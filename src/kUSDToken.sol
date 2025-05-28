@@ -30,10 +30,10 @@ contract kUSD is BurnMintERC677 {
     address public ccipAdmin;
 
     /// @notice Minimum amount for transactions
-    uint256 public minAmount = 1e6; // 1 USDC
+    uint256 public minAmount = 1e18; // 1 Ether
 
     /// @notice Maximum amount for transactions
-    uint256 public maxAmount = 1_000_000e6; // 1M USDC
+    uint256 public maxAmount = 1_000e18; // 1K Ether
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS

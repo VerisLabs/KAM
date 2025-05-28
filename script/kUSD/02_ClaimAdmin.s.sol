@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import { kUSD } from "../../src/kUSD.sol";
+import { kUSD } from "../../src/kUSDToken.sol";
 import { AddressBook } from "../helpers/AddressBook.sol";
 import { Config } from "../helpers/Config.s.sol";
 import { RegistryModuleOwnerCustom } from

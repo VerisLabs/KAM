@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import "../../src/kUSD.sol";
+import "../../src/kUSDToken.sol";
 import "forge-std/Script.sol";
 
 contract DeployKUSD is Script {
