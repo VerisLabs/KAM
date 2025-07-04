@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.30;
 
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { ERC20 } from "solady/tokens/ERC20.sol";
+import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
+import {ERC20} from "solady/tokens/ERC20.sol";
 
-import { Multicallable } from "solady/utils/Multicallable.sol";
-import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
+import {Multicallable} from "solady/utils/Multicallable.sol";
+import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 
-import { Initializable } from "solady/utils/Initializable.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
+import {Initializable} from "solady/utils/Initializable.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
 
-import { DataTypes } from "src/types/DataTypes.sol";
+import {DataTypes} from "src/types/DataTypes.sol";
 
 /// @title kDNStakingVault
 /// @notice Pure ERC20 vault with dual accounting for minter and user pools
@@ -209,10 +209,7 @@ contract kDNStakingVault is Initializable, UUPSUpgradeable, ERC20, OwnableRoles,
         address emergencyAdmin_,
         address settler_,
         address strategyManager_
-    )
-        external
-        initializer
-    {
+    ) external initializer {
         if (asset_ == address(0)) revert ZeroAddress();
         if (kToken_ == address(0)) revert ZeroAddress();
         if (owner_ == address(0)) revert ZeroAddress();
@@ -294,11 +291,7 @@ contract kDNStakingVault is Initializable, UUPSUpgradeable, ERC20, OwnableRoles,
     /// @param minter Minter address for tracking
     /// @param batchReceiver BatchReceiver to send assets to
     /// @return batchId Batch ID for this request
-    function requestMinterRedeem(
-        uint256 assetAmount,
-        address minter,
-        address batchReceiver
-    )
+    function requestMinterRedeem(uint256 assetAmount, address minter, address batchReceiver)
         external
         payable
         nonReentrant
@@ -497,10 +490,7 @@ contract kDNStakingVault is Initializable, UUPSUpgradeable, ERC20, OwnableRoles,
     /// @dev Validates batch sequence, applies automatic rebase, calculates stkToken price, and updates accounting
     /// @param batchId The identifier of the staking batch to settle
     /// @param totalKTokensStaked Aggregated amount of kTokens from all requests in the batch
-    function settleStakingBatch(
-        uint256 batchId,
-        uint256 totalKTokensStaked
-    )
+    function settleStakingBatch(uint256 batchId, uint256 totalKTokensStaked)
         external
         nonReentrant
         onlyRoles(SETTLER_ROLE | STRATEGY_MANAGER_ROLE)
@@ -580,10 +570,7 @@ contract kDNStakingVault is Initializable, UUPSUpgradeable, ERC20, OwnableRoles,
     /// @notice Settles an unstaking batch with O(1) efficiency - only updates batch state
     /// @param batchId Batch ID to settle
     /// @param totalStkTokensUnstaked Total stkTokens in the batch (from backend aggregation)
-    function settleUnstakingBatch(
-        uint256 batchId,
-        uint256 totalStkTokensUnstaked
-    )
+    function settleUnstakingBatch(uint256 batchId, uint256 totalStkTokensUnstaked)
         external
         nonReentrant
         onlyRoles(SETTLER_ROLE | STRATEGY_MANAGER_ROLE)
@@ -1163,9 +1150,7 @@ contract kDNStakingVault is Initializable, UUPSUpgradeable, ERC20, OwnableRoles,
         uint256 netAmount,
         address batchReceiver,
         kDNStakingVaultStorage storage $
-    )
-        private
-    {
+    ) private {
         // Use 1:1 accounting for minters
         if ($.minterAssetBalances[minter] < netAmount) {
             revert InsufficientMinterShares();

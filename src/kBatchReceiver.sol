@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.30;
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 /// @title kBatchReceiver
 /// @notice Minimal receiver contract for batch redemptions

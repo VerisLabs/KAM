@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.30;
 
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
 
-import { Multicallable } from "solady/utils/Multicallable.sol";
-import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
+import {Multicallable} from "solady/utils/Multicallable.sol";
+import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 
-import { Initializable } from "solady/utils/Initializable.sol";
-import { LibBitmap } from "solady/utils/LibBitmap.sol";
-import { LibClone } from "solady/utils/LibClone.sol";
-import { LibTransient } from "solady/utils/LibTransient.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
+import {Initializable} from "solady/utils/Initializable.sol";
+import {LibBitmap} from "solady/utils/LibBitmap.sol";
+import {LibClone} from "solady/utils/LibClone.sol";
+import {LibTransient} from "solady/utils/LibTransient.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
 
-import { IkDNStaking } from "src/interfaces/IkDNStaking.sol";
-import { IkToken } from "src/interfaces/IkToken.sol";
-import { kBatchReceiver } from "src/kBatchReceiver.sol";
-import { DataTypes } from "src/types/DataTypes.sol";
+import {IkDNStaking} from "src/interfaces/IkDNStaking.sol";
+import {IkToken} from "src/interfaces/IkToken.sol";
+import {kBatchReceiver} from "src/kBatchReceiver.sol";
+import {DataTypes} from "src/types/DataTypes.sol";
 
 /// @title kMinter
 /// @notice Institutional minting and redemption manager for kTokens
@@ -393,11 +393,7 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
     /// @param kdnBatchId kDN Batch ID that received assets
     /// @param batchReceiver BatchReceiver that received the assets
     /// @param amount Amount of assets received
-    function notifyKDNBatchAssetsReceived(
-        uint256 kdnBatchId,
-        address batchReceiver,
-        uint256 amount
-    )
+    function notifyKDNBatchAssetsReceived(uint256 kdnBatchId, address batchReceiver, uint256 amount)
         external
         onlyRoles(SETTLER_ROLE)
     {
@@ -802,5 +798,5 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Accepts ETH transfers
-    receive() external payable { }
+    receive() external payable {}
 }
