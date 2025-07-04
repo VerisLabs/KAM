@@ -6,7 +6,7 @@
 
 > **Dual-Flow kToken Protocol with O(1) Settlement & Automatic Yield Distribution**
 
-kTokens is a next-generation protocol providing 1:1 asset backing for institutions while enabling automatic yield distribution to retail users through a dual accounting model. The protocol leverages innovative O(1) settlement optimization, modular strategy management, and Solady's gas-optimized libraries for maximum efficiency
+kTokens is a next-generation protocol providing 1:1 asset backing for institutions while enabling automatic yield distribution to retail users through a dual accounting model. The protocol leverages innovative O(1) settlement optimization, modular strategy management, Solady's gas-optimized libraries, and Uniswap v4's Extsload pattern for maximum efficiency
 
 ## 🎯 Overview
 
@@ -37,8 +37,8 @@ kTokens is a next-generation protocol providing 1:1 asset backing for institutio
 ```
 
 - **kToken:** Upgradeable ERC20 token with 1:1 asset backing, mint/burn controlled by kMinter
-- **kMinter:** Institutional minting/redemption with **bitmap-based batch settlement**, integrates with kDNStakingVault for 1:1 backing  
-- **kDNStakingVault:** **Dual accounting ERC4626 vault** - separate 1:1 accounting for minters, yield-bearing for users
+- **kMinter:** Institutional minting/redemption with **bitmap-based batch settlement** and **Extsload** for efficient storage access  
+- **kDNStakingVault:** **Dual accounting ERC4626 vault** with **Extsload** - separate 1:1 accounting for minters, yield-bearing for users
 - **kStrategyManager:** **O(1) settlement orchestration** - modular strategy allocation with EIP712 signatures (97-99% gas savings)
 - **kBatchReceiver:** Minimal proxy deployed per redemption batch for asset distribution
 
@@ -57,6 +57,7 @@ kTokens is a next-generation protocol providing 1:1 asset backing for institutio
 - **Dual Accounting:** Separate 1:1 minter accounting from yield-bearing user accounting
 - **Batch Settlement:** Bitmap-based eligibility and status tracking for ultra-low gas batch settlement
 - **Testing:** Foundry test suite (unit, integration, invariant, fork)
+- **Storage Access:** Extsload pattern for efficient frontend data queries
 
 ## 🚀 Quick Start
 
@@ -188,6 +189,26 @@ forge script script/base/01_Deploy.s.sol \
 - **User-Paid Claims:** Optional claiming shifts gas costs to users (only when needed)
 - **Unlimited Scalability:** No gas limit constraints for batch processing
 - **Bitmap-Based Tracking:** Ultra-efficient status and eligibility management
+
+## 💡 Direct Storage Access (Extsload)
+
+The protocol implements Uniswap v4's Extsload pattern for efficient frontend data access:
+
+```javascript
+// Read single storage slot
+const value = await contract.extsload(slot);
+
+// Read multiple consecutive slots
+const values = await contract.extsload(startSlot, count);
+
+// Read arbitrary slots
+const values = await contract.extsload([slot1, slot2, slot3]);
+```
+
+This enables:
+- **Gas-efficient queries**: Direct storage reads without view function overhead
+- **Flexible data access**: Frontend can read any storage configuration
+- **Reduced contract size**: Removed 15+ view functions from kMinter
 
 ## 🛡️ Security & Dual Accounting Model
 

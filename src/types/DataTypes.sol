@@ -33,14 +33,12 @@ library DataTypes {
     struct MintRequest {
         uint256 amount;
         address beneficiary;
-        uint256 nonce;
     }
 
     struct RedeemRequest {
         uint256 amount;
         address user;
         address recipient;
-        uint256 nonce;
     }
 
     struct RedemptionRequest {
@@ -48,6 +46,7 @@ library DataTypes {
         address user;
         uint96 amount;
         address recipient;
+        address batchReceiver;
         uint64 requestTimestamp;
         RedemptionStatus status;
     }

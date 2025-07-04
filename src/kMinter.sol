@@ -18,11 +18,12 @@ import {IkDNStaking} from "src/interfaces/IkDNStaking.sol";
 import {IkToken} from "src/interfaces/IkToken.sol";
 import {kBatchReceiver} from "src/kBatchReceiver.sol";
 import {DataTypes} from "src/types/DataTypes.sol";
+import {Extsload} from "src/abstracts/Extsload.sol";
 
 /// @title kMinter
 /// @notice Institutional minting and redemption manager for kTokens
 /// @dev Manages deposits/redemptions through kDNStakingVault with batch settlement
-contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard, Multicallable {
+contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard, Multicallable, Extsload {
     using SafeTransferLib for address;
     using LibBitmap for LibBitmap.Bitmap;
     using LibClone for address;
@@ -61,10 +62,8 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         uint256 requestCounter;
         mapping(uint256 => DataTypes.BatchInfo) batches;
         mapping(bytes32 => uint256) requestToKDNBatch;
-        mapping(bytes32 => address) requestToBatchReceiver;
         LibBitmap.Bitmap executedRequests;
         LibBitmap.Bitmap cancelledRequests;
-        LibBitmap.Bitmap usedNonces;
         mapping(bytes32 => DataTypes.RedemptionRequest) redemptionRequests;
         mapping(address => bytes32[]) userRequests;
         uint256 totalDeposited;
@@ -87,7 +86,7 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event Minted(address indexed beneficiary, uint256 amount, uint256 nonce, uint256 indexed batchId);
+    event Minted(address indexed beneficiary, uint256 amount, uint256 indexed batchId);
     event RedemptionRequested(
         bytes32 indexed requestId, address indexed user, address recipient, uint256 amount, uint256 indexed batchId
     );
@@ -116,7 +115,6 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
     error RequestNotEligible();
     error RequestAlreadyProcessed();
     error InsufficientAssets();
-    error NonceAlreadyUsed();
     error InsufficientBalance();
     error KDNStakingNotSet();
     error BatchReceiverAlreadyDeployed();
@@ -206,10 +204,6 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         // Validate request
         if (request.amount == 0) revert ZeroAmount();
         if (request.beneficiary == address(0)) revert ZeroAddress();
-        if ($.usedNonces.get(request.nonce)) revert NonceAlreadyUsed();
-
-        // Mark nonce as used
-        $.usedNonces.set(request.nonce);
 
         // Transfer underlying asset from sender to this contract
         $.underlyingAsset.safeTransferFrom(msg.sender, address(this), request.amount);
@@ -226,7 +220,7 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         // Mint kTokens 1:1 with deposited amount
         IkToken($.kToken).mint(request.beneficiary, request.amount);
 
-        emit Minted(request.beneficiary, request.amount, request.nonce, batchId);
+        emit Minted(request.beneficiary, request.amount, batchId);
     }
 
     /// @notice Initiates redemption process by burning kTokens and creating batch redemption request
@@ -248,10 +242,6 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         // Validate request
         if (request.amount == 0) revert ZeroAmount();
         if (request.user == address(0) || request.recipient == address(0)) revert ZeroAddress();
-        if ($.usedNonces.get(request.nonce)) revert NonceAlreadyUsed();
-
-        // Mark nonce as used
-        $.usedNonces.set(request.nonce);
 
         // Validate user has sufficient kToken balance
         if (IkToken($.kToken).balanceOf(request.user) < request.amount) {
@@ -275,6 +265,7 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
             user: request.user,
             amount: _safeToUint96(request.amount),
             recipient: request.recipient,
+            batchReceiver: $.batches[targetBatchId].batchReceiver,
             requestTimestamp: _safeToUint64(block.timestamp),
             status: DataTypes.RedemptionStatus.PENDING
         });
@@ -286,15 +277,12 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         $.totalPendingRedemptions += request.amount;
         $.batches[targetBatchId].totalAmount += request.amount;
 
-        // Store batch receiver mapping BEFORE external calls (we already have this value)
-        $.requestToBatchReceiver[requestId] = $.batches[targetBatchId].batchReceiver;
-
         // Burn kTokens immediately from user
         IkToken($.kToken).burnFrom(request.user, request.amount);
 
         // Direct integration with kDNStaking - request redemption
         $.requestToKDNBatch[requestId] = IkDNStaking($.kDNStaking).requestMinterRedeem(
-            request.amount, address(this), $.batches[targetBatchId].batchReceiver
+            request.amount, address(this), $.redemptionRequests[requestId].batchReceiver
         );
 
         emit RedemptionRequested(requestId, request.user, request.recipient, request.amount, targetBatchId);
@@ -330,14 +318,14 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
             revert RequestAlreadyProcessed();
         }
 
-        // Get batch receiver from stored mapping
-        address batchReceiver = $.requestToBatchReceiver[requestId];
+        // Get batch receiver from request
+        address batchReceiver = request.batchReceiver;
         if (batchReceiver == address(0)) {
             revert InvalidBatchReceiver();
         }
 
         // Update state
-        request.status = DataTypes.RedemptionStatus.REDEEMED;
+        request.status = DataTypes.RedemptionStatus.REDEEMED; // pop the object from the mapping.
         _markRequestExecuted(requestId);
 
         // Update accounting BEFORE external call (effects before interactions)
@@ -439,108 +427,6 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
     /// @notice Check if this contract is an authorized minter
     function isAuthorizedMinter() external view returns (bool) {
         return _getkMinterStorage().isAuthorizedMinter;
-    }
-
-    /// @notice Checks if nonce is used
-    /// @param nonce Nonce to check
-    /// @return True if used, false otherwise
-    function isNonceUsed(uint256 nonce) external view returns (bool) {
-        return _getkMinterStorage().usedNonces.get(nonce);
-    }
-
-    /// @notice Get batch info - Use kDataProvider for UX functions
-    function getBatchInfo(uint256 batchId) external view returns (DataTypes.BatchInfo memory) {
-        return _getkMinterStorage().batches[batchId];
-    }
-
-    /// @notice Get redemption request - Use kDataProvider for UX functions
-    function getRedemptionRequest(bytes32 requestId) external view returns (DataTypes.RedemptionRequest memory) {
-        return _getkMinterStorage().redemptionRequests[requestId];
-    }
-
-    /// @notice Get user requests - Use kDataProvider for UX functions
-    function getUserRequests(address user) external view returns (bytes32[] memory) {
-        return _getkMinterStorage().userRequests[user];
-    }
-
-    /// @notice Get total pending redemptions - Use kDataProvider for UX functions
-    function getTotalPendingRedemptions() external view returns (uint256) {
-        return _getkMinterStorage().totalPendingRedemptions;
-    }
-
-    /// @notice Get batch total amount - Use kDataProvider for UX functions
-    function getBatchTotalAmount(uint256 batchId) external view returns (uint256) {
-        return _getkMinterStorage().batches[batchId].totalAmount;
-    }
-
-    /// @notice Check if eligible for redeem - Use kDataProvider for UX functions
-    function isEligibleForRedeem(bytes32 requestId) external view returns (bool eligible, string memory reason) {
-        kMinterStorage storage $ = _getkMinterStorage();
-        DataTypes.RedemptionRequest storage request = $.redemptionRequests[requestId];
-
-        if (request.id == bytes32(0)) return (false, "Request not found");
-        if (request.status != DataTypes.RedemptionStatus.PENDING) return (false, "Request not pending");
-        if ($.executedRequests.get(uint256(requestId))) return (false, "Request already executed");
-
-        return (true, "");
-    }
-
-    /// @notice Get request kDN batch ID - Use kDataProvider for UX functions
-    function getRequestKDNBatchId(bytes32 requestId) external view returns (uint256) {
-        return _getkMinterStorage().requestToKDNBatch[requestId];
-    }
-
-    /// @notice Get request batch receiver - Use kDataProvider for UX functions
-    function getRequestBatchReceiver(bytes32 requestId) external view returns (address) {
-        return _getkMinterStorage().requestToBatchReceiver[requestId];
-    }
-
-    /// @notice Get current batch info - Use kDataProvider for UX functions
-    function getCurrentBatchInfo()
-        external
-        view
-        returns (uint256 batchId, uint256 startTime, uint256 cutoffTime, uint256 settlementTime, uint256 totalAmount)
-    {
-        kMinterStorage storage $ = _getkMinterStorage();
-        batchId = $.currentBatchId;
-        DataTypes.BatchInfo storage batch = $.batches[batchId];
-        startTime = batch.startTime;
-        cutoffTime = batch.cutoffTime;
-        settlementTime = batch.settlementTime;
-        totalAmount = batch.totalAmount;
-    }
-
-    /// @notice Get total value locked - Use kDataProvider for UX functions
-    function getTotalValueLocked() external view returns (uint256) {
-        return _getkMinterStorage().totalDeposited - _getkMinterStorage().totalRedeemed;
-    }
-
-    /// @notice Get total deposited - Use kDataProvider for UX functions
-    function getTotalDeposited() external view returns (uint256) {
-        return _getkMinterStorage().totalDeposited;
-    }
-
-    /// @notice Get total redeemed - Use kDataProvider for UX functions
-    function getTotalRedeemed() external view returns (uint256) {
-        return _getkMinterStorage().totalRedeemed;
-    }
-
-    /// @notice Get total kToken supply - Use kDataProvider for UX functions
-    function getTotalKTokenSupply() external view returns (uint256) {
-        return IkToken(_getkMinterStorage().kToken).totalSupply();
-    }
-
-    /// @notice Check if current batch past cutoff - Use kDataProvider for UX functions
-    function isCurrentBatchPastCutoff() external view returns (bool) {
-        kMinterStorage storage $ = _getkMinterStorage();
-        return block.timestamp > $.batches[$.currentBatchId].cutoffTime;
-    }
-
-    /// @notice Get next settlement time - Use kDataProvider for UX functions
-    function getNextSettlementTime() external view returns (uint256) {
-        kMinterStorage storage $ = _getkMinterStorage();
-        uint256 targetBatch = _getTargetBatchIdView();
-        return $.batches[targetBatch].settlementTime;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -675,19 +561,6 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         $.isAuthorizedMinter = IkDNStaking($.kDNStaking).isAuthorizedMinter(address(this));
 
         emit AuthorizedMinterSet($.isAuthorizedMinter);
-    }
-
-    /// @notice View version of _getTargetBatchId (doesn't modify state)
-    function _getTargetBatchIdView() internal view returns (uint256) {
-        kMinterStorage storage $ = _getkMinterStorage();
-        DataTypes.BatchInfo storage currentBatch = $.batches[$.currentBatchId];
-
-        // If past cutoff time, requests would go to next batch
-        if (block.timestamp > currentBatch.cutoffTime) {
-            return $.currentBatchId + 1;
-        }
-
-        return $.currentBatchId;
     }
 
     /// @notice Creates new time-based batch with 4h cutoff

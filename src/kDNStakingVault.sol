@@ -13,11 +13,20 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
 
 import {DataTypes} from "src/types/DataTypes.sol";
+import {Extsload} from "src/abstracts/Extsload.sol";
 
 /// @title kDNStakingVault
 /// @notice Pure ERC20 vault with dual accounting for minter and user pools
 /// @dev Implements automatic yield distribution from minter to user pools
-contract kDNStakingVault is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
+contract kDNStakingVault is
+    Initializable,
+    UUPSUpgradeable,
+    ERC20,
+    OwnableRoles,
+    ReentrancyGuard,
+    Multicallable,
+    Extsload
+{
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
 
@@ -734,122 +743,6 @@ contract kDNStakingVault is Initializable, UUPSUpgradeable, ERC20, OwnableRoles,
     /*//////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Returns minter's asset balance with 1:1 accounting
-    /// @param minter Minter address to query
-    /// @return Asset balance
-    function getMinterAssetBalance(address minter) external view returns (uint256) {
-        return _getkDNStakingVaultStorage().minterAssetBalances[minter];
-    }
-
-    /// @notice Returns minter's net pending amount
-    /// @param minter Minter address to query
-    /// @return Net pending amount (can be negative)
-    function getMinterPendingNetAmount(address minter) external view returns (int256) {
-        return _getkDNStakingVaultStorage().minterPendingNetAmounts[minter];
-    }
-
-    /// @notice Returns total minter assets with 1:1 accounting
-    /// @return Total minter assets
-    function getTotalMinterAssets() external view returns (uint256) {
-        return _getkDNStakingVaultStorage().totalMinterAssets;
-    }
-
-    /// @notice Returns user's yield-bearing share balance
-    /// @param user User address to query
-    /// @return Share balance
-    function getUserShareBalance(address user) external view returns (uint256) {
-        return _getkDNStakingVaultStorage().userShareBalances[user];
-    }
-
-    /// @notice Get unaccounted yield
-    function getUnaccountedYield() external view returns (uint256) {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-        uint256 totalVaultBalance = getTotalVaultAssets();
-        uint256 accountedAssets = $.totalMinterAssets + $.userTotalAssets;
-        return totalVaultBalance > accountedAssets ? totalVaultBalance - accountedAssets : 0;
-    }
-
-    /// @notice Get user share price
-    function getUserSharePrice() external view returns (uint256) {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-        if ($.userTotalSupply == 0) return PRECISION;
-        return (getTotalUserAssets() * PRECISION) / $.userTotalSupply;
-    }
-
-    /// @notice Get unstaking batch
-    function getUnstakingBatch(uint256 batchId) external view returns (DataTypes.UnstakingBatch memory) {
-        return _getkDNStakingVaultStorage().unstakingBatches[batchId];
-    }
-
-    /// @notice Get current batch IDs
-    function getCurrentBatchIds()
-        external
-        view
-        returns (uint256 BatchId, uint256 stakingBatchId, uint256 unstakingBatchId)
-    {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-        BatchId = $.currentBatchId;
-        stakingBatchId = $.currentStakingBatchId;
-        unstakingBatchId = $.currentUnstakingBatchId;
-    }
-
-    /// @notice Get last settled batch IDs
-    function getLastSettledBatchIds()
-        external
-        view
-        returns (uint256 BatchId, uint256 stakingBatchId, uint256 unstakingBatchId)
-    {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-        BatchId = $.lastSettledBatchId;
-        stakingBatchId = $.lastSettledStakingBatchId;
-        unstakingBatchId = $.lastSettledUnstakingBatchId;
-    }
-
-    /// @notice Get total staked kTokens
-    function getTotalStakedKTokens() external view returns (uint256) {
-        return _getkDNStakingVaultStorage().totalStakedKTokens;
-    }
-
-    /// @notice Get stkToken balance
-    function getStkTokenBalance(address user) external view returns (uint256) {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-        return $.userStkTokenBalances[user] + $.userUnclaimedStkTokens[user];
-    }
-
-    /// @notice Get claimed stkToken balance
-    function getClaimedStkTokenBalance(address user) external view returns (uint256) {
-        return _getkDNStakingVaultStorage().userStkTokenBalances[user];
-    }
-
-    /// @notice Get unclaimed stkToken balance
-    function getUnclaimedStkTokenBalance(address user) external view returns (uint256) {
-        return _getkDNStakingVaultStorage().userUnclaimedStkTokens[user];
-    }
-
-    /// @notice Get total stkTokens
-    function getTotalStkTokens() external view returns (uint256) {
-        return _getkDNStakingVaultStorage().totalStkTokenSupply;
-    }
-
-    /// @notice Get stkToken price
-    function getStkTokenPrice() external view returns (uint256) {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-        if ($.totalStkTokenSupply == 0) return PRECISION;
-        return ($.totalStkTokenAssets * PRECISION) / $.totalStkTokenSupply;
-    }
-
-    /// @notice Get total stkToken assets
-    function getTotalStkTokenAssets() external view returns (uint256) {
-        return _getkDNStakingVaultStorage().totalStkTokenAssets;
-    }
-
-    /// @notice Get stkToken rebase ratio
-    function getStkTokenRebaseRatio() external view returns (uint256) {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-        if ($.totalStkTokenSupply == 0) return PRECISION;
-        return ($.totalStkTokenAssets * PRECISION) / $.totalStkTokenSupply;
-    }
 
     /// @notice Check if address is authorized minter
     function isAuthorizedMinter(address minter) external view returns (bool) {
