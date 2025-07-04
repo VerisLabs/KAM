@@ -384,22 +384,12 @@ contract kDNStakingVault is
 
         if (stkTokenAmount == 0) revert ZeroAmount();
 
-        // Check total available stkTokens (claimed + unclaimed)
-        uint256 totalAvailable = $.userStkTokenBalances[msg.sender] + $.userUnclaimedStkTokens[msg.sender];
+        // Check available stkTokens using ERC20 balance
+        uint256 totalAvailable = balanceOf(msg.sender);
         if (totalAvailable < stkTokenAmount) revert InsufficientShares();
 
-        // Smart balance handling - reduce unclaimed first to save gas
-        uint256 unclaimedBalance = $.userUnclaimedStkTokens[msg.sender];
-        if (unclaimedBalance >= stkTokenAmount) {
-            // Reduce unclaimed balance (no token burning needed)
-            $.userUnclaimedStkTokens[msg.sender] -= stkTokenAmount;
-        } else {
-            // Use all unclaimed + burn actual stkTokens for remainder
-            uint256 toBurn = stkTokenAmount - unclaimedBalance;
-            $.userUnclaimedStkTokens[msg.sender] = 0; // Clear unclaimed
-            $.userStkTokenBalances[msg.sender] -= toBurn; // Reduce claimed balance
-            $.totalStkTokenSupply -= toBurn; // Reduce total supply
-        }
+        // Burn stkTokens using proper ERC20 mechanism
+        _burn(msg.sender, stkTokenAmount);
 
         // Get current unstaking batch
         uint256 batchId = $.currentUnstakingBatchId;
@@ -537,12 +527,10 @@ contract kDNStakingVault is
         if (totalVaultAssets > accountedAssets) {
             uint256 yield = totalVaultAssets - accountedAssets;
             if (yield <= MAX_YIELD_PER_SYNC) {
-                // Transfer yield from minter pool to stkToken pool
+                // Add yield directly to stkToken pool - DO NOT reduce minter assets
+                // Yield comes from external sources (strategies), not minter funds
                 $.totalStkTokenAssets += yield;
-                // Reduce from minter assets if available
-                if ($.totalMinterAssets >= yield) {
-                    $.totalMinterAssets -= yield;
-                }
+                $.userTotalAssets += yield;
                 emit VarianceRecorded(yield, true);
             }
         }
@@ -556,9 +544,14 @@ contract kDNStakingVault is
         uint256 totalStkTokensToMint = (totalKTokensStaked * PRECISION) / currentStkTokenPrice;
 
         // O(1) STATE UPDATE: Update global accounting without loops
-        $.totalMinterAssets -= totalKTokensStaked;
+        // NOTE: kTokens were already transferred to vault in requestStake()
+        // Just update accounting to track that these assets are now in user pool
         $.totalStkTokenAssets += totalKTokensStaked;
-        $.totalStkTokenSupply += totalStkTokensToMint;
+        $.userTotalAssets += totalKTokensStaked;
+
+        // Mint user shares using proper ERC20 mechanism
+        // This will update userTotalSupply via _update override
+        _mint(address(this), totalStkTokensToMint);
 
         // O(1) BATCH STATE: Mark batch as settled with settlement parameters
         batch.settled = true;
@@ -619,12 +612,10 @@ contract kDNStakingVault is
         if (totalVaultAssets > accountedAssets) {
             uint256 Yield = totalVaultAssets - accountedAssets;
             if (Yield <= MAX_YIELD_PER_SYNC) {
-                // Transfer yield from minter pool to stkToken pool
+                // Add yield directly to stkToken pool - DO NOT reduce minter assets
+                // Yield comes from external sources (strategies), not minter funds
                 $.totalStkTokenAssets += Yield;
-                // Reduce from minter assets if available
-                if ($.totalMinterAssets >= Yield) {
-                    $.totalMinterAssets -= Yield;
-                }
+                $.userTotalAssets += Yield;
                 emit VarianceRecorded(Yield, true);
             }
         }
@@ -691,8 +682,9 @@ contract kDNStakingVault is
         // Calculate stkTokens to mint based on batch settlement price
         uint256 stkTokensToMint = (request.kTokenAmount * PRECISION) / batch.stkTokenPrice;
 
-        // O(1) CLAIM: Transfer stkTokens to user's claimed balance
-        $.userStkTokenBalances[request.user] += stkTokensToMint;
+        // O(1) CLAIM: Transfer stkTokens from vault to user using proper ERC20 transfer
+        // This will update userShareBalances via _update override
+        _transfer(address(this), request.user, stkTokensToMint);
 
         // Track the specific kToken amount staked by this user
         $.userOriginalKTokens[request.user] += request.kTokenAmount;
@@ -807,6 +799,49 @@ contract kDNStakingVault is
         return _getkDNStakingVaultStorage().decimals;
     }
 
+    /// @notice Get user's stkToken balance (alias for balanceOf)
+    /// @param user User address
+    /// @return User's stkToken balance
+    function getStkTokenBalance(address user) external view returns (uint256) {
+        return balanceOf(user);
+    }
+
+    /// @notice Get user's claimed stkToken balance (same as total balance in new model)
+    /// @param user User address
+    /// @return User's claimed stkToken balance
+    function getClaimedStkTokenBalance(address user) external view returns (uint256) {
+        return balanceOf(user);
+    }
+
+    /// @notice Get user's unclaimed stkToken balance (always 0 in new model since we use proper transfers)
+    /// @param user User address
+    /// @return Always 0 since we use proper ERC20 transfers now
+    function getUnclaimedStkTokenBalance(address user) external pure returns (uint256) {
+        user; // silence warning
+        return 0; // No unclaimed balance in new model
+    }
+
+    /// @notice Get total stkTokens in circulation
+    /// @return Total stkToken supply
+    function getTotalStkTokens() external view returns (uint256) {
+        return totalSupply();
+    }
+
+    /// @notice Get current stkToken price
+    /// @return Current price in terms of assets per stkToken
+    function getStkTokenPrice() external view returns (uint256) {
+        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
+        return $.totalStkTokenSupply == 0 ? PRECISION : ($.totalStkTokenAssets * PRECISION) / $.totalStkTokenSupply;
+    }
+
+    /// @notice Get minter's asset balance (for 1:1 guarantee validation)
+    /// @param minter Minter address
+    /// @return Minter's tracked asset balance
+    function getMinterAssetBalance(address minter) external view returns (uint256) {
+        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
+        return $.minterAssetBalances[minter];
+    }
+
     /*//////////////////////////////////////////////////////////////
                           ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -869,11 +904,10 @@ contract kDNStakingVault is
 
         // Add yield to stkToken backing assets (automatic appreciation)
         $.totalStkTokenAssets += yieldAmount;
+        $.userTotalAssets += yieldAmount;
 
-        // Yield can come from minter pool (strategies)
-        if ($.totalMinterAssets >= yieldAmount) {
-            $.totalMinterAssets -= yieldAmount;
-        }
+        // DO NOT reduce minter assets - yield comes from external sources
+        // Minter assets must remain 1:1 to preserve guarantee
 
         emit VarianceRecorded(yieldAmount, true);
     }
@@ -1058,6 +1092,70 @@ contract kDNStakingVault is
         $.underlyingAsset.safeTransfer(batchReceiver, netAmount);
 
         emit MinterNetted(minter, -int256(netAmount), netAmount); // assets = shares for minters
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        ERC20 OVERRIDES FOR DUAL ACCOUNTING
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Returns total supply of user shares (not including minter accounting)
+    /// @dev Overrides ERC20 to provide user-only share accounting
+    function totalSupply() public view override returns (uint256) {
+        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
+        return $.userTotalSupply;
+    }
+
+    /// @notice Returns user's stkToken balance
+    /// @dev Overrides ERC20 to provide user share balance
+    function balanceOf(address account) public view override returns (uint256) {
+        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
+        return $.userShareBalances[account];
+    }
+
+    /// @notice Override internal mint to update our dual accounting
+    /// @dev Updates userTotalSupply and userShareBalances
+    function _mint(address to, uint256 value) internal override {
+        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
+
+        $.userTotalSupply += value;
+        $.userShareBalances[to] += value;
+
+        emit Transfer(address(0), to, value);
+    }
+
+    /// @notice Override internal burn to update our dual accounting
+    /// @dev Updates userTotalSupply and userShareBalances
+    function _burn(address from, uint256 value) internal override {
+        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
+
+        $.userShareBalances[from] -= value;
+        $.userTotalSupply -= value;
+
+        emit Transfer(from, address(0), value);
+    }
+
+    /// @notice Override internal transfer to update our dual accounting
+    /// @dev Updates userShareBalances for both from and to
+    function _transfer(address from, address to, uint256 value) internal override {
+        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
+
+        if (from == address(0)) {
+            // This is a mint
+            _mint(to, value);
+            return;
+        }
+
+        if (to == address(0)) {
+            // This is a burn
+            _burn(from, value);
+            return;
+        }
+
+        // Regular transfer
+        $.userShareBalances[from] -= value;
+        $.userShareBalances[to] += value;
+
+        emit Transfer(from, to, value);
     }
 
     /// @notice Calculate shares for given assets

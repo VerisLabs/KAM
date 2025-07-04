@@ -53,7 +53,6 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
     /// @custom:storage-location erc7201:kMinter.storage.kMinter
     struct kMinterStorage {
         bool isPaused;
-        uint256 dustAmount;
         address kToken;
         address underlyingAsset;
         address kDNStaking;
@@ -100,7 +99,6 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
     event KDNBatchSettled(uint256 indexed kdnBatchId, uint256 timestamp);
     event PauseState(bool isPaused);
     event BatchCreated(uint256 indexed batchId, uint256 timestamp);
-    event DustAmountUpdated(uint256 newDustAmount);
     event BatchCutoffReached(uint256 indexed batchId, uint256 timestamp);
     event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
 
@@ -166,7 +164,6 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         $.underlyingAsset = params.underlyingAsset;
         $.kDNStaking = params.manager;
         // Time-based batches use fixed 8h settlement interval
-        $.dustAmount = 1e12;
 
         // Initialize time-based batch system
         $.currentBatchId = 1;
@@ -278,6 +275,7 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         $.batches[targetBatchId].totalAmount += request.amount;
 
         // Burn kTokens immediately from user
+        // TODO: check if this is correct: safeTransfer? peg will be broken if burn?
         IkToken($.kToken).burnFrom(request.user, request.amount);
 
         // Direct integration with kDNStaking - request redemption
@@ -301,13 +299,12 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         if (request.status == DataTypes.RedemptionStatus.REDEEMED) revert RequestAlreadyProcessed();
         if (request.status == DataTypes.RedemptionStatus.CANCELLED) revert RequestNotEligible();
 
-        // Check if kDN batch is settled (direct integration)
+        // Check if kDN batch is settled
         uint256 kdnBatchId = $.requestToKDNBatch[requestId];
         if (kdnBatchId == 0) {
             revert RequestNotFound();
         }
 
-        // Check if kDN batch is ready (simplified - backend coordinates this)
         // Assets should be available in BatchReceiver after kDN settlement
         if (!IkDNStaking($.kDNStaking).isBatchSettled(kdnBatchId)) {
             revert BatchNotSettled();
@@ -325,17 +322,15 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         }
 
         // Update state
-        request.status = DataTypes.RedemptionStatus.REDEEMED; // pop the object from the mapping.
+        request.status = DataTypes.RedemptionStatus.REDEEMED;
         _markRequestExecuted(requestId);
 
-        // Update accounting BEFORE external call (effects before interactions)
+        // Update accounting
         $.totalPendingRedemptions -= request.amount;
         $.totalRedeemed += request.amount;
 
-        // Emit event BEFORE external call
         emit RedemptionExecuted(requestId, request.recipient, request.amount);
 
-        // External call LAST (interactions)
         // Withdraw from BatchReceiver to recipient (1:1 with kTokens burned)
         kBatchReceiver(batchReceiver).withdrawForRedemption(request.recipient, request.amount);
     }
@@ -456,13 +451,6 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         _registerAsAuthorizedMinter();
 
         emit KDNStakingUpdated(newStaking);
-    }
-
-    /// @notice Sets the dust amount threshold
-    /// @param newDustAmount New dust amount value
-    function setDustAmount(uint256 newDustAmount) external onlyRoles(ADMIN_ROLE) {
-        _getkMinterStorage().dustAmount = newDustAmount;
-        emit DustAmountUpdated(newDustAmount);
     }
 
     /// @notice Forces creation of new time-based batch

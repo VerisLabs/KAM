@@ -2,8 +2,8 @@
 pragma solidity 0.8.30;
 
 import {Test} from "forge-std/Test.sol";
-import {kMinter} from "../src/kMinter.sol";
-import {DataTypes} from "../src/types/DataTypes.sol";
+import {kMinter} from "../../src/kMinter.sol";
+import {DataTypes} from "../../src/types/DataTypes.sol";
 
 contract ExtsloadTest is Test {
     kMinter minter;
