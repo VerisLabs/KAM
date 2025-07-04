@@ -163,11 +163,19 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     /// @dev Validates allocation order signature, settles vault batches, and executes asset distribution
     /// @param stakingBatchId Identifier for the staking batch to process
     /// @param unstakingBatchId Identifier for the unstaking batch to process, or 0 to skip
+    /// @param totalKTokensStaked Total kTokens in staking batch (backend calculated)
+    /// @param totalStkTokensUnstaked Total stkTokens in unstaking batch (backend calculated)
+    /// @param totalKTokensToReturn Total original kTokens to return to users
+    /// @param totalYieldToMinter Total yield to transfer back to minter pool
     /// @param order Structured allocation instructions containing targets and amounts
     /// @param signature Cryptographic signature validating the allocation order
     function settleAndAllocate(
         uint256 stakingBatchId,
         uint256 unstakingBatchId,
+        uint256 totalKTokensStaked,
+        uint256 totalStkTokensUnstaked,
+        uint256 totalKTokensToReturn,
+        uint256 totalYieldToMinter,
         DataTypes.AllocationOrder calldata order,
         bytes calldata signature
     ) external nonReentrant whenNotPaused onlyRoles(SETTLER_ROLE) {
@@ -182,7 +190,14 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         _validateAllocationOrder(order, signature);
 
         // Settle vault batches first
-        _settleVaultBatches(stakingBatchId, unstakingBatchId);
+        _settleVaultBatches(
+            stakingBatchId,
+            unstakingBatchId,
+            totalKTokensStaked,
+            totalStkTokensUnstaked,
+            totalKTokensToReturn,
+            totalYieldToMinter
+        );
 
         // Execute allocation strategy
         _executeAllocations(order);
@@ -195,12 +210,22 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
 
     /// @notice Processes vault batch settlement without executing any asset allocation
     /// @dev Emergency function that bypasses allocation logic and only updates vault accounting
-    function emergencySettle(uint256 stakingBatchId, uint256 unstakingBatchId)
-        external
-        nonReentrant
-        onlyRoles(EMERGENCY_ADMIN_ROLE)
-    {
-        _settleVaultBatches(stakingBatchId, unstakingBatchId);
+    function emergencySettle(
+        uint256 stakingBatchId,
+        uint256 unstakingBatchId,
+        uint256 totalKTokensStaked,
+        uint256 totalStkTokensUnstaked,
+        uint256 totalKTokensToReturn,
+        uint256 totalYieldToMinter
+    ) external nonReentrant onlyRoles(EMERGENCY_ADMIN_ROLE) {
+        _settleVaultBatches(
+            stakingBatchId,
+            unstakingBatchId,
+            totalKTokensStaked,
+            totalStkTokensUnstaked,
+            totalKTokensToReturn,
+            totalYieldToMinter
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -441,19 +466,36 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         require(success, "Lending deposit failed");
     }
 
-    /// @notice Settles vault batches
-    function _settleVaultBatches(uint256 stakingBatchId, uint256 unstakingBatchId) internal {
+    /// @notice Settles vault batches with backend-calculated parameters
+    function _settleVaultBatches(
+        uint256 stakingBatchId,
+        uint256 unstakingBatchId,
+        uint256 totalKTokensStaked,
+        uint256 totalStkTokensUnstaked,
+        uint256 totalKTokensToReturn,
+        uint256 totalYieldToMinter
+    ) internal {
         address vault = _getkStrategyManagerStorage().kDNStakingVault;
 
         // Settle staking batch
         if (stakingBatchId > 0) {
-            (bool success,) = vault.call(abi.encodeWithSignature("settleStakingBatch(uint256)", stakingBatchId));
+            (bool success,) = vault.call(
+                abi.encodeWithSignature("settleStakingBatch(uint256,uint256)", stakingBatchId, totalKTokensStaked)
+            );
             require(success, "Staking settlement failed");
         }
 
         // Settle unstaking batch
         if (unstakingBatchId > 0) {
-            (bool success,) = vault.call(abi.encodeWithSignature("settleUnstakingBatch(uint256)", unstakingBatchId));
+            (bool success,) = vault.call(
+                abi.encodeWithSignature(
+                    "settleUnstakingBatch(uint256,uint256,uint256,uint256)",
+                    unstakingBatchId,
+                    totalStkTokensUnstaked,
+                    totalKTokensToReturn,
+                    totalYieldToMinter
+                )
+            );
             require(success, "Unstaking settlement failed");
         }
     }

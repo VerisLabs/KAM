@@ -46,7 +46,12 @@ interface IkDNStaking {
 
     function settleBatch(uint256 batchId) external;
     function settleStakingBatch(uint256 batchId, uint256 totalKTokensStaked) external;
-    function settleUnstakingBatch(uint256 batchId, uint256 totalStkTokensUnstaked) external;
+    function settleUnstakingBatch(
+        uint256 batchId,
+        uint256 totalStkTokensUnstaked,
+        uint256 totalKTokensToReturn,
+        uint256 totalYieldToMinter
+    ) external;
 
     /*//////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS

@@ -42,10 +42,21 @@ interface IkStrategyManager {
     function settleAndAllocate(
         uint256 stakingBatchId,
         uint256 unstakingBatchId,
+        uint256 totalKTokensStaked,
+        uint256 totalStkTokensUnstaked,
+        uint256 totalKTokensToReturn,
+        uint256 totalYieldToMinter,
         DataTypes.AllocationOrder calldata order,
         bytes calldata signature
     ) external;
-    function emergencySettle(uint256 stakingBatchId, uint256 unstakingBatchId) external;
+    function emergencySettle(
+        uint256 stakingBatchId,
+        uint256 unstakingBatchId,
+        uint256 totalKTokensStaked,
+        uint256 totalStkTokensUnstaked,
+        uint256 totalKTokensToReturn,
+        uint256 totalYieldToMinter
+    ) external;
     function executeAllocation(DataTypes.AllocationOrder calldata order, bytes calldata signature) external;
     function registerAdapter(
         address adapter,

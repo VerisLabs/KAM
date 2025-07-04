@@ -570,11 +570,14 @@ contract kDNStakingVault is Initializable, UUPSUpgradeable, ERC20, OwnableRoles,
     /// @notice Settles an unstaking batch with O(1) efficiency - only updates batch state
     /// @param batchId Batch ID to settle
     /// @param totalStkTokensUnstaked Total stkTokens in the batch (from backend aggregation)
-    function settleUnstakingBatch(uint256 batchId, uint256 totalStkTokensUnstaked)
-        external
-        nonReentrant
-        onlyRoles(SETTLER_ROLE | STRATEGY_MANAGER_ROLE)
-    {
+    /// @param totalKTokensToReturn Total original kTokens to return to users
+    /// @param totalYieldToMinter Total yield to transfer back to minter pool
+    function settleUnstakingBatch(
+        uint256 batchId,
+        uint256 totalStkTokensUnstaked,
+        uint256 totalKTokensToReturn,
+        uint256 totalYieldToMinter
+    ) external nonReentrant onlyRoles(SETTLER_ROLE | STRATEGY_MANAGER_ROLE) {
         kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
 
         // Validate batch
@@ -621,24 +624,24 @@ contract kDNStakingVault is Initializable, UUPSUpgradeable, ERC20, OwnableRoles,
         uint256 currentStkTokenPrice =
             $.totalStkTokenSupply == 0 ? PRECISION : ($.totalStkTokenAssets * PRECISION) / $.totalStkTokenSupply;
 
-        // O(1) OPTIMIZATION: Calculate totals for entire batch without loops
+        // O(1) OPTIMIZATION: Use backend-calculated values for exact split
         uint256 totalAssetsValue = (totalStkTokensUnstaked * currentStkTokenPrice) / PRECISION;
 
-        // For O(1) settlement, estimate yield as 20% of total value (backend can provide exact split)
-        // In production, backend would calculate exact originalKTokens vs yieldAssets split
-        uint256 estimatedYield = totalAssetsValue / 5; // 20% yield estimate
-        uint256 estimatedOriginalTokens = totalAssetsValue - estimatedYield;
+        // Validate backend calculations
+        if (totalKTokensToReturn + totalYieldToMinter != totalAssetsValue) {
+            revert("Invalid split calculation");
+        }
 
         // O(1) STATE UPDATE: Update global accounting without loops
         $.totalStkTokenSupply -= totalStkTokensUnstaked;
         $.totalStkTokenAssets -= totalAssetsValue;
-        $.totalMinterAssets += estimatedYield; // Return yield to minter pool
+        $.totalMinterAssets += totalYieldToMinter; // Return yield to minter pool
 
         // O(1) BATCH STATE: Mark batch as settled with settlement parameters
         batch.settled = true;
         batch.stkTokenPrice = currentStkTokenPrice;
-        batch.totalKTokensToReturn = estimatedOriginalTokens;
-        batch.totalYieldToMinter = estimatedYield;
+        batch.totalKTokensToReturn = totalKTokensToReturn;
+        batch.totalYieldToMinter = totalYieldToMinter;
         $.lastSettledUnstakingBatchId = batchId;
         $.lastUnstakingSettlement = block.timestamp;
 
