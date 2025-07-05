@@ -1,24 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {BaseTest} from "../utils/BaseTest.sol";
-import {kMinter} from "../../src/kMinter.sol";
-import {kMinterProxy} from "../helpers/kMinterProxy.sol";
-import {MockkDNStaking} from "../helpers/MockkDNStaking.sol";
-import {MockToken} from "../helpers/MockToken.sol";
-import {MockkToken} from "../helpers/MockkToken.sol";
-import {kBatchReceiver} from "../../src/kBatchReceiver.sol";
-import {DataTypes} from "../../src/types/DataTypes.sol";
+import { kBatchReceiver } from "../../src/kBatchReceiver.sol";
+import { kMinter } from "../../src/kMinter.sol";
+import { DataTypes } from "../../src/types/DataTypes.sol";
+import { MockToken } from "../helpers/MockToken.sol";
+import { MockkDNStaking } from "../helpers/MockkDNStaking.sol";
+import { MockkToken } from "../helpers/MockkToken.sol";
+import { kMinterProxy } from "../helpers/kMinterProxy.sol";
+import { BaseTest } from "../utils/BaseTest.sol";
+
 import {
     ADMIN_ROLE,
+    BATCH_CUTOFF_TIME,
     EMERGENCY_ADMIN_ROLE,
     INSTITUTION_ROLE,
-    SETTLER_ROLE,
-    _100_USDC,
-    _1000_USDC,
-    _10000_USDC,
     SETTLEMENT_INTERVAL,
-    BATCH_CUTOFF_TIME
+    SETTLER_ROLE,
+    _10000_USDC,
+    _1000_USDC,
+    _100_USDC
 } from "../utils/Constants.sol";
 
 /// @title kMinter Unit Tests
@@ -173,7 +174,7 @@ contract kMinterTest is BaseTest {
         vm.prank(users.institution);
         MockToken(asset).approve(address(minter), amount);
 
-        DataTypes.MintRequest memory request = DataTypes.MintRequest({amount: amount, beneficiary: users.bob});
+        DataTypes.MintRequest memory request = DataTypes.MintRequest({ amount: amount, beneficiary: users.bob });
 
         vm.expectEmit(true, false, false, true);
         emit kMinter.Minted(users.bob, amount, 1); // First batch ID
@@ -193,7 +194,7 @@ contract kMinterTest is BaseTest {
     function test_mint_revertsIfNotInstitution() public {
         uint256 amount = _1000_USDC;
 
-        DataTypes.MintRequest memory request = DataTypes.MintRequest({amount: amount, beneficiary: users.bob});
+        DataTypes.MintRequest memory request = DataTypes.MintRequest({ amount: amount, beneficiary: users.bob });
 
         vm.expectRevert(); // OwnableRoles revert
         vm.prank(users.alice);
@@ -207,7 +208,7 @@ contract kMinterTest is BaseTest {
         vm.prank(users.emergencyAdmin);
         minter.setPaused(true);
 
-        DataTypes.MintRequest memory request = DataTypes.MintRequest({amount: amount, beneficiary: users.bob});
+        DataTypes.MintRequest memory request = DataTypes.MintRequest({ amount: amount, beneficiary: users.bob });
 
         vm.expectRevert(kMinter.Paused.selector);
         vm.prank(users.institution);
@@ -215,7 +216,7 @@ contract kMinterTest is BaseTest {
     }
 
     function test_mint_revertsIfZeroAmount() public {
-        DataTypes.MintRequest memory request = DataTypes.MintRequest({amount: 0, beneficiary: users.bob});
+        DataTypes.MintRequest memory request = DataTypes.MintRequest({ amount: 0, beneficiary: users.bob });
 
         vm.expectRevert(kMinter.ZeroAmount.selector);
         vm.prank(users.institution);
@@ -225,7 +226,7 @@ contract kMinterTest is BaseTest {
     function test_mint_revertsIfZeroBeneficiary() public {
         uint256 amount = _1000_USDC;
 
-        DataTypes.MintRequest memory request = DataTypes.MintRequest({amount: amount, beneficiary: address(0)});
+        DataTypes.MintRequest memory request = DataTypes.MintRequest({ amount: amount, beneficiary: address(0) });
 
         vm.expectRevert(kMinter.ZeroAddress.selector);
         vm.prank(users.institution);
@@ -240,7 +241,7 @@ contract kMinterTest is BaseTest {
         vm.prank(users.admin);
         minter.setKDNStaking(address(mockStaking));
 
-        DataTypes.MintRequest memory request = DataTypes.MintRequest({amount: amount, beneficiary: users.bob});
+        DataTypes.MintRequest memory request = DataTypes.MintRequest({ amount: amount, beneficiary: users.bob });
 
         vm.expectRevert(kMinter.NotAuthorizedMinter.selector);
         vm.prank(users.institution);
@@ -265,7 +266,7 @@ contract kMinterTest is BaseTest {
         address newMinter = proxyDeployer.deployAndInitialize(address(minterImpl), initData);
 
         uint256 amount = _1000_USDC;
-        DataTypes.MintRequest memory request = DataTypes.MintRequest({amount: amount, beneficiary: users.bob});
+        DataTypes.MintRequest memory request = DataTypes.MintRequest({ amount: amount, beneficiary: users.bob });
 
         vm.expectRevert(kMinter.KDNStakingNotSet.selector);
         vm.prank(users.institution);
@@ -287,7 +288,7 @@ contract kMinterTest is BaseTest {
         kToken.approve(address(minter), amount);
 
         DataTypes.RedeemRequest memory request =
-            DataTypes.RedeemRequest({amount: amount, user: users.bob, recipient: users.charlie});
+            DataTypes.RedeemRequest({ amount: amount, user: users.bob, recipient: users.charlie });
 
         vm.prank(users.institution);
         bytes32 requestId = minter.requestRedeem(request);
@@ -307,7 +308,7 @@ contract kMinterTest is BaseTest {
         uint256 amount = _1000_USDC;
 
         DataTypes.RedeemRequest memory request =
-            DataTypes.RedeemRequest({amount: amount, user: users.bob, recipient: users.charlie});
+            DataTypes.RedeemRequest({ amount: amount, user: users.bob, recipient: users.charlie });
 
         vm.expectRevert(); // OwnableRoles revert
         vm.prank(users.alice);
@@ -320,7 +321,7 @@ contract kMinterTest is BaseTest {
         // Don't mint tokens to user
 
         DataTypes.RedeemRequest memory request =
-            DataTypes.RedeemRequest({amount: amount, user: users.bob, recipient: users.charlie});
+            DataTypes.RedeemRequest({ amount: amount, user: users.bob, recipient: users.charlie });
 
         vm.expectRevert(kMinter.InsufficientBalance.selector);
         vm.prank(users.institution);
@@ -329,7 +330,7 @@ contract kMinterTest is BaseTest {
 
     function test_requestRedeem_revertsIfZeroAmount() public {
         DataTypes.RedeemRequest memory request =
-            DataTypes.RedeemRequest({amount: 0, user: users.bob, recipient: users.charlie});
+            DataTypes.RedeemRequest({ amount: 0, user: users.bob, recipient: users.charlie });
 
         vm.expectRevert(kMinter.ZeroAmount.selector);
         vm.prank(users.institution);
@@ -363,7 +364,7 @@ contract kMinterTest is BaseTest {
         kToken.approve(address(minter), amount);
 
         DataTypes.RedeemRequest memory request =
-            DataTypes.RedeemRequest({amount: amount, user: users.bob, recipient: users.charlie});
+            DataTypes.RedeemRequest({ amount: amount, user: users.bob, recipient: users.charlie });
 
         vm.prank(users.institution);
         bytes32 requestId = minter.requestRedeem(request);
@@ -404,7 +405,7 @@ contract kMinterTest is BaseTest {
         kToken.approve(address(minter), amount);
 
         DataTypes.RedeemRequest memory request =
-            DataTypes.RedeemRequest({amount: amount, user: users.bob, recipient: users.charlie});
+            DataTypes.RedeemRequest({ amount: amount, user: users.bob, recipient: users.charlie });
 
         vm.prank(users.institution);
         bytes32 requestId = minter.requestRedeem(request);
@@ -432,7 +433,7 @@ contract kMinterTest is BaseTest {
         kToken.approve(address(minter), amount);
 
         DataTypes.RedeemRequest memory request =
-            DataTypes.RedeemRequest({amount: amount, user: users.bob, recipient: users.charlie});
+            DataTypes.RedeemRequest({ amount: amount, user: users.bob, recipient: users.charlie });
 
         vm.prank(users.institution);
         bytes32 requestId = minter.requestRedeem(request);
@@ -456,7 +457,7 @@ contract kMinterTest is BaseTest {
         kToken.approve(address(minter), amount);
 
         DataTypes.RedeemRequest memory request =
-            DataTypes.RedeemRequest({amount: amount, user: users.bob, recipient: users.charlie});
+            DataTypes.RedeemRequest({ amount: amount, user: users.bob, recipient: users.charlie });
 
         vm.prank(users.institution);
         bytes32 requestId = minter.requestRedeem(request);
@@ -505,7 +506,7 @@ contract kMinterTest is BaseTest {
         kToken.approve(address(minter), amount);
 
         DataTypes.RedeemRequest memory request =
-            DataTypes.RedeemRequest({amount: amount, user: users.bob, recipient: users.charlie});
+            DataTypes.RedeemRequest({ amount: amount, user: users.bob, recipient: users.charlie });
 
         vm.prank(users.institution);
         minter.requestRedeem(request);
@@ -819,7 +820,7 @@ contract kMinterTest is BaseTest {
         kToken.approve(address(minter), amount);
 
         DataTypes.RedeemRequest memory request =
-            DataTypes.RedeemRequest({amount: amount, user: users.bob, recipient: users.charlie});
+            DataTypes.RedeemRequest({ amount: amount, user: users.bob, recipient: users.charlie });
 
         vm.prank(users.institution);
         minter.requestRedeem(request);
@@ -842,7 +843,7 @@ contract kMinterTest is BaseTest {
         uint256 balanceBefore = address(minter).balance;
 
         // Send ETH to contract
-        (bool success,) = address(minter).call{value: amount}("");
+        (bool success,) = address(minter).call{ value: amount }("");
         assertTrue(success);
 
         assertEq(address(minter).balance, balanceBefore + amount);
@@ -854,14 +855,14 @@ contract kMinterTest is BaseTest {
 
     function testFuzz_mint(uint256 amount) public {
         vm.assume(amount > 0 && amount <= type(uint96).max);
-        vm.assume(amount <= 1000000 * 1e6); // Reasonable upper limit
+        vm.assume(amount <= 1_000_000 * 1e6); // Reasonable upper limit
 
         // Give institution tokens and approve
         mintTokens(asset, users.institution, amount);
         vm.prank(users.institution);
         MockToken(asset).approve(address(minter), amount);
 
-        DataTypes.MintRequest memory request = DataTypes.MintRequest({amount: amount, beneficiary: users.bob});
+        DataTypes.MintRequest memory request = DataTypes.MintRequest({ amount: amount, beneficiary: users.bob });
 
         vm.prank(users.institution);
         minter.mint(request);
@@ -872,7 +873,7 @@ contract kMinterTest is BaseTest {
 
     function testFuzz_requestRedeem(uint256 amount) public {
         vm.assume(amount > 0 && amount <= type(uint96).max);
-        vm.assume(amount <= 1000000 * 1e6); // Reasonable upper limit
+        vm.assume(amount <= 1_000_000 * 1e6); // Reasonable upper limit
 
         // Setup: mint tokens to user
         kToken.mint(users.bob, amount);
@@ -880,7 +881,7 @@ contract kMinterTest is BaseTest {
         kToken.approve(address(minter), amount);
 
         DataTypes.RedeemRequest memory request =
-            DataTypes.RedeemRequest({amount: amount, user: users.bob, recipient: users.charlie});
+            DataTypes.RedeemRequest({ amount: amount, user: users.bob, recipient: users.charlie });
 
         vm.prank(users.institution);
         bytes32 requestId = minter.requestRedeem(request);

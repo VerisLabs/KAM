@@ -1,21 +1,23 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {BaseTest} from "../utils/BaseTest.sol";
-import {kDNStakingVault} from "../../src/kDNStakingVault.sol";
-import {kDNStakingVaultProxy} from "../helpers/kDNStakingVaultProxy.sol";
-import {MockkToken} from "../helpers/MockkToken.sol";
-import {MockToken} from "../helpers/MockToken.sol";
-import {DataTypes} from "../../src/types/DataTypes.sol";
+import { kDNStakingVault } from "../../src/kDNStakingVault.sol";
+
+import { DataTypes } from "../../src/types/DataTypes.sol";
+import { MockToken } from "../helpers/MockToken.sol";
+import { MockkToken } from "../helpers/MockkToken.sol";
+import { kDNStakingVaultProxy } from "../helpers/kDNStakingVaultProxy.sol";
+import { BaseTest } from "../utils/BaseTest.sol";
+
 import {
     ADMIN_ROLE,
     EMERGENCY_ADMIN_ROLE,
     MINTER_ROLE,
+    SETTLEMENT_INTERVAL,
     SETTLER_ROLE,
-    _100_USDC,
-    _1000_USDC,
     _10000_USDC,
-    SETTLEMENT_INTERVAL
+    _1000_USDC,
+    _100_USDC
 } from "../utils/Constants.sol";
 
 /// @title kDNStakingVault Unit Tests
@@ -258,7 +260,7 @@ contract kDNStakingVaultTest is BaseTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_requestStake_success() public {
-        uint256 amount = 1000000 * 1e6; // 1M USDC to exceed dust threshold of 1e12
+        uint256 amount = 1_000_000 * 1e6; // 1M USDC to exceed dust threshold of 1e12
 
         // Give user some kTokens
         kToken.mint(users.bob, amount);
@@ -284,7 +286,7 @@ contract kDNStakingVaultTest is BaseTest {
     }
 
     function test_requestStake_revertsIfPaused() public {
-        uint256 amount = 1000000 * 1e6; // 1M USDC
+        uint256 amount = 1_000_000 * 1e6; // 1M USDC
 
         // Pause vault
         vm.prank(users.emergencyAdmin);
@@ -300,8 +302,8 @@ contract kDNStakingVaultTest is BaseTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_requestUnstake_success() public {
-        uint256 stakeAmount = 1000000 * 1e6; // 1M USDC
-        uint256 unstakeAmount = 100000 * 1e6; // 100K USDC
+        uint256 stakeAmount = 1_000_000 * 1e6; // 1M USDC
+        uint256 unstakeAmount = 100_000 * 1e6; // 100K USDC
 
         // First add underlying assets to vault via minter deposit
         mintTokens(asset, users.institution, stakeAmount);
@@ -340,7 +342,7 @@ contract kDNStakingVaultTest is BaseTest {
     }
 
     function test_requestUnstake_revertsIfInsufficientShares() public {
-        uint256 amount = 1000000 * 1e6; // 1M USDC
+        uint256 amount = 1_000_000 * 1e6; // 1M USDC
 
         vm.expectRevert();
         vm.prank(users.bob);
@@ -384,7 +386,7 @@ contract kDNStakingVaultTest is BaseTest {
     }
 
     function test_settleStakingBatch_success() public {
-        uint256 amount = 1000000 * 1e6; // 1M USDC
+        uint256 amount = 1_000_000 * 1e6; // 1M USDC
 
         // First add underlying assets to vault via minter deposit
         mintTokens(asset, users.institution, amount);
@@ -446,7 +448,7 @@ contract kDNStakingVaultTest is BaseTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_claimStakedShares_success() public {
-        uint256 amount = 1000000 * 1e6; // 1M USDC
+        uint256 amount = 1_000_000 * 1e6; // 1M USDC
 
         // First add underlying assets to vault via minter deposit
         mintTokens(asset, users.institution, amount);
@@ -495,7 +497,7 @@ contract kDNStakingVaultTest is BaseTest {
     }
 
     function test_claimStakedShares_revertsIfAlreadyClaimed() public {
-        uint256 amount = 1000000 * 1e6; // 1M USDC
+        uint256 amount = 1_000_000 * 1e6; // 1M USDC
 
         // First add underlying assets to vault via minter deposit
         mintTokens(asset, users.institution, amount);
@@ -981,7 +983,7 @@ contract kDNStakingVaultTest is BaseTest {
 
     function testFuzz_requestMinterDeposit(uint256 amount) public {
         vm.assume(amount > 0 && amount <= type(uint96).max);
-        vm.assume(amount <= 1000000 * 1e6); // Reasonable upper limit
+        vm.assume(amount <= 1_000_000 * 1e6); // Reasonable upper limit
 
         // Give institution tokens and approve
         mintTokens(asset, users.institution, amount);
@@ -996,8 +998,7 @@ contract kDNStakingVaultTest is BaseTest {
     }
 
     function testFuzz_requestStake(uint256 amount) public {
-        vm.assume(amount > 0 && amount <= type(uint96).max);
-        vm.assume(amount >= 1000000 * 1e6 && amount <= 10000000 * 1e6); // Above dust threshold
+        amount = bound(amount, 1_000_000 * 1e6, 10_000_000 * 1e6); // 1M to 10M USDC
 
         // Give user kTokens and approve
         kToken.mint(users.bob, amount);

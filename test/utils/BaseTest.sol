@@ -1,29 +1,29 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {Test} from "forge-std/Test.sol";
-import {console2} from "forge-std/console2.sol";
+import { Test } from "forge-std/Test.sol";
+import { console2 } from "forge-std/console2.sol";
 
-import {Utilities} from "./Utilities.sol";
+import { MockToken } from "../helpers/MockToken.sol";
 import {
-    getMainnetTokens,
-    getUSDCToken,
-    USDC_MAINNET,
-    _1_USDC,
-    _10_USDC,
-    _100_USDC,
-    _1000_USDC,
-    _1_WBTC,
     ADMIN_ROLE,
+    BATCH_CUTOFF_TIME,
     EMERGENCY_ADMIN_ROLE,
     INSTITUTION_ROLE,
-    SETTLER_ROLE,
     MINTER_ROLE,
-    STRATEGY_ROLE,
     SETTLEMENT_INTERVAL,
-    BATCH_CUTOFF_TIME
+    SETTLER_ROLE,
+    STRATEGY_ROLE,
+    USDC_MAINNET,
+    _1000_USDC,
+    _100_USDC,
+    _10_USDC,
+    _1_USDC,
+    _1_WBTC,
+    getMainnetTokens,
+    getUSDCToken
 } from "./Constants.sol";
-import {MockToken} from "../helpers/MockToken.sol";
+import { Utilities } from "./Utilities.sol";
 
 /// @title BaseTest
 /// @notice Base contract for all tests with common setup and utilities
@@ -87,7 +87,7 @@ contract BaseTest is Test {
     function _setupFork() internal {
         if (useMainnetFork) {
             string memory rpcUrl = vm.envString("RPC_MAINNET");
-            mainnetFork = vm.createFork(rpcUrl, 22847000);
+            mainnetFork = vm.createFork(rpcUrl, 22_847_000);
             vm.selectFork(mainnetFork);
 
             // Use USDC as main test asset
@@ -104,9 +104,9 @@ contract BaseTest is Test {
             asset = address(mockUSDC);
 
             // Mint initial tokens to users
-            mockUSDC.mint(users.alice, 1000000 * _1_USDC); // 1M USDC
-            mockUSDC.mint(users.bob, 500000 * _1_USDC); // 500K USDC
-            mockUSDC.mint(users.institution, 10000000 * _1_USDC); // 10M USDC
+            mockUSDC.mint(users.alice, 1_000_000 * _1_USDC); // 1M USDC
+            mockUSDC.mint(users.bob, 500_000 * _1_USDC); // 500K USDC
+            mockUSDC.mint(users.institution, 10_000_000 * _1_USDC); // 10M USDC
 
             mockWBTC.mint(users.alice, 100 * _1_WBTC); // 100 WBTC
             mockWBTC.mint(users.bob, 50 * _1_WBTC); // 50 WBTC

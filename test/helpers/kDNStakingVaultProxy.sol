@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {LibClone} from "solady/utils/LibClone.sol";
+import { LibClone } from "solady/utils/LibClone.sol";
 
 /// @title kDNStakingVaultProxy
 /// @notice Helper contract to deploy kDNStakingVault via minimal proxy for testing
@@ -37,7 +37,11 @@ contract kDNStakingVaultProxy {
     /// @param salt The salt for deterministic deployment
     /// @param initData The initialization data
     /// @return proxy The address of the deployed proxy
-    function deployDeterministicAndInitialize(address implementation, bytes32 salt, bytes memory initData)
+    function deployDeterministicAndInitialize(
+        address implementation,
+        bytes32 salt,
+        bytes memory initData
+    )
         external
         returns (address proxy)
     {

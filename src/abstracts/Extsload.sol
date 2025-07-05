@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IExtsload} from "../interfaces/IExtsload.sol";
+import { IExtsload } from "../interfaces/IExtsload.sol";
 
 /// @title Extsload
 /// @notice Enables public storage access for efficient state retrieval by external contracts
@@ -25,7 +25,7 @@ abstract contract Extsload is IExtsload {
             mstore(add(memptr, 0x20), nSlots)
             memptr := add(memptr, 0x40)
             let end := add(memptr, length)
-            for {} 1 {} {
+            for { } 1 { } {
                 mstore(memptr, sload(startSlot))
                 memptr := add(memptr, 0x20)
                 startSlot := add(startSlot, 1)
@@ -45,7 +45,7 @@ abstract contract Extsload is IExtsload {
             memptr := add(memptr, 0x40)
             let end := add(memptr, shl(5, slots.length))
             let calldataptr := slots.offset
-            for {} 1 {} {
+            for { } 1 { } {
                 mstore(memptr, sload(calldataload(calldataptr)))
                 memptr := add(memptr, 0x20)
                 calldataptr := add(calldataptr, 0x20)

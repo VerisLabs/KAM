@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.30;
 
-import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 
-import {ECDSA} from "solady/utils/ECDSA.sol";
-import {EIP712} from "solady/utils/EIP712.sol";
+import { ECDSA } from "solady/utils/ECDSA.sol";
+import { EIP712 } from "solady/utils/EIP712.sol";
 
-import {Initializable} from "solady/utils/Initializable.sol";
-import {Multicallable} from "solady/utils/Multicallable.sol";
-import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
+import { Multicallable } from "solady/utils/Multicallable.sol";
+import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import {DataTypes} from "src/types/DataTypes.sol";
+import { DataTypes } from "src/types/DataTypes.sol";
 
 /// @title kStrategyManager
 /// @notice Orchestrates settlement and asset allocation across different strategies
@@ -134,7 +134,10 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         address admin_,
         address emergencyAdmin_,
         address settler_
-    ) external initializer {
+    )
+        external
+        initializer
+    {
         if (kDNStakingVault_ == address(0)) revert ZeroAddress();
         if (underlyingAsset_ == address(0)) revert ZeroAddress();
         if (owner_ == address(0)) revert ZeroAddress();
@@ -178,7 +181,12 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         uint256 totalYieldToMinter,
         DataTypes.AllocationOrder calldata order,
         bytes calldata signature
-    ) external nonReentrant whenNotPaused onlyRoles(SETTLER_ROLE) {
+    )
+        external
+        nonReentrant
+        whenNotPaused
+        onlyRoles(SETTLER_ROLE)
+    {
         kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
 
         // Check settlement interval
@@ -217,7 +225,11 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         uint256 totalStkTokensUnstaked,
         uint256 totalKTokensToReturn,
         uint256 totalYieldToMinter
-    ) external nonReentrant onlyRoles(EMERGENCY_ADMIN_ROLE) {
+    )
+        external
+        nonReentrant
+        onlyRoles(EMERGENCY_ADMIN_ROLE)
+    {
         _settleVaultBatches(
             stakingBatchId,
             unstakingBatchId,
@@ -234,7 +246,10 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
 
     /// @notice Processes asset allocation according to signed allocation order
     /// @dev Validates signature and executes distribution across specified strategy adapters
-    function executeAllocation(DataTypes.AllocationOrder calldata order, bytes calldata signature)
+    function executeAllocation(
+        DataTypes.AllocationOrder calldata order,
+        bytes calldata signature
+    )
         external
         nonReentrant
         whenNotPaused
@@ -273,7 +288,10 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         DataTypes.AdapterType adapterType,
         uint256 maxAllocation,
         address implementation
-    ) external onlyRoles(ADMIN_ROLE) {
+    )
+        external
+        onlyRoles(ADMIN_ROLE)
+    {
         if (adapter == address(0)) revert ZeroAddress();
         if (maxAllocation > 10_000) revert AllocationExceeded(); // Max 100%
 
@@ -474,7 +492,9 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         uint256 totalStkTokensUnstaked,
         uint256 totalKTokensToReturn,
         uint256 totalYieldToMinter
-    ) internal {
+    )
+        internal
+    {
         address vault = _getkStrategyManagerStorage().kDNStakingVault;
 
         // Settle staking batch

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {IkDNStaking} from "../../src/interfaces/IkDNStaking.sol";
-import {DataTypes} from "../../src/types/DataTypes.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import { IkDNStaking } from "../../src/interfaces/IkDNStaking.sol";
+import { DataTypes } from "../../src/types/DataTypes.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 /// @title MockkDNStaking
 /// @notice Mock implementation of IkDNStaking for testing kMinter
@@ -53,7 +53,11 @@ contract MockkDNStaking is IkDNStaking {
         return batchId;
     }
 
-    function requestMinterRedeem(uint256 assetAmount, address minter, address batchReceiver)
+    function requestMinterRedeem(
+        uint256 assetAmount,
+        address minter,
+        address batchReceiver
+    )
         external
         payable
         returns (uint256 batchId)
@@ -102,7 +106,9 @@ contract MockkDNStaking is IkDNStaking {
         uint256 totalStkTokensUnstaked,
         uint256 totalKTokensToReturn,
         uint256 totalYieldToMinter
-    ) external {
+    )
+        external
+    {
         settledBatches[batchId] = true;
     }
 

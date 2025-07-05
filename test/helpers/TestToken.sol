@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
-import {ERC20} from "solady/tokens/ERC20.sol";
-import {Multicallable} from "solady/utils/Multicallable.sol";
-import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { ERC20 } from "solady/tokens/ERC20.sol";
+import { Multicallable } from "solady/utils/Multicallable.sol";
+import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 /// @title TestToken
 /// @notice Simplified kToken implementation for unit testing without UUPS complexity
@@ -72,7 +72,9 @@ contract TestToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
         address admin_,
         address emergencyAdmin_,
         address minter_
-    ) external {
+    )
+        external
+    {
         if (owner_ == address(0) || admin_ == address(0) || emergencyAdmin_ == address(0)) revert ZeroAddress();
         if (minter_ == address(0)) revert ZeroAddress();
 

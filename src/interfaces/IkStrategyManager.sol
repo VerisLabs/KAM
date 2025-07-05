@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {DataTypes} from "src/types/DataTypes.sol";
+import { DataTypes } from "src/types/DataTypes.sol";
 
 /// @title IkStrategyManager
 /// @notice Interface for kStrategyManager contract
@@ -48,7 +48,8 @@ interface IkStrategyManager {
         uint256 totalYieldToMinter,
         DataTypes.AllocationOrder calldata order,
         bytes calldata signature
-    ) external;
+    )
+        external;
     function emergencySettle(
         uint256 stakingBatchId,
         uint256 unstakingBatchId,
@@ -56,14 +57,16 @@ interface IkStrategyManager {
         uint256 totalStkTokensUnstaked,
         uint256 totalKTokensToReturn,
         uint256 totalYieldToMinter
-    ) external;
+    )
+        external;
     function executeAllocation(DataTypes.AllocationOrder calldata order, bytes calldata signature) external;
     function registerAdapter(
         address adapter,
         DataTypes.AdapterType adapterType,
         uint256 maxAllocation,
         address implementation
-    ) external;
+    )
+        external;
     function updateAdapter(address adapter, bool enabled, uint256 maxAllocation) external;
     function getAdapterConfig(address adapter) external view returns (DataTypes.AdapterConfig memory);
     function getNonce(address account) external view returns (uint256);

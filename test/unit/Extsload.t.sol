@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {Test} from "forge-std/Test.sol";
-import {kMinter} from "../../src/kMinter.sol";
-import {DataTypes} from "../../src/types/DataTypes.sol";
+import { kMinter } from "../../src/kMinter.sol";
+import { DataTypes } from "../../src/types/DataTypes.sol";
+import { Test } from "forge-std/Test.sol";
 
 contract ExtsloadTest is Test {
     kMinter minter;
@@ -18,7 +18,7 @@ contract ExtsloadTest is Test {
 
     function test_extsload_singleSlot() public {
         // Set a value in storage
-        uint256 testValue = 12345;
+        uint256 testValue = 12_345;
         bytes32 slot = bytes32(uint256(KMINTER_STORAGE_LOCATION) + 5); // currentBatchId slot
         vm.store(address(minter), slot, bytes32(testValue));
 
@@ -60,7 +60,7 @@ contract ExtsloadTest is Test {
 
         testValues[0] = uint256(uint160(address(0x1234)));
         testValues[1] = 42;
-        testValues[2] = 1000000;
+        testValues[2] = 1_000_000;
 
         for (uint256 i = 0; i < slots.length; i++) {
             vm.store(address(minter), slots[i], bytes32(testValues[i]));

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity 0.8.30;
 
-import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
-import {ERC20} from "solady/tokens/ERC20.sol";
-import {Initializable} from "solady/utils/Initializable.sol";
-import {Multicallable} from "solady/utils/Multicallable.sol";
-import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { ERC20 } from "solady/tokens/ERC20.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
+import { Multicallable } from "solady/utils/Multicallable.sol";
+import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 /// @title kToken
 /// @notice ERC20 token with role-based minting and burning capabilities
@@ -105,7 +105,10 @@ contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, Reentran
         address admin_,
         address emergencyAdmin_,
         address minter_
-    ) external initializer {
+    )
+        external
+        initializer
+    {
         if (owner_ == address(0) || admin_ == address(0) || emergencyAdmin_ == address(0)) revert ZeroAddress();
         if (minter_ == address(0)) revert ZeroAddress();
 

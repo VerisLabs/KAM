@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {IERC20} from "forge-std/interfaces/IERC20.sol";
-import {StdCheats} from "forge-std/StdCheats.sol";
-import {Vm} from "forge-std/Vm.sol";
+import { StdCheats } from "forge-std/StdCheats.sol";
+import { Vm } from "forge-std/Vm.sol";
+import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 contract Utilities is StdCheats {
     address constant HEVM_ADDRESS = address(bytes20(uint160(uint256(keccak256("hevm cheat code")))));
@@ -12,9 +12,9 @@ contract Utilities is StdCheats {
     /// @dev Generates an address by hashing the name, labels the address and funds it with test assets
     function createUser(string memory name, address[] memory tokens) external returns (address payable addr) {
         addr = payable(makeAddr(name));
-        vm.deal({account: addr, newBalance: 1000 ether});
+        vm.deal({ account: addr, newBalance: 1000 ether });
         for (uint256 i; i < tokens.length;) {
-            deal({token: tokens[i], to: addr, give: 2000 * 10 ** _getDecimals(tokens[i])});
+            deal({ token: tokens[i], to: addr, give: 2000 * 10 ** _getDecimals(tokens[i]) });
             unchecked {
                 ++i;
             }
@@ -24,7 +24,7 @@ contract Utilities is StdCheats {
     /// @dev Creates a simple user with ETH balance only
     function createUser(string memory name) external returns (address payable addr) {
         addr = payable(makeAddr(name));
-        vm.deal({account: addr, newBalance: 1000 ether});
+        vm.deal({ account: addr, newBalance: 1000 ether });
     }
 
     /// @dev Moves block.number forward by a given number of blocks

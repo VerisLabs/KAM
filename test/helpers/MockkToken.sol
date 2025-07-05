@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {ERC20} from "solady/tokens/ERC20.sol";
-import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { ERC20 } from "solady/tokens/ERC20.sol";
 
 /// @title MockkToken
 /// @notice Mock kToken implementation for testing

@@ -1,6 +1,53 @@
-[profile.fork]
+[profile.default]
 src = "src"
 out = "out"
-libs = ["lib"]
+libs = ["dependencies"]
+gas_reports = ['*']
+solc_version = "0.8.30"
 
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+[profile.deploy]
+via_ir = true
+optimization_runs = 200
+                    
+[fuzz]
+runs = 1000
+max_test_rejects = 65536
+seed = '0x1'
+dictionary_weight = 40
+include_storage = true
+include_push_bytes = true
+extra_output = ["storageLayout", "metadata"]
+
+[invariant]
+runs = 256
+depth = 16
+fail_on_revert = true
+
+[fmt]
+bracket_spacing = true
+int_types = "long"
+line_length = 120
+multiline_func_header = "all"
+number_underscore = "thousands"
+quote_style = "double"
+tab_width = 4
+wrap_comments = true
+sort_imports = true
+
+[rpc_endpoints]
+mainnet = "${RPC_MAINNET}"
+
+[etherscan]
+mainnet = { key = "${ETHERSCAN_MAINNET_KEY}" }
+
+[dependencies]
+solady = "0.1.19"
+forge-std = "1.9.7"
+
+[soldeer]
+# whether soldeer manages remappings
+remappings_generated = false
+# whether soldeer re-generates all remappings when installing, updating or uninstalling deps
+remappings_regenerate = false
+# whether to suffix the remapping with the version: `name-a.b.c`
+remappings_version = false

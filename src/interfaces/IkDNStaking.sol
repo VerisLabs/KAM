@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {DataTypes} from "src/types/DataTypes.sol";
+import { DataTypes } from "src/types/DataTypes.sol";
 
 /// @title IkDNStaking
 /// @notice Interface for kDNStakingVault that manages minter operations and user staking
@@ -26,7 +26,11 @@ interface IkDNStaking {
     //////////////////////////////////////////////////////////////*/
 
     function requestMinterDeposit(uint256 assetAmount) external payable returns (uint256 batchId);
-    function requestMinterRedeem(uint256 assetAmount, address minter, address batchReceiver)
+    function requestMinterRedeem(
+        uint256 assetAmount,
+        address minter,
+        address batchReceiver
+    )
         external
         payable
         returns (uint256 batchId);
@@ -51,7 +55,8 @@ interface IkDNStaking {
         uint256 totalStkTokensUnstaked,
         uint256 totalKTokensToReturn,
         uint256 totalYieldToMinter
-    ) external;
+    )
+        external;
 
     /*//////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
