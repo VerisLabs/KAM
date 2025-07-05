@@ -24,8 +24,8 @@ jobs:
       - name: Install Foundryup and Foundry v0.3.0
         run: |
           curl -L https://foundry.paradigm.xyz | bash
-          source ~/.bashrc
-          foundryup -v 0.3.0
+          export PATH="$HOME/.foundry/bin:$PATH"
+          $HOME/.foundry/bin/foundryup -v 0.3.0
           echo "$HOME/.foundry/bin" >> $GITHUB_PATH
 
       - name: Show Forge version
