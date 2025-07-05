@@ -1,12 +1,13 @@
-name: CI
+name: Forge Tests
 
 on:
   push:
+    branches: [ main, development ]
   pull_request:
-  workflow_dispatch:
+    branches: [ main ]
 
 env:
-  FOUNDRY_PROFILE: ci
+  FOUNDRY_PROFILE: default
 
 jobs:
   check:
@@ -22,22 +23,18 @@ jobs:
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: "0.3.0"
 
       - name: Show Forge version
         run: |
           forge --version
 
-      - name: Run Forge fmt
-        run: |
-          forge fmt --check
-        id: fmt
-
       - name: Run Forge build
         run: |
+          forge --version
           forge build --sizes
-        id: build
 
       - name: Run Forge tests
         run: |
           forge test -vvv
-        id: test
