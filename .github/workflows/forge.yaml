@@ -21,24 +21,28 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Foundryup and Foundry v0.3.0
-        run: |
-          curl -L https://foundry.paradigm.xyz | bash
-          export PATH="$HOME/.foundry/bin:$PATH"
-          $HOME/.foundry/bin/foundryup -v 0.3.0
-          echo "$HOME/.foundry/bin" >> $GITHUB_PATH
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
 
       - name: Show Forge version
-        run: forge --version
+        run: |
+          forge --version
       
       - name: Install dependencies
-        run: forge soldeer install
+        run: |
+          forge soldeer install
 
       - name: Run Forge fmt
-        run: forge fmt --check
+        run: |
+          forge fmt --check
+        id: fmt
 
       - name: Run Forge build
-        run: forge build --sizes
+        run: |
+          forge build
+        id: build
 
       - name: Run Forge tests
-        run: forge test -vv
+        run: |
+          forge test -vv
+        id: test

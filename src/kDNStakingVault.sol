@@ -827,14 +827,6 @@ contract kDNStakingVault is
         return balanceOf(user);
     }
 
-    /// @notice Get user's unclaimed stkToken balance (always 0 in new model since we use proper transfers)
-    /// @param user User address
-    /// @return Always 0 since we use proper ERC20 transfers now
-    function getUnclaimedStkTokenBalance(address user) external pure returns (uint256) {
-        user; // silence warning
-        return 0; // No unclaimed balance in new model
-    }
-
     /// @notice Get total stkTokens in circulation
     /// @return Total stkToken supply
     function getTotalStkTokens() external view returns (uint256) {
@@ -906,60 +898,6 @@ contract kDNStakingVault is
     /// @param strategyManager Address to revoke role from
     function revokeStrategyManagerRole(address strategyManager) external onlyRoles(ADMIN_ROLE) {
         _removeRoles(strategyManager, STRATEGY_MANAGER_ROLE);
-    }
-
-    /// @notice Rebase stkTokens with yield (like Ethena sUSDe)
-    /// @param yieldAmount Amount of yield to distribute to stkToken holders
-    function rebaseStkTokens(uint256 yieldAmount) external onlyRoles(ADMIN_ROLE) {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-
-        if (yieldAmount == 0) revert ZeroAmount();
-        if (yieldAmount > MAX_YIELD_PER_SYNC) revert ExcessiveYield();
-
-        // Add yield to stkToken backing assets (automatic appreciation)
-        $.totalStkTokenAssets += yieldAmount;
-        $.userTotalAssets += yieldAmount;
-
-        // DO NOT reduce minter assets - yield comes from external sources
-        // Minter assets must remain 1:1 to preserve guarantee
-
-        emit VarianceRecorded(yieldAmount, true);
-    }
-
-    /// @notice Syncs yield from minter assets to user pool
-    function syncYield() external onlyRoles(ADMIN_ROLE) {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-
-        uint256 totalVaultBalance = getTotalVaultAssets();
-        uint256 accountedAssets = $.totalMinterAssets + $.userTotalAssets;
-
-        if (totalVaultBalance > accountedAssets) {
-            // Unaccounted yield exists - transfer to user pool
-            uint256 yieldAmount = totalVaultBalance - accountedAssets;
-
-            // Add validation to prevent excessive yield manipulation
-            if (yieldAmount > MAX_YIELD_PER_SYNC) revert ExcessiveYield();
-
-            $.userTotalAssets += yieldAmount;
-
-            emit VarianceRecorded(yieldAmount, true);
-        }
-    }
-
-    /// @notice Distributes yield from minter pool to user pool
-    /// @param amount Amount of yield to distribute
-    function distributeYield(uint256 amount) external onlyRoles(ADMIN_ROLE) {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-
-        if (amount == 0) revert ZeroAmount();
-        if (amount > $.totalMinterAssets) revert("Insufficient minter assets");
-
-        // Move assets from minter pool to user pool
-        $.totalMinterAssets -= amount;
-        $.userTotalAssets += amount;
-
-        // This increases user share value without changing supply
-        emit VarianceRecorded(amount, true);
     }
 
     /// @notice Transfers yield directly to user as shares

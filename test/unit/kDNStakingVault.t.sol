@@ -412,9 +412,6 @@ contract kDNStakingVaultTest is BaseTest {
 
         vm.prank(users.settler);
         vault.settleStakingBatch(1, amount);
-
-        // Note: getUnclaimedStkTokenBalance not yet implemented
-        // Check that settlement succeeded (no revert)
     }
 
     function test_settleStakingBatch_revertsIfNotSettler() public {
@@ -762,43 +759,6 @@ contract kDNStakingVaultTest is BaseTest {
         vault.setSettlementInterval(0);
     }
 
-    function test_rebaseStkTokens() public {
-        uint256 yieldAmount = _1000_USDC;
-
-        vm.prank(users.admin);
-        vault.rebaseStkTokens(yieldAmount);
-
-        // Cannot directly verify without view functions, but no revert means success
-    }
-
-    function test_syncYield() public {
-        vm.prank(users.admin);
-        vault.syncYield();
-
-        // Cannot directly verify without view functions, but no revert means success
-    }
-
-    function test_distributeYield() public {
-        uint256 amount = _1000_USDC;
-
-        // First add some assets to minter pool to have sufficient minter assets
-        mintTokens(asset, users.institution, amount);
-        vm.prank(users.institution);
-        MockToken(asset).approve(address(vault), amount);
-        vm.prank(users.institution);
-        vault.requestMinterDeposit(amount);
-
-        // Advance time and settle to actually add assets
-        vm.warp(block.timestamp + 1 hours + 1);
-        vm.prank(users.settler);
-        vault.settleBatch(1);
-
-        vm.prank(users.admin);
-        vault.distributeYield(_100_USDC); // Use smaller amount
-
-        // Cannot directly verify without view functions, but no revert means success
-    }
-
     function test_transferYieldToUser() public {
         uint256 amount = _1000_USDC;
         uint256 assets = _100_USDC;
@@ -924,18 +884,6 @@ contract kDNStakingVaultTest is BaseTest {
         vm.expectRevert();
         vm.prank(users.alice);
         vault.setSettlementInterval(2 hours);
-
-        vm.expectRevert();
-        vm.prank(users.alice);
-        vault.rebaseStkTokens(_1000_USDC);
-
-        vm.expectRevert();
-        vm.prank(users.alice);
-        vault.syncYield();
-
-        vm.expectRevert();
-        vm.prank(users.alice);
-        vault.distributeYield(_1000_USDC);
 
         vm.expectRevert();
         vm.prank(users.alice);
