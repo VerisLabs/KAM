@@ -29,12 +29,22 @@ jobs:
       - name: Show Forge version
         run: |
           forge --version
+      
+      - name: Install dependencies
+        run: |
+          forge soldeer install
+
+      - name: Run Forge fmt
+        run: |
+          forge fmt --check
+        id: fmt
 
       - name: Run Forge build
         run: |
-          forge --version
           forge build --sizes
+        id: build
 
       - name: Run Forge tests
         run: |
-          forge test -vvv
+          forge test -vv
+        id: test
