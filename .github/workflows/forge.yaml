@@ -22,6 +22,9 @@ jobs:
           submodules: recursive
 
       - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Foundry 0.3.0
         run: foundryup -v 0.3.0
 
       - name: Show Forge version
