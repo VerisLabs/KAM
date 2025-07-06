@@ -13,107 +13,31 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { Extsload } from "src/abstracts/Extsload.sol";
+
+import { MultiFacetProxy } from "src/modules/MultiFacetProxy.sol";
+import { ModuleBase } from "src/modules/base/ModuleBase.sol";
 import { DataTypes } from "src/types/DataTypes.sol";
 
 /// @title kDNStakingVault
 /// @notice Pure ERC20 vault with dual accounting for minter and user pools
-/// @dev Implements automatic yield distribution from minter to user pools
+/// @dev Implements automatic yield distribution from minter to user pools with modular architecture
 contract kDNStakingVault is
     Initializable,
     UUPSUpgradeable,
     ERC20,
-    OwnableRoles,
-    ReentrancyGuard,
+    ModuleBase,
     Multicallable,
+    MultiFacetProxy,
     Extsload
 {
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
 
-    /*//////////////////////////////////////////////////////////////
-                                ROLES
-    //////////////////////////////////////////////////////////////*/
+    // Roles, storage, and constants inherited from ModuleBase
 
-    uint256 public constant ADMIN_ROLE = _ROLE_0;
-    uint256 public constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
-    uint256 public constant MINTER_ROLE = _ROLE_2;
-    uint256 public constant SETTLER_ROLE = _ROLE_3;
-    uint256 public constant STRATEGY_MANAGER_ROLE = _ROLE_4;
-
-    /*//////////////////////////////////////////////////////////////
-                              CONSTANTS
-    //////////////////////////////////////////////////////////////*/
-
-    uint256 private constant DEFAULT_DUST_AMOUNT = 1e12;
-    uint256 private constant DEFAULT_SETTLEMENT_INTERVAL = 1 hours;
-    uint256 private constant PRECISION = 1e18; // 18 decimal precision
-    uint256 private constant MAX_YIELD_PER_SYNC = 1000e18; // Max 1000 tokens yield per sync
-
-    /*//////////////////////////////////////////////////////////////
-                              STORAGE
-    //////////////////////////////////////////////////////////////*/
-
-    /// @custom:storage-location erc7201:kDNStakingVault.storage.kDNStakingVault
-    struct kDNStakingVaultStorage {
-        string name;
-        string symbol;
-        uint8 decimals;
-        bool isPaused;
-        uint256 dustAmount;
-        address underlyingAsset;
-        address kToken;
-        // DUAL ACCOUNTING MODEL
-        // 1. Fixed 1:1 accounting for kMinter (assets = shares always)
-        mapping(address => uint256) minterAssetBalances; // 1:1 with deposited assets
-        mapping(address => int256) minterPendingNetAmounts; // Pending net amounts
-        uint256 totalMinterAssets; // Total assets under 1:1 management
-        // 2. Yield-bearing accounting for users
-        uint256 userTotalSupply; // User shares that can appreciate
-        uint256 userTotalAssets; // Assets backing user shares (can grow with yield)
-        mapping(address => uint256) userShareBalances; // User's yield-bearing shares
-        uint256 currentBatchId;
-        uint256 lastSettledBatchId;
-        mapping(uint256 => DataTypes.Batch) batches;
-        // Staking batches (kToken -> shares)
-        uint256 currentStakingBatchId;
-        uint256 lastSettledStakingBatchId;
-        mapping(uint256 => DataTypes.StakingBatch) stakingBatches;
-        // Unstaking batches (shares -> assets)
-        uint256 currentUnstakingBatchId;
-        uint256 lastSettledUnstakingBatchId;
-        mapping(uint256 => DataTypes.UnstakingBatch) unstakingBatches;
-        // stkToken tracking (rebase token for yield distribution)
-        uint256 totalStkTokenSupply; // Total stkTokens minted
-        uint256 totalStkTokenAssets; // Total assets backing stkTokens (including yield)
-        mapping(address => uint256) userStkTokenBalances; // User stkToken balances
-        mapping(address => uint256) userUnclaimedStkTokens; // Unclaimed stkTokens from requests
-        mapping(address => uint256) userOriginalKTokens; // Track original kToken amounts per user
-        uint256 totalStakedKTokens; // Total kTokens held by vault for staking
-        // Settlement configuration
-        uint256 settlementInterval;
-        uint256 lastSettlement;
-        uint256 lastStakingSettlement;
-        uint256 lastUnstakingSettlement;
-        // Variance tracking
-        uint256 totalVariance;
-        address varianceRecipient;
-        // Strategy integration moved to StrategyManager
-        address strategyManager; // StrategyManager contract address
-        // Admin yield distribution
-        uint256 pendingYieldToDistribute;
-        mapping(address => uint256) userPendingYield;
-    }
-
-    // keccak256(abi.encode(uint256(keccak256("kDNStakingVault.storage.kDNStakingVault")) - 1)) &
-    // ~bytes32(uint256(0xff))
-    bytes32 private constant KDNSTAKINGVAULT_STORAGE_LOCATION =
-        0x9d5c7e4b8f3a2d1e6f9c8b7a6d5e4f3c2b1a0e9d8c7b6a5f4e3d2c1b0a9e8d00;
-
-    function _getkDNStakingVaultStorage() private pure returns (kDNStakingVaultStorage storage $) {
-        assembly {
-            $.slot := KDNSTAKINGVAULT_STORAGE_LOCATION
-        }
-    }
+    // Metadata constants to save gas (instead of storage)
+    string private constant DEFAULT_NAME = "Kintsugi DN Staking Vault";
+    string private constant DEFAULT_SYMBOL = "kDNSV";
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
@@ -135,17 +59,6 @@ contract kDNStakingVault is
     event StkTokensIssued(address indexed user, uint256 stkTokenAmount);
     event StkTokensRedeemed(address indexed user, uint256 stkTokenAmount, uint256 kTokenAmount);
     event SharesTransferredToUser(address indexed user, address indexed fromMinter, uint256 shares);
-    event BatchSettled(
-        uint256 indexed batchId, uint256 netDeposits, uint256 netRedeems, uint256 sharesCreated, uint256 sharesBurned
-    );
-    event StakingBatchSettled(uint256 indexed batchId, uint256 totalShares, uint256 sharePrice);
-    event UnstakingBatchSettled(uint256 indexed batchId, uint256 totalAssets, uint256 assetPrice);
-    event StakingSharesClaimed(uint256 indexed batchId, uint256 requestIndex, address indexed user, uint256 shares);
-    event UnstakingAssetsClaimed(uint256 indexed batchId, uint256 requestIndex, address indexed user, uint256 assets);
-    event MinterNetted(address indexed minter, int256 netAmount, uint256 sharesAdjusted);
-    event VarianceRecorded(uint256 amount, bool positive);
-    event StrategyManagerUpdated(address indexed newStrategyManager);
-    event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
     event Initialized(
         string name,
         string symbol,
@@ -163,37 +76,15 @@ contract kDNStakingVault is
                               ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error Paused();
-    error ZeroAddress();
-    error ZeroAmount();
-    error BatchNotFound();
-    error BatchAlreadySettled();
-    error InsufficientMinterShares();
-    error InsufficientShares();
+    // Shared errors inherited from ModuleBase
     error InvalidBatchReceiver();
-    error SettlementTooEarly();
-    error AlreadyClaimed();
-    error NotBeneficiary();
-    error InvalidRequestIndex();
-    error AmountTooLarge();
-    error ExcessiveYield();
-
-    /*//////////////////////////////////////////////////////////////
-                                MODIFIERS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Ensures function cannot be called when contract is paused
-    modifier whenNotPaused() {
-        if (_getkDNStakingVaultStorage().isPaused) revert Paused();
-        _;
-    }
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Disables initializers to prevent implementation contract initialization
-    constructor() {
+    constructor() MultiFacetProxy(ADMIN_ROLE) {
         _disableInitializers();
     }
 
@@ -237,19 +128,20 @@ contract kDNStakingVault is
         _grantRoles(settler_, SETTLER_ROLE);
         _grantRoles(strategyManager_, STRATEGY_MANAGER_ROLE);
 
-        // Initialize storage
+        // Initialize storage with optimized packing
         kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
         $.underlyingAsset = asset_;
-        $.name = name_;
-        $.symbol = symbol_;
-        $.decimals = decimals_;
         $.kToken = kToken_;
         $.strategyManager = strategyManager_;
-        $.dustAmount = DEFAULT_DUST_AMOUNT;
         $.varianceRecipient = owner_;
-        $.settlementInterval = DEFAULT_SETTLEMENT_INTERVAL;
 
-        // Initialize batch IDs (start at 1)
+        // Pack configuration values efficiently
+        $.dustAmount = _safeToUint128(DEFAULT_DUST_AMOUNT);
+        $.settlementInterval = _safeToUint64(DEFAULT_SETTLEMENT_INTERVAL);
+        $.decimals = _safeToUint32(decimals_);
+        $.isPaused = false;
+
+        // Initialize batch IDs (start at 1) - packed efficiently
         $.currentBatchId = 1;
         $.currentStakingBatchId = 1;
         $.currentUnstakingBatchId = 1;
@@ -354,7 +246,7 @@ contract kDNStakingVault is
         uint256 batchId = $.currentStakingBatchId;
         DataTypes.StakingBatch storage batch = $.stakingBatches[batchId];
 
-        $.totalStakedKTokens += amount;
+        $.totalStakedKTokens += _safeToUint128(amount);
 
         // Add to batch (stkToken amount calculated at settlement)
         batch.requests.push(
@@ -370,7 +262,6 @@ contract kDNStakingVault is
         batch.totalKTokens += amount;
         requestId = batch.requests.length - 1; // Request index as ID
 
-        // External call LAST (interactions)
         $.kToken.safeTransferFrom(msg.sender, address(this), amount);
 
         emit KTokenStakingRequested(msg.sender, address(0), amount, batchId);
@@ -421,332 +312,6 @@ contract kDNStakingVault is
     }
 
     /*//////////////////////////////////////////////////////////////
-                          SETTLEMENT FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Settles a unified batch with netting
-    /// @param batchId Batch ID to settle
-    function settleBatch(uint256 batchId) external nonReentrant onlyRoles(SETTLER_ROLE) {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-
-        // Validate batch
-        if (batchId == 0 || batchId > $.currentBatchId) revert BatchNotFound();
-        if (batchId <= $.lastSettledBatchId) revert BatchAlreadySettled();
-
-        // Enforce sequential settlement
-        if (batchId != $.lastSettledBatchId + 1) revert BatchNotFound();
-
-        // Check settlement interval
-        if (block.timestamp < $.lastSettlement + $.settlementInterval) {
-            revert SettlementTooEarly();
-        }
-
-        DataTypes.Batch storage batch = $.batches[batchId];
-
-        // Calculate net flows with overflow protection
-        uint256 netDeposits = 0;
-        uint256 netRedeems = 0;
-
-        if (batch.totalDeposits > batch.totalRedeems) {
-            netDeposits = batch.totalDeposits - batch.totalRedeems;
-            // Sanity check for reasonable amounts
-            if (netDeposits > type(uint128).max) revert("Net deposits too large");
-        } else if (batch.totalRedeems > batch.totalDeposits) {
-            netRedeems = batch.totalRedeems - batch.totalDeposits;
-            // Sanity check for reasonable amounts
-            if (netRedeems > type(uint128).max) revert("Net redeems too large");
-        }
-
-        // Process based on net flow (dual accounting)
-        uint256 sharesCreated = 0;
-        uint256 sharesBurned = 0;
-
-        if (netDeposits > 0) {
-            // Net deposits: increase total minter assets (1:1)
-            // No user shares created here - only minter asset tracking
-            sharesCreated = netDeposits; // 1:1 for tracking
-        } else if (netRedeems > 0) {
-            // Net redeems: decrease total minter assets (1:1)
-            // No user shares burned here - only minter asset tracking
-            sharesBurned = netRedeems; // 1:1 for tracking
-        }
-
-        // Process each minter's net position
-        _processMinterPositions(batch, $);
-
-        // Mark batch as settled
-        batch.settled = true;
-        batch.netDeposits = netDeposits;
-        batch.netRedeems = netRedeems;
-        batch.sharesCreated = sharesCreated;
-        batch.sharesBurned = sharesBurned;
-
-        $.lastSettledBatchId = batchId;
-        $.lastSettlement = block.timestamp;
-
-        // Create new batch
-        unchecked {
-            $.currentBatchId++;
-        }
-
-        emit BatchSettled(batchId, netDeposits, netRedeems, sharesCreated, sharesBurned);
-    }
-
-    /// @notice Processes staking batch settlement by updating global state and batch parameters
-    /// @dev Validates batch sequence, applies automatic rebase, calculates stkToken price, and updates accounting
-    /// @param batchId The identifier of the staking batch to settle
-    /// @param totalKTokensStaked Aggregated amount of kTokens from all requests in the batch
-    function settleStakingBatch(
-        uint256 batchId,
-        uint256 totalKTokensStaked
-    )
-        external
-        nonReentrant
-        onlyRoles(SETTLER_ROLE | STRATEGY_MANAGER_ROLE)
-    {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-
-        // Validate batch
-        if (batchId == 0 || batchId > $.currentStakingBatchId) revert BatchNotFound();
-        if (batchId <= $.lastSettledStakingBatchId) revert BatchAlreadySettled();
-
-        // Enforce sequential settlement
-        if (batchId != $.lastSettledStakingBatchId + 1) revert BatchNotFound();
-
-        // Check settlement interval
-        if (block.timestamp < $.lastStakingSettlement + $.settlementInterval) {
-            revert SettlementTooEarly();
-        }
-
-        DataTypes.StakingBatch storage batch = $.stakingBatches[batchId];
-
-        if (totalKTokensStaked == 0) {
-            // Empty batch, just mark as settled
-            $.lastSettledStakingBatchId = batchId;
-            $.lastStakingSettlement = block.timestamp;
-            emit StakingBatchSettled(batchId, 0, 0);
-            return;
-        }
-
-        // TODO: Validate ACCOUNTING! SHOULD USE RAV!?
-        // AUTOMATIC REBASE: Update stkToken assets with real
-        uint256 totalVaultAssets = getTotalVaultAssets(); // Real assets
-        uint256 accountedAssets = $.totalMinterAssets + $.totalStkTokenAssets;
-
-        // Auto-rebase stkTokens with unaccounted yield
-        if (totalVaultAssets > accountedAssets) {
-            uint256 yield = totalVaultAssets - accountedAssets;
-            if (yield <= MAX_YIELD_PER_SYNC) {
-                // Add yield directly to stkToken pool - DO NOT reduce minter assets
-                // Yield comes from external sources (strategies), not minter funds
-                $.totalStkTokenAssets += yield;
-                $.userTotalAssets += yield;
-                emit VarianceRecorded(yield, true);
-            }
-        }
-
-        // Calculate stkToken price AFTER rebase (includes yield)
-        uint256 currentStkTokenPrice = $.totalStkTokenSupply == 0
-            ? PRECISION // 1:1 initial
-            : ($.totalStkTokenAssets * PRECISION) / $.totalStkTokenSupply;
-
-        // O(1) OPTIMIZATION: Calculate total stkTokens for entire batch
-        uint256 totalStkTokensToMint = (totalKTokensStaked * PRECISION) / currentStkTokenPrice;
-
-        // O(1) STATE UPDATE: Update global accounting without loops
-        // NOTE: kTokens were already transferred to vault in requestStake()
-        // Just update accounting to track that these assets are now in user pool
-        $.totalStkTokenAssets += totalKTokensStaked;
-        $.userTotalAssets += totalKTokensStaked;
-
-        // Mint user shares using proper ERC20 mechanism
-        // This will update userTotalSupply via _update override
-        _mint(address(this), totalStkTokensToMint);
-
-        // O(1) BATCH STATE: Mark batch as settled with settlement parameters
-        batch.settled = true;
-        batch.stkTokenPrice = currentStkTokenPrice;
-        batch.totalStkTokens = totalStkTokensToMint;
-        batch.totalAssetsFromMinter = totalKTokensStaked;
-        $.lastSettledStakingBatchId = batchId;
-        $.lastStakingSettlement = block.timestamp;
-
-        // Create new batch
-        unchecked {
-            $.currentStakingBatchId++;
-        }
-
-        emit StakingBatchSettled(batchId, totalStkTokensToMint, currentStkTokenPrice);
-    }
-
-    /// @notice Settles an unstaking batch with O(1) efficiency - only updates batch state
-    /// @param batchId Batch ID to settle
-    /// @param totalStkTokensUnstaked Total stkTokens in the batch (from backend aggregation)
-    /// @param totalKTokensToReturn Total original kTokens to return to users
-    /// @param totalYieldToMinter Total yield to transfer back to minter pool
-    function settleUnstakingBatch(
-        uint256 batchId,
-        uint256 totalStkTokensUnstaked,
-        uint256 totalKTokensToReturn,
-        uint256 totalYieldToMinter
-    )
-        external
-        nonReentrant
-        onlyRoles(SETTLER_ROLE | STRATEGY_MANAGER_ROLE)
-    {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-
-        // Validate batch
-        if (batchId == 0 || batchId > $.currentUnstakingBatchId) revert BatchNotFound();
-        if (batchId <= $.lastSettledUnstakingBatchId) revert BatchAlreadySettled();
-
-        // Enforce sequential settlement
-        if (batchId != $.lastSettledUnstakingBatchId + 1) revert BatchNotFound();
-
-        // Check settlement interval
-        if (block.timestamp < $.lastUnstakingSettlement + $.settlementInterval) {
-            revert SettlementTooEarly();
-        }
-
-        DataTypes.UnstakingBatch storage batch = $.unstakingBatches[batchId];
-
-        if (totalStkTokensUnstaked == 0) {
-            // Empty batch, just mark as settled
-            $.lastSettledUnstakingBatchId = batchId;
-            $.lastUnstakingSettlement = block.timestamp;
-            emit UnstakingBatchSettled(batchId, 0, 0);
-            return;
-        }
-
-        // AUTOMATIC REBASE: Update stkToken assets with latest performance
-        uint256 totalVaultAssets = getTotalVaultAssets(); // Real assets
-        uint256 accountedAssets = $.totalMinterAssets + $.totalStkTokenAssets;
-
-        // Auto-rebase stkTokens with unaccounted yield
-        if (totalVaultAssets > accountedAssets) {
-            uint256 Yield = totalVaultAssets - accountedAssets;
-            if (Yield <= MAX_YIELD_PER_SYNC) {
-                // Add yield directly to stkToken pool - DO NOT reduce minter assets
-                // Yield comes from external sources (strategies), not minter funds
-                $.totalStkTokenAssets += Yield;
-                $.userTotalAssets += Yield;
-                emit VarianceRecorded(Yield, true);
-            }
-        }
-
-        // Calculate current stkToken price AFTER rebase (maximum yield to users)
-        uint256 currentStkTokenPrice =
-            $.totalStkTokenSupply == 0 ? PRECISION : ($.totalStkTokenAssets * PRECISION) / $.totalStkTokenSupply;
-
-        // O(1) OPTIMIZATION: Use backend-calculated values for exact split
-        uint256 totalAssetsValue = (totalStkTokensUnstaked * currentStkTokenPrice) / PRECISION;
-
-        // Validate backend calculations
-        if (totalKTokensToReturn + totalYieldToMinter != totalAssetsValue) {
-            revert("Invalid split calculation");
-        }
-
-        // O(1) STATE UPDATE: Update global accounting without loops
-        $.totalStkTokenSupply -= totalStkTokensUnstaked;
-        $.totalStkTokenAssets -= totalAssetsValue;
-        $.totalMinterAssets += totalYieldToMinter; // Return yield to minter pool
-
-        // O(1) BATCH STATE: Mark batch as settled with settlement parameters
-        batch.settled = true;
-        batch.stkTokenPrice = currentStkTokenPrice;
-        batch.totalKTokensToReturn = totalKTokensToReturn;
-        batch.totalYieldToMinter = totalYieldToMinter;
-        $.lastSettledUnstakingBatchId = batchId;
-        $.lastUnstakingSettlement = block.timestamp;
-
-        // Create new batch
-        $.currentUnstakingBatchId++;
-
-        emit UnstakingBatchSettled(batchId, totalAssetsValue, currentStkTokenPrice);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                          CLAIM FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Claims stkTokens from a settled staking batch
-    /// @param batchId Batch ID to claim from
-    /// @param requestIndex Index of the request in the batch
-    function claimStakedShares(uint256 batchId, uint256 requestIndex) external payable nonReentrant whenNotPaused {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-
-        // Validate batch is settled
-        if (batchId > $.lastSettledStakingBatchId) revert BatchNotFound();
-
-        DataTypes.StakingBatch storage batch = $.stakingBatches[batchId];
-        if (!batch.settled) revert BatchNotFound();
-
-        // Validate request
-        if (requestIndex >= batch.requests.length) revert InvalidRequestIndex();
-
-        DataTypes.StakingRequest storage request = batch.requests[requestIndex];
-        if (request.claimed) revert AlreadyClaimed();
-
-        // Verify caller is the beneficiary
-        if (msg.sender != request.user) revert NotBeneficiary();
-
-        // Mark as claimed
-        request.claimed = true;
-
-        // Calculate stkTokens to mint based on batch settlement price
-        uint256 stkTokensToMint = (request.kTokenAmount * PRECISION) / batch.stkTokenPrice;
-
-        // O(1) CLAIM: Transfer stkTokens from vault to user using proper ERC20 transfer
-        // This will update userShareBalances via _update override
-        _transfer(address(this), request.user, stkTokensToMint);
-
-        // Track the specific kToken amount staked by this user
-        $.userOriginalKTokens[request.user] += request.kTokenAmount;
-
-        // Update batch tracking
-        batch.totalStkTokensClaimed += stkTokensToMint;
-
-        emit StakingSharesClaimed(batchId, requestIndex, request.user, stkTokensToMint);
-        emit StkTokensIssued(request.user, stkTokensToMint);
-    }
-
-    /// @notice Claims kTokens from a settled unstaking batch (yield goes to minter)
-    /// @param batchId Batch ID to claim from
-    /// @param requestIndex Index of the request in the batch
-    function claimUnstakedAssets(uint256 batchId, uint256 requestIndex) external payable nonReentrant whenNotPaused {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-
-        // Validate batch is settled
-        if (batchId > $.lastSettledUnstakingBatchId) revert BatchNotFound();
-
-        DataTypes.UnstakingBatch storage batch = $.unstakingBatches[batchId];
-        if (!batch.settled) revert BatchNotFound();
-
-        // Validate request
-        if (requestIndex >= batch.requests.length) revert InvalidRequestIndex();
-
-        DataTypes.UnstakingRequest storage request = batch.requests[requestIndex];
-        if (request.claimed) revert AlreadyClaimed();
-
-        // Verify caller is the beneficiary
-        if (msg.sender != request.user) revert NotBeneficiary();
-
-        // Mark as claimed
-        request.claimed = true;
-
-        uint256 kTokensToReturn = request.originalKTokenAmount;
-
-        $.totalStakedKTokens -= kTokensToReturn;
-        batch.totalKTokensClaimed += kTokensToReturn;
-
-        emit UnstakingAssetsClaimed(batchId, requestIndex, request.user, kTokensToReturn);
-
-        $.kToken.safeTransfer(request.user, kTokensToReturn);
-
-        // Note: yield assets already transferred to minter pool during settlement
-    }
-
-    /*//////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -773,7 +338,7 @@ contract kDNStakingVault is
 
     /// @notice Returns total user assets including automatic yield
     /// @return Total user assets including unaccounted yield
-    function getTotalUserAssets() public view returns (uint256) {
+    function getTotalUserAssets() external view returns (uint256) {
         kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
 
         uint256 userAssets = $.userTotalAssets; // Cache storage read
@@ -797,20 +362,20 @@ contract kDNStakingVault is
 
     /// @notice Returns the vault shares token name
     /// @return Token name
-    function name() public view override returns (string memory) {
-        return _getkDNStakingVaultStorage().name;
+    function name() public pure override returns (string memory) {
+        return DEFAULT_NAME;
     }
 
     /// @notice Returns the vault shares token symbol
     /// @return Token symbol
-    function symbol() public view override returns (string memory) {
-        return _getkDNStakingVaultStorage().symbol;
+    function symbol() public pure override returns (string memory) {
+        return DEFAULT_SYMBOL;
     }
 
     /// @notice Returns the vault shares token decimals
     /// @return Token decimals
     function decimals() public view override returns (uint8) {
-        return _getkDNStakingVaultStorage().decimals;
+        return uint8(_getkDNStakingVaultStorage().decimals);
     }
 
     /// @notice Get user's stkToken balance (alias for balanceOf)
@@ -849,206 +414,6 @@ contract kDNStakingVault is
     }
 
     /*//////////////////////////////////////////////////////////////
-                          ADMIN FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Grants admin role to address
-    /// @param admin Address to grant role to
-    function grantAdminRole(address admin) external onlyOwner {
-        _grantRoles(admin, ADMIN_ROLE);
-    }
-
-    /// @notice Revokes admin role from address
-    /// @param admin Address to revoke role from
-    function revokeAdminRole(address admin) external onlyOwner {
-        _removeRoles(admin, ADMIN_ROLE);
-    }
-
-    /// @notice Grants minter role to address
-    /// @param minter Address to grant role to
-    function grantMinterRole(address minter) external onlyRoles(ADMIN_ROLE) {
-        _grantRoles(minter, MINTER_ROLE);
-    }
-
-    /// @notice Revokes minter role from address
-    /// @param minter Address to revoke role from
-    function revokeMinterRole(address minter) external onlyRoles(ADMIN_ROLE) {
-        _removeRoles(minter, MINTER_ROLE);
-    }
-
-    /// @notice Grants settler role to address
-    /// @param settler Address to grant role to
-    function grantSettlerRole(address settler) external onlyRoles(ADMIN_ROLE) {
-        _grantRoles(settler, SETTLER_ROLE);
-    }
-
-    /// @notice Revokes settler role from address
-    /// @param settler Address to revoke role from
-    function revokeSettlerRole(address settler) external onlyRoles(ADMIN_ROLE) {
-        _removeRoles(settler, SETTLER_ROLE);
-    }
-
-    /// @notice Grants strategy manager role to address
-    /// @param strategyManager Address to grant role to
-    function grantStrategyManagerRole(address strategyManager) external onlyRoles(ADMIN_ROLE) {
-        _grantRoles(strategyManager, STRATEGY_MANAGER_ROLE);
-    }
-
-    /// @notice Revokes strategy manager role from address
-    /// @param strategyManager Address to revoke role from
-    function revokeStrategyManagerRole(address strategyManager) external onlyRoles(ADMIN_ROLE) {
-        _removeRoles(strategyManager, STRATEGY_MANAGER_ROLE);
-    }
-
-    /// @notice Transfers yield directly to user as shares
-    /// @param user User address to receive yield
-    /// @param assets Amount of assets to transfer as yield
-    function transferYieldToUser(address user, uint256 assets) external onlyRoles(ADMIN_ROLE) {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-
-        if (user == address(0)) revert ZeroAddress();
-        if (assets == 0) revert ZeroAmount();
-        if (assets > $.totalMinterAssets) revert("Insufficient minter assets");
-
-        // Convert assets to user shares at current rate
-        uint256 shares = _calculateShares(assets);
-
-        // Move assets from minter pool to user pool
-        $.totalMinterAssets -= assets;
-        $.userTotalAssets += assets;
-
-        // Mint new shares to user
-        _mint(user, shares);
-
-        emit SharesTransferredToUser(user, address(this), shares);
-    }
-
-    /// @notice Sets strategy manager address
-    /// @param newStrategyManager New strategy manager address
-    function setStrategyManager(address newStrategyManager) external onlyRoles(ADMIN_ROLE) {
-        if (newStrategyManager == address(0)) revert ZeroAddress();
-        _getkDNStakingVaultStorage().strategyManager = newStrategyManager;
-        _grantRoles(newStrategyManager, STRATEGY_MANAGER_ROLE);
-        emit StrategyManagerUpdated(newStrategyManager);
-    }
-
-    /// @notice Sets variance recipient address
-    /// @param newRecipient New recipient address
-    function setVarianceRecipient(address newRecipient) external onlyRoles(ADMIN_ROLE) {
-        if (newRecipient == address(0)) revert ZeroAddress();
-        _getkDNStakingVaultStorage().varianceRecipient = newRecipient;
-    }
-
-    /// @notice Sets settlement interval
-    /// @param newInterval New interval in seconds
-    function setSettlementInterval(uint256 newInterval) external onlyRoles(ADMIN_ROLE) {
-        if (newInterval == 0) revert("Invalid interval");
-        _getkDNStakingVaultStorage().settlementInterval = newInterval;
-    }
-
-    /// @notice Pauses or unpauses the contract
-    /// @param _isPaused True to pause, false to unpause
-    function setPaused(bool _isPaused) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
-        _getkDNStakingVaultStorage().isPaused = _isPaused;
-        emit PauseState(_isPaused);
-    }
-
-    /// @notice Emergency withdraws tokens when paused
-    /// @param token Token address to withdraw (use address(0) for ETH)
-    /// @param to Recipient address
-    /// @param amount Amount to withdraw
-    function emergencyWithdraw(address token, address to, uint256 amount) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
-        if (!_getkDNStakingVaultStorage().isPaused) revert("Not paused");
-        if (to == address(0)) revert ZeroAddress();
-        if (amount == 0) revert ZeroAmount();
-
-        if (token == address(0)) {
-            // Withdraw ETH
-            to.safeTransferETH(amount);
-        } else {
-            // Withdraw ERC20 token
-            token.safeTransfer(to, amount);
-        }
-
-        emit EmergencyWithdrawal(token, to, amount, msg.sender);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        INTERNAL FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Processes minter positions for batch settlement
-    /// @param batch Batch storage pointer
-    /// @param $ Storage pointer
-    function _processMinterPositions(DataTypes.Batch storage batch, kDNStakingVaultStorage storage $) private {
-        uint256 length = batch.minters.length;
-
-        address minter;
-        uint256 deposits;
-        uint256 redeems;
-
-        for (uint256 i = 0; i < length;) {
-            minter = batch.minters[i];
-            deposits = batch.depositAmounts[minter];
-            redeems = batch.redeemAmounts[minter];
-
-            if (deposits > redeems) {
-                unchecked {
-                    _processMinterDeposit(minter, deposits - redeems, $);
-                }
-            } else if (redeems > deposits) {
-                unchecked {
-                    _processMinterRedeem(minter, redeems - deposits, batch.batchReceivers[minter], $);
-                }
-            }
-
-            // Clear pending
-            $.minterPendingNetAmounts[minter] = 0;
-
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    /// @notice Processes minter deposit with 1:1 accounting
-    /// @param minter Minter address
-    /// @param netAmount Net deposit amount
-    /// @param $ Storage pointer
-    function _processMinterDeposit(address minter, uint256 netAmount, kDNStakingVaultStorage storage $) private {
-        // Use 1:1 accounting for minters
-        $.minterAssetBalances[minter] += netAmount;
-        $.totalMinterAssets += netAmount;
-        emit MinterNetted(minter, int256(netAmount), netAmount); // assets = shares for minters
-    }
-
-    /// @notice Processes minter redemption with 1:1 accounting
-    /// @param minter Minter address
-    /// @param netAmount Net redemption amount
-    /// @param batchReceiver Batch receiver address
-    /// @param $ Storage pointer
-    function _processMinterRedeem(
-        address minter,
-        uint256 netAmount,
-        address batchReceiver,
-        kDNStakingVaultStorage storage $
-    )
-        private
-    {
-        // Use 1:1 accounting for minters
-        if ($.minterAssetBalances[minter] < netAmount) {
-            revert InsufficientMinterShares();
-        }
-
-        $.minterAssetBalances[minter] -= netAmount;
-        $.totalMinterAssets -= netAmount;
-
-        $.underlyingAsset.safeTransfer(batchReceiver, netAmount);
-
-        emit MinterNetted(minter, -int256(netAmount), netAmount); // assets = shares for minters
-    }
-
-    /*//////////////////////////////////////////////////////////////
                         ERC20 OVERRIDES FOR DUAL ACCOUNTING
     //////////////////////////////////////////////////////////////*/
 
@@ -1056,7 +421,7 @@ contract kDNStakingVault is
     /// @dev Overrides ERC20 to provide user-only share accounting
     function totalSupply() public view override returns (uint256) {
         kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
-        return $.userTotalSupply;
+        return uint256($.userTotalSupply);
     }
 
     /// @notice Returns user's stkToken balance
@@ -1071,7 +436,7 @@ contract kDNStakingVault is
     function _mint(address to, uint256 value) internal override {
         kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
 
-        $.userTotalSupply += value;
+        $.userTotalSupply += _safeToUint128(value);
         $.userShareBalances[to] += value;
 
         emit Transfer(address(0), to, value);
@@ -1083,7 +448,7 @@ contract kDNStakingVault is
         kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
 
         $.userShareBalances[from] -= value;
-        $.userTotalSupply -= value;
+        $.userTotalSupply -= _safeToUint128(value);
 
         emit Transfer(from, address(0), value);
     }
@@ -1112,41 +477,63 @@ contract kDNStakingVault is
         emit Transfer(from, to, value);
     }
 
-    /// @notice Calculate shares for given assets
-    /// @param assets Assets to calculate shares for
-    /// @return Shares
-    function _calculateShares(uint256 assets) internal view returns (uint256) {
-        uint256 supply = totalSupply();
-        uint256 totalUserAssets = getTotalUserAssets();
-        return supply == 0 ? assets : (assets * supply) / totalUserAssets;
+    /*//////////////////////////////////////////////////////////////
+                        ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Grants admin role to address
+    /// @param admin Address to grant role to
+    function grantAdminRole(address admin) external onlyOwner {
+        _grantRoles(admin, ADMIN_ROLE);
     }
 
-    /// @notice Safely casts uint256 to uint96
-    /// @param value Value to cast
-    /// @return Casted uint96 value
-    function _safeToUint96(uint256 value) internal pure returns (uint96) {
-        if (value > type(uint96).max) revert AmountTooLarge();
-        return uint96(value);
-    }
-
-    /// @notice Safely casts uint256 to uint64
-    /// @param value Value to cast
-    /// @return Casted uint64 value
-    function _safeToUint64(uint256 value) internal pure returns (uint64) {
-        if (value > type(uint64).max) revert AmountTooLarge();
-        return uint64(value);
+    /// @notice Revokes admin role from address
+    /// @param admin Address to revoke role from
+    function revokeAdminRole(address admin) external onlyOwner {
+        _removeRoles(admin, ADMIN_ROLE);
     }
 
     /*//////////////////////////////////////////////////////////////
-                        UPGRADE AUTHORIZATION
+                        MULTIFACET PROXY OVERRIDES
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Authorizes contract upgrades
-    /// @dev Only callable by ADMIN_ROLE
-    /// @param newImplementation New implementation address
-    function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE) {
-        if (newImplementation == address(0)) revert ZeroAddress();
+    /// @notice Override MultiFacetProxy addFunction to use main contract's role system
+    /// @param selector The function selector to add
+    /// @param implementation The implementation contract address
+    /// @param forceOverride If true, allows overwriting existing mappings
+    function addFunction(
+        bytes4 selector,
+        address implementation,
+        bool forceOverride
+    )
+        public
+        override
+        onlyRoles(ADMIN_ROLE)
+    {
+        // Use direct mapping access instead of parent to bypass proxy admin role check
+        if (!forceOverride) {
+            if (selectorToImplementation[selector] != address(0)) revert("Selector already mapped");
+        }
+        selectorToImplementation[selector] = implementation;
     }
+
+    /// @notice Override MultiFacetProxy addFunctions to use main contract's role system
+    /// @param selectors Array of function selectors to add
+    /// @param implementation The implementation contract address
+    /// @param forceOverride If true, allows overwriting existing mappings
+    function addFunctions(bytes4[] calldata selectors, address implementation, bool forceOverride) public override {
+        for (uint256 i = 0; i < selectors.length; i++) {
+            addFunction(selectors[i], implementation, forceOverride);
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        UUPS UPGRADE
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Authorize upgrade (only owner can upgrade)
+    /// @dev This allows upgrading the main contract while keeping modules separate
+    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner { }
 
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO
@@ -1163,4 +550,11 @@ contract kDNStakingVault is
     function contractVersion() external pure returns (string memory) {
         return "1.0.0";
     }
+
+    /*//////////////////////////////////////////////////////////////
+                            RECEIVE ETH
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Accepts ETH transfers
+    receive() external payable { }
 }

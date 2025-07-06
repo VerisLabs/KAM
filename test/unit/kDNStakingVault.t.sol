@@ -3,6 +3,11 @@ pragma solidity 0.8.30;
 
 import { kDNStakingVault } from "../../src/kDNStakingVault.sol";
 
+import { AdminModule } from "../../src/modules/AdminModule.sol";
+
+import { ClaimModule } from "../../src/modules/ClaimModule.sol";
+import { SettlementModule } from "../../src/modules/SettlementModule.sol";
+
 import { DataTypes } from "../../src/types/DataTypes.sol";
 import { MockToken } from "../helpers/MockToken.sol";
 import { MockkToken } from "../helpers/MockkToken.sol";
@@ -27,6 +32,11 @@ contract kDNStakingVaultTest is BaseTest {
     kDNStakingVault internal vaultImpl;
     kDNStakingVaultProxy internal proxyDeployer;
     MockkToken internal kToken;
+
+    // Module instances for direct access in tests
+    AdminModule internal adminModule;
+    SettlementModule internal settlementModule;
+    ClaimModule internal claimModule;
 
     // Test constants
     string constant VAULT_NAME = "Kintsugi DN Staking Vault";
@@ -70,13 +80,46 @@ contract kDNStakingVaultTest is BaseTest {
         // Grant test contract minter role for setup operations
         kToken.grantRole(kToken.MINTER_ROLE(), address(this));
 
+        // Configure modules
+        _configureModules();
+
         // Grant minter role to test addresses
         vm.prank(users.admin);
-        vault.grantMinterRole(users.institution);
+        AdminModule(payable(address(vault))).grantMinterRole(users.institution);
 
         vm.label(address(vault), "kDNStakingVault_Proxy");
         vm.label(address(vaultImpl), "kDNStakingVault_Implementation");
         vm.label(address(kToken), "MockkToken");
+    }
+
+    /// @notice Configure modules for the vault
+    function _configureModules() internal {
+        // Deploy modules
+        adminModule = new AdminModule();
+        settlementModule = new SettlementModule();
+        claimModule = new ClaimModule();
+
+        // Configure module functions in the vault as admin
+        vm.startPrank(users.admin);
+
+        // Add AdminModule functions
+        bytes4[] memory adminSelectors = adminModule.selectors();
+        vault.addFunctions(adminSelectors, address(adminModule), false);
+
+        // Add SettlementModule functions
+        bytes4[] memory settlementSelectors = settlementModule.selectors();
+        vault.addFunctions(settlementSelectors, address(settlementModule), false);
+
+        // Add ClaimModule functions
+        bytes4[] memory claimSelectors = claimModule.selectors();
+        vault.addFunctions(claimSelectors, address(claimModule), false);
+
+        vm.stopPrank();
+
+        // Label modules for debugging
+        vm.label(address(adminModule), "AdminModule");
+        vm.label(address(settlementModule), "SettlementModule");
+        vm.label(address(claimModule), "ClaimModule");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -196,7 +239,7 @@ contract kDNStakingVaultTest is BaseTest {
 
         // Pause vault
         vm.prank(users.emergencyAdmin);
-        vault.setPaused(true);
+        AdminModule(payable(address(vault))).setPaused(true);
 
         vm.expectRevert();
         vm.prank(users.institution);
@@ -290,7 +333,7 @@ contract kDNStakingVaultTest is BaseTest {
 
         // Pause vault
         vm.prank(users.emergencyAdmin);
-        vault.setPaused(true);
+        AdminModule(payable(address(vault))).setPaused(true);
 
         vm.expectRevert();
         vm.prank(users.bob);
@@ -315,7 +358,7 @@ contract kDNStakingVaultTest is BaseTest {
         // Advance time and settle the deposit to add assets to vault
         vm.warp(block.timestamp + 1 hours + 1);
         vm.prank(users.settler);
-        vault.settleBatch(1);
+        SettlementModule(payable(address(vault))).settleBatch(1);
 
         // Now stake some kTokens
         kToken.mint(users.bob, stakeAmount);
@@ -329,11 +372,11 @@ contract kDNStakingVaultTest is BaseTest {
 
         // Settle staking batch to get stkTokens
         vm.prank(users.settler);
-        vault.settleStakingBatch(1, stakeAmount);
+        SettlementModule(payable(address(vault))).settleStakingBatch(1, stakeAmount);
 
         // Claim staked shares
         vm.prank(users.bob);
-        vault.claimStakedShares(1, 0);
+        ClaimModule(payable(address(vault))).claimStakedShares(1, 0);
 
         vm.prank(users.bob);
         uint256 requestId = vault.requestUnstake(unstakeAmount);
@@ -373,7 +416,7 @@ contract kDNStakingVaultTest is BaseTest {
         vm.warp(block.timestamp + 1 hours + 1);
 
         vm.prank(users.settler);
-        vault.settleBatch(1);
+        SettlementModule(payable(address(vault))).settleBatch(1);
 
         assertTrue(vault.isBatchSettled(1));
         // Note: getMinterAssetBalance not yet implemented
@@ -382,7 +425,7 @@ contract kDNStakingVaultTest is BaseTest {
     function test_settleBatch_revertsIfNotSettler() public {
         vm.expectRevert(); // OwnableRoles revert
         vm.prank(users.alice);
-        vault.settleBatch(1);
+        SettlementModule(payable(address(vault))).settleBatch(1);
     }
 
     function test_settleStakingBatch_success() public {
@@ -398,7 +441,7 @@ contract kDNStakingVaultTest is BaseTest {
         // Advance time and settle the deposit to add assets to vault
         vm.warp(block.timestamp + 1 hours + 1);
         vm.prank(users.settler);
-        vault.settleBatch(1);
+        SettlementModule(payable(address(vault))).settleBatch(1);
 
         // Now create staking request
         kToken.mint(users.bob, amount);
@@ -411,7 +454,7 @@ contract kDNStakingVaultTest is BaseTest {
         vm.warp(block.timestamp + 1 hours + 1);
 
         vm.prank(users.settler);
-        vault.settleStakingBatch(1, amount);
+        SettlementModule(payable(address(vault))).settleStakingBatch(1, amount);
     }
 
     function test_settleStakingBatch_revertsIfNotSettler() public {
@@ -419,7 +462,7 @@ contract kDNStakingVaultTest is BaseTest {
 
         vm.expectRevert(); // OwnableRoles revert
         vm.prank(users.alice);
-        vault.settleStakingBatch(1, amount);
+        SettlementModule(payable(address(vault))).settleStakingBatch(1, amount);
     }
 
     function test_settleUnstakingBatch_success() public {
@@ -429,7 +472,7 @@ contract kDNStakingVaultTest is BaseTest {
 
         vm.expectRevert(); // Should revert since there's no batch to settle
         vm.prank(users.settler);
-        vault.settleUnstakingBatch(1, amount, amount, 0);
+        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, amount);
     }
 
     function test_settleUnstakingBatch_revertsIfNotSettler() public {
@@ -437,7 +480,7 @@ contract kDNStakingVaultTest is BaseTest {
 
         vm.expectRevert(); // OwnableRoles revert
         vm.prank(users.alice);
-        vault.settleUnstakingBatch(1, amount, amount, 0);
+        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -457,7 +500,7 @@ contract kDNStakingVaultTest is BaseTest {
         // Advance time and settle the deposit to add assets to vault
         vm.warp(block.timestamp + 1 hours + 1);
         vm.prank(users.settler);
-        vault.settleBatch(1);
+        SettlementModule(payable(address(vault))).settleBatch(1);
 
         // Now stake and settle
         kToken.mint(users.bob, amount);
@@ -470,7 +513,7 @@ contract kDNStakingVaultTest is BaseTest {
         vm.warp(block.timestamp + 1 hours + 1);
 
         vm.prank(users.settler);
-        vault.settleStakingBatch(1, amount);
+        SettlementModule(payable(address(vault))).settleStakingBatch(1, amount);
 
         // Validate minter balance is tracked correctly (1:1)
         assertEq(vault.getMinterAssetBalance(users.institution), amount);
@@ -480,7 +523,7 @@ contract kDNStakingVaultTest is BaseTest {
 
         // Claim staked shares
         vm.prank(users.bob);
-        vault.claimStakedShares(1, 0);
+        ClaimModule(payable(address(vault))).claimStakedShares(1, 0);
 
         // Now Bob should have stkTokens (1:1 initially)
         uint256 bobStkTokens = vault.getStkTokenBalance(users.bob);
@@ -506,7 +549,7 @@ contract kDNStakingVaultTest is BaseTest {
         // Advance time and settle the deposit to add assets to vault
         vm.warp(block.timestamp + 1 hours + 1);
         vm.prank(users.settler);
-        vault.settleBatch(1);
+        SettlementModule(payable(address(vault))).settleBatch(1);
 
         // Stake, settle, and claim once
         kToken.mint(users.bob, amount);
@@ -519,34 +562,34 @@ contract kDNStakingVaultTest is BaseTest {
         vm.warp(block.timestamp + 1 hours + 1);
 
         vm.prank(users.settler);
-        vault.settleStakingBatch(1, amount);
+        SettlementModule(payable(address(vault))).settleStakingBatch(1, amount);
 
         vm.prank(users.bob);
-        vault.claimStakedShares(1, 0);
+        ClaimModule(payable(address(vault))).claimStakedShares(1, 0);
 
         // Try to claim again
         vm.expectRevert();
         vm.prank(users.bob);
-        vault.claimStakedShares(1, 0);
+        ClaimModule(payable(address(vault))).claimStakedShares(1, 0);
     }
 
     function test_claimUnstakedAssets_success() public {
         // Simplified test - just check that function exists with proper access control
         vm.expectRevert(); // Should revert since there's no batch to claim from
         vm.prank(users.bob);
-        vault.claimUnstakedAssets(1, 0);
+        ClaimModule(payable(address(vault))).claimUnstakedAssets(1, 0);
     }
 
     function test_claimUnstakedAssets_revertsIfAlreadyClaimed() public {
         // Simplified test - double claim should revert
         vm.expectRevert(); // Should revert since there's no batch to claim from
         vm.prank(users.bob);
-        vault.claimUnstakedAssets(1, 0);
+        ClaimModule(payable(address(vault))).claimUnstakedAssets(1, 0);
 
         // Try to claim again - should also revert
         vm.expectRevert();
         vm.prank(users.bob);
-        vault.claimUnstakedAssets(1, 0);
+        ClaimModule(payable(address(vault))).claimUnstakedAssets(1, 0);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -588,7 +631,7 @@ contract kDNStakingVaultTest is BaseTest {
         vm.warp(block.timestamp + 1 hours + 1);
 
         vm.prank(users.settler);
-        vault.settleBatch(1);
+        SettlementModule(payable(address(vault))).settleBatch(1);
 
         assertEq(vault.getTotalVaultAssets(), amount);
     }
@@ -614,7 +657,7 @@ contract kDNStakingVaultTest is BaseTest {
         // Advance time and settle the batch
         vm.warp(block.timestamp + 1 hours + 1);
         vm.prank(users.settler);
-        vault.settleBatch(1);
+        SettlementModule(payable(address(vault))).settleBatch(1);
 
         // Now should be settled
         assertTrue(vault.isBatchSettled(1));
@@ -626,7 +669,7 @@ contract kDNStakingVaultTest is BaseTest {
 
     function test_grantMinterRole() public {
         vm.prank(users.admin);
-        vault.grantMinterRole(users.bob);
+        AdminModule(payable(address(vault))).grantMinterRole(users.bob);
 
         assertTrue(vault.hasAnyRole(users.bob, MINTER_ROLE));
         assertTrue(vault.isAuthorizedMinter(users.bob));
@@ -635,10 +678,10 @@ contract kDNStakingVaultTest is BaseTest {
     function test_revokeMinterRole() public {
         // First grant role
         vm.prank(users.admin);
-        vault.grantMinterRole(users.bob);
+        AdminModule(payable(address(vault))).grantMinterRole(users.bob);
 
         vm.prank(users.admin);
-        vault.revokeMinterRole(users.bob);
+        AdminModule(payable(address(vault))).revokeMinterRole(users.bob);
 
         assertFalse(vault.hasAnyRole(users.bob, MINTER_ROLE));
         assertFalse(vault.isAuthorizedMinter(users.bob));
@@ -664,7 +707,7 @@ contract kDNStakingVaultTest is BaseTest {
 
     function test_grantSettlerRole() public {
         vm.prank(users.admin);
-        vault.grantSettlerRole(users.bob);
+        AdminModule(payable(address(vault))).grantSettlerRole(users.bob);
 
         assertTrue(vault.hasAnyRole(users.bob, SETTLER_ROLE));
     }
@@ -672,17 +715,17 @@ contract kDNStakingVaultTest is BaseTest {
     function test_revokeSettlerRole() public {
         // First grant role
         vm.prank(users.admin);
-        vault.grantSettlerRole(users.bob);
+        AdminModule(payable(address(vault))).grantSettlerRole(users.bob);
 
         vm.prank(users.admin);
-        vault.revokeSettlerRole(users.bob);
+        AdminModule(payable(address(vault))).revokeSettlerRole(users.bob);
 
         assertFalse(vault.hasAnyRole(users.bob, SETTLER_ROLE));
     }
 
     function test_grantStrategyManagerRole() public {
         vm.prank(users.admin);
-        vault.grantStrategyManagerRole(users.bob);
+        AdminModule(payable(address(vault))).grantStrategyManagerRole(users.bob);
 
         assertTrue(vault.hasAnyRole(users.bob, vault.STRATEGY_MANAGER_ROLE()));
     }
@@ -690,17 +733,17 @@ contract kDNStakingVaultTest is BaseTest {
     function test_revokeStrategyManagerRole() public {
         // First grant role
         vm.prank(users.admin);
-        vault.grantStrategyManagerRole(users.bob);
+        AdminModule(payable(address(vault))).grantStrategyManagerRole(users.bob);
 
         vm.prank(users.admin);
-        vault.revokeStrategyManagerRole(users.bob);
+        AdminModule(payable(address(vault))).revokeStrategyManagerRole(users.bob);
 
         assertFalse(vault.hasAnyRole(users.bob, vault.STRATEGY_MANAGER_ROLE()));
     }
 
     function test_setPaused() public {
         vm.prank(users.emergencyAdmin);
-        vault.setPaused(true);
+        AdminModule(payable(address(vault))).setPaused(true);
 
         // Verify operations are paused
         vm.expectRevert();
@@ -711,14 +754,14 @@ contract kDNStakingVaultTest is BaseTest {
     function test_setPaused_revertsIfNotEmergencyAdmin() public {
         vm.expectRevert(); // OwnableRoles revert
         vm.prank(users.alice);
-        vault.setPaused(true);
+        AdminModule(payable(address(vault))).setPaused(true);
     }
 
     function test_setStrategyManager() public {
         address newManager = address(0x123);
 
         vm.prank(users.admin);
-        vault.setStrategyManager(newManager);
+        AdminModule(payable(address(vault))).setStrategyManager(newManager);
 
         // Cannot directly verify without a getter, but no revert means success
     }
@@ -726,14 +769,14 @@ contract kDNStakingVaultTest is BaseTest {
     function test_setStrategyManager_revertsIfZeroAddress() public {
         vm.expectRevert();
         vm.prank(users.admin);
-        vault.setStrategyManager(address(0));
+        AdminModule(payable(address(vault))).setStrategyManager(address(0));
     }
 
     function test_setVarianceRecipient() public {
         address newRecipient = address(0x123);
 
         vm.prank(users.admin);
-        vault.setVarianceRecipient(newRecipient);
+        AdminModule(payable(address(vault))).setVarianceRecipient(newRecipient);
 
         // Cannot directly verify without a getter, but no revert means success
     }
@@ -741,14 +784,14 @@ contract kDNStakingVaultTest is BaseTest {
     function test_setVarianceRecipient_revertsIfZeroAddress() public {
         vm.expectRevert();
         vm.prank(users.admin);
-        vault.setVarianceRecipient(address(0));
+        AdminModule(payable(address(vault))).setVarianceRecipient(address(0));
     }
 
     function test_setSettlementInterval() public {
         uint256 newInterval = 2 hours;
 
         vm.prank(users.admin);
-        vault.setSettlementInterval(newInterval);
+        AdminModule(payable(address(vault))).setSettlementInterval(newInterval);
 
         // Cannot directly verify without a getter, but no revert means success
     }
@@ -756,7 +799,7 @@ contract kDNStakingVaultTest is BaseTest {
     function test_setSettlementInterval_revertsIfZero() public {
         vm.expectRevert();
         vm.prank(users.admin);
-        vault.setSettlementInterval(0);
+        AdminModule(payable(address(vault))).setSettlementInterval(0);
     }
 
     function test_transferYieldToUser() public {
@@ -773,10 +816,10 @@ contract kDNStakingVaultTest is BaseTest {
         // Advance time and settle to actually add assets
         vm.warp(block.timestamp + 1 hours + 1);
         vm.prank(users.settler);
-        vault.settleBatch(1);
+        SettlementModule(payable(address(vault))).settleBatch(1);
 
         vm.prank(users.admin);
-        vault.transferYieldToUser(users.bob, assets);
+        AdminModule(payable(address(vault))).transferYieldToUser(users.bob, assets);
 
         // Cannot directly verify without view functions, but no revert means success
     }
@@ -790,13 +833,13 @@ contract kDNStakingVaultTest is BaseTest {
 
         // Pause vault
         vm.prank(users.emergencyAdmin);
-        vault.setPaused(true);
+        AdminModule(payable(address(vault))).setPaused(true);
 
         // Give vault some tokens
         mintTokens(asset, address(vault), amount);
 
         vm.prank(users.emergencyAdmin);
-        vault.emergencyWithdraw(asset, users.treasury, amount);
+        AdminModule(payable(address(vault))).emergencyWithdraw(asset, users.treasury, amount);
 
         assertEq(MockToken(asset).balanceOf(users.treasury), amount);
     }
@@ -806,7 +849,7 @@ contract kDNStakingVaultTest is BaseTest {
 
         // Pause vault
         vm.prank(users.emergencyAdmin);
-        vault.setPaused(true);
+        AdminModule(payable(address(vault))).setPaused(true);
 
         // Give vault ETH
         vm.deal(address(vault), amount);
@@ -814,7 +857,7 @@ contract kDNStakingVaultTest is BaseTest {
         uint256 treasuryBalanceBefore = users.treasury.balance;
 
         vm.prank(users.emergencyAdmin);
-        vault.emergencyWithdraw(address(0), users.treasury, amount);
+        AdminModule(payable(address(vault))).emergencyWithdraw(address(0), users.treasury, amount);
 
         assertEq(users.treasury.balance, treasuryBalanceBefore + amount);
     }
@@ -824,7 +867,7 @@ contract kDNStakingVaultTest is BaseTest {
 
         vm.expectRevert();
         vm.prank(users.emergencyAdmin);
-        vault.emergencyWithdraw(asset, users.treasury, amount);
+        AdminModule(payable(address(vault))).emergencyWithdraw(asset, users.treasury, amount);
     }
 
     function test_emergencyWithdraw_revertsIfNotEmergencyAdmin() public {
@@ -832,11 +875,11 @@ contract kDNStakingVaultTest is BaseTest {
 
         // Pause vault
         vm.prank(users.emergencyAdmin);
-        vault.setPaused(true);
+        AdminModule(payable(address(vault))).setPaused(true);
 
         vm.expectRevert(); // OwnableRoles revert
         vm.prank(users.alice);
-        vault.emergencyWithdraw(asset, users.treasury, amount);
+        AdminModule(payable(address(vault))).emergencyWithdraw(asset, users.treasury, amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -859,35 +902,35 @@ contract kDNStakingVaultTest is BaseTest {
         // Test admin-only functions with non-admin user
         vm.expectRevert(); // OwnableRoles revert
         vm.prank(users.alice);
-        vault.grantMinterRole(users.bob);
+        AdminModule(payable(address(vault))).grantMinterRole(users.bob);
 
         vm.expectRevert();
         vm.prank(users.alice);
-        vault.revokeMinterRole(users.bob);
+        AdminModule(payable(address(vault))).revokeMinterRole(users.bob);
 
         vm.expectRevert();
         vm.prank(users.alice);
-        vault.grantSettlerRole(users.bob);
+        AdminModule(payable(address(vault))).grantSettlerRole(users.bob);
 
         vm.expectRevert();
         vm.prank(users.alice);
-        vault.revokeSettlerRole(users.bob);
+        AdminModule(payable(address(vault))).revokeSettlerRole(users.bob);
 
         vm.expectRevert();
         vm.prank(users.alice);
-        vault.setStrategyManager(address(0x123));
+        AdminModule(payable(address(vault))).setStrategyManager(address(0x123));
 
         vm.expectRevert();
         vm.prank(users.alice);
-        vault.setVarianceRecipient(address(0x123));
+        AdminModule(payable(address(vault))).setVarianceRecipient(address(0x123));
 
         vm.expectRevert();
         vm.prank(users.alice);
-        vault.setSettlementInterval(2 hours);
+        AdminModule(payable(address(vault))).setSettlementInterval(2 hours);
 
         vm.expectRevert();
         vm.prank(users.alice);
-        vault.transferYieldToUser(users.bob, _100_USDC);
+        AdminModule(payable(address(vault))).transferYieldToUser(users.bob, _100_USDC);
     }
 
     function test_ownerOnlyFunctions_revertsIfNotOwner() public {
@@ -905,15 +948,15 @@ contract kDNStakingVaultTest is BaseTest {
         // Test settler-only functions with non-settler user
         vm.expectRevert(); // OwnableRoles revert
         vm.prank(users.alice);
-        vault.settleBatch(1);
+        SettlementModule(payable(address(vault))).settleBatch(1);
 
         vm.expectRevert();
         vm.prank(users.alice);
-        vault.settleStakingBatch(1, _1000_USDC);
+        SettlementModule(payable(address(vault))).settleStakingBatch(1, _1000_USDC);
 
         vm.expectRevert();
         vm.prank(users.alice);
-        vault.settleUnstakingBatch(1, _1000_USDC, _1000_USDC, 0);
+        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, _1000_USDC);
     }
 
     function test_emergencyWithdraw_revertsIfNotPausedFirst() public {
@@ -922,7 +965,7 @@ contract kDNStakingVaultTest is BaseTest {
         // Try emergency withdraw without pausing first
         vm.expectRevert();
         vm.prank(users.emergencyAdmin);
-        vault.emergencyWithdraw(asset, users.treasury, amount);
+        AdminModule(payable(address(vault))).emergencyWithdraw(asset, users.treasury, amount);
     }
 
     /*//////////////////////////////////////////////////////////////
