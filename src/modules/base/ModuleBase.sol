@@ -151,8 +151,7 @@ abstract contract ModuleBase is OwnableRoles, ReentrancyGuard {
     /// @param value Value to cast
     /// @return Casted uint128 value
     function _safeToUint128(uint256 value) internal pure virtual returns (uint128) {
-        if (value > type(uint128).max) revert AmountTooLarge();
-        return uint128(value);
+        return SafeCastLib.toUint128(value);
     }
 
     /// @notice Safely casts uint256 to uint96 with overflow protection
@@ -173,8 +172,7 @@ abstract contract ModuleBase is OwnableRoles, ReentrancyGuard {
     /// @param value Value to cast
     /// @return Casted uint32 value
     function _safeToUint32(uint256 value) internal pure virtual returns (uint32) {
-        if (value > type(uint32).max) revert AmountTooLarge();
-        return uint32(value);
+        return SafeCastLib.toUint32(value);
     }
 
     // Module-specific functions are implemented by individual modules
