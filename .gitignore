@@ -16,6 +16,7 @@ docs/
 # AI Extensions
 .cursorrules
 CLAUDE.md
+.claude/
 
 # Soldeer
 /dependencies

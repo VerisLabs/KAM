@@ -1,15 +1,14 @@
-// SPDX-License-Identifier: Unlicensed
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 
 import { Multicallable } from "solady/utils/Multicallable.sol";
-import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
+import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 
 import { Initializable } from "solady/utils/Initializable.sol";
 import { LibBitmap } from "solady/utils/LibBitmap.sol";
 import { LibClone } from "solady/utils/LibClone.sol";
-import { LibTransient } from "solady/utils/LibTransient.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
@@ -23,12 +22,11 @@ import { DataTypes } from "src/types/DataTypes.sol";
 /// @title kMinter
 /// @notice Institutional minting and redemption manager for kTokens
 /// @dev Manages deposits/redemptions through kDNStakingVault with batch settlement
-contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard, Multicallable, Extsload {
+contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuardTransient, Multicallable, Extsload {
     using SafeTransferLib for address;
     using LibBitmap for LibBitmap.Bitmap;
     using LibClone for address;
     using SafeCastLib for uint256;
-    using LibTransient for *;
 
     /*//////////////////////////////////////////////////////////////
                                 ROLES

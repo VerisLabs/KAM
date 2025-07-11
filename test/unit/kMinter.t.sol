@@ -43,7 +43,7 @@ contract kMinterTest is BaseTest {
         // Deploy mock dependencies
         mockStaking = new MockkDNStaking();
         mockStaking.setAsset(asset); // Set the asset address
-        kToken = new MockkToken("Kintsugi USDC", "kUSDC", 6);
+        kToken = new MockkToken("KAM USDC", "kUSDC", 6);
 
         // Set up kToken mint/burn capabilities for minter
         kToken.grantRole(kToken.MINTER_ROLE(), address(this));

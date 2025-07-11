@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
+import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { DataTypes } from "src/types/DataTypes.sol";
@@ -10,7 +10,7 @@ import { DataTypes } from "src/types/DataTypes.sol";
 /// @title ModuleBase
 /// @notice Base contract for kDNStakingVault and all modules
 /// @dev Provides shared storage, roles, and common functionality
-abstract contract ModuleBase is OwnableRoles, ReentrancyGuard {
+abstract contract ModuleBase is OwnableRoles, ReentrancyGuardTransient {
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
 
@@ -130,7 +130,6 @@ abstract contract ModuleBase is OwnableRoles, ReentrancyGuard {
     error InvalidRequestIndex();
     error AlreadyClaimed();
     error NotBeneficiary();
-    error AmountTooLarge();
 
     /*//////////////////////////////////////////////////////////////
                               MODIFIERS

@@ -1,11 +1,10 @@
-// SPDX-License-Identifier: Unlicensed
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ERC20 } from "solady/tokens/ERC20.sol";
 
 import { Multicallable } from "solady/utils/Multicallable.sol";
-import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
@@ -36,8 +35,8 @@ contract kDNStakingVault is
     // Roles, storage, and constants inherited from ModuleBase
 
     // Metadata constants to save gas (instead of storage)
-    string private constant DEFAULT_NAME = "Kintsugi DN Staking Vault";
-    string private constant DEFAULT_SYMBOL = "kDNSV";
+    string private constant DEFAULT_NAME = "KAM DN Staking Vault";
+    string private constant DEFAULT_SYMBOL = "kToken";
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
@@ -88,27 +87,25 @@ contract kDNStakingVault is
         _disableInitializers();
     }
 
-    /// @notice Initializes the kDNStakingVault contract
-    /// @param name_ Vault token name (unused)
-    /// @param symbol_ Vault token symbol (unused)
+    /// @notice Initializes the kDNStakingVault contract (stack optimized)
+    /// @dev Phase 1: Core initialization without strings to avoid stack too deep
     /// @param asset_ Underlying asset address
     /// @param kToken_ kToken address
-    /// @param owner_ Address to set as owner
-    /// @param admin_ Address to grant admin role
-    /// @param emergencyAdmin_ Address to grant emergency admin role
-    /// @param settler_ Address to grant settler role
-    /// @param strategyManager_ Address to grant strategy manager role
+    /// @param owner_ Owner address
+    /// @param admin_ Admin address
+    /// @param emergencyAdmin_ Emergency admin address
+    /// @param settler_ Settler address
+    /// @param strategyManager_ Strategy manager address
+    /// @param decimals_ Token decimals
     function initialize(
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
         address asset_,
         address kToken_,
         address owner_,
         address admin_,
         address emergencyAdmin_,
         address settler_,
-        address strategyManager_
+        address strategyManager_,
+        uint8 decimals_
     )
         external
         initializer
@@ -145,10 +142,6 @@ contract kDNStakingVault is
         $.currentBatchId = 1;
         $.currentStakingBatchId = 1;
         $.currentUnstakingBatchId = 1;
-
-        emit Initialized(
-            name_, symbol_, decimals_, asset_, kToken_, owner_, admin_, emergencyAdmin_, settler_, strategyManager_
-        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -286,8 +279,8 @@ contract kDNStakingVault is
         uint256 totalAvailable = balanceOf(msg.sender);
         if (totalAvailable < stkTokenAmount) revert InsufficientShares();
 
-        // Burn stkTokens using proper ERC20 mechanism
-        _burn(msg.sender, stkTokenAmount);
+        // Transfer stkTokens to vault for safe handling during settlement process
+        _transfer(msg.sender, address(this), stkTokenAmount);
 
         // Get current unstaking batch
         uint256 batchId = $.currentUnstakingBatchId;
@@ -298,8 +291,6 @@ contract kDNStakingVault is
             DataTypes.UnstakingRequest({
                 user: msg.sender,
                 stkTokenAmount: _safeToUint96(stkTokenAmount),
-                originalKTokenAmount: 0, // Will be calculated at settlement
-                yieldAssets: 0, // Will be calculated at settlement
                 requestTimestamp: _safeToUint64(block.timestamp),
                 claimed: false
             })
@@ -332,7 +323,7 @@ contract kDNStakingVault is
     function getTotalVaultAssets() public view returns (uint256) {
         kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
 
-        // Only return vault balance - StrategyManager tracks external allocations
+        // Return kToken balance only (underlyingAsset for vault is kToken, not USDC)
         return $.underlyingAsset.balanceOf(address(this));
     }
 

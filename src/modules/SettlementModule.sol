@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { LibTransient } from "solady/utils/LibTransient.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { ModuleBase } from "src/modules/base/ModuleBase.sol";
 import { DataTypes } from "src/types/DataTypes.sol";
@@ -10,8 +10,8 @@ import { DataTypes } from "src/types/DataTypes.sol";
 /// @notice Handles all settlement operations for kDNStakingVault
 /// @dev Contains batch settlement functions for minter, staking, and unstaking operations
 contract SettlementModule is ModuleBase {
-    using LibTransient for *;
     using SafeTransferLib for address;
+    using FixedPointMathLib for uint256;
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
@@ -31,6 +31,11 @@ contract SettlementModule is ModuleBase {
     //////////////////////////////////////////////////////////////*/
 
     error SettlementTooEarly();
+    error StkTokenAssetsOverflow();
+    error UserAssetsOverflow();
+    error InsufficientMinterBacking();
+    error StkTokenSupplyOverflow();
+    error InsufficientVaultBalance();
 
     /*//////////////////////////////////////////////////////////////
                         SETTLEMENT FUNCTIONS
@@ -85,6 +90,9 @@ contract SettlementModule is ModuleBase {
 
         // Process each minter's net position
         _processMinterPositions(batch, $);
+
+        // Distribute assets to batch receivers for redemptions
+        _distributeMinterAssets(batch, $);
 
         // Mark batch as settled
         batch.settled = true;
@@ -149,29 +157,48 @@ contract SettlementModule is ModuleBase {
             uint256 yield = totalVaultAssets - accountedAssets;
             if (yield <= MAX_YIELD_PER_SYNC) {
                 // Add yield directly to stkToken pool - DO NOT reduce minter assets
-                // Yield comes from external sources (strategies), not minter funds
-                $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) + yield);
-                $.userTotalAssets = uint128(uint256($.userTotalAssets) + yield);
-                emit VarianceRecorded(yield, true);
+                // Yield comes as extra kTokens from external sources (strategies), not minter funds
+                uint256 newStkTokenAssetsYield = uint256($.totalStkTokenAssets) + yield;
+                uint256 newUserTotalAssetsYield = uint256($.userTotalAssets) + yield;
+
+                // Overflow protection before downcasting
+                if (newStkTokenAssetsYield <= type(uint128).max && newUserTotalAssetsYield <= type(uint128).max) {
+                    $.totalStkTokenAssets = uint128(newStkTokenAssetsYield);
+                    $.userTotalAssets = uint128(newUserTotalAssetsYield);
+                    emit VarianceRecorded(yield, true);
+                }
+                // If overflow would occur, skip yield distribution for safety
             }
         }
 
-        // Calculate stkToken price AFTER rebase (includes yield)
+        // Calculate stkToken price AFTER rebase (includes yield) using FixedPointMathLib
         uint256 currentStkTokenPrice = $.totalStkTokenSupply == 0
             ? PRECISION // 1:1 initial
-            : ($.totalStkTokenAssets * PRECISION) / $.totalStkTokenSupply;
+            : uint256($.totalStkTokenAssets).divWad(uint256($.totalStkTokenSupply)); // Automatic zero protection
 
-        // O(1) OPTIMIZATION: Calculate total stkTokens for entire batch
-        uint256 totalStkTokensToMint = (totalKTokensStaked * PRECISION) / currentStkTokenPrice;
+        // Calculate total stkTokens for entire batch
+        uint256 totalStkTokensToMint = totalKTokensStaked.divWad(currentStkTokenPrice);
 
-        // O(1) STATE UPDATE: Update global accounting without loops
-        // NOTE: kTokens were already transferred to vault in requestStake()
-        // Just update accounting to track that these assets are now in user pool
-        $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) + totalKTokensStaked);
-        $.userTotalAssets = uint128(uint256($.userTotalAssets) + totalKTokensStaked);
+        // Update global accounting to track assets in user pool
+        uint256 newStkTokenAssets = uint256($.totalStkTokenAssets) + totalKTokensStaked;
+        uint256 newUserTotalAssets = uint256($.userTotalAssets) + totalKTokensStaked;
 
-        // Update stkToken supply
-        $.totalStkTokenSupply = uint128(uint256($.totalStkTokenSupply) + totalStkTokensToMint);
+        // Overflow protection before downcasting
+        if (newStkTokenAssets > type(uint128).max) revert StkTokenAssetsOverflow();
+        if (newUserTotalAssets > type(uint128).max) revert UserAssetsOverflow();
+
+        $.totalStkTokenAssets = uint128(newStkTokenAssets);
+        $.userTotalAssets = uint128(newUserTotalAssets);
+
+        // Reduce minter pool by the same amount to shift backing to users
+        // This ensures yield flows to users, not minters
+        if ($.totalMinterAssets < totalKTokensStaked) revert InsufficientMinterBacking();
+        $.totalMinterAssets = uint128(uint256($.totalMinterAssets) - totalKTokensStaked);
+
+        // Update stkToken supply with overflow protection
+        uint256 newStkTokenSupply = uint256($.totalStkTokenSupply) + totalStkTokensToMint;
+        if (newStkTokenSupply > type(uint128).max) revert StkTokenSupplyOverflow();
+        $.totalStkTokenSupply = uint128(newStkTokenSupply);
 
         // O(1) BATCH STATE: Mark batch as settled with settlement parameters
         batch.settled = true;
@@ -234,31 +261,49 @@ contract SettlementModule is ModuleBase {
             uint256 yield = totalVaultAssets - accountedAssets;
             if (yield <= MAX_YIELD_PER_SYNC) {
                 // Add yield directly to stkToken pool
+                // Yield comes as extra kTokens from external sources (strategies)
                 $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) + yield);
                 $.userTotalAssets = uint128(uint256($.userTotalAssets) + yield);
                 emit VarianceRecorded(yield, true);
             }
         }
 
-        // Calculate current stkToken price AFTER rebase
-        uint256 currentStkTokenPrice = $.totalStkTokenSupply == 0
-            ? PRECISION // 1:1 initial
-            : ($.totalStkTokenAssets * PRECISION) / $.totalStkTokenSupply;
+        // Calculate effective supply - escrow pattern means totalStkTokenSupply already includes unstaked tokens
+        uint256 effectiveSupply = $.totalStkTokenSupply;
 
-        // O(1) OPTIMIZATION: Calculate total assets to distribute for entire batch
-        uint256 totalAssetsToDistribute = (totalStkTokensUnstaked * currentStkTokenPrice) / PRECISION;
+        // Calculate current stkToken price using effective supply
+        uint256 currentStkTokenPrice =
+            effectiveSupply == 0 ? PRECISION : uint256($.totalStkTokenAssets).divWad(effectiveSupply);
 
-        // O(1) STATE UPDATE: Update global accounting
-        // NOTE: stkTokens were already burned in requestUnstake()
-        // Just update asset accounting to reflect redemption
+        // Calculate total assets to distribute for entire batch
+        uint256 totalAssetsToDistribute = totalStkTokensUnstaked.mulWad(currentStkTokenPrice);
+
+        // Update global accounting
+        // Tokens remain escrowed until individual claims
+        // Settlement calculates distributions without token operations
+
+        // Update asset accounting to reflect redemption
         $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) - totalAssetsToDistribute);
         $.userTotalAssets = uint128(uint256($.userTotalAssets) - totalAssetsToDistribute);
+
+        // Calculate total original kTokens being unstaked to return to minter pool
+        uint256 totalOriginalKTokens = $.totalStakedKTokens;
+        uint256 batchOriginalKTokens = effectiveSupply == 0
+            ? 0
+            : totalStkTokensUnstaked.mulWad(uint256(totalOriginalKTokens)).divWad(effectiveSupply);
+
+        // Return original kTokens backing to minter pool (yield stays with users)
+        $.totalMinterAssets = uint128(uint256($.totalMinterAssets) + batchOriginalKTokens);
 
         // O(1) BATCH STATE: Mark batch as settled with settlement parameters
         batch.settled = true;
         batch.stkTokenPrice = currentStkTokenPrice;
         // Note: Using totalKTokensToReturn for asset distribution
         batch.totalKTokensToReturn = totalAssetsToDistribute;
+
+        // Store the ratio of original kTokens to stkTokens for efficient claims
+        batch.originalKTokenRatio = effectiveSupply == 0 ? 0 : uint256(totalOriginalKTokens).divWad(effectiveSupply);
+
         $.lastSettledUnstakingBatchId = uint64(batchId);
         $.lastUnstakingSettlement = uint64(block.timestamp);
 
@@ -300,10 +345,37 @@ contract SettlementModule is ModuleBase {
         }
     }
 
+    /// @notice Internal function to distribute assets to batch receivers for net redemptions
+    /// @param batch The batch being settled
+    /// @param $ Storage reference
+    function _distributeMinterAssets(DataTypes.Batch storage batch, kDNStakingVaultStorage storage $) internal {
+        // Only process if there are net redeems
+        if (batch.netRedeems == 0) return;
+
+        // Validate vault has sufficient assets
+        uint256 vaultBalance = $.underlyingAsset.balanceOf(address(this));
+        if (vaultBalance < batch.netRedeems) revert InsufficientVaultBalance();
+
+        // Distribute assets to each minter's batch receiver
+        for (uint256 i = 0; i < batch.minters.length; i++) {
+            address minter = batch.minters[i];
+            uint256 redeemAmount = batch.redeemAmounts[minter];
+
+            if (redeemAmount > 0) {
+                address batchReceiver = batch.batchReceivers[minter];
+                if (batchReceiver != address(0)) {
+                    // Transfer assets to the batch receiver
+                    $.underlyingAsset.safeTransfer(batchReceiver, redeemAmount);
+                }
+            }
+        }
+    }
+
     /// @notice Returns total vault assets (real balance)
     /// @param $ Storage reference
     /// @return Total assets in the vault
     function _getTotalVaultAssets(kDNStakingVaultStorage storage $) internal view returns (uint256) {
+        // Return kToken balance only (underlyingAsset for vault is kToken, not USDC)
         return $.underlyingAsset.balanceOf(address(this));
     }
 

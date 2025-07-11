@@ -6,7 +6,7 @@
 
 > **Dual-Flow kToken Protocol with Modular Architecture & Automatic Yield Distribution**
 
-kTokens is a next-generation protocol providing 1:1 asset backing for institutions while enabling automatic yield distribution to retail users through a dual accounting model. The protocol features a consolidated modular architecture for contract size optimization, Solady's gas-optimized libraries, and Uniswap v4's Extsload pattern for maximum efficiency.
+kTokens is a next-generation protocol providing 1:1 asset backing for institutions while enabling automatic yield distribution to retail users through a dual accounting model. The protocol features a consolidated modular architecture for contract size optimization, Solady's mathematical libraries with overflow protection and automatic zero-division safety, and enhanced escrow patterns for fund security.
 
 ## 🎯 Overview
 
@@ -83,7 +83,9 @@ kTokens is a next-generation protocol providing 1:1 asset backing for institutio
 - **Yield Model:** Automatic yield distribution from minter assets to user shares
 - **Dual Accounting:** Separate 1:1 minter accounting from yield-bearing user accounting
 - **Batch Settlement:** Bitmap-based eligibility and status tracking for ultra-low gas batch settlement
-- **Testing:** Foundry test suite (unit, integration, invariant, fork)
+- **Mathematical Safety:** Solady FixedPointMathLib with automatic overflow protection and zero-division safety
+- **Escrow Security:** Enhanced escrow pattern preventing fund loss during settlement failures
+- **Testing:** Foundry test suite (unit, integration, invariant, fork) with comprehensive edge case coverage
 - **Storage Access:** Extsload pattern for efficient frontend data queries
 
 ## 🚀 Quick Start

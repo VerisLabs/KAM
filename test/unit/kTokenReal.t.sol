@@ -17,7 +17,7 @@ contract kTokenRealTest is BaseTest {
     kTokenProxy internal proxyDeployer;
 
     // Test constants
-    string constant TOKEN_NAME = "Kintsugi USDC";
+    string constant TOKEN_NAME = "KAM USDC";
     string constant TOKEN_SYMBOL = "kUSDC";
     uint8 constant TOKEN_DECIMALS = 6;
 
@@ -33,18 +33,20 @@ contract kTokenRealTest is BaseTest {
         // Prepare initialization data
         bytes memory initData = abi.encodeWithSelector(
             kToken.initialize.selector,
-            TOKEN_NAME,
-            TOKEN_SYMBOL,
-            TOKEN_DECIMALS,
             users.alice, // owner
             users.admin, // admin
             users.emergencyAdmin, // emergency admin
-            users.institution // minter
+            users.institution, // minter
+            TOKEN_DECIMALS
         );
 
         // Deploy and initialize proxy
         address proxyAddress = proxyDeployer.deployAndInitialize(address(tokenImpl), initData);
         token = kToken(proxyAddress);
+
+        // Setup metadata separately
+        vm.prank(users.admin);
+        token.setupMetadata(TOKEN_NAME, TOKEN_SYMBOL);
 
         vm.label(address(token), "kToken_Proxy");
         vm.label(address(tokenImpl), "kToken_Implementation");
@@ -61,9 +63,7 @@ contract kTokenRealTest is BaseTest {
 
         // Try to initialize implementation directly (should fail)
         vm.expectRevert();
-        tokenImpl.initialize(
-            TOKEN_NAME, TOKEN_SYMBOL, TOKEN_DECIMALS, users.alice, users.admin, users.emergencyAdmin, users.institution
-        );
+        tokenImpl.initialize(users.alice, users.admin, users.emergencyAdmin, users.institution, TOKEN_DECIMALS);
     }
 
     function test_initialize_success() public {
@@ -81,9 +81,7 @@ contract kTokenRealTest is BaseTest {
     function test_initialize_revertsOnDoubleInit() public {
         // Try to initialize again (should fail)
         vm.expectRevert();
-        token.initialize(
-            TOKEN_NAME, TOKEN_SYMBOL, TOKEN_DECIMALS, users.alice, users.admin, users.emergencyAdmin, users.institution
-        );
+        token.initialize(users.alice, users.admin, users.emergencyAdmin, users.institution, TOKEN_DECIMALS);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -540,21 +538,17 @@ contract kTokenRealTest is BaseTest {
 
         // Deploy new proxy with new implementation
         bytes memory initData = abi.encodeWithSelector(
-            kToken.initialize.selector,
-            "New Token",
-            "NEW",
-            18,
-            users.alice,
-            users.admin,
-            users.emergencyAdmin,
-            users.institution
+            kToken.initialize.selector, users.alice, users.admin, users.emergencyAdmin, users.institution, 18
         );
 
         address newProxy = proxyDeployer.deployAndInitialize(address(newImpl), initData);
         assertTrue(newProxy != address(0));
 
-        // Verify new implementation works
+        // Setup metadata and verify new implementation works
         kToken newToken = kToken(newProxy);
+        vm.prank(users.admin);
+        newToken.setupMetadata("New Token", "NEW");
+
         assertEq(newToken.name(), "New Token");
         assertEq(newToken.symbol(), "NEW");
         assertEq(newToken.decimals(), 18);

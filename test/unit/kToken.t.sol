@@ -16,7 +16,7 @@ contract kTokenTest is BaseTest {
     kToken internal tokenImpl;
 
     // Test constants
-    string constant TOKEN_NAME = "Kintsugi USDC";
+    string constant TOKEN_NAME = "KAM USDC";
     string constant TOKEN_SYMBOL = "kUSDC";
     uint8 constant TOKEN_DECIMALS = 6;
 
