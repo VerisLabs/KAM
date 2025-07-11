@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { ModuleBase } from "src/modules/base/ModuleBase.sol";
 import { DataTypes } from "src/types/DataTypes.sol";
@@ -10,6 +11,7 @@ import { DataTypes } from "src/types/DataTypes.sol";
 /// @dev Contains claim functions for staking and unstaking operations
 contract ClaimModule is ModuleBase {
     using SafeTransferLib for address;
+    using FixedPointMathLib for uint256;
 
     // Constants inherited from ModuleBase
 
@@ -20,6 +22,7 @@ contract ClaimModule is ModuleBase {
     event StakingSharesClaimed(uint256 indexed batchId, uint256 requestIndex, address indexed user, uint256 shares);
     event UnstakingAssetsClaimed(uint256 indexed batchId, uint256 requestIndex, address indexed user, uint256 assets);
     event StkTokensIssued(address indexed user, uint256 stkTokenAmount);
+    event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
 
     /*//////////////////////////////////////////////////////////////
                           CLAIM FUNCTIONS
@@ -50,10 +53,9 @@ contract ClaimModule is ModuleBase {
         request.claimed = true;
 
         // Calculate stkTokens to mint based on batch settlement price
-        uint256 stkTokensToMint = (request.kTokenAmount * PRECISION) / batch.stkTokenPrice;
+        uint256 stkTokensToMint = uint256(request.kTokenAmount).divWad(batch.stkTokenPrice);
 
-        // O(1) CLAIM: Direct storage update for stkTokens transfer from vault to user
-        // Update user share balances directly in the modular architecture
+        // Update user share balances
         $.userTotalSupply = uint128(uint256($.userTotalSupply) + stkTokensToMint);
         $.userShareBalances[request.user] += stkTokensToMint;
 
@@ -91,16 +93,28 @@ contract ClaimModule is ModuleBase {
         // Mark as claimed
         request.claimed = true;
 
-        uint256 kTokensToReturn = request.originalKTokenAmount;
+        // Burn the user's escrowed stkTokens from vault balance
+        $.userTotalSupply = uint128(uint256($.userTotalSupply) - uint256(request.stkTokenAmount));
+        $.userShareBalances[address(this)] -= uint256(request.stkTokenAmount);
 
-        $.totalStakedKTokens = uint128(uint256($.totalStakedKTokens) - kTokensToReturn);
-        batch.totalKTokensClaimed += kTokensToReturn;
+        // Calculate user's share using batch-level ratio
+        uint256 originalKTokens = uint256(request.stkTokenAmount).mulWad(batch.originalKTokenRatio);
 
-        emit UnstakingAssetsClaimed(batchId, requestIndex, request.user, kTokensToReturn);
+        // Calculate total kTokens to return including yield with user-favorable rounding
+        uint256 totalKTokensToReturn = uint256(request.stkTokenAmount).mulWadUp(batch.stkTokenPrice);
 
-        $.kToken.safeTransfer(request.user, kTokensToReturn);
+        // Update accounting
+        $.totalStakedKTokens = uint128(uint256($.totalStakedKTokens) - originalKTokens);
+        batch.totalKTokensClaimed += totalKTokensToReturn;
 
-        // Note: yield assets already transferred to minter pool during settlement
+        // Decrement user's original kTokens tracking
+        $.userOriginalKTokens[request.user] -= originalKTokens;
+
+        emit UnstakingAssetsClaimed(batchId, requestIndex, request.user, totalKTokensToReturn);
+        emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensToReturn);
+
+        // Transfer total kTokens (original + yield) to user
+        $.kToken.safeTransfer(request.user, totalKTokensToReturn);
     }
 
     /*//////////////////////////////////////////////////////////////

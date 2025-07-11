@@ -75,7 +75,9 @@ contract TestToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     )
         external
     {
-        if (owner_ == address(0) || admin_ == address(0) || emergencyAdmin_ == address(0)) revert ZeroAddress();
+        if (owner_ == address(0) || admin_ == address(0) || emergencyAdmin_ == address(0)) {
+            revert ZeroAddress();
+        }
         if (minter_ == address(0)) revert ZeroAddress();
 
         // Initialize ownership and roles

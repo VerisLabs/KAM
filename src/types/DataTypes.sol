@@ -15,7 +15,7 @@ library DataTypes {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        KMINTER STRUCTS
+                        INITIALIZATION STRUCTS
     //////////////////////////////////////////////////////////////*/
 
     struct InitParams {
@@ -28,6 +28,25 @@ library DataTypes {
         address settler;
         address manager;
         uint256 settlementInterval;
+    }
+
+    struct kTokenInitParams {
+        uint8 decimals;
+        address owner;
+        address admin;
+        address emergencyAdmin;
+        address minter;
+    }
+
+    struct kDNStakingVaultInitParams {
+        uint8 decimals;
+        address asset;
+        address kToken;
+        address owner;
+        address admin;
+        address emergencyAdmin;
+        address settler;
+        address strategyManager;
     }
 
     struct MintRequest {
@@ -100,8 +119,6 @@ library DataTypes {
     struct UnstakingRequest {
         address user;
         uint96 stkTokenAmount;
-        uint96 originalKTokenAmount;
-        uint96 yieldAssets;
         uint64 requestTimestamp;
         bool claimed;
     }
@@ -113,6 +130,7 @@ library DataTypes {
         uint256 totalKTokensToReturn;
         uint256 totalYieldToMinter;
         uint256 totalKTokensClaimed;
+        uint256 originalKTokenRatio; // Ratio of original kTokens to stkTokens (scaled by PRECISION)
         bool settled;
     }
 

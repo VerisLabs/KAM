@@ -91,19 +91,17 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
         // Deploy proxy deployer
         proxyDeployer = new kDNStakingVaultProxy();
 
-        // Prepare initialization data
+        // Prepare initialization data for new signature
         bytes memory initData = abi.encodeWithSelector(
             kDNStakingVault.initialize.selector,
-            "KAM DN Staking Vault",
-            "kDNSV",
-            6,
-            address(asset),
-            address(testKToken),
-            alice, // owner
-            admin, // admin
-            emergencyAdmin, // emergency admin
-            settler, // settler
-            alice // strategy manager
+            address(asset), // asset_
+            address(testKToken), // kToken_
+            alice, // owner_
+            admin, // admin_
+            emergencyAdmin, // emergencyAdmin_
+            settler, // settler_
+            alice, // strategyManager_
+            6 // decimals_
         );
 
         // Deploy and initialize proxy
@@ -135,15 +133,15 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
 
         console2.log("Module configuration completed successfully!");
 
+        // Set up handlers first
+        vaultHandler = new kDNStakingVaultHandler(vault, kToken(address(testKToken)), asset);
+
         // Grant roles using properly configured AdminModule interface
         vm.startPrank(admin);
         // admin already has ADMIN_ROLE from initialization (roles: 1)
         testKToken.grantMinterRole(address(vault)); // Grant minter role to vault
         testKToken.grantMinterRole(address(vaultHandler)); // Grant minter role to handler
         vm.stopPrank();
-
-        // Set up handlers
-        vaultHandler = new kDNStakingVaultHandler(vault, kToken(address(testKToken)), asset);
 
         // Target contracts for invariant testing
         targetContract(address(vaultHandler));
@@ -202,6 +200,26 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
     /// @dev stkToken bounds
     function invariant_StkTokenBounds() public view {
         vaultHandler.INVARIANT_STKTOKEN_BOUNDS();
+    }
+
+    /// @dev CRITICAL: Peg protection - validates the unstaking settlement fix
+    function invariant_PegProtection() public view {
+        vaultHandler.INVARIANT_PEG_PROTECTION();
+    }
+
+    /// @dev Enhanced dual accounting using data provider
+    function invariant_EnhancedDualAccounting() public view {
+        vaultHandler.INVARIANT_ENHANCED_DUAL_ACCOUNTING();
+    }
+
+    /// @dev Unstaking claim validation
+    function invariant_UnstakingClaimTotals() public view {
+        vaultHandler.INVARIANT_UNSTAKING_CLAIM_TOTALS();
+    }
+
+    /// @dev Escrow safety validation
+    function invariant_EscrowSafety() public view {
+        vaultHandler.INVARIANT_ESCROW_SAFETY();
     }
 
     ////////////////////////////////////////////////////////////////

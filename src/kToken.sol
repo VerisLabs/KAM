@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Unlicensed
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
@@ -88,28 +88,26 @@ contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, Reentran
         _disableInitializers();
     }
 
-    /// @notice Initializes the kToken contract with token metadata and role assignments
-    /// @dev Sets up ERC20 metadata, grants roles, and validates all parameters are non-zero addresses
-    /// @param name_ The name of the token
-    /// @param symbol_ The symbol of the token
-    /// @param decimals_ The number of decimals for the token
-    /// @param owner_ Address that will own the contract
-    /// @param admin_ Address that will have admin privileges
-    /// @param emergencyAdmin_ Address that will have emergency admin privileges
-    /// @param minter_ Address that will have minting and burning privileges
+    /// @notice Initializes the kToken contract (stack optimized - no strings)
+    /// @dev Sets up roles and basic config. Call setupMetadata separately for name/symbol
+    /// @param owner_ Owner address
+    /// @param admin_ Admin address
+    /// @param emergencyAdmin_ Emergency admin address
+    /// @param minter_ Minter address
+    /// @param decimals_ Token decimals
     function initialize(
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
         address owner_,
         address admin_,
         address emergencyAdmin_,
-        address minter_
+        address minter_,
+        uint8 decimals_
     )
         external
         initializer
     {
-        if (owner_ == address(0) || admin_ == address(0) || emergencyAdmin_ == address(0)) revert ZeroAddress();
+        if (owner_ == address(0) || admin_ == address(0) || emergencyAdmin_ == address(0)) {
+            revert ZeroAddress();
+        }
         if (minter_ == address(0)) revert ZeroAddress();
 
         // Initialize ownership and roles
@@ -118,13 +116,21 @@ contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, Reentran
         _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);
         _grantRoles(minter_, MINTER_ROLE);
 
-        // Initialize storage
+        // Initialize basic storage (no strings to avoid stack issues)
+        kTokenStorage storage $ = _getkTokenStorage();
+        $._decimals = decimals_;
+    }
+
+    /// @notice Sets token metadata (separate call to avoid stack too deep)
+    /// @dev Must be called after initialize, only by admin
+    /// @param name_ Token name
+    /// @param symbol_ Token symbol
+    function setupMetadata(string calldata name_, string calldata symbol_) external onlyRoles(ADMIN_ROLE) {
         kTokenStorage storage $ = _getkTokenStorage();
         $._name = name_;
         $._symbol = symbol_;
-        $._decimals = decimals_;
 
-        emit TokenInitialized(name_, symbol_, decimals_);
+        emit TokenInitialized(name_, symbol_, $._decimals);
     }
 
     /*//////////////////////////////////////////////////////////////

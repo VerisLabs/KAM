@@ -4,6 +4,9 @@ out = "out"
 libs = ["dependencies"]
 gas_reports = ['*']
 solc_version = "0.8.30"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
 
 [profile.deploy]
 via_ir = true
@@ -20,8 +23,10 @@ extra_output = ["storageLayout", "metadata"]
 
 [invariant]
 runs = 256
-depth = 16
+depth = 128
 fail_on_revert = true
+call_override = false
+preserve_state = true   
 
 [fmt]
 bracket_spacing = true

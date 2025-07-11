@@ -39,8 +39,8 @@ contract kDNStakingVaultTest is BaseTest {
     ClaimModule internal claimModule;
 
     // Test constants
-    string constant VAULT_NAME = "Kintsugi DN Staking Vault";
-    string constant VAULT_SYMBOL = "kDNSV";
+    string constant VAULT_NAME = "KAM DN Staking Vault";
+    string constant VAULT_SYMBOL = "kToken";
     uint8 constant VAULT_DECIMALS = 6;
 
     function setUp() public override {
@@ -53,21 +53,19 @@ contract kDNStakingVaultTest is BaseTest {
         proxyDeployer = new kDNStakingVaultProxy();
 
         // Deploy mock kToken
-        kToken = new MockkToken("Kintsugi USDC", "kUSDC", 6);
+        kToken = new MockkToken("KAM USDC", "kUSDC", 6);
 
         // Prepare initialization data
         bytes memory initData = abi.encodeWithSelector(
             kDNStakingVault.initialize.selector,
-            VAULT_NAME,
-            VAULT_SYMBOL,
-            VAULT_DECIMALS,
             asset, // underlying asset
             address(kToken),
             users.alice, // owner
             users.admin, // admin
             users.emergencyAdmin, // emergency admin
             users.settler, // settler
-            users.alice // strategyManager (use alice for tests)
+            users.alice, // strategyManager (use alice for tests)
+            VAULT_DECIMALS
         );
 
         // Deploy and initialize proxy
@@ -133,16 +131,14 @@ contract kDNStakingVaultTest is BaseTest {
         // Try to initialize implementation directly (should fail)
         vm.expectRevert();
         vaultImpl.initialize(
-            VAULT_NAME,
-            VAULT_SYMBOL,
-            VAULT_DECIMALS,
             asset,
             address(kToken),
             users.alice,
             users.admin,
             users.emergencyAdmin,
             users.settler,
-            users.alice
+            users.alice,
+            VAULT_DECIMALS
         );
     }
 
@@ -182,16 +178,14 @@ contract kDNStakingVaultTest is BaseTest {
         // Try to initialize again (should fail)
         vm.expectRevert();
         vault.initialize(
-            VAULT_NAME,
-            VAULT_SYMBOL,
-            VAULT_DECIMALS,
             asset,
             address(kToken),
             users.alice,
             users.admin,
             users.emergencyAdmin,
             users.settler,
-            users.alice
+            users.alice,
+            VAULT_DECIMALS
         );
     }
 

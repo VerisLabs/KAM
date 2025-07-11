@@ -22,7 +22,7 @@ contract AdminModule is ModuleBase {
     event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
 
     /*//////////////////////////////////////////////////////////////
-                        ROLE MANAGEMENT
+                               ROLES
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Grants admin role to an address
@@ -74,7 +74,7 @@ contract AdminModule is ModuleBase {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        CONFIGURATION FUNCTIONS
+                        ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Sets the strategy manager address
