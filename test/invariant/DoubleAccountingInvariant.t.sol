@@ -17,6 +17,7 @@ import { MockToken } from "test/helpers/MockToken.sol";
 import { MockkDNStaking } from "test/helpers/MockkDNStaking.sol";
 import { TestToken } from "test/helpers/TestToken.sol";
 import { kDNStakingVaultProxy } from "test/helpers/kDNStakingVaultProxy.sol";
+import { kMinterProxy } from "test/helpers/kMinterProxy.sol";
 
 import { kDNStakingVaultHandler } from "test/invariant/handlers/kDNStakingVaultHandler.t.sol";
 import { kMinterHandler } from "test/invariant/handlers/kMinterHandler.t.sol";
@@ -44,6 +45,7 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
     kDNStakingVault public vault;
     kDNStakingVault public vaultImpl;
     kDNStakingVaultProxy public proxyDeployer;
+    kMinter public minter;
     AdminModule public adminModule;
     SettlementModule public settlementModule;
 
@@ -52,6 +54,7 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
     ////////////////////////////////////////////////////////////////
 
     kDNStakingVaultHandler public vaultHandler;
+    kMinterHandler public minterHandler;
 
     ////////////////////////////////////////////////////////////////
     ///                      ACTORS                              ///
@@ -133,24 +136,75 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
 
         console2.log("Module configuration completed successfully!");
 
-        // Set up handlers first
+        // Deploy kMinter
+        kMinter minterImpl = new kMinter();
+        kMinterProxy minterProxyDeployer = new kMinterProxy();
+
+        DataTypes.InitParams memory initParams = DataTypes.InitParams({
+            kToken: address(testKToken),
+            underlyingAsset: address(asset),
+            owner: alice,
+            admin: admin,
+            emergencyAdmin: emergencyAdmin,
+            institution: institution,
+            settler: settler,
+            manager: address(vault), // kDNStaking vault as manager
+            settlementInterval: 3600 // 1 hour
+         });
+
+        bytes memory minterInitData = abi.encodeWithSelector(kMinter.initialize.selector, initParams);
+
+        address minterProxyAddress = minterProxyDeployer.deployAndInitialize(address(minterImpl), minterInitData);
+        minter = kMinter(payable(minterProxyAddress));
+
+        // Set up handlers with cross-references for synchronization
         vaultHandler = new kDNStakingVaultHandler(vault, kToken(address(testKToken)), asset);
+        minterHandler = new kMinterHandler(minter, kToken(address(testKToken)), asset, mockStaking);
+
+        // CRITICAL: Set up cross-handler synchronization
+        vaultHandler.setMinterHandler(address(minterHandler));
+        minterHandler.setVaultHandler(address(vaultHandler));
 
         // Grant roles using properly configured AdminModule interface
         vm.startPrank(admin);
-        // admin already has ADMIN_ROLE from initialization (roles: 1)
-        testKToken.grantMinterRole(address(vault)); // Grant minter role to vault
-        testKToken.grantMinterRole(address(vaultHandler)); // Grant minter role to handler
+
+        // CRITICAL: kDNStakingVault MUST have MINTER_ROLE on kToken for yield distribution
+        testKToken.grantMinterRole(address(vault));
+
+        // CRITICAL: kMinter MUST have MINTER_ROLE on kToken to mint for institutions
+        testKToken.grantMinterRole(address(minter));
+
+        // Grant handler roles for fuzzing
+        testKToken.grantMinterRole(address(vaultHandler)); // For direct vault operations
+
+        // CRITICAL: Institutions need INSTITUTION_ROLE on kMinter to deposit USDC/WBTC
+        minter.grantInstitutionRole(address(minterHandler)); // Handler acts as institution
+
+        // CRITICAL: kMinter needs MINTER_ROLE on kDNStakingVault to deposit/redeem
+        AdminModule(payable(address(vault))).grantMinterRole(address(minter));
+
+        // CRITICAL: kMinter needs to know about the kDNStakingVault
+        minter.setKDNStaking(address(vault));
+
         vm.stopPrank();
 
         // Target contracts for invariant testing
         targetContract(address(vaultHandler));
+        targetContract(address(minterHandler));
 
-        // Target selectors
+        // Target vault selectors
         bytes4[] memory vaultSelectors = vaultHandler.getEntryPoints();
         for (uint256 i = 0; i < vaultSelectors.length; i++) {
             targetSelector(
                 FuzzSelector({ addr: address(vaultHandler), selectors: _toSingletonArray(vaultSelectors[i]) })
+            );
+        }
+
+        // Target minter selectors
+        bytes4[] memory minterSelectors = minterHandler.getEntryPoints();
+        for (uint256 i = 0; i < minterSelectors.length; i++) {
+            targetSelector(
+                FuzzSelector({ addr: address(minterHandler), selectors: _toSingletonArray(minterSelectors[i]) })
             );
         }
 
@@ -220,6 +274,36 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
     /// @dev Escrow safety validation
     function invariant_EscrowSafety() public view {
         vaultHandler.INVARIANT_ESCROW_SAFETY();
+    }
+
+    /// @dev CRITICAL: USDC Lock Invariant following expected/actual pattern
+    function invariant_USDCLock() public view {
+        // Use the existing expected/actual pattern from vault handler
+        uint256 actualVaultAssets = vaultHandler.actualTotalVaultAssets();
+        uint256 expectedVaultAssets = vaultHandler.expectedTotalVaultAssets();
+
+        // CRITICAL: Vault USDC should only change through tracked operations
+        // Yield minting (kTokens) should NOT affect underlying USDC balance
+        // The vault tracks kTokens as assets, but USDC backing should remain constant
+        uint256 vaultUSDCBalance = asset.balanceOf(address(vault));
+
+        // CORRECTED: USDC balance should match expected vault assets from tracked operations
+        // This tests that yield minting doesn't affect USDC - USDC only changes from deposits/redeems
+        assertEq(vaultUSDCBalance, expectedVaultAssets, "USDC Lock Violation: Vault USDC != expected vault assets");
+    }
+
+    /// @dev CRITICAL: kToken backing using expected/actual pattern
+    function invariant_kTokenBacking() public view {
+        // Follow the established pattern - compare expected vs actual
+        uint256 actualMinterAssets = vaultHandler.actualTotalMinterAssets();
+        uint256 expectedMinterAssets = vaultHandler.expectedTotalMinterAssets();
+
+        // Minter assets should maintain 1:1 backing (this is tested elsewhere too)
+        assertEq(actualMinterAssets, expectedMinterAssets, "kToken Backing: Minter assets expected/actual mismatch");
+
+        // Additional check: Total kToken supply should have USDC backing
+        uint256 vaultUSDCBalance = asset.balanceOf(address(vault));
+        assertGe(vaultUSDCBalance, actualMinterAssets, "kToken Backing: Insufficient USDC for minter assets");
     }
 
     ////////////////////////////////////////////////////////////////

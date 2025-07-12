@@ -16,6 +16,9 @@ contract kMinterHandler is BaseHandler, Test {
     MockToken public asset;
     MockkDNStaking public mockStaking;
 
+    // Cross-handler synchronization
+    address public vaultHandler;
+
     ////////////////////////////////////////////////////////////////
     ///                      GHOST VARIABLES                     ///
     ////////////////////////////////////////////////////////////////
@@ -61,21 +64,25 @@ contract kMinterHandler is BaseHandler, Test {
         // Skip if actor is a contract (avoid issues)
         if (currentActor.code.length > 0) return;
 
-        // Give actor assets and approve
-        asset.mint(currentActor, amount);
+        // Give handler assets to perform operation on behalf of actor
+        asset.mint(address(this), amount);
+        asset.approve(address(minter), amount);
 
         // Calculate expected state BEFORE operation
         expectedTotalDeposited = actualTotalDeposited + amount;
         expectedKTokenSupply = actualKTokenSupply + amount;
 
-        vm.startPrank(currentActor);
-        asset.approve(address(minter), amount);
-
         DataTypes.MintRequest memory request = DataTypes.MintRequest({ amount: amount, beneficiary: currentActor });
 
-        // Execute operation
+        // Execute operation as handler (has INSTITUTION_ROLE)
         minter.mint(request);
-        vm.stopPrank();
+
+        // CRITICAL: Notify vault handler of minter deposit (USDC goes to vault)
+        if (vaultHandler != address(0)) {
+            // Call vault handler to update its expected vault assets
+            (bool success,) = vaultHandler.call(abi.encodeWithSignature("notifyMinterDeposit(uint256)", amount));
+            // Don't revert on failure, just skip synchronization
+        }
 
         // Update actual state AFTER operation
         _syncActualValues();
@@ -99,9 +106,8 @@ contract kMinterHandler is BaseHandler, Test {
         DataTypes.RedeemRequest memory request =
             DataTypes.RedeemRequest({ amount: amount, user: currentActor, recipient: currentActor });
 
-        // Execute operation (institution role for test)
+        // Execute operation as the minter handler (which has INSTITUTION_ROLE)
         vm.stopPrank();
-        vm.prank(address(0x1)); // Assume institution address
         bytes32 requestId = minter.requestRedeem(request);
 
         // Update actual state AFTER operation
@@ -172,6 +178,11 @@ contract kMinterHandler is BaseHandler, Test {
     function _getActualCurrentBatchId() internal view returns (uint256) {
         bytes32 slot = bytes32(uint256(0xd7df67ea9a5dbfe32636a20098d87d60f65e8140be3a76c5824fb5a4c8e19d00) + 5);
         return uint256(vm.load(address(minter), slot));
+    }
+
+    /// @notice Set the vault handler for cross-synchronization
+    function setVaultHandler(address _vaultHandler) external {
+        vaultHandler = _vaultHandler;
     }
 
     function getEntryPoints() public pure override returns (bytes4[] memory) {

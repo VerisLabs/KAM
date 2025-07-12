@@ -3,6 +3,8 @@ pragma solidity 0.8.30;
 
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+
+import { IkToken } from "src/interfaces/IkToken.sol";
 import { ModuleBase } from "src/modules/base/ModuleBase.sol";
 import { DataTypes } from "src/types/DataTypes.sol";
 
@@ -156,6 +158,11 @@ contract SettlementModule is ModuleBase {
         if (totalVaultAssets > accountedAssets) {
             uint256 yield = totalVaultAssets - accountedAssets;
             if (yield <= MAX_YIELD_PER_SYNC) {
+                // CRITICAL FIX: Mint kTokens to vault to maintain 1:1 backing
+                // This ensures the vault has enough kTokens to cover yield distribution
+                // IMPORTANT: kDNStakingVault MUST have MINTER_ROLE on kToken contract
+                IkToken($.kToken).mint(address(this), yield);
+
                 // Add yield directly to stkToken pool - DO NOT reduce minter assets
                 // Yield comes as extra kTokens from external sources (strategies), not minter funds
                 uint256 newStkTokenAssetsYield = uint256($.totalStkTokenAssets) + yield;
@@ -260,6 +267,11 @@ contract SettlementModule is ModuleBase {
         if (totalVaultAssets > accountedAssets) {
             uint256 yield = totalVaultAssets - accountedAssets;
             if (yield <= MAX_YIELD_PER_SYNC) {
+                // CRITICAL FIX: Mint kTokens to vault to maintain 1:1 backing
+                // This ensures the vault has enough kTokens to cover yield distribution
+                // IMPORTANT: kDNStakingVault MUST have MINTER_ROLE on kToken contract
+                IkToken($.kToken).mint(address(this), yield);
+
                 // Add yield directly to stkToken pool
                 // Yield comes as extra kTokens from external sources (strategies)
                 $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) + yield);
@@ -323,9 +335,14 @@ contract SettlementModule is ModuleBase {
     /// @param batch The batch being settled
     /// @param $ Storage reference
     function _processMinterPositions(DataTypes.Batch storage batch, kDNStakingVaultStorage storage $) internal {
-        for (uint256 i = 0; i < batch.minters.length; i++) {
-            address minter = batch.minters[i];
-            int256 netAmount = $.minterPendingNetAmounts[minter];
+        uint256 length = batch.minters.length;
+        address minter;
+        int256 netAmount;
+        uint256 redeemAmount;
+
+        for (uint256 i; i < length;) {
+            minter = batch.minters[i];
+            netAmount = $.minterPendingNetAmounts[minter];
 
             if (netAmount > 0) {
                 // Net deposit: increase minter balance 1:1
@@ -333,7 +350,7 @@ contract SettlementModule is ModuleBase {
                 $.totalMinterAssets = uint128(uint256($.totalMinterAssets) + uint256(netAmount));
             } else if (netAmount < 0) {
                 // Net redeem: decrease minter balance 1:1
-                uint256 redeemAmount = uint256(-netAmount);
+                redeemAmount = uint256(-netAmount);
                 if ($.minterAssetBalances[minter] >= redeemAmount) {
                     $.minterAssetBalances[minter] -= redeemAmount;
                     $.totalMinterAssets = uint128(uint256($.totalMinterAssets) - redeemAmount);
@@ -342,6 +359,10 @@ contract SettlementModule is ModuleBase {
 
             // Clear pending amount
             delete $.minterPendingNetAmounts[minter];
+
+            unchecked {
+                i++;
+            }
         }
     }
 
