@@ -392,6 +392,32 @@ contract SettlementModule is ModuleBase {
         }
     }
 
+    /// @notice Internal function to distribute assets to batch receivers for net redemptions
+    /// @param batch The batch being settled
+    /// @param $ Storage reference
+    function _distributeMinterAssets(DataTypes.Batch storage batch, kDNStakingVaultStorage storage $) internal {
+        // Only process if there are net redeems
+        if (batch.netRedeems == 0) return;
+
+        // Validate vault has sufficient assets
+        uint256 vaultBalance = $.underlyingAsset.balanceOf(address(this));
+        if (vaultBalance < batch.netRedeems) revert InsufficientVaultBalance();
+
+        // Distribute assets to each minter's batch receiver
+        for (uint256 i = 0; i < batch.minters.length; i++) {
+            address minter = batch.minters[i];
+            uint256 redeemAmount = batch.redeemAmounts[minter];
+
+            if (redeemAmount > 0) {
+                address batchReceiver = batch.batchReceivers[minter];
+                if (batchReceiver != address(0)) {
+                    // Transfer assets to the batch receiver
+                    $.underlyingAsset.safeTransfer(batchReceiver, redeemAmount);
+                }
+            }
+        }
+    }
+
     /// @notice Returns total vault assets (real balance)
     /// @param $ Storage reference
     /// @return Total assets in the vault
