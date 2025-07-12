@@ -194,18 +194,28 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
 
         // Target vault selectors
         bytes4[] memory vaultSelectors = vaultHandler.getEntryPoints();
-        for (uint256 i = 0; i < vaultSelectors.length; i++) {
+        uint256 length = vaultSelectors.length;
+        for (uint256 i; i < length;) {
             targetSelector(
                 FuzzSelector({ addr: address(vaultHandler), selectors: _toSingletonArray(vaultSelectors[i]) })
             );
+
+            unchecked {
+                i++;
+            }
         }
 
         // Target minter selectors
         bytes4[] memory minterSelectors = minterHandler.getEntryPoints();
-        for (uint256 i = 0; i < minterSelectors.length; i++) {
+        length = minterSelectors.length;
+        for (uint256 i; i < length;) {
             targetSelector(
                 FuzzSelector({ addr: address(minterHandler), selectors: _toSingletonArray(minterSelectors[i]) })
             );
+
+            unchecked {
+                i++;
+            }
         }
 
         console2.log("=== Double Accounting Invariant Test Setup Complete ===");

@@ -35,8 +35,13 @@ contract ExtsloadTest is Test {
         testValues[1] = 200; // requestCounter
         testValues[2] = 300; // next slot
 
-        for (uint256 i = 0; i < testValues.length; i++) {
+        uint256 length = testValues.length;
+        for (uint256 i; i < length;) {
             vm.store(address(minter), bytes32(startSlot + i), bytes32(testValues[i]));
+
+            unchecked {
+                i++;
+            }
         }
 
         // Read them back in one call
@@ -62,8 +67,13 @@ contract ExtsloadTest is Test {
         testValues[1] = 42;
         testValues[2] = 1_000_000;
 
-        for (uint256 i = 0; i < slots.length; i++) {
+        uint256 length = slots.length;
+        for (uint256 i; i < length;) {
             vm.store(address(minter), slots[i], bytes32(testValues[i]));
+
+            unchecked {
+                i++;
+            }
         }
 
         // Read all slots in one call

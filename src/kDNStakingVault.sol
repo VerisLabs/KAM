@@ -513,8 +513,13 @@ contract kDNStakingVault is
     /// @param implementation The implementation contract address
     /// @param forceOverride If true, allows overwriting existing mappings
     function addFunctions(bytes4[] calldata selectors, address implementation, bool forceOverride) public override {
-        for (uint256 i = 0; i < selectors.length; i++) {
+        uint256 length = selectors.length;
+        for (uint256 i; i < length;) {
             addFunction(selectors[i], implementation, forceOverride);
+
+            unchecked {
+                i++;
+            }
         }
     }
 

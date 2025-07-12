@@ -49,8 +49,13 @@ contract MultiFacetProxy is Proxy, OwnableRoles {
     /// @param implementation The implementation contract address
     /// @param forceOverride If true, allows overwriting existing mappings
     function addFunctions(bytes4[] calldata selectors, address implementation, bool forceOverride) public virtual {
-        for (uint256 i = 0; i < selectors.length; i++) {
+        uint256 length = selectors.length;
+        for (uint256 i; i < length;) {
             addFunction(selectors[i], implementation, forceOverride);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -64,8 +69,13 @@ contract MultiFacetProxy is Proxy, OwnableRoles {
     /// @notice Removes multiple function selector mappings
     /// @param selectors Array of function selectors to remove
     function removeFunctions(bytes4[] calldata selectors) public {
-        for (uint256 i = 0; i < selectors.length; i++) {
+        uint256 length = selectors.length;
+        for (uint256 i; i < length;) {
             removeFunction(selectors[i]);
+
+            unchecked {
+                i++;
+            }
         }
     }
 

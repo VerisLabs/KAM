@@ -395,20 +395,30 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
         uint256 totalAllocated = 0;
 
-        for (uint256 i = 0; i < order.allocations.length; i++) {
-            DataTypes.Allocation calldata allocation = order.allocations[i];
+        uint256 length = order.allocations.length;
+        DataTypes.Allocation calldata allocation;
+        DataTypes.AdapterConfig storage config;
+        uint256 newAllocation;
+        uint256 maxAllowed;
+
+        for (uint256 i; i < length;) {
+            allocation = order.allocations[i];
 
             // Check adapter is enabled
             if (!$.adapterConfigs[allocation.target].enabled) revert AdapterNotEnabled();
 
             // Check allocation limits
-            DataTypes.AdapterConfig storage config = $.adapterConfigs[allocation.target];
-            uint256 newAllocation = config.currentAllocation + allocation.amount;
-            uint256 maxAllowed = ($.currentTotalAllocation * config.maxAllocation) / 10_000;
+            config = $.adapterConfigs[allocation.target];
+            newAllocation = config.currentAllocation + allocation.amount;
+            maxAllowed = ($.currentTotalAllocation * config.maxAllocation) / 10_000;
 
             if (newAllocation > maxAllowed) revert AllocationExceeded();
 
             totalAllocated += allocation.amount;
+
+            unchecked {
+                i++;
+            }
         }
 
         // Check total allocation matches order
@@ -424,8 +434,11 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     function _executeAllocations(DataTypes.AllocationOrder calldata order) internal {
         kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
 
-        for (uint256 i = 0; i < order.allocations.length; i++) {
-            DataTypes.Allocation calldata allocation = order.allocations[i];
+        uint256 length = order.allocations.length;
+        DataTypes.Allocation calldata allocation;
+
+        for (uint256 i; i < length;) {
+            allocation = order.allocations[i];
 
             // Update tracking
             $.adapterConfigs[allocation.target].currentAllocation += allocation.amount;
@@ -435,6 +448,10 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
             _executeAllocation(allocation);
 
             emit AllocationExecuted(allocation.target, allocation.adapterType, allocation.amount);
+
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -524,7 +541,12 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     function _hashAllocationOrder(DataTypes.AllocationOrder calldata order) internal pure returns (bytes32) {
         bytes32[] memory allocationHashes = new bytes32[](order.allocations.length);
 
-        for (uint256 i = 0; i < order.allocations.length; i++) {
+        uint256 length = order.allocations.length;
+        DataTypes.Allocation calldata allocation;
+
+        for (uint256 i; i < length;) {
+            allocation = order.allocations[i];
+
             allocationHashes[i] = keccak256(
                 abi.encode(
                     ALLOCATION_TYPEHASH,
@@ -534,6 +556,10 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
                     keccak256(order.allocations[i].data)
                 )
             );
+
+            unchecked {
+                i++;
+            }
         }
 
         return keccak256(
