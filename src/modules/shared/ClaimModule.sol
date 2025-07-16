@@ -19,6 +19,9 @@ contract ClaimModule is ModuleBase {
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice ERC20 Transfer event for stkToken operations
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
     event StakingSharesClaimed(uint256 indexed batchId, uint256 requestIndex, address indexed user, uint256 shares);
     event UnstakingAssetsClaimed(uint256 indexed batchId, uint256 requestIndex, address indexed user, uint256 assets);
     event StkTokensIssued(address indexed user, uint256 stkTokenAmount);
@@ -55,9 +58,12 @@ contract ClaimModule is ModuleBase {
         // Calculate stkTokens to mint based on batch settlement price
         uint256 stkTokensToMint = uint256(request.kTokenAmount).divWad(batch.stkTokenPrice);
 
-        // Update user share balances
-        $.userTotalSupply = uint128(uint256($.userTotalSupply) + stkTokensToMint);
+        // Mint stkTokens to user with proper ERC20 accounting and events
+        $.userTotalSupply += _safeToUint128(stkTokensToMint);
         $.userShareBalances[request.user] += stkTokensToMint;
+
+        // Emit proper ERC20 Transfer event for minting
+        emit Transfer(address(0), request.user, stkTokensToMint);
 
         // Track the specific kToken amount staked by this user
         $.userOriginalKTokens[request.user] += request.kTokenAmount;
@@ -93,9 +99,12 @@ contract ClaimModule is ModuleBase {
         // Mark as claimed
         request.claimed = true;
 
-        // Burn the user's escrowed stkTokens from vault balance
-        $.userTotalSupply = uint128(uint256($.userTotalSupply) - uint256(request.stkTokenAmount));
+        // Burn the user's escrowed stkTokens from vault balance with proper ERC20 accounting and events
+        $.userTotalSupply -= _safeToUint128(uint256(request.stkTokenAmount));
         $.userShareBalances[address(this)] -= uint256(request.stkTokenAmount);
+
+        // Emit proper ERC20 Transfer event for burning
+        emit Transfer(address(this), address(0), uint256(request.stkTokenAmount));
 
         // Calculate user's share using batch-level ratio
         uint256 originalKTokens = uint256(request.stkTokenAmount).mulWad(batch.originalKTokenRatio);

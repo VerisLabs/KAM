@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import { kMinter } from "src/kMinter.sol";
-import { DataTypes } from "src/types/DataTypes.sol";
 
 /// @title kMinterDataProvider
 /// @notice Comprehensive data provider for kMinter contract using extsload pattern
@@ -193,8 +192,7 @@ contract kMinterDataProvider {
         exists = user != address(0);
 
         // Check executed and cancelled status from bitmaps
-        // Note: For production, would need to implement bitmap reading from storage
-        // This is a simplified version for the data provider
+        (executed, cancelled) = _getRequestBitmapStatus(requestId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -223,11 +221,32 @@ contract kMinterDataProvider {
             timeToSettle = 0;
             batchAge = 0;
         } else {
-            // For simplicity, assume batch can be settled
-            // In production, would check timing constraints
-            canSettle = true;
-            timeToSettle = 0;
-            batchAge = block.timestamp; // Simplified
+            // Calculate actual settlement timing based on batch creation time
+            // Read batch creation timestamp from storage
+            bytes32 timestampSlot = bytes32(uint256(batchSlot) + 1); // Assuming timestamp is stored at offset +1
+            bytes32 timestampValue = minter.extsload(timestampSlot);
+            uint256 batchCreationTime = uint256(timestampValue);
+
+            if (batchCreationTime == 0) {
+                // Batch not found or invalid
+                canSettle = false;
+                timeToSettle = 0;
+                batchAge = 0;
+            } else {
+                // Calculate time since batch creation
+                batchAge = block.timestamp - batchCreationTime;
+
+                // Settlement interval is 8 hours (from constants)
+                uint256 SETTLEMENT_INTERVAL = 8 hours;
+
+                if (batchAge >= SETTLEMENT_INTERVAL) {
+                    canSettle = true;
+                    timeToSettle = 0;
+                } else {
+                    canSettle = false;
+                    timeToSettle = SETTLEMENT_INTERVAL - batchAge;
+                }
+            }
         }
     }
 
@@ -288,5 +307,60 @@ contract kMinterDataProvider {
         underlyingAsset = address(uint160(uint256(values[1])));
         kDNStaking = address(uint160(uint256(values[2])));
         batchReceiverImpl = address(uint160(uint256(values[3])));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        BITMAP STATUS FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Checks if a specific request has been executed
+    /// @param requestId The request ID to check
+    /// @return executed Whether the request has been executed
+    function isRequestExecuted(bytes32 requestId) external view returns (bool executed) {
+        (executed,) = _getRequestBitmapStatus(requestId);
+    }
+
+    /// @notice Checks if a specific request has been cancelled
+    /// @param requestId The request ID to check
+    /// @return cancelled Whether the request has been cancelled
+    function isRequestCancelled(bytes32 requestId) external view returns (bool cancelled) {
+        (, cancelled) = _getRequestBitmapStatus(requestId);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        INTERNAL BITMAP FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Reads executed and cancelled status from bitmaps using extsload
+    /// @param requestId The request ID to check
+    /// @return executed Whether the request has been executed
+    /// @return cancelled Whether the request has been cancelled
+    function _getRequestBitmapStatus(bytes32 requestId) internal view returns (bool executed, bool cancelled) {
+        uint256 requestIndex = uint256(requestId);
+
+        // Calculate bitmap indices and bit positions
+        uint256 bitmapIndex = requestIndex >> 8; // Divide by 256
+        uint256 bitPosition = requestIndex & 0xff; // Modulo 256
+
+        // Calculate storage slots for bitmap data
+        // executedRequests bitmap starts at STORAGE_SLOT_BASE + 9 (after requestToKDNBatch mapping)
+        // cancelledRequests bitmap starts at STORAGE_SLOT_BASE + 10 (after executedRequests bitmap)
+        bytes32 executedSlot = keccak256(abi.encode(bitmapIndex, uint256(STORAGE_SLOT_BASE) + 9)); // +9 for
+            // executedRequests offset
+        bytes32 cancelledSlot = keccak256(abi.encode(bitmapIndex, uint256(STORAGE_SLOT_BASE) + 10)); // +10 for
+            // cancelledRequests offset
+
+        bytes32[] memory slots = new bytes32[](2);
+        slots[0] = executedSlot;
+        slots[1] = cancelledSlot;
+
+        bytes32[] memory values = minter.extsload(slots);
+
+        // Extract bits at the specific positions
+        uint256 executedBitmap = uint256(values[0]);
+        uint256 cancelledBitmap = uint256(values[1]);
+
+        executed = (executedBitmap >> bitPosition) & 1 == 1;
+        cancelled = (cancelledBitmap >> bitPosition) & 1 == 1;
     }
 }

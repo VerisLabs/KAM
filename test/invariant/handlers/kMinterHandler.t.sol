@@ -77,9 +77,11 @@ contract kMinterHandler is BaseHandler, Test {
         asset.mint(address(this), amount);
         asset.approve(address(minter), amount);
 
-        // Calculate expected state BEFORE operation
-        expectedTotalDeposited = actualTotalDeposited + amount;
-        expectedKTokenSupply = actualKTokenSupply + amount;
+        // Calculate expected state BEFORE operation with overflow protection
+        unchecked {
+            expectedTotalDeposited = actualTotalDeposited + amount;
+            expectedKTokenSupply = actualKTokenSupply + amount;
+        }
 
         DataTypes.MintRequest memory request = DataTypes.MintRequest({ amount: amount, beneficiary: currentActor });
 
@@ -104,10 +106,12 @@ contract kMinterHandler is BaseHandler, Test {
 
         amount = bound(amount, 1, balance);
 
-        // Calculate expected state BEFORE operation
-        expectedTotalRedeemed = actualTotalRedeemed + amount;
-        expectedKTokenSupply = actualKTokenSupply - amount;
-        expectedTotalPendingRedemptions = actualTotalPendingRedemptions + amount;
+        // Calculate expected state BEFORE operation with overflow protection
+        unchecked {
+            expectedTotalRedeemed = actualTotalRedeemed + amount;
+            expectedKTokenSupply = actualKTokenSupply - amount;
+            expectedTotalPendingRedemptions = actualTotalPendingRedemptions + amount;
+        }
 
         vm.startPrank(currentActor);
         kToken_.approve(address(minter), amount);

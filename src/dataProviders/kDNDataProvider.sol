@@ -263,29 +263,4 @@ contract kDNDataProvider {
 
         isValid = (minterAssets + userAssets) == vaultAssets;
     }
-
-    /// @notice Check if unstaking would break peg (price < 1e18)
-    /// @param unstakingStkTokens Amount of stkTokens being unstaked
-    /// @return wouldBreakPeg Whether this unstaking would break peg
-    /// @return resultingPrice Resulting stkToken price after unstaking
-    function checkUnstakingPegImpact(uint256 unstakingStkTokens)
-        external
-        view
-        returns (bool wouldBreakPeg, uint256 resultingPrice)
-    {
-        (, uint256 totalStkTokenAssets,, uint256 totalStkTokenSupply,) = this.getAccountingData();
-
-        if (totalStkTokenSupply == 0) {
-            wouldBreakPeg = false;
-            resultingPrice = 1e18;
-            return (wouldBreakPeg, resultingPrice);
-        }
-
-        // Simulate the settlement calculation (with fixed logic)
-        uint256 effectiveSupply = totalStkTokenSupply; // Fixed: no double counting
-        uint256 currentPrice = (totalStkTokenAssets * 1e18) / effectiveSupply;
-
-        resultingPrice = currentPrice;
-        wouldBreakPeg = currentPrice < 1e18;
-    }
 }

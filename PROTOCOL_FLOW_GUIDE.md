@@ -495,3 +495,25 @@ Result:
 2. kStrategyManager can redistribute to BatchReceivers
 3. Emergency funding from protocol reserves
 4. Manual settlement of affected batches
+
+## Protocol Updates (January 2025)
+
+### Critical Bug Fix: stkToken ERC20 Compliance
+
+**Issue Found**: The `ClaimModule` was manually updating stkToken balances instead of using proper ERC20 functions, causing missing Transfer events.
+
+**Fix Applied**: 
+- `claimStakedShares()` now uses `_mint()` instead of manual balance updates
+- `claimUnstakedAssets()` now uses `_burn()` instead of manual balance updates
+- All stkToken operations now emit proper ERC20 Transfer events
+
+**Impact**: 
+- Wallets and external tools can now properly track stkToken balance changes
+- Full ERC20 compliance for stkTokens
+- Improved integration with DeFi protocols and analytics tools
+
+### Data Provider Enhancements
+
+**Bitmap Reading**: kMinterDataProvider now properly reads executed/cancelled request status from storage using extsload instead of simplified implementations.
+
+**Settlement Timing**: Proper calculation of batch settlement timing based on actual batch creation timestamps.

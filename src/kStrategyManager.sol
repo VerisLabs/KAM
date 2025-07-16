@@ -136,7 +136,6 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     error SiloContractNotSet();
     error InvalidSettlementOperation();
     error VaultNotSet();
-    error SettlementArrayMismatch();
     error SettlementFailed();
     error UseVaultSpecificEmergencySettlementFunctions();
     error ContractNotPaused();
