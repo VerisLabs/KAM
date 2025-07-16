@@ -293,7 +293,7 @@ contract kStrategyManagerTest is BaseTest {
             unstakingAmounts: emptyAmounts
         });
         vm.prank(users.settler);
-        vm.expectRevert(); // TODO: Add revert reason
+        vm.expectRevert(kStrategyManager.SettlementTooEarly.selector);
         strategyManager.settleAndAllocate(params, order, "");
     }
 }

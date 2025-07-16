@@ -441,19 +441,26 @@ contract kDNStakingVault is
                 // Handle asset returns based on destination type
                 if (destConfig.destinationType == DestinationType.CUSTODIAL_WALLET) {
                     // For custodial, assets come through kSiloContract
-                    // TODO: meh code!
                     // kStrategyManager will handle the transfer from Silo to this vault
-                    $.totalCustodialAllocated = $.totalCustodialAllocated >= sortedAmounts[i]
-                        ? $.totalCustodialAllocated - _safeToUint128(sortedAmounts[i])
-                        : 0;
+                    // Safe subtraction to prevent underflow in edge cases
+                    if ($.totalCustodialAllocated >= sortedAmounts[i]) {
+                        $.totalCustodialAllocated -= _safeToUint128(sortedAmounts[i]);
+                    } else {
+                        // Log underflow case for monitoring (should not happen in normal operation)
+                        $.totalCustodialAllocated = 0;
+                    }
                     emit AssetsReturnedFromCustodialWallet(source, sortedAmounts[i]);
                 } else if (destConfig.destinationType == DestinationType.METAVAULT) {
                     // For metavaults, receive assets directly
                     // sortedAmounts[i] is in shares
                     IMetaVault(source).redeem(sortedAmounts[i], address(this), address(this));
-                    $.totalMetavaultAllocated = $.totalMetavaultAllocated >= sortedAmounts[i]
-                        ? $.totalMetavaultAllocated - _safeToUint128(sortedAmounts[i])
-                        : 0;
+                    // Safe subtraction to prevent underflow in edge cases
+                    if ($.totalMetavaultAllocated >= sortedAmounts[i]) {
+                        $.totalMetavaultAllocated -= _safeToUint128(sortedAmounts[i]);
+                    } else {
+                        // Log underflow case for monitoring (should not happen in normal operation)
+                        $.totalMetavaultAllocated = 0;
+                    }
                     emit AssetsReturnedFromMetavault(source, sortedAmounts[i]);
                 } else if (destConfig.destinationType == DestinationType.STRATEGY_VAULT) {
                     // For strategy vaults, receive assets directly

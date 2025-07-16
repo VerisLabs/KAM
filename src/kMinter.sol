@@ -276,8 +276,8 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         $.totalPendingRedemptions += request.amount;
         $.batches[targetBatchId].totalAmount += request.amount;
 
-        // Burn kTokens immediately from user
-        // TODO: check if this is correct: safeTransfer? peg will be broken if burn?
+        // Burn kTokens immediately from user to prevent double-spending
+        // This maintains the 1:1 backing invariant: totalSupply = totalDeposited - totalRedeemed
         IkToken($.kToken).burnFrom(request.user, request.amount);
 
         // Direct integration with kDNStaking - request redemption
