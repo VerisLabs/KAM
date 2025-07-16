@@ -19,7 +19,7 @@ The KAM kTokens Protocol is a sophisticated dual accounting system that separate
 1. **Institutional Focus**: Provides 1:1 guaranteed backing for institutional users through kMinter
 2. **Retail Yield**: Offers yield-bearing opportunities through dual-vault staking system
 3. **Risk Segregation**: Separates delta-neutral strategies (kDNStakingVault) from higher-risk strategies (kSStakingVault)
-4. **Automated Yield Distribution**: Implements Ethena-style yield flow from minter assets to user shares
+4. **Automated Yield Distribution**: Implements yield flow from minter assets to user shares
 
 ### Key Design Principles
 

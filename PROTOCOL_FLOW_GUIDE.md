@@ -389,7 +389,7 @@ Hour 16: Next Settlement Cycle
 
 ## Yield Distribution Model
 
-### Ethena-Style Automatic Yield Distribution
+### Automatic Yield Distribution
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
