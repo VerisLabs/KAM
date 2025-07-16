@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { kMinterDataProvider } from "../../src/dataProviders/kMinterDataProvider.sol";
 import { kBatchReceiver } from "../../src/kBatchReceiver.sol";
 import { kMinter } from "../../src/kMinter.sol";
 import { DataTypes } from "../../src/types/DataTypes.sol";
@@ -27,6 +28,7 @@ import {
 contract kMinterTest is BaseTest {
     kMinter internal minter;
     kMinter internal minterImpl;
+    kMinterDataProvider internal minterDataProvider;
     kMinterProxy internal proxyDeployer;
     MockkDNStaking internal mockStaking;
     MockkToken internal kToken;
@@ -78,6 +80,9 @@ contract kMinterTest is BaseTest {
         // Re-register to update the isAuthorizedMinter flag
         vm.prank(users.admin);
         minter.setKDNStaking(address(mockStaking));
+
+        // Deploy data provider
+        minterDataProvider = new kMinterDataProvider(address(minter));
 
         vm.label(address(minter), "kMinter_Proxy");
         vm.label(address(minterImpl), "kMinter_Implementation");
@@ -297,8 +302,8 @@ contract kMinterTest is BaseTest {
         assertEq(kToken.balanceOf(users.bob), 0);
 
         // Verify batch receiver was deployed
-        address batchReceiver = minter.getBatchReceiver(2);
-        assertTrue(batchReceiver != address(0));
+        address batchReceiver = minterDataProvider.getBatchReceiver(2);
+        if (!(batchReceiver != address(0))) revert BatchReceiverNotDeployed();
 
         // Verify request ID is not zero
         assertTrue(requestId != bytes32(0));
@@ -370,8 +375,8 @@ contract kMinterTest is BaseTest {
         bytes32 requestId = minter.requestRedeem(request);
 
         // Get the actual batch receiver that was deployed (should be batch 2 since initial batch is 1)
-        address batchReceiver = minter.getBatchReceiver(2);
-        require(batchReceiver != address(0), "Batch receiver not deployed");
+        address batchReceiver = minterDataProvider.getBatchReceiver(2);
+        if (!(batchReceiver != address(0))) revert BatchReceiverNotDeployed();
 
         // Give batch receiver assets
         mintTokens(asset, batchReceiver, amount);
@@ -411,8 +416,8 @@ contract kMinterTest is BaseTest {
         bytes32 requestId = minter.requestRedeem(request);
 
         // Setup for execution
-        address batchReceiver = minter.getBatchReceiver(2);
-        require(batchReceiver != address(0), "Batch receiver not deployed");
+        address batchReceiver = minterDataProvider.getBatchReceiver(2);
+        if (!(batchReceiver != address(0))) revert BatchReceiverNotDeployed();
         mintTokens(asset, batchReceiver, amount);
         mockStaking.setBatchSettled(1, true);
 
@@ -511,8 +516,8 @@ contract kMinterTest is BaseTest {
         vm.prank(users.institution);
         minter.requestRedeem(request);
 
-        address batchReceiver = minter.getBatchReceiver(2);
-        require(batchReceiver != address(0), "Batch receiver not deployed");
+        address batchReceiver = minterDataProvider.getBatchReceiver(2);
+        if (!(batchReceiver != address(0))) revert BatchReceiverNotDeployed();
 
         // Give the minter contract assets and let it transfer to batch receiver properly
         mintTokens(asset, address(minter), amount);
@@ -637,6 +642,45 @@ contract kMinterTest is BaseTest {
         // We can't directly verify this without view functions, but no revert means success
     }
 
+    function test_setkStrategyManager_success() public {
+        address newStrategyManager = makeAddr("newStrategyManager");
+
+        vm.expectEmit(true, true, false, false);
+        emit kMinter.kStrategyManagerUpdated(address(0), newStrategyManager);
+
+        vm.prank(users.admin);
+        minter.setkStrategyManager(newStrategyManager);
+
+        assertEq(minter.kStrategyManager(), newStrategyManager);
+    }
+
+    function test_setkStrategyManager_revertsIfZeroAddress() public {
+        vm.expectRevert(kMinter.ZeroAddress.selector);
+        vm.prank(users.admin);
+        minter.setkStrategyManager(address(0));
+    }
+
+    function test_setkStrategyManager_revertsIfNotAdmin() public {
+        address newStrategyManager = makeAddr("newStrategyManager");
+
+        vm.expectRevert(); // OwnableRoles revert
+        vm.prank(users.alice);
+        minter.setkStrategyManager(newStrategyManager);
+    }
+
+    function test_kStrategyManager_view() public {
+        // Initially should be zero address
+        assertEq(minter.kStrategyManager(), address(0));
+
+        // Set strategy manager
+        address strategyManager = makeAddr("strategyManager");
+        vm.prank(users.admin);
+        minter.setkStrategyManager(strategyManager);
+
+        // Verify view function
+        assertEq(minter.kStrategyManager(), strategyManager);
+    }
+
     function test_grantEmergencyRole() public {
         vm.prank(users.admin);
         minter.grantEmergencyRole(users.bob);
@@ -754,7 +798,7 @@ contract kMinterTest is BaseTest {
     function test_emergencyWithdraw_revertsIfNotPaused() public {
         uint256 amount = _100_USDC;
 
-        vm.expectRevert("Not paused");
+        vm.expectRevert(kMinter.ContractNotPaused.selector);
         vm.prank(users.emergencyAdmin);
         minter.emergencyWithdraw(asset, users.treasury, amount);
     }
@@ -798,11 +842,13 @@ contract kMinterTest is BaseTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_contractName() public {
-        assertEq(minter.contractName(), "kMinter");
+        (string memory name,) = minterDataProvider.getContractMetadata();
+        assertEq(name, "kMinter");
     }
 
     function test_contractVersion() public {
-        assertEq(minter.contractVersion(), "1.0.0");
+        (, string memory version) = minterDataProvider.getContractMetadata();
+        assertEq(version, "1.0.0");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -811,7 +857,7 @@ contract kMinterTest is BaseTest {
 
     function test_getBatchReceiver() public {
         // Initially should be zero for batch 2 (batch 1 is created at initialization)
-        assertEq(minter.getBatchReceiver(2), address(0));
+        assertEq(minterDataProvider.getBatchReceiver(2), address(0));
 
         // Create a redemption request to deploy batch receiver
         uint256 amount = _1000_USDC;
@@ -826,8 +872,8 @@ contract kMinterTest is BaseTest {
         minter.requestRedeem(request);
 
         // Now should have batch receiver for batch 2 (the new batch created)
-        address batchReceiver = minter.getBatchReceiver(2);
-        assertTrue(batchReceiver != address(0));
+        address batchReceiver = minterDataProvider.getBatchReceiver(2);
+        if (!(batchReceiver != address(0))) revert BatchReceiverNotDeployed();
 
         // Verify it's a valid kBatchReceiver
         assertEq(kBatchReceiver(batchReceiver).asset(), asset);
@@ -889,4 +935,10 @@ contract kMinterTest is BaseTest {
         assertTrue(requestId != bytes32(0));
         assertEq(kToken.balanceOf(users.bob), 0);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                              ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    error BatchReceiverNotDeployed();
 }

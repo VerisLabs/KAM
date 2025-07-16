@@ -75,7 +75,7 @@ contract IntegratedHandler is BaseHandler, Test {
         console2.log("Vault Minter Assets:", vaultMinterAssets);
 
         // Allow for settlement delays - assets may be in transit
-        // The critical check is that vault assets >= minter net position
+        // The check is that vault assets >= minter net position
         assertGe(vault.getTotalVaultAssets(), netMinterAssets, "Vault assets < minter position");
     }
 

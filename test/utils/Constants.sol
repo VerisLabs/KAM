@@ -8,6 +8,7 @@ uint256 constant _40_USDC = 40e6;
 uint256 constant _50_USDC = 50e6;
 uint256 constant _60_USDC = 60e6;
 uint256 constant _100_USDC = 100e6;
+uint256 constant _200_USDC = 200e6;
 uint256 constant _1000_USDC = 1000e6;
 uint256 constant _10000_USDC = 10_000e6;
 

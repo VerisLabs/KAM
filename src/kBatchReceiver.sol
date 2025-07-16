@@ -16,6 +16,7 @@ contract kBatchReceiver {
     //////////////////////////////////////////////////////////////*/
 
     address public kMinter;
+    address public kStrategyManager;
     address public asset;
     uint256 public batchId;
     uint256 public totalReceived;
@@ -26,9 +27,10 @@ contract kBatchReceiver {
     //////////////////////////////////////////////////////////////*/
 
     event Initialized(address indexed kMinter, address indexed asset, uint256 indexed batchId);
-    event AssetsReceived(uint256 indexed amount);
+    event AssetsReceived(uint256 indexed amount, address indexed sender);
     event WithdrawnForRedemption(address indexed recipient, uint256 indexed amount);
     event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed caller);
+    event kStrategyManagerUpdated(address indexed oldManager, address indexed newManager);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -70,17 +72,46 @@ contract kBatchReceiver {
         emit Initialized(kMinter, asset, batchId);
     }
 
-    /// @notice Receives assets from kDNStaking
+    /// @notice Sets the kStrategyManager address (only callable by kMinter)
+    /// @param _kStrategyManager kStrategyManager address
+    function setkStrategyManager(address _kStrategyManager) external {
+        if (!initialized) revert NotInitialized();
+        if (msg.sender != kMinter) revert OnlyKMinter();
+        if (_kStrategyManager == address(0)) revert InvalidAddress();
+
+        address oldManager = kStrategyManager;
+        kStrategyManager = _kStrategyManager;
+
+        emit kStrategyManagerUpdated(oldManager, _kStrategyManager);
+    }
+
+    /// @notice Receives assets from kDNStaking or kStrategyManager
     /// @param amount Amount of assets to receive
     function receiveAssets(uint256 amount) external {
         if (!initialized) revert NotInitialized();
-        if (msg.sender != kMinter && msg.sender != address(this)) revert OnlyAuthorized();
+        if (msg.sender != kMinter && msg.sender != kStrategyManager && msg.sender != address(this)) {
+            revert OnlyAuthorized();
+        }
         asset.safeTransferFrom(msg.sender, address(this), amount);
         unchecked {
             totalReceived += amount;
         }
 
-        emit AssetsReceived(amount);
+        emit AssetsReceived(amount, msg.sender);
+    }
+
+    /// @notice Receives assets directly (for kStrategyManager transfers)
+    /// @param amount Amount of assets being received
+    function receiveAssetsFromStrategy(uint256 amount) external {
+        if (!initialized) revert NotInitialized();
+        if (msg.sender != kStrategyManager) revert OnlyAuthorized();
+
+        // Assets are transferred directly by kStrategyManager before calling this
+        unchecked {
+            totalReceived += amount;
+        }
+
+        emit AssetsReceived(amount, msg.sender);
     }
 
     /// @notice Withdraws assets for redemption
@@ -88,7 +119,7 @@ contract kBatchReceiver {
     /// @param amount Amount to withdraw
     function withdrawForRedemption(address recipient, uint256 amount) external {
         if (!initialized) revert NotInitialized();
-        if (msg.sender != kMinter) revert OnlyKMinter();
+        if (msg.sender != kMinter && msg.sender != kStrategyManager) revert OnlyKMinter();
         asset.safeTransfer(recipient, amount);
 
         emit WithdrawnForRedemption(recipient, amount);

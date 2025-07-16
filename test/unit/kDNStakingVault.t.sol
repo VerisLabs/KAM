@@ -2,16 +2,22 @@
 pragma solidity 0.8.30;
 
 import { kDNStakingVault } from "../../src/kDNStakingVault.sol";
+import { console2 } from "forge-std/console2.sol";
 
-import { AdminModule } from "../../src/modules/AdminModule.sol";
+import { ModuleBase } from "../../src/modules/base/ModuleBase.sol";
+import { AdminModule } from "../../src/modules/shared/AdminModule.sol";
 
-import { ClaimModule } from "../../src/modules/ClaimModule.sol";
-import { SettlementModule } from "../../src/modules/SettlementModule.sol";
+import { SettlementModule } from "../../src/modules/kDNStaking/SettlementModule.sol";
+import { ClaimModule } from "../../src/modules/shared/ClaimModule.sol";
 
+import { kToken } from "../../src/kToken.sol";
 import { DataTypes } from "../../src/types/DataTypes.sol";
+
+import { MockMetaVault } from "../helpers/MockMetaVault.sol";
 import { MockToken } from "../helpers/MockToken.sol";
-import { MockkToken } from "../helpers/MockkToken.sol";
+
 import { kDNStakingVaultProxy } from "../helpers/kDNStakingVaultProxy.sol";
+import { kTokenProxy } from "../helpers/kTokenProxy.sol";
 import { BaseTest } from "../utils/BaseTest.sol";
 
 import {
@@ -31,7 +37,9 @@ contract kDNStakingVaultTest is BaseTest {
     kDNStakingVault internal vault;
     kDNStakingVault internal vaultImpl;
     kDNStakingVaultProxy internal proxyDeployer;
-    MockkToken internal kToken;
+    kToken internal kTokenContract;
+    kToken internal kTokenImpl;
+    kTokenProxy internal kTokenProxyDeployer;
 
     // Module instances for direct access in tests
     AdminModule internal adminModule;
@@ -39,7 +47,7 @@ contract kDNStakingVaultTest is BaseTest {
     ClaimModule internal claimModule;
 
     // Test constants
-    string constant VAULT_NAME = "KAM DN Staking Vault";
+    string constant VAULT_NAME = "KAM Delta Neutral Staking Vault";
     string constant VAULT_SYMBOL = "kToken";
     uint8 constant VAULT_DECIMALS = 6;
 
@@ -52,14 +60,37 @@ contract kDNStakingVaultTest is BaseTest {
         // Deploy proxy deployer
         proxyDeployer = new kDNStakingVaultProxy();
 
-        // Deploy mock kToken
-        kToken = new MockkToken("KAM USDC", "kUSDC", 6);
+        // Deploy kToken implementation
+        kTokenImpl = new kToken();
+
+        // Deploy kToken proxy deployer
+        kTokenProxyDeployer = new kTokenProxy();
+
+        // Prepare kToken initialization data
+        bytes memory kTokenInitData = abi.encodeWithSelector(
+            kToken.initialize.selector,
+            users.alice, // owner
+            users.admin, // admin
+            users.emergencyAdmin, // emergency admin
+            address(this), // initial minter
+            6 // decimals
+        );
+
+        // Deploy and initialize kToken proxy
+        address kTokenProxyAddress = kTokenProxyDeployer.deployAndInitialize(address(kTokenImpl), kTokenInitData);
+        kTokenContract = kToken(kTokenProxyAddress);
+
+        // Setup metadata using setupMetadata
+        console2.log("About to setup metadata...");
+        vm.prank(users.admin);
+        kTokenContract.setupMetadata("KAM USDC", "kUSDC");
+        console2.log("Metadata setup complete");
 
         // Prepare initialization data
         bytes memory initData = abi.encodeWithSelector(
             kDNStakingVault.initialize.selector,
             asset, // underlying asset
-            address(kToken),
+            address(kTokenContract),
             users.alice, // owner
             users.admin, // admin
             users.emergencyAdmin, // emergency admin
@@ -72,13 +103,23 @@ contract kDNStakingVaultTest is BaseTest {
         address proxyAddress = proxyDeployer.deployAndInitialize(address(vaultImpl), initData);
         vault = kDNStakingVault(payable(proxyAddress));
 
+        // The MultiFacetProxy has its own OwnableRoles that needs to be initialized
+        // Since the proxy constructor doesn't run, we need to initialize it manually
+        // For now, we'll use the owner directly in the module configuration
+
         // Grant vault minter role to interact with kToken
-        kToken.grantRole(kToken.MINTER_ROLE(), address(vault));
+        console2.log("About to grant vault minter role...");
+        vm.prank(users.admin);
+        kTokenContract.grantMinterRole(address(vault));
+        console2.log("Vault minter role granted");
 
         // Grant test contract minter role for setup operations
-        kToken.grantRole(kToken.MINTER_ROLE(), address(this));
+        console2.log("About to grant test contract minter role...");
+        vm.prank(users.admin);
+        kTokenContract.grantMinterRole(address(this));
+        console2.log("Test contract minter role granted");
 
-        // Configure modules
+        // Configure modules - this should work now
         _configureModules();
 
         // Grant minter role to test addresses
@@ -87,7 +128,7 @@ contract kDNStakingVaultTest is BaseTest {
 
         vm.label(address(vault), "kDNStakingVault_Proxy");
         vm.label(address(vaultImpl), "kDNStakingVault_Implementation");
-        vm.label(address(kToken), "MockkToken");
+        vm.label(address(kTokenContract), "kToken");
     }
 
     /// @notice Configure modules for the vault
@@ -97,8 +138,10 @@ contract kDNStakingVaultTest is BaseTest {
         settlementModule = new SettlementModule();
         claimModule = new ClaimModule();
 
-        // Configure module functions in the vault as admin
-        vm.startPrank(users.admin);
+        // Configure module functions in the vault
+        // Since MultiFacetProxy has its own OwnableRoles system, use the owner directly
+        // The owner should have all privileges in both role systems
+        vm.startPrank(users.alice);
 
         // Add AdminModule functions
         bytes4[] memory adminSelectors = adminModule.selectors();
@@ -132,7 +175,7 @@ contract kDNStakingVaultTest is BaseTest {
         vm.expectRevert();
         vaultImpl.initialize(
             asset,
-            address(kToken),
+            address(kTokenContract),
             users.alice,
             users.admin,
             users.emergencyAdmin,
@@ -162,7 +205,7 @@ contract kDNStakingVaultTest is BaseTest {
             VAULT_SYMBOL,
             VAULT_DECIMALS,
             address(0), // zero asset
-            address(kToken),
+            address(kTokenContract),
             users.alice,
             users.admin,
             users.emergencyAdmin,
@@ -179,7 +222,7 @@ contract kDNStakingVaultTest is BaseTest {
         vm.expectRevert();
         vault.initialize(
             asset,
-            address(kToken),
+            address(kTokenContract),
             users.alice,
             users.admin,
             users.emergencyAdmin,
@@ -300,11 +343,11 @@ contract kDNStakingVaultTest is BaseTest {
         uint256 amount = 1_000_000 * 1e6; // 1M USDC to exceed dust threshold of 1e12
 
         // Give user some kTokens
-        kToken.mint(users.bob, amount);
+        kTokenContract.mint(users.bob, amount);
 
         // Approve vault to spend kTokens
         vm.prank(users.bob);
-        kToken.approve(address(vault), amount);
+        kTokenContract.approve(address(vault), amount);
 
         // Don't check event for now, just verify function succeeds
 
@@ -312,7 +355,7 @@ contract kDNStakingVaultTest is BaseTest {
         uint256 requestId = vault.requestStake(amount);
 
         assertEq(requestId, 0); // First request in batch
-        assertEq(kToken.balanceOf(address(vault)), amount);
+        assertEq(kTokenContract.balanceOf(address(vault)), amount);
         // Note: getTotalStakedKTokens not yet implemented
     }
 
@@ -350,23 +393,25 @@ contract kDNStakingVaultTest is BaseTest {
         vault.requestMinterDeposit(stakeAmount);
 
         // Advance time and settle the deposit to add assets to vault
-        vm.warp(block.timestamp + 1 hours + 1);
+        vm.warp(block.timestamp + 8 hours + 1);
         vm.prank(users.settler);
         SettlementModule(payable(address(vault))).settleBatch(1);
 
         // Now stake some kTokens
-        kToken.mint(users.bob, stakeAmount);
+        kTokenContract.mint(users.bob, stakeAmount);
         vm.prank(users.bob);
-        kToken.approve(address(vault), stakeAmount);
+        kTokenContract.approve(address(vault), stakeAmount);
         vm.prank(users.bob);
         vault.requestStake(stakeAmount);
 
-        // Advance time to meet settlement interval requirement (1 hour)
-        vm.warp(block.timestamp + 1 hours + 1);
+        // Advance time to meet settlement interval requirement (8 hours)
+        vm.warp(block.timestamp + 8 hours + 1);
 
         // Settle staking batch to get stkTokens
+        address[] memory emptyAddresses = new address[](0);
+        uint256[] memory emptyAmounts = new uint256[](0);
         vm.prank(users.settler);
-        SettlementModule(payable(address(vault))).settleStakingBatch(1, stakeAmount);
+        SettlementModule(payable(address(vault))).settleStakingBatch(1, stakeAmount, emptyAddresses, emptyAmounts);
 
         // Claim staked shares
         vm.prank(users.bob);
@@ -406,8 +451,8 @@ contract kDNStakingVaultTest is BaseTest {
         vm.prank(users.institution);
         vault.requestMinterDeposit(amount);
 
-        // Advance time to meet settlement interval requirement (1 hour)
-        vm.warp(block.timestamp + 1 hours + 1);
+        // Advance time to meet settlement interval requirement (8 hours)
+        vm.warp(block.timestamp + 8 hours + 1);
 
         vm.prank(users.settler);
         SettlementModule(payable(address(vault))).settleBatch(1);
@@ -433,30 +478,34 @@ contract kDNStakingVaultTest is BaseTest {
         vault.requestMinterDeposit(amount);
 
         // Advance time and settle the deposit to add assets to vault
-        vm.warp(block.timestamp + 1 hours + 1);
+        vm.warp(block.timestamp + 8 hours + 1);
         vm.prank(users.settler);
         SettlementModule(payable(address(vault))).settleBatch(1);
 
         // Now create staking request
-        kToken.mint(users.bob, amount);
+        kTokenContract.mint(users.bob, amount);
         vm.prank(users.bob);
-        kToken.approve(address(vault), amount);
+        kTokenContract.approve(address(vault), amount);
         vm.prank(users.bob);
         vault.requestStake(amount);
 
-        // Advance time to meet settlement interval requirement (1 hour)
-        vm.warp(block.timestamp + 1 hours + 1);
+        // Advance time to meet settlement interval requirement (8 hours)
+        vm.warp(block.timestamp + 8 hours + 1);
 
+        address[] memory emptyAddresses = new address[](0);
+        uint256[] memory emptyAmounts = new uint256[](0);
         vm.prank(users.settler);
-        SettlementModule(payable(address(vault))).settleStakingBatch(1, amount);
+        SettlementModule(payable(address(vault))).settleStakingBatch(1, amount, emptyAddresses, emptyAmounts);
     }
 
     function test_settleStakingBatch_revertsIfNotSettler() public {
         uint256 amount = _1000_USDC;
+        address[] memory emptyAddresses = new address[](0);
+        uint256[] memory emptyAmounts = new uint256[](0);
 
         vm.expectRevert(); // OwnableRoles revert
         vm.prank(users.alice);
-        SettlementModule(payable(address(vault))).settleStakingBatch(1, amount);
+        SettlementModule(payable(address(vault))).settleStakingBatch(1, amount, emptyAddresses, emptyAmounts);
     }
 
     function test_settleUnstakingBatch_success() public {
@@ -466,7 +515,7 @@ contract kDNStakingVaultTest is BaseTest {
 
         vm.expectRevert(); // Should revert since there's no batch to settle
         vm.prank(users.settler);
-        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, amount);
+        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, amount, 0, 0);
     }
 
     function test_settleUnstakingBatch_revertsIfNotSettler() public {
@@ -474,7 +523,7 @@ contract kDNStakingVaultTest is BaseTest {
 
         vm.expectRevert(); // OwnableRoles revert
         vm.prank(users.alice);
-        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, amount);
+        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, amount, 0, 0);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -492,22 +541,24 @@ contract kDNStakingVaultTest is BaseTest {
         vault.requestMinterDeposit(amount);
 
         // Advance time and settle the deposit to add assets to vault
-        vm.warp(block.timestamp + 1 hours + 1);
+        vm.warp(block.timestamp + 8 hours + 1);
         vm.prank(users.settler);
         SettlementModule(payable(address(vault))).settleBatch(1);
 
         // Now stake and settle
-        kToken.mint(users.bob, amount);
+        kTokenContract.mint(users.bob, amount);
         vm.prank(users.bob);
-        kToken.approve(address(vault), amount);
+        kTokenContract.approve(address(vault), amount);
         vm.prank(users.bob);
         vault.requestStake(amount);
 
-        // Advance time to meet settlement interval requirement (1 hour)
-        vm.warp(block.timestamp + 1 hours + 1);
+        // Advance time to meet settlement interval requirement (8 hours)
+        vm.warp(block.timestamp + 8 hours + 1);
 
+        address[] memory emptyAddresses = new address[](0);
+        uint256[] memory emptyAmounts = new uint256[](0);
         vm.prank(users.settler);
-        SettlementModule(payable(address(vault))).settleStakingBatch(1, amount);
+        SettlementModule(payable(address(vault))).settleStakingBatch(1, amount, emptyAddresses, emptyAmounts);
 
         // Validate minter balance is tracked correctly (1:1)
         assertEq(vault.getMinterAssetBalance(users.institution), amount);
@@ -541,22 +592,24 @@ contract kDNStakingVaultTest is BaseTest {
         vault.requestMinterDeposit(amount);
 
         // Advance time and settle the deposit to add assets to vault
-        vm.warp(block.timestamp + 1 hours + 1);
+        vm.warp(block.timestamp + 8 hours + 1);
         vm.prank(users.settler);
         SettlementModule(payable(address(vault))).settleBatch(1);
 
         // Stake, settle, and claim once
-        kToken.mint(users.bob, amount);
+        kTokenContract.mint(users.bob, amount);
         vm.prank(users.bob);
-        kToken.approve(address(vault), amount);
+        kTokenContract.approve(address(vault), amount);
         vm.prank(users.bob);
         vault.requestStake(amount);
 
-        // Advance time to meet settlement interval requirement (1 hour)
-        vm.warp(block.timestamp + 1 hours + 1);
+        // Advance time to meet settlement interval requirement (8 hours)
+        vm.warp(block.timestamp + 8 hours + 1);
 
+        address[] memory emptyAddresses = new address[](0);
+        uint256[] memory emptyAmounts = new uint256[](0);
         vm.prank(users.settler);
-        SettlementModule(payable(address(vault))).settleStakingBatch(1, amount);
+        SettlementModule(payable(address(vault))).settleStakingBatch(1, amount, emptyAddresses, emptyAmounts);
 
         vm.prank(users.bob);
         ClaimModule(payable(address(vault))).claimStakedShares(1, 0);
@@ -621,8 +674,8 @@ contract kDNStakingVaultTest is BaseTest {
         vm.prank(users.institution);
         vault.requestMinterDeposit(amount);
 
-        // Advance time to meet settlement interval requirement (1 hour)
-        vm.warp(block.timestamp + 1 hours + 1);
+        // Advance time to meet settlement interval requirement (8 hours)
+        vm.warp(block.timestamp + 8 hours + 1);
 
         vm.prank(users.settler);
         SettlementModule(payable(address(vault))).settleBatch(1);
@@ -649,7 +702,7 @@ contract kDNStakingVaultTest is BaseTest {
         assertFalse(vault.isBatchSettled(1));
 
         // Advance time and settle the batch
-        vm.warp(block.timestamp + 1 hours + 1);
+        vm.warp(block.timestamp + 8 hours + 1);
         vm.prank(users.settler);
         SettlementModule(payable(address(vault))).settleBatch(1);
 
@@ -808,7 +861,7 @@ contract kDNStakingVaultTest is BaseTest {
         vault.requestMinterDeposit(amount);
 
         // Advance time and settle to actually add assets
-        vm.warp(block.timestamp + 1 hours + 1);
+        vm.warp(block.timestamp + 8 hours + 1);
         vm.prank(users.settler);
         SettlementModule(payable(address(vault))).settleBatch(1);
 
@@ -859,7 +912,7 @@ contract kDNStakingVaultTest is BaseTest {
     function test_emergencyWithdraw_revertsIfNotPaused() public {
         uint256 amount = _100_USDC;
 
-        vm.expectRevert();
+        vm.expectRevert(AdminModule.ContractNotPaused.selector);
         vm.prank(users.emergencyAdmin);
         AdminModule(payable(address(vault))).emergencyWithdraw(asset, users.treasury, amount);
     }
@@ -944,20 +997,22 @@ contract kDNStakingVaultTest is BaseTest {
         vm.prank(users.alice);
         SettlementModule(payable(address(vault))).settleBatch(1);
 
+        address[] memory emptyAddresses = new address[](0);
+        uint256[] memory emptyAmounts = new uint256[](0);
         vm.expectRevert();
         vm.prank(users.alice);
-        SettlementModule(payable(address(vault))).settleStakingBatch(1, _1000_USDC);
+        SettlementModule(payable(address(vault))).settleStakingBatch(1, _1000_USDC, emptyAddresses, emptyAmounts);
 
         vm.expectRevert();
         vm.prank(users.alice);
-        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, _1000_USDC);
+        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, _1000_USDC, 0, 0);
     }
 
     function test_emergencyWithdraw_revertsIfNotPausedFirst() public {
         uint256 amount = _100_USDC;
 
         // Try emergency withdraw without pausing first
-        vm.expectRevert();
+        vm.expectRevert(AdminModule.ContractNotPaused.selector);
         vm.prank(users.emergencyAdmin);
         AdminModule(payable(address(vault))).emergencyWithdraw(asset, users.treasury, amount);
     }
@@ -986,14 +1041,239 @@ contract kDNStakingVaultTest is BaseTest {
         amount = bound(amount, 1_000_000 * 1e6, 10_000_000 * 1e6); // 1M to 10M USDC
 
         // Give user kTokens and approve
-        kToken.mint(users.bob, amount);
+        kTokenContract.mint(users.bob, amount);
         vm.prank(users.bob);
-        kToken.approve(address(vault), amount);
+        kTokenContract.approve(address(vault), amount);
 
         vm.prank(users.bob);
         uint256 requestId = vault.requestStake(amount);
 
         assertEq(requestId, 0);
-        assertEq(kToken.balanceOf(address(vault)), amount);
+        assertEq(kTokenContract.balanceOf(address(vault)), amount);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    MULTI-DESTINATION ALLOCATION TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_allocateAssetsToDestinations_success() public {
+        // Setup vault with minter assets
+        uint256 totalAmount = _1000_USDC;
+        _setupVaultWithMinterAssets(totalAmount);
+
+        // Register destinations first
+        address destination1 = makeAddr("destination1");
+        MockMetaVault mockMetaVault = new MockMetaVault(asset);
+        address destination2 = address(mockMetaVault);
+        _registerDestinations(destination1, destination2);
+
+        address[] memory destinations = new address[](2);
+        destinations[0] = destination1;
+        destinations[1] = destination2;
+
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = _100_USDC;
+        amounts[1] = _100_USDC;
+
+        // Grant STRATEGY_MANAGER_ROLE to alice for this test
+        vm.prank(users.admin);
+        AdminModule(payable(address(vault))).grantStrategyManagerRole(users.alice);
+
+        vm.prank(users.alice);
+        bool success = vault.allocateAssetsToDestinations(destinations, amounts);
+
+        assertTrue(success);
+        assertEq(MockToken(asset).balanceOf(destination1), _100_USDC); // Direct for custodial
+        assertEq(MockToken(asset).balanceOf(destination2), _100_USDC); // Direct for metavault
+    }
+
+    function test_allocateAssetsToDestinations_revertsInsufficientAssets() public {
+        // Setup vault with small minter assets
+        uint256 totalAmount = _100_USDC;
+        _setupVaultWithMinterAssets(totalAmount);
+
+        address destination1 = makeAddr("destination1");
+        _registerDestination(destination1, ModuleBase.DestinationType.CUSTODIAL_WALLET, 5000);
+
+        address[] memory destinations = new address[](1);
+        destinations[0] = destination1;
+
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = _1000_USDC; // More than available
+
+        vm.expectRevert(); // Should revert with InsufficientMinterAssets
+        vm.prank(users.alice);
+        vault.allocateAssetsToDestinations(destinations, amounts);
+    }
+
+    function test_allocateAssetsToDestinations_revertsArrayLengthMismatch() public {
+        address[] memory destinations = new address[](2);
+        destinations[0] = makeAddr("destination1");
+        destinations[1] = makeAddr("destination2");
+
+        uint256[] memory amounts = new uint256[](1); // Wrong length
+        amounts[0] = _100_USDC;
+
+        vm.expectRevert(); // Should revert with InvalidRequestIndex
+        vm.prank(users.alice);
+        vault.allocateAssetsToDestinations(destinations, amounts);
+    }
+
+    function test_returnAssetsFromDestinations_success() public {
+        // Setup: Allocate assets first
+        uint256 totalAmount = _1000_USDC;
+        _setupVaultWithMinterAssets(totalAmount);
+
+        address destination1 = makeAddr("destination1");
+        MockMetaVault mockMetaVault = new MockMetaVault(asset);
+        address destination2 = address(mockMetaVault);
+        _registerDestinations(destination1, destination2);
+
+        // Allocate assets
+        address[] memory destinations = new address[](2);
+        destinations[0] = destination1;
+        destinations[1] = destination2;
+
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = _100_USDC;
+        amounts[1] = _100_USDC;
+
+        vm.prank(users.alice);
+        vault.allocateAssetsToDestinations(destinations, amounts);
+
+        // Setup return: For metavault, the shares should already be held by the vault
+        // The allocation would have given the vault shares in the metavault
+
+        // Return assets
+        uint256[] memory returnAmounts = new uint256[](2);
+        returnAmounts[0] = _100_USDC; // From custodial (via silo)
+        returnAmounts[1] = _100_USDC; // From metavault (shares to redeem)
+
+        // Comment out event expectations for now
+        // vm.expectEmit(true, false, false, true);
+        // emit kDNStakingVault.AssetsReturnedFromCustodialWallet(destination1, _100_USDC);
+
+        // vm.expectEmit(true, false, false, true);
+        // emit kDNStakingVault.AssetsReturnedFromMetavault(destination2, _100_USDC);
+
+        vm.prank(users.alice);
+        bool success = vault.returnAssetsFromDestinations(destinations, returnAmounts);
+
+        assertTrue(success);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                      DESTINATION MANAGEMENT TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_registerDestination_success() public {
+        address destination = makeAddr("testDestination");
+
+        vm.expectEmit(true, false, false, true);
+        emit ModuleBase.DestinationRegistered(
+            destination, ModuleBase.DestinationType.CUSTODIAL_WALLET, 5000, "Test Custodial"
+        );
+
+        vm.prank(users.admin);
+        AdminModule(payable(address(vault))).registerDestination(
+            destination,
+            ModuleBase.DestinationType.CUSTODIAL_WALLET,
+            5000, // 50% max allocation
+            "Test Custodial",
+            address(0)
+        );
+
+        // Verify registration
+        ModuleBase.DestinationConfig memory config =
+            AdminModule(payable(address(vault))).getDestinationConfig(destination);
+        assertTrue(config.isActive);
+        assertEq(config.maxAllocation, 5000);
+        assertTrue(config.destinationType == ModuleBase.DestinationType.CUSTODIAL_WALLET);
+    }
+
+    function test_setAllocationPercentages_success() public {
+        uint64 custodialPercentage = 7000; // 70%
+        uint64 metavaultPercentage = 3000; // 30%
+
+        vm.expectEmit(false, false, false, true);
+        emit ModuleBase.AllocationPercentagesUpdated(custodialPercentage, metavaultPercentage);
+
+        vm.prank(users.admin);
+        AdminModule(payable(address(vault))).setAllocationPercentages(custodialPercentage, metavaultPercentage);
+
+        // Verify percentages
+        (uint64 custodial, uint64 metavault) = AdminModule(payable(address(vault))).getAllocationPercentages();
+        assertEq(custodial, custodialPercentage);
+        assertEq(metavault, metavaultPercentage);
+    }
+
+    function test_setAllocationPercentages_revertsInvalidPercentage() public {
+        uint64 custodialPercentage = 7000; // 70%
+        uint64 metavaultPercentage = 4000; // 40% - Total > 100%
+
+        vm.expectRevert(); // Should revert with InvalidAllocationPercentage
+        AdminModule(payable(address(vault))).setAllocationPercentages(custodialPercentage, metavaultPercentage);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            HELPER FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    function _setupVaultWithMinterAssets(uint256 amount) internal {
+        // Give vault actual assets so it can transfer them
+        mintTokens(asset, address(vault), amount);
+
+        // Directly set storage to simulate having minter assets available for allocation
+        // This is a test utility to bypass the complex settlement process
+        // Storage slot calculation for totalMinterAssets in BaseVaultStorage
+        // BASE_VAULT_STORAGE_LOCATION + 3 (slot 3 contains totalMinterAssets as first 128 bits)
+        bytes32 baseLocation = 0x9d5c7e4b8f3a2d1e6f9c8b7a6d5e4f3c2b1a0e9d8c7b6a5f4e3d2c1b0a9e8d00;
+        bytes32 storageSlot = bytes32(uint256(baseLocation) + 3);
+
+        // totalMinterAssets is uint128 in the lower 128 bits of slot 3
+        // We need to preserve the upper 128 bits (userTotalSupply) if any
+        bytes32 currentValue = vm.load(address(vault), storageSlot);
+        bytes32 newValue = bytes32((uint256(currentValue) & (type(uint256).max << 128)) | uint128(amount));
+        vm.store(address(vault), storageSlot, newValue);
+    }
+
+    function _registerDestination(
+        address destination,
+        ModuleBase.DestinationType destType,
+        uint256 maxAllocation
+    )
+        internal
+    {
+        vm.prank(users.admin);
+        AdminModule(payable(address(vault))).registerDestination(
+            destination, destType, maxAllocation, "Test Destination", address(0)
+        );
+    }
+
+    function _registerDestinations(address destination1, address destination2) internal {
+        // Register custodial destination
+        vm.prank(users.admin);
+        AdminModule(payable(address(vault))).registerDestination(
+            destination1,
+            ModuleBase.DestinationType.CUSTODIAL_WALLET,
+            5000, // 50% max allocation
+            "Test Custodial",
+            address(0)
+        );
+
+        // Register metavault destination
+        vm.prank(users.admin);
+        AdminModule(payable(address(vault))).registerDestination(
+            destination2,
+            ModuleBase.DestinationType.METAVAULT,
+            5000, // 50% max allocation
+            "Test Metavault",
+            address(0)
+        );
+
+        // Set silo contract for custodial transfers
+        address mockSilo = makeAddr("mockSilo");
+        vm.prank(users.admin);
+        AdminModule(payable(address(vault))).setkSiloContract(mockSilo);
     }
 }

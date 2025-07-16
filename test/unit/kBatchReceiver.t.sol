@@ -14,6 +14,7 @@ contract kBatchReceiverTest is BaseTest {
 
     // Test constants
     address internal kMinter = makeAddr("kMinter");
+    address internal kStrategyManager = makeAddr("kStrategyManager");
     uint256 internal constant BATCH_ID = 1;
 
     function setUp() public override {
@@ -28,6 +29,7 @@ contract kBatchReceiverTest is BaseTest {
         vm.label(address(receiver), "kBatchReceiver_Implementation");
         vm.label(address(receiverProxy), "kBatchReceiver_Proxy");
         vm.label(kMinter, "MockkMinter");
+        vm.label(kStrategyManager, "MockkStrategyManager");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -84,7 +86,7 @@ contract kBatchReceiverTest is BaseTest {
         MockToken(asset).approve(address(receiverProxy), amount);
 
         vm.expectEmit(true, false, false, true);
-        emit kBatchReceiver.AssetsReceived(amount);
+        emit kBatchReceiver.AssetsReceived(amount, kMinter);
 
         vm.prank(kMinter);
         receiverProxy.receiveAssets(amount);
@@ -105,7 +107,7 @@ contract kBatchReceiverTest is BaseTest {
 
         // kMinter calls receiveAssets, transferring from itself
         vm.expectEmit(true, false, false, true);
-        emit kBatchReceiver.AssetsReceived(amount);
+        emit kBatchReceiver.AssetsReceived(amount, kMinter);
 
         vm.prank(kMinter);
         receiverProxy.receiveAssets(amount);
@@ -339,6 +341,140 @@ contract kBatchReceiverTest is BaseTest {
         receiverProxy.withdrawForRedemption(recipient, amount);
 
         assertEq(MockToken(asset).balanceOf(address(receiverProxy)), 0);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                   KSTRATEGYMANAGER TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_setkStrategyManager_success() public {
+        _initializeProxy();
+
+        vm.expectEmit(true, true, false, false);
+        emit kBatchReceiver.kStrategyManagerUpdated(address(0), kStrategyManager);
+
+        vm.prank(kMinter);
+        receiverProxy.setkStrategyManager(kStrategyManager);
+
+        assertEq(receiverProxy.kStrategyManager(), kStrategyManager);
+    }
+
+    function test_setkStrategyManager_revertsIfNotInitialized() public {
+        vm.expectRevert(kBatchReceiver.NotInitialized.selector);
+        vm.prank(kMinter);
+        receiverProxy.setkStrategyManager(kStrategyManager);
+    }
+
+    function test_setkStrategyManager_revertsIfNotMinter() public {
+        _initializeProxy();
+
+        vm.expectRevert(kBatchReceiver.OnlyKMinter.selector);
+        vm.prank(users.alice);
+        receiverProxy.setkStrategyManager(kStrategyManager);
+    }
+
+    function test_setkStrategyManager_revertsIfZeroAddress() public {
+        _initializeProxy();
+
+        vm.expectRevert(kBatchReceiver.InvalidAddress.selector);
+        vm.prank(kMinter);
+        receiverProxy.setkStrategyManager(address(0));
+    }
+
+    function test_receiveAssets_successFromkStrategyManager() public {
+        _initializeProxy();
+
+        // Set kStrategyManager
+        vm.prank(kMinter);
+        receiverProxy.setkStrategyManager(kStrategyManager);
+
+        uint256 amount = _100_USDC;
+
+        // Setup: Give kStrategyManager tokens and approve
+        mintTokens(asset, kStrategyManager, amount);
+        vm.prank(kStrategyManager);
+        MockToken(asset).approve(address(receiverProxy), amount);
+
+        vm.expectEmit(true, true, false, true);
+        emit kBatchReceiver.AssetsReceived(amount, kStrategyManager);
+
+        vm.prank(kStrategyManager);
+        receiverProxy.receiveAssets(amount);
+
+        // Verify state
+        assertEq(receiverProxy.totalReceived(), amount);
+        assertEq(MockToken(asset).balanceOf(address(receiverProxy)), amount);
+    }
+
+    function test_receiveAssetsFromStrategy_success() public {
+        _initializeProxy();
+
+        // Set kStrategyManager
+        vm.prank(kMinter);
+        receiverProxy.setkStrategyManager(kStrategyManager);
+
+        uint256 amount = _100_USDC;
+
+        // Setup: Give receiver tokens directly (simulating kStrategyManager transfer)
+        mintTokens(asset, address(receiverProxy), amount);
+
+        vm.expectEmit(true, true, false, true);
+        emit kBatchReceiver.AssetsReceived(amount, kStrategyManager);
+
+        vm.prank(kStrategyManager);
+        receiverProxy.receiveAssetsFromStrategy(amount);
+
+        // Verify state - totalReceived should be updated
+        assertEq(receiverProxy.totalReceived(), amount);
+    }
+
+    function test_receiveAssetsFromStrategy_revertsIfNotInitialized() public {
+        uint256 amount = _100_USDC;
+
+        vm.expectRevert(kBatchReceiver.NotInitialized.selector);
+        vm.prank(kStrategyManager);
+        receiverProxy.receiveAssetsFromStrategy(amount);
+    }
+
+    function test_receiveAssetsFromStrategy_revertsIfNotStrategyManager() public {
+        _initializeProxy();
+
+        // Set kStrategyManager
+        vm.prank(kMinter);
+        receiverProxy.setkStrategyManager(kStrategyManager);
+
+        uint256 amount = _100_USDC;
+
+        vm.expectRevert(kBatchReceiver.OnlyAuthorized.selector);
+        vm.prank(users.alice);
+        receiverProxy.receiveAssetsFromStrategy(amount);
+    }
+
+    function test_withdrawForRedemption_successFromkStrategyManager() public {
+        _initializeProxy();
+
+        // Set kStrategyManager
+        vm.prank(kMinter);
+        receiverProxy.setkStrategyManager(kStrategyManager);
+
+        uint256 amount = _100_USDC;
+        address recipient = users.alice;
+
+        // Setup: Receiver has tokens
+        mintTokens(asset, address(receiverProxy), amount);
+
+        // Record initial balance
+        uint256 initialBalance = MockToken(asset).balanceOf(recipient);
+
+        vm.expectEmit(true, true, false, true);
+        emit kBatchReceiver.WithdrawnForRedemption(recipient, amount);
+
+        vm.prank(kStrategyManager);
+        receiverProxy.withdrawForRedemption(recipient, amount);
+
+        // Verify transfer
+        assertEq(MockToken(asset).balanceOf(address(receiverProxy)), 0);
+        assertEq(MockToken(asset).balanceOf(recipient), initialBalance + amount);
     }
 
     /*//////////////////////////////////////////////////////////////

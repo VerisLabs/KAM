@@ -54,6 +54,7 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         address kToken;
         address underlyingAsset;
         address kDNStaking;
+        address kStrategyManager;
         address batchReceiverImplementation;
         uint256 currentBatchId;
         uint256 requestCounter;
@@ -90,6 +91,7 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
     event RedemptionExecuted(bytes32 indexed requestId, address indexed recipient, uint256 amount);
     event RedemptionCancelled(bytes32 indexed requestId, address indexed user, uint256 amount);
     event KDNStakingUpdated(address indexed newStaking);
+    event kStrategyManagerUpdated(address indexed oldManager, address indexed newManager);
     event BatchReceiverDeployed(uint256 indexed batchId, address receiver);
     event BatchAssetsReceived(uint256 indexed kdnBatchId, uint256 amount);
     // KTokenStakingEnabled event removed - staking happens directly on kDNStakingVault
@@ -118,6 +120,7 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
     error NotAuthorizedMinter();
     error AmountTooLarge();
     error BatchNotSettled();
+    error ContractNotPaused();
 
     /*//////////////////////////////////////////////////////////////
                                 MODIFIERS
@@ -161,6 +164,7 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         $.kToken = params.kToken;
         $.underlyingAsset = params.underlyingAsset;
         $.kDNStaking = params.manager;
+        $.kStrategyManager = address(0); // Will be set later by admin
         // Time-based batches use fixed 8h settlement interval
 
         // Initialize time-based batch system
@@ -414,16 +418,14 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         return _getkMinterStorage().kDNStaking;
     }
 
-    /// @notice Returns BatchReceiver address for a time-based batch
-    /// @param batchId Batch ID to query
-    /// @return BatchReceiver address
-    function getBatchReceiver(uint256 batchId) external view returns (address) {
-        return _getkMinterStorage().batches[batchId].batchReceiver;
-    }
-
     /// @notice Check if this contract is an authorized minter
     function isAuthorizedMinter() external view returns (bool) {
         return _getkMinterStorage().isAuthorizedMinter;
+    }
+
+    /// @notice Returns the kStrategyManager address
+    function kStrategyManager() external view returns (address) {
+        return _getkMinterStorage().kStrategyManager;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -453,6 +455,17 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         _registerAsAuthorizedMinter();
 
         emit KDNStakingUpdated(newStaking);
+    }
+
+    /// @notice Updates kStrategyManager address
+    /// @param newStrategyManager New kStrategyManager address
+    function setkStrategyManager(address newStrategyManager) external onlyRoles(ADMIN_ROLE) {
+        if (newStrategyManager == address(0)) revert ZeroAddress();
+        kMinterStorage storage $ = _getkMinterStorage();
+        address oldManager = $.kStrategyManager;
+        $.kStrategyManager = newStrategyManager;
+
+        emit kStrategyManagerUpdated(oldManager, newStrategyManager);
     }
 
     /// @notice Forces creation of new time-based batch
@@ -508,7 +521,7 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
     /// @param to Recipient address
     /// @param amount Amount to withdraw
     function emergencyWithdraw(address token, address to, uint256 amount) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
-        if (!_getkMinterStorage().isPaused) revert("Not paused");
+        if (!_getkMinterStorage().isPaused) revert ContractNotPaused();
         if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
 
@@ -599,6 +612,11 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
 
         // Initialize the receiver
         kBatchReceiver(receiver).initialize(address(this), $.underlyingAsset, batchId);
+
+        // Set kStrategyManager if available
+        if ($.kStrategyManager != address(0)) {
+            kBatchReceiver(receiver).setkStrategyManager($.kStrategyManager);
+        }
 
         // Store the receiver address
         $.batches[batchId].batchReceiver = receiver;

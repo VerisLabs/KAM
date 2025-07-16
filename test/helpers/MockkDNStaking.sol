@@ -97,8 +97,16 @@ contract MockkDNStaking is IkDNStaking {
         settledBatches[batchId] = true;
     }
 
-    function settleStakingBatch(uint256 batchId, uint256 totalKTokensStaked) external {
+    function settleStakingBatch(
+        uint256 batchId,
+        uint256 totalKTokensStaked,
+        address[] calldata destinations,
+        uint256[] calldata amounts
+    )
+        external
+    {
         settledBatches[batchId] = true;
+        // Mock implementation ignores destinations and amounts
     }
 
     function settleUnstakingBatch(
@@ -210,6 +218,65 @@ contract MockkDNStaking is IkDNStaking {
 
     function revokeMinterRole(address minter) external {
         authorizedMinters[minter] = false;
+    }
+
+    function setStrategyVault(address strategyVault) external {
+        // Mock implementation
+        strategyVault; // silence warning
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                      INTER-VAULT OPERATIONS
+    //////////////////////////////////////////////////////////////*/
+
+    function allocateAssetsToDestinations(
+        address[] memory destinations,
+        uint256[] memory amounts
+    )
+        external
+        payable
+        returns (bool success)
+    {
+        // Mock implementation - transfer assets to each destination
+        if (asset != address(0)) {
+            for (uint256 i = 0; i < destinations.length; i++) {
+                if (amounts[i] > 0) {
+                    asset.safeTransfer(destinations[i], amounts[i]);
+                }
+            }
+        }
+        return true;
+    }
+
+    function returnAssetsFromDestinations(
+        address[] calldata sources,
+        uint256[] calldata amounts
+    )
+        external
+        payable
+        returns (bool success)
+    {
+        // Mock implementation - receive assets from each source
+        if (asset != address(0)) {
+            for (uint256 i = 0; i < sources.length; i++) {
+                if (amounts[i] > 0) {
+                    asset.safeTransferFrom(sources[i], address(this), amounts[i]);
+                }
+            }
+        }
+        return true;
+    }
+
+    function getTotalAllocatedToStrategies() external pure returns (uint256) {
+        return 0; // Mock implementation
+    }
+
+    function getTotalMinterAssetsIncludingStrategies() external pure returns (uint256) {
+        return 0; // Mock implementation
+    }
+
+    function getStrategyVault() external pure returns (address) {
+        return address(0); // Mock implementation
     }
 
     /*//////////////////////////////////////////////////////////////

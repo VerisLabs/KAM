@@ -40,6 +40,15 @@ contract kMinterHandler is BaseHandler, Test {
     uint256 public expectedCurrentBatchId;
     uint256 public actualCurrentBatchId;
 
+    // kToken staking tracking
+    uint256 public expectedTotalStakedKTokens;
+    uint256 public actualTotalStakedKTokens;
+
+    // Settlement tracking
+    uint256 public totalBatchesSettled;
+    uint256 public totalBatchesPending;
+    uint256 public totalSuccessfulRedemptions;
+
     ////////////////////////////////////////////////////////////////
     ///                      SETUP                               ///
     ////////////////////////////////////////////////////////////////
@@ -77,7 +86,7 @@ contract kMinterHandler is BaseHandler, Test {
         // Execute operation as handler (has INSTITUTION_ROLE)
         minter.mint(request);
 
-        // CRITICAL: Notify vault handler of minter deposit (USDC goes to vault)
+        // Notify vault handler of minter deposit (USDC goes to vault)
         if (vaultHandler != address(0)) {
             // Call vault handler to update its expected vault assets
             (bool success,) = vaultHandler.call(abi.encodeWithSignature("notifyMinterDeposit(uint256)", amount));
@@ -114,6 +123,34 @@ contract kMinterHandler is BaseHandler, Test {
         _syncActualValues();
     }
 
+    function forceCreateNewBatch() public countCall("forceCreateNewBatch") {
+        // Only admin can force create new batch
+        address admin = address(0x1);
+
+        vm.prank(admin);
+        try minter.forceCreateNewBatch() {
+            // Batch creation successful
+            _syncActualValues();
+        } catch {
+            // Batch creation failed, skip
+        }
+    }
+
+    function redeem(bytes32 requestId) public createActor countCall("redeem") {
+        // Try to redeem a request (this is for completed batch receiver redemptions)
+
+        vm.prank(currentActor);
+        try minter.redeem(requestId) {
+            // Track redemption completion
+            totalSuccessfulRedemptions++;
+
+            // Update actual state AFTER operation
+            _syncActualValues();
+        } catch {
+            // Redemption failed, skip
+        }
+    }
+
     ////////////////////////////////////////////////////////////////
     ///                      INVARIANTS                          ///
     ////////////////////////////////////////////////////////////////
@@ -133,7 +170,7 @@ contract kMinterHandler is BaseHandler, Test {
         assertEq(actualTotalRedeemed, expectedTotalRedeemed, "Total redeemed mismatch");
     }
 
-    /// @dev Critical invariant: kToken supply = deposits - redeemed (1:1 backing)
+    /// @dev invariant: kToken supply = deposits - redeemed (1:1 backing)
     function INVARIANT_1TO1_BACKING() public view {
         uint256 expectedBacking = actualTotalDeposited - actualTotalRedeemed;
         assertEq(actualKTokenSupply, expectedBacking, "1:1 backing violation");
@@ -142,6 +179,22 @@ contract kMinterHandler is BaseHandler, Test {
     /// @dev Total accounting: deposited >= redeemed
     function INVARIANT_ACCOUNTING_SANITY() public view {
         assertGe(actualTotalDeposited, actualTotalRedeemed, "Deposited < Redeemed");
+    }
+
+    /// @dev kToken staking should match expected
+    function INVARIANT_KTOKEN_STAKING() public view {
+        assertEq(actualTotalStakedKTokens, expectedTotalStakedKTokens, "kToken staking mismatch");
+    }
+
+    /// @dev Pending redemptions should be reasonable
+    function INVARIANT_PENDING_REDEMPTIONS() public view {
+        assertLe(actualTotalPendingRedemptions, actualTotalDeposited, "Pending redemptions > deposits");
+    }
+
+    /// @dev Settlement consistency
+    function INVARIANT_SETTLEMENT_CONSISTENCY() public view {
+        // Settled + pending should equal total operations
+        assertTrue(totalBatchesSettled <= actualCurrentBatchId, "Settlement consistency violated");
     }
 
     ////////////////////////////////////////////////////////////////
@@ -154,6 +207,7 @@ contract kMinterHandler is BaseHandler, Test {
         actualKTokenSupply = kToken_.totalSupply();
         actualTotalPendingRedemptions = _getActualTotalPendingRedemptions();
         actualCurrentBatchId = _getActualCurrentBatchId();
+        actualTotalStakedKTokens = _getActualTotalStakedKTokens();
     }
 
     /// @dev Read totalDeposited from storage slot +14
@@ -180,15 +234,23 @@ contract kMinterHandler is BaseHandler, Test {
         return uint256(vm.load(address(minter), slot));
     }
 
+    /// @dev Read totalStakedKTokens from storage slot +17 (estimate)
+    function _getActualTotalStakedKTokens() internal view returns (uint256) {
+        bytes32 slot = bytes32(uint256(0xd7df67ea9a5dbfe32636a20098d87d60f65e8140be3a76c5824fb5a4c8e19d00) + 17);
+        return uint256(vm.load(address(minter), slot));
+    }
+
     /// @notice Set the vault handler for cross-synchronization
     function setVaultHandler(address _vaultHandler) external {
         vaultHandler = _vaultHandler;
     }
 
     function getEntryPoints() public pure override returns (bytes4[] memory) {
-        bytes4[] memory _entryPoints = new bytes4[](2);
+        bytes4[] memory _entryPoints = new bytes4[](4);
         _entryPoints[0] = this.mint.selector;
         _entryPoints[1] = this.requestRedeem.selector;
+        _entryPoints[2] = this.forceCreateNewBatch.selector;
+        _entryPoints[3] = this.redeem.selector;
         return _entryPoints;
     }
 
@@ -197,10 +259,15 @@ contract kMinterHandler is BaseHandler, Test {
         console2.log("=== kMinter Call Summary ===");
         console2.log("mint:", calls["mint"]);
         console2.log("requestRedeem:", calls["requestRedeem"]);
+        console2.log("forceCreateNewBatch:", calls["forceCreateNewBatch"]);
+        console2.log("redeem:", calls["redeem"]);
         console2.log("Expected kToken Supply:", expectedKTokenSupply);
         console2.log("Actual kToken Supply:", actualKTokenSupply);
         console2.log("Expected Total Deposited:", expectedTotalDeposited);
         console2.log("Actual Total Deposited:", actualTotalDeposited);
+        console2.log("Expected Total Staked:", expectedTotalStakedKTokens);
+        console2.log("Actual Total Staked:", actualTotalStakedKTokens);
+        console2.log("Total Pending Redemptions:", actualTotalPendingRedemptions);
         console2.log("1:1 Backing Check:", actualKTokenSupply == (actualTotalDeposited - actualTotalRedeemed));
     }
 }

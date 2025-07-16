@@ -457,7 +457,7 @@ contract kTokenRealTest is BaseTest {
     function test_emergencyWithdraw_revertsIfNotPaused() public {
         uint256 amount = _100_USDC;
 
-        vm.expectRevert("Contract not paused");
+        vm.expectRevert(kToken.ContractNotPaused.selector);
         vm.prank(users.emergencyAdmin);
         token.emergencyWithdraw(asset, users.treasury, amount);
     }

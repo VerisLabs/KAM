@@ -66,6 +66,7 @@ contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, Reentran
     error Paused();
     error ZeroAddress();
     error ZeroAmount();
+    error ContractNotPaused();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -254,7 +255,7 @@ contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, Reentran
     /// @param amount Amount to withdraw
     function emergencyWithdraw(address token, address to, uint256 amount) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
         kTokenStorage storage $ = _getkTokenStorage();
-        if (!$.isPaused) revert("Contract not paused");
+        if (!$.isPaused) revert ContractNotPaused();
         if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
 

@@ -9,15 +9,16 @@ import { kDNStakingVault } from "src/kDNStakingVault.sol";
 
 import { kMinter } from "src/kMinter.sol";
 import { kToken } from "src/kToken.sol";
-import { AdminModule } from "src/modules/AdminModule.sol";
+import { AdminModule } from "src/modules/shared/AdminModule.sol";
 
-import { ClaimModule } from "src/modules/ClaimModule.sol";
-import { SettlementModule } from "src/modules/SettlementModule.sol";
+import { SettlementModule } from "src/modules/kDNStaking/SettlementModule.sol";
+import { ClaimModule } from "src/modules/shared/ClaimModule.sol";
 import { MockToken } from "test/helpers/MockToken.sol";
 import { MockkDNStaking } from "test/helpers/MockkDNStaking.sol";
-import { TestToken } from "test/helpers/TestToken.sol";
+
 import { kDNStakingVaultProxy } from "test/helpers/kDNStakingVaultProxy.sol";
 import { kMinterProxy } from "test/helpers/kMinterProxy.sol";
+import { kTokenProxy } from "test/helpers/kTokenProxy.sol";
 
 import { kDNStakingVaultHandler } from "test/invariant/handlers/kDNStakingVaultHandler.t.sol";
 import { kMinterHandler } from "test/invariant/handlers/kMinterHandler.t.sol";
@@ -32,15 +33,17 @@ import {
     SETTLER_ROLE
 } from "test/utils/Constants.sol";
 
-/// @title Double Accounting Invariant Tests
-/// @notice Tests the critical invariants of the dual accounting system
-contract DoubleAccountingInvariant is StdInvariant, Test {
+/// @title Dual Accounting Invariant Tests
+/// @notice Tests the invariants of the dual accounting system
+contract DualAccountingInvariant is StdInvariant, Test {
     ////////////////////////////////////////////////////////////////
     ///                      CONTRACTS                           ///
     ////////////////////////////////////////////////////////////////
 
     MockToken public asset;
-    TestToken public testKToken; // Use TestToken to avoid proxy issues
+    kToken public testKToken; // Use real kToken with proxy pattern
+    kToken public kTokenImpl;
+    kTokenProxy public kTokenProxyDeployer;
     MockkDNStaking public mockStaking;
     kDNStakingVault public vault;
     kDNStakingVault public vaultImpl;
@@ -70,19 +73,29 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
         // Deploy asset token
         asset = new MockToken("USDC", "USDC", 6);
 
-        // Deploy test kToken (simple ERC20 for testing)
-        testKToken = new TestToken();
+        // Deploy kToken implementation
+        kTokenImpl = new kToken();
 
-        // Initialize kToken
-        testKToken.initialize(
-            "KAM USDC",
-            "kUSD",
-            6,
+        // Deploy kToken proxy deployer
+        kTokenProxyDeployer = new kTokenProxy();
+
+        // Prepare kToken initialization data
+        bytes memory kTokenInitData = abi.encodeWithSelector(
+            kToken.initialize.selector,
             alice, // owner
             admin, // admin
             emergencyAdmin, // emergency admin
-            address(this) // initial minter
+            address(this), // initial minter
+            6 // decimals
         );
+
+        // Deploy and initialize kToken proxy
+        address kTokenProxyAddress = kTokenProxyDeployer.deployAndInitialize(address(kTokenImpl), kTokenInitData);
+        testKToken = kToken(kTokenProxyAddress);
+
+        // Set up metadata
+        vm.prank(admin);
+        testKToken.setupMetadata("KAM USDC", "kUSD");
 
         // Deploy mock staking vault
         mockStaking = new MockkDNStaking();
@@ -116,8 +129,8 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
         settlementModule = new SettlementModule();
 
         // Configure modules in MultiFacetProxy using the fixed authorization
-        // admin (not alice) has ADMIN_ROLE from initialization
-        vm.startPrank(admin);
+        // Since MultiFacetProxy has its own OwnableRoles, use the owner directly
+        vm.startPrank(alice); // Use owner who has all roles
 
         // Add AdminModule functions
         bytes4[] memory adminSelectors = adminModule.selectors();
@@ -161,29 +174,23 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
         vaultHandler = new kDNStakingVaultHandler(vault, kToken(address(testKToken)), asset);
         minterHandler = new kMinterHandler(minter, kToken(address(testKToken)), asset, mockStaking);
 
-        // CRITICAL: Set up cross-handler synchronization
         vaultHandler.setMinterHandler(address(minterHandler));
         minterHandler.setVaultHandler(address(vaultHandler));
 
         // Grant roles using properly configured AdminModule interface
         vm.startPrank(admin);
 
-        // CRITICAL: kDNStakingVault MUST have MINTER_ROLE on kToken for yield distribution
         testKToken.grantMinterRole(address(vault));
 
-        // CRITICAL: kMinter MUST have MINTER_ROLE on kToken to mint for institutions
         testKToken.grantMinterRole(address(minter));
 
         // Grant handler roles for fuzzing
         testKToken.grantMinterRole(address(vaultHandler)); // For direct vault operations
 
-        // CRITICAL: Institutions need INSTITUTION_ROLE on kMinter to deposit USDC/WBTC
         minter.grantInstitutionRole(address(minterHandler)); // Handler acts as institution
 
-        // CRITICAL: kMinter needs MINTER_ROLE on kDNStakingVault to deposit/redeem
         AdminModule(payable(address(vault))).grantMinterRole(address(minter));
 
-        // CRITICAL: kMinter needs to know about the kDNStakingVault
         minter.setKDNStaking(address(vault));
 
         vm.stopPrank();
@@ -218,7 +225,7 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
             }
         }
 
-        console2.log("=== Double Accounting Invariant Test Setup Complete ===");
+        console2.log("=== Dual Accounting Invariant Test Setup Complete ===");
         console2.log("Asset:", address(asset));
         console2.log("kToken:", address(testKToken));
         console2.log("Vault:", address(vault));
@@ -231,7 +238,7 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
     ///                      INVARIANTS                          ///
     ////////////////////////////////////////////////////////////////
 
-    /// @dev Critical: Dual accounting must always balance
+    /// @dev Dual accounting must always balance
     function invariant_DualAccounting() public view {
         vaultHandler.INVARIANT_DUAL_ACCOUNTING();
     }
@@ -266,7 +273,7 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
         vaultHandler.INVARIANT_STKTOKEN_BOUNDS();
     }
 
-    /// @dev CRITICAL: Peg protection - validates the unstaking settlement fix
+    /// @dev Peg protection - validates the unstaking settlement fix
     function invariant_PegProtection() public view {
         vaultHandler.INVARIANT_PEG_PROTECTION();
     }
@@ -286,13 +293,12 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
         vaultHandler.INVARIANT_ESCROW_SAFETY();
     }
 
-    /// @dev CRITICAL: USDC Lock Invariant following expected/actual pattern
+    /// @dev USDC Lock Invariant following expected/actual pattern
     function invariant_USDCLock() public view {
         // Use the existing expected/actual pattern from vault handler
         uint256 actualVaultAssets = vaultHandler.actualTotalVaultAssets();
         uint256 expectedVaultAssets = vaultHandler.expectedTotalVaultAssets();
 
-        // CRITICAL: Vault USDC should only change through tracked operations
         // Yield minting (kTokens) should NOT affect underlying USDC balance
         // The vault tracks kTokens as assets, but USDC backing should remain constant
         uint256 vaultUSDCBalance = asset.balanceOf(address(vault));
@@ -302,7 +308,7 @@ contract DoubleAccountingInvariant is StdInvariant, Test {
         assertEq(vaultUSDCBalance, expectedVaultAssets, "USDC Lock Violation: Vault USDC != expected vault assets");
     }
 
-    /// @dev CRITICAL: kToken backing using expected/actual pattern
+    /// @dev kToken backing using expected/actual pattern
     function invariant_kTokenBacking() public view {
         // Follow the established pattern - compare expected vs actual
         uint256 actualMinterAssets = vaultHandler.actualTotalMinterAssets();

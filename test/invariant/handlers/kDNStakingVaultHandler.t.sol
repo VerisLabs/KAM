@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { kDNDataProvider } from "../../../src/kDNDataProvider.sol";
+import { kDNDataProvider } from "../../../src/dataProviders/kDNDataProvider.sol";
 import { kDNStakingVault } from "../../../src/kDNStakingVault.sol";
 
 import { kToken } from "../../../src/kToken.sol";
-import { AdminModule } from "../../../src/modules/AdminModule.sol";
+import { AdminModule } from "../../../src/modules/shared/AdminModule.sol";
 
-import { ClaimModule } from "../../../src/modules/ClaimModule.sol";
-import { SettlementModule } from "../../../src/modules/SettlementModule.sol";
+import { SettlementModule } from "../../../src/modules/kDNStaking/SettlementModule.sol";
+import { ClaimModule } from "../../../src/modules/shared/ClaimModule.sol";
 
 import { MockToken } from "../../helpers/MockToken.sol";
 import { BaseHandler } from "./BaseHandler.t.sol";
@@ -199,8 +199,12 @@ contract kDNStakingVaultHandler is BaseHandler, Test {
         // Get actual total kTokens from batch data
         (, uint256 totalKTokensStaked,,) = dataProvider.getStakingBatchInfo(batchId);
 
+        address[] memory emptyAddresses = new address[](0);
+        uint256[] memory emptyAmounts = new uint256[](0);
         vm.prank(settler);
-        try SettlementModule(payable(address(vault))).settleStakingBatch(batchId, totalKTokensStaked) {
+        try SettlementModule(payable(address(vault))).settleStakingBatch(
+            batchId, totalKTokensStaked, emptyAddresses, emptyAmounts
+        ) {
             lastSettledStakingBatchId = batchId;
             _syncActualValues();
         } catch {
@@ -221,7 +225,7 @@ contract kDNStakingVaultHandler is BaseHandler, Test {
         (, uint256 totalStkTokensInBatch,,,) = dataProvider.getUnstakingBatchInfo(batchId);
 
         vm.prank(settler);
-        try SettlementModule(payable(address(vault))).settleUnstakingBatch(batchId, totalStkTokensInBatch) {
+        try SettlementModule(payable(address(vault))).settleUnstakingBatch(batchId, totalStkTokensInBatch, 0, 0) {
             lastSettledUnstakingBatchId = batchId;
 
             // Track settled distributions using actual batch data
@@ -317,7 +321,7 @@ contract kDNStakingVaultHandler is BaseHandler, Test {
     ////////////////////////////////////////////////////////////////
 
     /// @dev Core dual accounting: minter + user assets == total vault assets
-    /// @dev CRITICAL: Uses getTotalUserAssets() which includes automatic yield
+    /// @dev Uses getTotalUserAssets() which includes automatic yield
     function INVARIANT_DUAL_ACCOUNTING() public view {
         uint256 actualUserAssetsWithYield = vault.getTotalUserAssets(); // Includes automatic yield
         uint256 expectedTotal = actualTotalMinterAssets + actualUserAssetsWithYield;
@@ -447,7 +451,7 @@ contract kDNStakingVaultHandler is BaseHandler, Test {
         }
     }
 
-    /// @dev CRITICAL: Unstaking claims - sum of claimed originals matches expected prorata distribution
+    /// @dev Unstaking claims - sum of claimed originals matches expected prorata distribution
     function INVARIANT_UNSTAKING_CLAIM_TOTALS() public view {
         // Post-claims validation: claimed originals should follow prorata math
         // For the last settled batch, validate claim consistency
@@ -460,7 +464,7 @@ contract kDNStakingVaultHandler is BaseHandler, Test {
         }
     }
 
-    /// @dev Peg protection - stkToken price should never go below 1:1 (CRITICAL FIX VALIDATION)
+    /// @dev Peg protection - stkToken price should never go below 1:1
     function INVARIANT_PEG_PROTECTION() public view {
         uint256 currentPrice = dataProvider.getCurrentStkTokenPriceWithYield();
         // With fixed logic, yield should always be non-negative, price >= PRECISION (1e18)
@@ -585,7 +589,7 @@ contract kDNStakingVaultHandler is BaseHandler, Test {
         // But DON'T update expected minter assets (they only update on settlement)
         expectedTotalVaultAssets += amount;
 
-        // CRITICAL: Sync actual values after minter operations affect the vault
+        // Sync actual values after minter operations affect the vault
         _syncActualValues();
     }
 

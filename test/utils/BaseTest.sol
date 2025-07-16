@@ -40,6 +40,7 @@ contract BaseTest is Test {
         address payable institution;
         address payable settler;
         address payable treasury;
+        address payable owner;
     }
 
     Users internal users;
@@ -81,6 +82,7 @@ contract BaseTest is Test {
         users.institution = utils.createUser("Institution", tokens);
         users.settler = utils.createUser("Settler", tokens);
         users.treasury = utils.createUser("Treasury", tokens);
+        users.owner = utils.createUser("Owner", tokens);
     }
 
     /// @dev Setup mainnet fork for integration tests
@@ -151,6 +153,46 @@ contract BaseTest is Test {
     function getBalance(address token, address user) internal view returns (uint256) {
         return MockToken(token).balanceOf(user);
     }
+
+    /// @dev Helper to create MockToken for kToken in unit tests
+    /// @param name Token name
+    /// @param symbol Token symbol
+    /// @param decimals Token decimals
+    /// @return MockToken instance suitable for simple kToken testing
+    function createMockKToken(string memory name, string memory symbol, uint8 decimals) internal returns (MockToken) {
+        return new MockToken(name, symbol, decimals);
+    }
+
+    /// @dev Helper to create MockToken with default kToken parameters
+    /// @return MockToken instance with standard kToken settings
+    function createDefaultMockKToken() internal returns (MockToken) {
+        return createMockKToken("KAM Token", "kToken", 6);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          TOKEN USAGE GUIDELINES
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev Token Usage Guidelines for Tests:
+    ///
+    /// 1. **MockToken**: Use for simple token testing scenarios
+    ///    - Underlying assets (USDC, WBTC) in unit tests
+    ///    - kToken when you don't need role-based access control
+    ///    - Simple mint/burn operations without permission checks
+    ///    - Basic transfer and balance testing
+    ///
+    /// 2. **TestToken**: Use for complex kToken behavior testing
+    ///    - Invariant tests where proper role-based access control is needed
+    ///    - Testing MINTER_ROLE, ADMIN_ROLE, EMERGENCY_ADMIN_ROLE functionality
+    ///    - Pause/unpause functionality testing
+    ///    - Emergency withdrawal testing
+    ///
+    /// 3. **MockkToken**: Legacy - being phased out in favor of MockToken
+    ///    - Replace with MockToken for simple scenarios
+    ///    - Replace with TestToken for complex role testing
+    ///
+    /// **Recommendation**: Start with MockToken for new tests, upgrade to TestToken
+    /// only if you need role-based access control or pause functionality.
 
     /// @dev Skip tests that require mainnet fork if RPC_MAINNET not set
     function requireMainnetFork() internal {

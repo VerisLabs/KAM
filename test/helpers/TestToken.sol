@@ -44,6 +44,7 @@ contract TestToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     //////////////////////////////////////////////////////////////*/
 
     error Paused();
+    error ContractNotPaused();
     error ZeroAddress();
     error ZeroAmount();
 
@@ -164,7 +165,7 @@ contract TestToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     }
 
     function emergencyWithdraw(address token, address to, uint256 amount) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
-        if (!isPaused) revert("Contract not paused");
+        if (!isPaused) revert ContractNotPaused();
         if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
 

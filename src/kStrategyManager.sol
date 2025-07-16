@@ -12,6 +12,9 @@ import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
+import { IkDNStaking } from "src/interfaces/IkDNStaking.sol";
+import { IkSStaking } from "src/interfaces/IkSStaking.sol";
+import { kSiloContract } from "src/kSiloContract.sol";
 import { DataTypes } from "src/types/DataTypes.sol";
 
 /// @title kStrategyManager
@@ -46,7 +49,7 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     uint256 public constant MAX_ALLOCATIONS = 10;
 
     /// @notice Default settlement interval
-    uint256 public constant DEFAULT_SETTLEMENT_INTERVAL = 1 hours;
+    uint256 public constant DEFAULT_SETTLEMENT_INTERVAL = 8 hours;
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -55,7 +58,10 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     /// @custom:storage-location erc7201:kStrategyManager.storage.kStrategyManager
     struct kStrategyManagerStorage {
         address kDNStakingVault;
+        address kSStakingVault;
         address underlyingAsset;
+        address kSiloContract;
+        address kMinter;
         mapping(address => DataTypes.AdapterConfig) adapterConfigs;
         address[] registeredAdapters;
         mapping(address => uint256) nonces;
@@ -64,6 +70,21 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         bool paused;
         uint256 maxTotalAllocation;
         uint256 currentTotalAllocation;
+        mapping(uint256 => SettlementOperation) settlementOperations;
+        uint256 settlementCounter;
+    }
+
+    struct SettlementOperation {
+        uint256 operationId;
+        uint256 totalWithdrawals;
+        uint256 totalDeposits;
+        address[] destinations;
+        uint256[] amounts;
+        bytes32[] batchReceiverIds;
+        bool validated;
+        bool executed;
+        uint256 timestamp;
+        string operationType;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kStrategyManager.storage.kStrategyManager")) - 1)) &
@@ -87,6 +108,11 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     event AdapterUpdated(address indexed adapter, bool enabled, uint256 maxAllocation);
     event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
     event SettlementIntervalUpdated(uint256 oldInterval, uint256 newInterval);
+    event SettlementValidated(uint256 indexed operationId, uint256 totalWithdrawals, uint256 totalDeposits);
+    event SiloTransferExecuted(bytes32 indexed operationId, address indexed destination, uint256 amount);
+    event AsyncOperationTracked(bytes32 indexed operationId, address indexed metavault, uint256 amount);
+    event WithdrawalsDepositsMismatch(uint256 totalWithdrawals, uint256 totalDeposits, uint256 difference);
+    event kSiloContractUpdated(address indexed oldSilo, address indexed newSilo);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -104,6 +130,16 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     error InvalidAllocationSum();
     error TooManyAllocations();
     error ZeroAmount();
+    error InsufficientWithdrawals();
+    error SettlementNotValidated();
+    error SettlementAlreadyExecuted();
+    error SiloContractNotSet();
+    error InvalidSettlementOperation();
+    error VaultNotSet();
+    error SettlementArrayMismatch();
+    error SettlementFailed();
+    error UseVaultSpecificEmergencySettlementFunctions();
+    error ContractNotPaused();
 
     /*//////////////////////////////////////////////////////////////
                               MODIFIERS
@@ -129,7 +165,10 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     /// @notice Initializes the kStrategyManager contract
     function initialize(
         address kDNStakingVault_,
+        address kSStakingVault_,
         address underlyingAsset_,
+        address kSiloContract_,
+        address kMinter_,
         address owner_,
         address admin_,
         address emergencyAdmin_,
@@ -140,6 +179,8 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     {
         if (kDNStakingVault_ == address(0)) revert ZeroAddress();
         if (underlyingAsset_ == address(0)) revert ZeroAddress();
+        if (kSiloContract_ == address(0)) revert ZeroAddress();
+        if (kMinter_ == address(0)) revert ZeroAddress();
         if (owner_ == address(0)) revert ZeroAddress();
 
         // Initialize ownership and roles
@@ -153,32 +194,120 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         // Initialize storage
         kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
         $.kDNStakingVault = kDNStakingVault_;
+        $.kSStakingVault = kSStakingVault_;
         $.underlyingAsset = underlyingAsset_;
+        $.kSiloContract = kSiloContract_;
+        $.kMinter = kMinter_;
         $.settlementInterval = DEFAULT_SETTLEMENT_INTERVAL;
         $.maxTotalAllocation = type(uint256).max; // No limit by default
+        $.settlementCounter = 0;
     }
 
     /*//////////////////////////////////////////////////////////////
                           SETTLEMENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Orchestrates batch settlement and asset allocation across multiple strategy adapters
-    /// @dev Validates allocation order signature, settles vault batches, and executes asset distribution
-    /// @param stakingBatchId Identifier for the staking batch to process
-    /// @param unstakingBatchId Identifier for the unstaking batch to process, or 0 to skip
-    /// @param totalKTokensStaked Total kTokens in staking batch (backend calculated)
-    /// @param totalStkTokensUnstaked Total stkTokens in unstaking batch (backend calculated)
-    /// @param totalKTokensToReturn Total original kTokens to return to users
-    /// @param totalYieldToMinter Total yield to transfer back to minter pool
+    /// @notice Validates settlement operation ensuring withdrawals > deposits
+    /// @param totalWithdrawals Total amount being withdrawn from strategies
+    /// @param totalDeposits Total amount being deposited to strategies
+    /// @param destinations Array of destination addresses (kBatchReceivers)
+    /// @param amounts Array of amounts to transfer to each destination
+    /// @param batchReceiverIds Array of batch receiver IDs for tracking
+    /// @param operationType Type of settlement operation
+    /// @return operationId Unique identifier for this settlement operation
+    function validateSettlement(
+        uint256 totalWithdrawals,
+        uint256 totalDeposits,
+        address[] calldata destinations,
+        uint256[] calldata amounts,
+        bytes32[] calldata batchReceiverIds,
+        string calldata operationType
+    )
+        external
+        onlyRoles(SETTLER_ROLE)
+        whenNotPaused
+        returns (uint256 operationId)
+    {
+        kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
+
+        // Validate withdrawals > deposits (key requirement)
+        if (totalWithdrawals <= totalDeposits) {
+            revert InsufficientWithdrawals();
+        }
+
+        // Validate arrays match
+        if (destinations.length != amounts.length || amounts.length != batchReceiverIds.length) {
+            revert InvalidSettlementOperation();
+        }
+
+        // Generate operation ID
+        operationId = ++$.settlementCounter;
+
+        // Store settlement operation
+        $.settlementOperations[operationId] = SettlementOperation({
+            operationId: operationId,
+            totalWithdrawals: totalWithdrawals,
+            totalDeposits: totalDeposits,
+            destinations: destinations,
+            amounts: amounts,
+            batchReceiverIds: batchReceiverIds,
+            validated: true,
+            executed: false,
+            timestamp: block.timestamp,
+            operationType: operationType
+        });
+
+        emit SettlementValidated(operationId, totalWithdrawals, totalDeposits);
+
+        // Log mismatch for monitoring
+        uint256 difference = totalWithdrawals - totalDeposits;
+        emit WithdrawalsDepositsMismatch(totalWithdrawals, totalDeposits, difference);
+
+        return operationId;
+    }
+
+    /// @notice Executes validated settlement by transferring from Silo to destinations
+    /// @param operationId Settlement operation ID to execute
+    function executeSettlement(uint256 operationId) external onlyRoles(SETTLER_ROLE) whenNotPaused {
+        kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
+
+        if ($.kSiloContract == address(0)) revert SiloContractNotSet();
+
+        // Direct lookup using operationId as key
+        SettlementOperation storage operation = $.settlementOperations[operationId];
+
+        // Validate operation exists
+        if (operation.operationId == 0) revert SettlementNotValidated();
+        if (!operation.validated) revert SettlementNotValidated();
+        if (operation.executed) revert SettlementAlreadyExecuted();
+
+        // Execute transfers from Silo to destinations
+        for (uint256 i = 0; i < operation.destinations.length; i++) {
+            if (operation.amounts[i] > 0) {
+                kSiloContract(payable($.kSiloContract)).transferToDestination(
+                    operation.destinations[i],
+                    operation.amounts[i],
+                    operation.batchReceiverIds[i],
+                    operation.operationType
+                );
+
+                emit SiloTransferExecuted(
+                    operation.batchReceiverIds[i], operation.destinations[i], operation.amounts[i]
+                );
+            }
+        }
+
+        // Mark as executed
+        operation.executed = true;
+    }
+
+    /// @notice Orchestrates multi-phase settlement across the entire protocol
+    /// @dev Implements proper settlement ordering: Institutional → User Staking → Strategy Deployment
+    /// @param params Struct containing all settlement and allocation parameters
     /// @param order Structured allocation instructions containing targets and amounts
     /// @param signature Cryptographic signature validating the allocation order
     function settleAndAllocate(
-        uint256 stakingBatchId,
-        uint256 unstakingBatchId,
-        uint256 totalKTokensStaked,
-        uint256 totalStkTokensUnstaked,
-        uint256 totalKTokensToReturn,
-        uint256 totalYieldToMinter,
+        DataTypes.SettlementParams calldata params,
         DataTypes.AllocationOrder calldata order,
         bytes calldata signature
     )
@@ -194,30 +323,65 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
             revert SettlementTooEarly();
         }
 
-        // Validate and execute allocation order
+        // Validate allocation order signature
         _validateAllocationOrder(order, signature);
 
-        // Settle vault batches first
-        _settleVaultBatches(
-            stakingBatchId,
-            unstakingBatchId,
-            totalKTokensStaked,
-            totalStkTokensUnstaked,
-            totalKTokensToReturn,
-            totalYieldToMinter
-        );
+        // PHASE 1: Institutional Settlement (kMinter → kDNStakingVault)
+        // Note: Institutional settlements are handled by kMinter.settleBatch() externally
+        // This ensures institutions get priority liquidity access
 
-        // Execute allocation strategy
-        _executeAllocations(order);
+        // PHASE 2: User Staking Settlement (kDNStakingVault → kSStakingVault)
+        // Handle kDNStakingVault settlements (both staking and unstaking)
+        if (params.stakingBatchId > 0 && params.totalKTokensStaked > 0) {
+            // Validate kDNStakingVault is set
+            if ($.kDNStakingVault == address(0)) revert VaultNotSet();
+
+            // kDNStakingVault staking settlement (now unified interface with optional destinations/amounts)
+            try IkDNStaking($.kDNStakingVault).settleStakingBatch(
+                params.stakingBatchId,
+                params.totalKTokensStaked,
+                params.stakingDestinations, // Forward destinations for unified interface
+                params.stakingAmounts // Forward amounts for unified interface
+            ) {
+                // Settlement successful
+            } catch {
+                revert SettlementFailed();
+            }
+        }
+
+        // PHASE 3: User Unstaking Settlement (kSStakingVault → kMinter)
+        if (params.unstakingBatchId > 0 && params.totalStkTokensUnstaked > 0) {
+            // Validate kSStakingVault is set
+            if ($.kSStakingVault == address(0)) revert VaultNotSet();
+
+            // kSStakingVault unstaking settlement (now unified interface with optional sources/amounts)
+            try IkSStaking($.kSStakingVault).settleUnstakingBatch(
+                params.unstakingBatchId,
+                params.totalStkTokensUnstaked,
+                params.unstakingSources, // Forward sources for unified interface
+                params.unstakingAmounts // Forward amounts for unified interface
+            ) {
+                // Settlement successful
+            } catch {
+                revert SettlementFailed();
+            }
+        }
+
+        // PHASE 4: Strategy Deployment (Execute allocation strategy)
+        // Each vault deploys to its strategy-specific destinations with MetaVault-first priority
+        _executeAllocation(order);
 
         // Update settlement timestamp
         $.lastSettlement = block.timestamp;
 
-        emit SettlementExecuted(stakingBatchId, order.totalAmount, order.allocations.length);
+        emit SettlementExecuted(params.stakingBatchId, order.totalAmount, order.allocations.length);
     }
 
     /// @notice Processes vault batch settlement without executing any asset allocation
     /// @dev Emergency function that bypasses allocation logic and only updates vault accounting
+    /// @notice Emergency settlement function (deprecated)
+    /// @dev Emergency settlements are now handled directly by individual vaults
+    /// @dev This function remains for compatibility but should not be used
     function emergencySettle(
         uint256 stakingBatchId,
         uint256 unstakingBatchId,
@@ -230,14 +394,9 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         nonReentrant
         onlyRoles(EMERGENCY_ADMIN_ROLE)
     {
-        _settleVaultBatches(
-            stakingBatchId,
-            unstakingBatchId,
-            totalKTokensStaked,
-            totalStkTokensUnstaked,
-            totalKTokensToReturn,
-            totalYieldToMinter
-        );
+        // Emergency settlements are now handled directly by vaults
+        // This function is deprecated but kept for interface compatibility
+        revert UseVaultSpecificEmergencySettlementFunctions();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -256,7 +415,7 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         onlyRoles(ADMIN_ROLE)
     {
         _validateAllocationOrder(order, signature);
-        _executeAllocations(order);
+        _executeAllocation(order);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -276,6 +435,26 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     /// @notice Get all registered adapters
     function getRegisteredAdapters() external view returns (address[] memory) {
         return _getkStrategyManagerStorage().registeredAdapters;
+    }
+
+    /// @notice Get settlement operation details
+    /// @param operationId Settlement operation ID
+    /// @return operation The settlement operation details
+    function getSettlementOperation(uint256 operationId) external view returns (SettlementOperation memory operation) {
+        kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
+
+        // Direct lookup using operationId as key
+        return $.settlementOperations[operationId];
+    }
+
+    /// @notice Get kSiloContractAddress
+    function kSiloContractAddress() external view returns (address) {
+        return _getkStrategyManagerStorage().kSiloContract;
+    }
+
+    /// @notice Get settlement counter
+    function settlementCounter() external view returns (uint256) {
+        return _getkStrategyManagerStorage().settlementCounter;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -334,6 +513,32 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         emit SettlementIntervalUpdated(oldInterval, newInterval);
     }
 
+    /// @notice Updates kSiloContract address
+    /// @param newSiloContract New kSiloContract address
+    function setkSiloContract(address newSiloContract) external onlyRoles(ADMIN_ROLE) {
+        if (newSiloContract == address(0)) revert ZeroAddress();
+        kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
+        address oldSilo = $.kSiloContract;
+        $.kSiloContract = newSiloContract;
+        emit kSiloContractUpdated(oldSilo, newSiloContract);
+    }
+
+    /// @notice Updates kSStakingVault address
+    /// @param newkSStakingVault New kSStakingVault address
+    function setkSStakingVault(address newkSStakingVault) external onlyRoles(ADMIN_ROLE) {
+        if (newkSStakingVault == address(0)) revert ZeroAddress();
+        kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
+        $.kSStakingVault = newkSStakingVault;
+    }
+
+    /// @notice Updates kMinter address
+    /// @param newkMinter New kMinter address
+    function setkMinter(address newkMinter) external onlyRoles(ADMIN_ROLE) {
+        if (newkMinter == address(0)) revert ZeroAddress();
+        kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
+        $.kMinter = newkMinter;
+    }
+
     /// @notice Emergency pause
     function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
         _getkStrategyManagerStorage().paused = paused;
@@ -344,7 +549,7 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     /// @param to Recipient address
     /// @param amount Amount to withdraw
     function emergencyWithdraw(address token, address to, uint256 amount) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
-        if (!_getkStrategyManagerStorage().paused) revert("Not paused");
+        if (!_getkStrategyManagerStorage().paused) revert ContractNotPaused();
         if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
 
@@ -430,110 +635,38 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         }
     }
 
-    /// @notice Executes the allocation strategy
-    function _executeAllocations(DataTypes.AllocationOrder calldata order) internal {
+    /// @notice Internal function to execute allocation orders
+    /// @param order The allocation order to execute
+    function _executeAllocation(DataTypes.AllocationOrder calldata order) internal {
         kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
 
+        // Execute each allocation in the order
         uint256 length = order.allocations.length;
-        DataTypes.Allocation calldata allocation;
-
         for (uint256 i; i < length;) {
-            allocation = order.allocations[i];
+            DataTypes.Allocation calldata allocation = order.allocations[i];
 
-            // Update tracking
-            $.adapterConfigs[allocation.target].currentAllocation += allocation.amount;
-            $.currentTotalAllocation += allocation.amount;
+            // Execute allocation based on adapter type
+            DataTypes.AdapterConfig storage adapterConfig = $.adapterConfigs[allocation.target];
+            if (!adapterConfig.enabled || adapterConfig.implementation == address(0)) revert AdapterNotEnabled();
 
-            // Execute allocation based on type
-            _executeAllocation(allocation);
+            // Call the adapter to execute the allocation
+            (bool success,) = adapterConfig.implementation.call(
+                abi.encodeWithSignature(
+                    "executeAllocation(address,uint256,bytes)", allocation.target, allocation.amount, allocation.data
+                )
+            );
 
+            if (!success) {
+                // Handle failed allocation
+                revert AllocationExceeded();
+            }
+
+            // Emit event for each allocation
             emit AllocationExecuted(allocation.target, allocation.adapterType, allocation.amount);
 
             unchecked {
-                i++;
+                ++i;
             }
-        }
-    }
-
-    /// @notice Executes individual allocation
-    function _executeAllocation(DataTypes.Allocation calldata allocation) internal {
-        if (allocation.adapterType == DataTypes.AdapterType.CUSTODIAL_WALLET) {
-            // Direct transfer to custodial wallet
-            _getkStrategyManagerStorage().underlyingAsset.safeTransfer(allocation.target, allocation.amount);
-        } else if (allocation.adapterType == DataTypes.AdapterType.ERC7540_VAULT) {
-            // ERC7540 async vault deposit
-            _executeERC7540Deposit(allocation);
-        } else if (allocation.adapterType == DataTypes.AdapterType.LENDING_PROTOCOL) {
-            // Onchain lending protocol
-            _executeLendingDeposit(allocation);
-        }
-    }
-
-    /// @notice Executes ERC7540 vault deposit
-    function _executeERC7540Deposit(DataTypes.Allocation calldata allocation) internal {
-        // ERC7540 async vault integration
-        // This would call requestDeposit on the ERC7540 vault
-        address vault = allocation.target;
-        uint256 amount = allocation.amount;
-
-        // Approve and request deposit
-        _getkStrategyManagerStorage().underlyingAsset.safeApprove(vault, amount);
-
-        // Call ERC7540 requestDeposit function
-        (bool success,) = vault.call(
-            abi.encodeWithSignature(
-                "requestDeposit(uint256,address,address,bytes)", amount, address(this), address(this), allocation.data
-            )
-        );
-        require(success, "ERC7540 deposit failed");
-    }
-
-    /// @notice Executes lending protocol deposit
-    function _executeLendingDeposit(DataTypes.Allocation calldata allocation) internal {
-        // Generic lending protocol integration
-        address protocol = allocation.target;
-        uint256 amount = allocation.amount;
-
-        _getkStrategyManagerStorage().underlyingAsset.safeApprove(protocol, amount);
-
-        // Call deposit function (would be protocol-specific)
-        (bool success,) = protocol.call(abi.encodeWithSignature("deposit(uint256,address)", amount, address(this)));
-        require(success, "Lending deposit failed");
-    }
-
-    /// @notice Settles vault batches with backend-calculated parameters
-    function _settleVaultBatches(
-        uint256 stakingBatchId,
-        uint256 unstakingBatchId,
-        uint256 totalKTokensStaked,
-        uint256 totalStkTokensUnstaked,
-        uint256 totalKTokensToReturn,
-        uint256 totalYieldToMinter
-    )
-        internal
-    {
-        address vault = _getkStrategyManagerStorage().kDNStakingVault;
-
-        // Settle staking batch
-        if (stakingBatchId > 0) {
-            (bool success,) = vault.call(
-                abi.encodeWithSignature("settleStakingBatch(uint256,uint256)", stakingBatchId, totalKTokensStaked)
-            );
-            require(success, "Staking settlement failed");
-        }
-
-        // Settle unstaking batch
-        if (unstakingBatchId > 0) {
-            (bool success,) = vault.call(
-                abi.encodeWithSignature(
-                    "settleUnstakingBatch(uint256,uint256,uint256,uint256)",
-                    unstakingBatchId,
-                    totalStkTokensUnstaked,
-                    totalKTokensToReturn,
-                    totalYieldToMinter
-                )
-            );
-            require(success, "Unstaking settlement failed");
         }
     }
 

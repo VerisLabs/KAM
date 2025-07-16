@@ -32,7 +32,7 @@ contract ClaimModule is ModuleBase {
     /// @param batchId Batch ID to claim from
     /// @param requestIndex Index of the request in the batch
     function claimStakedShares(uint256 batchId, uint256 requestIndex) external payable nonReentrant whenNotPaused {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
 
         // Validate batch is settled
         if (batchId > $.lastSettledStakingBatchId) revert BatchNotFound();
@@ -73,7 +73,7 @@ contract ClaimModule is ModuleBase {
     /// @param batchId Batch ID to claim from
     /// @param requestIndex Index of the request in the batch
     function claimUnstakedAssets(uint256 batchId, uint256 requestIndex) external payable nonReentrant whenNotPaused {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
 
         // Validate batch is settled
         if (batchId > $.lastSettledUnstakingBatchId) revert BatchNotFound();

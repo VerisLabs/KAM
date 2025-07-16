@@ -12,8 +12,16 @@ kTokens is a next-generation protocol providing 1:1 asset backing for institutio
 
 **Core Value Proposition:**
 - **For Institutions:** 1:1 backed kToken minting/redemption (never loses value to yield)
-- **For Retail Users:** Automatic yield distribution through kToken staking
+- **For Retail Users:** Automatic yield distribution through kToken staking with multiple risk profiles
 - **For Protocol:** Dual accounting model separating institutional 1:1 backing from user yield generation
+
+**Contract Architecture Per Asset Type:**
+- **1 kMinter** - Handles actual assets (USDC/WBTC) with 1:1 kToken backing
+- **1 kDNStakingVault** - Delta-neutral strategies using kTokens as underlying asset
+- **2+ kSStakingVaults** - Higher-risk strategies (Alpha/Beta) using kTokens as underlying asset
+- **1 kStrategyManager** - Central orchestrator for all asset flows and settlements
+- **1 kSiloContract** - Secure intermediary for custodial strategy returns
+- **1 kAsyncTracker** - Monitor for metavault operations and cross-chain delays
 
 ## 🏗️ Architecture
 
@@ -25,15 +33,20 @@ kTokens is a next-generation protocol providing 1:1 asset backing for institutio
 │ (ERC20/UUPS) │    │ (UUPS)       │    │ (Modular/UUPS)   │
 └──────────────┘    └──────────────┘    └──────────────────┘
                                                    │
-                                        ┌──────────────────┐
-                                        │ kStrategyManager │
-                                        │ (O(1) Settlement)│
-                                        └──────────────────┘
-                                                   │
-                                        ┌──────────────────┐
-                                        │ kBatchReceiver   │
-                                        │ (Minimal Proxy)  │
-                                        └──────────────────┘
+                            ┌─────────────────────────────────┐
+                            │      kStrategyManager           │
+                            │   (Central Orchestrator)        │
+                            └─────────────────────────────────┘
+                                     │           │
+                          ┌──────────────┐  ┌──────────────────┐
+                          │kSiloContract │  │  kAsyncTracker   │
+                          │ (Custodial)  │  │  (Metavaults)    │
+                          └──────────────┘  └──────────────────┘
+                                     │           │
+                          ┌──────────────────┐  ┌──────────────────┐
+                          │ kSStakingVault   │  │ kBatchReceiver   │
+                          │ (Alpha/Beta)     │  │ (Minimal Proxy)  │
+                          └──────────────────┘  └──────────────────┘
 ```
 
 ### Modular kDNStakingVault Architecture
@@ -55,23 +68,44 @@ kTokens is a next-generation protocol providing 1:1 asset backing for institutio
                          └──────────────────┘
 ```
 
-- **kToken:** Upgradeable ERC20 token with 1:1 asset backing, mint/burn controlled by kMinter
-- **kMinter:** Institutional minting/redemption with **bitmap-based batch settlement** and **Extsload** for efficient storage access  
-- **kDNStakingVault:** **Modular dual accounting vault** with **UUPS + MultiFacetProxy** - separate 1:1 accounting for minters, yield-bearing for users
+- **kToken:** Upgradeable ERC20 token with 1:1 asset backing, mint/burn controlled by kMinter and vaults
+- **kMinter:** Institutional minting/redemption with **bitmap-based batch settlement** and **Extsload** for efficient storage access
+  - **Underlying Asset:** Real assets (USDC/WBTC)
+  - **Role:** Maintains protocol-level 1:1 backing between kTokens and underlying assets
+- **kDNStakingVault:** **Modular dual accounting vault** with **UUPS + MultiFacetProxy** - delta-neutral strategies
+  - **Underlying Asset:** kTokens (kUSD/kBTC)
+  - **Strategy Destinations:** Metavaults (70%) + Custodial wallets (30%)
   - **AdminModule:** Role management, configuration, and emergency functions
   - **SettlementModule:** O(1) batch settlement with bitmap tracking
   - **ClaimModule:** User claim functions for settled batches
   - **ModuleBase:** Consolidated storage, roles, and shared utilities
-- **kStrategyManager:** **O(1) settlement orchestration** - modular strategy allocation with EIP712 signatures (97-99% gas savings)
+- **kSStakingVault:** **Strategy vaults for higher-risk yield strategies** (Alpha/Beta variants)
+  - **Underlying Asset:** kTokens (kUSD/kBTC)
+  - **Strategy Destinations:** Custodial wallets (80%) + Metavaults (20%)
+  - **Asset Sourcing:** Coordinates with kStrategyManager for asset allocation
+  - **Risk Profile:** Higher risk, potentially higher yields
+- **kStrategyManager:** **Central settlement orchestrator** for all asset flows
+  - **Settlement Control:** Validates withdrawals > deposits before distribution
+  - **Multi-Destination:** Handles custodial and metavault allocations
+  - **Backend Integration:** Executes signed orders for optimal asset allocation
+- **kSiloContract:** **Secure intermediary** for custodial strategy returns
+  - **Access Control:** Only kStrategyManager can redistribute funds
+  - **Operation Tracking:** Complete audit trail of all asset movements
+- **kAsyncTracker:** **Metavault operation monitor** for cross-chain delays
+  - **Async Operations:** Tracks metavault request/redeem cycles (~1h delays)
+  - **Status Management:** Real-time operation status and completion tracking
 - **kBatchReceiver:** Minimal proxy deployed per redemption batch for asset distribution
+  - **Funding Source:** Receives assets from kStrategyManager during settlement
 
 ### Contract Interactions
 - **Institutions** interact with `kMinter` for 1:1 kToken minting/redemption - always get exact asset amounts
-- **Retail Users** stake kTokens through `kMinter` → get stkTokens → claim yield-bearing vault shares
+- **Retail Users** stake kTokens through `kDNStakingVault` or `kSStakingVault` → get stkTokens → claim yield-bearing vault shares
 - **kMinter** maintains 1:1 backing by routing assets to kDNStakingVault's minter pool (fixed ratio)
 - **kDNStakingVault** uses **dual accounting**: minter assets (1:1) + user assets (yield-bearing)
+- **kSStakingVault** sources actual assets from kDNStakingVault minter pool for higher-risk strategies
 - **Modules** share storage via ERC-7201 pattern with **ModuleBase** providing unified access
 - **Automatic Yield Distribution**: Minter asset yield automatically flows to user share appreciation
+- **Inter-Vault Asset Management**: kSStakingVault calls `allocateAssetsToStrategy()` to get real assets from kDNStakingVault
 
 ## ⚡ Technology Stack
 - **Framework:** Foundry (forge, anvil, cast) + Soldeer for dependency management
@@ -228,6 +262,12 @@ forge script script/base/01_Deploy.s.sol \
 - **User-Paid Claims:** Optional claiming shifts gas costs to users (only when needed)
 - **Unlimited Scalability:** No gas limit constraints for batch processing
 - **Bitmap-Based Tracking:** Ultra-efficient status and eligibility management
+
+### Settlement Timing Consistency
+- **Settlement Interval**: 8 hours across all contracts (kMinter, kDNStakingVault, kSStakingVault)
+- **Batch Cutoff Time**: 4 hours for time-based batch creation
+- **Coordination**: All settlement intervals aligned for consistent user experience
+- **Backend Orchestration**: Centralized settlement timing ensures protocol-wide synchronization
 
 ## 💡 Direct Storage Access (Extsload)
 

@@ -49,7 +49,13 @@ interface IkDNStaking {
     //////////////////////////////////////////////////////////////*/
 
     function settleBatch(uint256 batchId) external;
-    function settleStakingBatch(uint256 batchId, uint256 totalKTokensStaked) external;
+    function settleStakingBatch(
+        uint256 batchId,
+        uint256 totalKTokensStaked,
+        address[] calldata destinations,
+        uint256[] calldata amounts
+    )
+        external;
     function settleUnstakingBatch(
         uint256 batchId,
         uint256 totalStkTokensUnstaked,
@@ -87,11 +93,36 @@ interface IkDNStaking {
     function getStkTokenRebaseRatio() external view returns (uint256);
 
     /*//////////////////////////////////////////////////////////////
+                      INTER-VAULT OPERATIONS
+    //////////////////////////////////////////////////////////////*/
+
+    function allocateAssetsToDestinations(
+        address[] memory destinations,
+        uint256[] memory amounts
+    )
+        external
+        payable
+        returns (bool success);
+
+    function returnAssetsFromDestinations(
+        address[] calldata sources,
+        uint256[] calldata amounts
+    )
+        external
+        payable
+        returns (bool success);
+
+    function getTotalAllocatedToStrategies() external view returns (uint256);
+    function getTotalMinterAssetsIncludingStrategies() external view returns (uint256);
+    function getStrategyVault() external view returns (address);
+
+    /*//////////////////////////////////////////////////////////////
                           ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     function grantMinterRole(address minter) external;
     function revokeMinterRole(address minter) external;
+    function setStrategyVault(address strategyVault) external;
 
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO

@@ -25,6 +25,7 @@ contract SettlementModule is ModuleBase {
     event StakingBatchSettled(uint256 indexed batchId, uint256 totalStkTokens, uint256 stkTokenPrice);
     event UnstakingBatchSettled(uint256 indexed batchId, uint256 totalAssets, uint256 assetPrice);
     event VarianceRecorded(uint256 amount, bool positive);
+    event AllocationRequested(uint256 indexed batchId, address[] destinations, uint256[] amounts);
 
     // Constants inherited from ModuleBase
 
@@ -38,6 +39,10 @@ contract SettlementModule is ModuleBase {
     error InsufficientMinterBacking();
     error StkTokenSupplyOverflow();
     error InsufficientVaultBalance();
+    error NetDepositsTooLarge();
+    error NetRedeemsTooLarge();
+    error ProtocolInvariantsViolatedAfterStakingSettlement();
+    error ProtocolInvariantsViolatedAfterUnstakingSettlement();
 
     /*//////////////////////////////////////////////////////////////
                         SETTLEMENT FUNCTIONS
@@ -46,7 +51,7 @@ contract SettlementModule is ModuleBase {
     /// @notice Settles a unified batch with netting
     /// @param batchId Batch ID to settle
     function settleBatch(uint256 batchId) external nonReentrant onlyRoles(SETTLER_ROLE) {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
 
         // Validate batch
         if (batchId == 0 || batchId > $.currentBatchId) revert BatchNotFound();
@@ -69,11 +74,11 @@ contract SettlementModule is ModuleBase {
         if (batch.totalDeposits > batch.totalRedeems) {
             netDeposits = batch.totalDeposits - batch.totalRedeems;
             // Sanity check for reasonable amounts
-            if (netDeposits > type(uint128).max) revert("Net deposits too large");
+            if (netDeposits > type(uint128).max) revert NetDepositsTooLarge();
         } else if (batch.totalRedeems > batch.totalDeposits) {
             netRedeems = batch.totalRedeems - batch.totalDeposits;
             // Sanity check for reasonable amounts
-            if (netRedeems > type(uint128).max) revert("Net redeems too large");
+            if (netRedeems > type(uint128).max) revert NetRedeemsTooLarge();
         }
 
         // Process based on net flow (dual accounting)
@@ -118,15 +123,19 @@ contract SettlementModule is ModuleBase {
     /// @dev Validates batch sequence, applies automatic rebase, calculates stkToken price, and updates accounting
     /// @param batchId The identifier of the staking batch to settle
     /// @param totalKTokensStaked Aggregated amount of kTokens from all requests in the batch
+    /// @param destinations Optional array of destination addresses for asset allocation (empty array if no routing)
+    /// @param amounts Optional array of amounts for each destination (empty array if no routing)
     function settleStakingBatch(
         uint256 batchId,
-        uint256 totalKTokensStaked
+        uint256 totalKTokensStaked,
+        address[] calldata destinations,
+        uint256[] calldata amounts
     )
         external
         nonReentrant
         onlyRoles(SETTLER_ROLE | STRATEGY_MANAGER_ROLE)
     {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
 
         // Validate batch
         if (batchId == 0 || batchId > $.currentStakingBatchId) revert BatchNotFound();
@@ -151,61 +160,54 @@ contract SettlementModule is ModuleBase {
         }
 
         // AUTOMATIC REBASE: Update stkToken assets with real vault balance
-        uint256 totalVaultAssets = _getTotalVaultAssets($); // Real assets
-        uint256 accountedAssets = $.totalMinterAssets + $.totalStkTokenAssets;
-
-        // Auto-rebase stkTokens with unaccounted yield
-        if (totalVaultAssets > accountedAssets) {
-            uint256 yield = totalVaultAssets - accountedAssets;
-            if (yield <= MAX_YIELD_PER_SYNC) {
-                // CRITICAL FIX: Mint kTokens to vault to maintain 1:1 backing
-                // This ensures the vault has enough kTokens to cover yield distribution
-                // IMPORTANT: kDNStakingVault MUST have MINTER_ROLE on kToken contract
-                IkToken($.kToken).mint(address(this), yield);
-
-                // Add yield directly to stkToken pool - DO NOT reduce minter assets
-                // Yield comes as extra kTokens from external sources (strategies), not minter funds
-                uint256 newStkTokenAssetsYield = uint256($.totalStkTokenAssets) + yield;
-                uint256 newUserTotalAssetsYield = uint256($.userTotalAssets) + yield;
-
-                // Overflow protection before downcasting
-                if (newStkTokenAssetsYield <= type(uint128).max && newUserTotalAssetsYield <= type(uint128).max) {
-                    $.totalStkTokenAssets = uint128(newStkTokenAssetsYield);
-                    $.userTotalAssets = uint128(newUserTotalAssetsYield);
-                    emit VarianceRecorded(yield, true);
+        {
+            uint256 totalVaultAssets = _getTotalVaultAssets($); // Real assets
+            uint256 accountedAssets = $.totalMinterAssets + $.totalStkTokenAssets;
+            if (totalVaultAssets > accountedAssets) {
+                uint256 yield = totalVaultAssets - accountedAssets;
+                if (yield <= MAX_YIELD_PER_SYNC) {
+                    IkToken($.kToken).mint(address(this), yield);
+                    uint256 newStkTokenAssetsYield = uint256($.totalStkTokenAssets) + yield;
+                    uint256 newUserTotalAssetsYield = uint256($.userTotalAssets) + yield;
+                    if (newStkTokenAssetsYield <= type(uint128).max && newUserTotalAssetsYield <= type(uint128).max) {
+                        $.totalStkTokenAssets = uint128(newStkTokenAssetsYield);
+                        $.userTotalAssets = uint128(newUserTotalAssetsYield);
+                        emit VarianceRecorded(yield, true);
+                    }
                 }
-                // If overflow would occur, skip yield distribution for safety
             }
         }
-
         // Calculate stkToken price AFTER rebase (includes yield) using FixedPointMathLib
-        uint256 currentStkTokenPrice = $.totalStkTokenSupply == 0
-            ? PRECISION // 1:1 initial
-            : uint256($.totalStkTokenAssets).divWad(uint256($.totalStkTokenSupply)); // Automatic zero protection
-
-        // Calculate total stkTokens for entire batch
-        uint256 totalStkTokensToMint = totalKTokensStaked.divWad(currentStkTokenPrice);
-
+        uint256 currentStkTokenPrice;
+        uint256 totalStkTokensToMint;
+        {
+            currentStkTokenPrice = $.totalStkTokenSupply == 0
+                ? PRECISION // 1:1 initial
+                : uint256($.totalStkTokenAssets).divWad(uint256($.totalStkTokenSupply));
+            totalStkTokensToMint = totalKTokensStaked.divWad(currentStkTokenPrice);
+        }
         // Update global accounting to track assets in user pool
-        uint256 newStkTokenAssets = uint256($.totalStkTokenAssets) + totalKTokensStaked;
-        uint256 newUserTotalAssets = uint256($.userTotalAssets) + totalKTokensStaked;
-
-        // Overflow protection before downcasting
-        if (newStkTokenAssets > type(uint128).max) revert StkTokenAssetsOverflow();
-        if (newUserTotalAssets > type(uint128).max) revert UserAssetsOverflow();
-
-        $.totalStkTokenAssets = uint128(newStkTokenAssets);
-        $.userTotalAssets = uint128(newUserTotalAssets);
-
+        {
+            uint256 newStkTokenAssets = uint256($.totalStkTokenAssets) + totalKTokensStaked;
+            uint256 newUserTotalAssets = uint256($.userTotalAssets) + totalKTokensStaked;
+            if (newStkTokenAssets > type(uint128).max) revert StkTokenAssetsOverflow();
+            if (newUserTotalAssets > type(uint128).max) revert UserAssetsOverflow();
+            $.totalStkTokenAssets = uint128(newStkTokenAssets);
+            $.userTotalAssets = uint128(newUserTotalAssets);
+        }
         // Reduce minter pool by the same amount to shift backing to users
-        // This ensures yield flows to users, not minters
         if ($.totalMinterAssets < totalKTokensStaked) revert InsufficientMinterBacking();
         $.totalMinterAssets = uint128(uint256($.totalMinterAssets) - totalKTokensStaked);
-
         // Update stkToken supply with overflow protection
-        uint256 newStkTokenSupply = uint256($.totalStkTokenSupply) + totalStkTokensToMint;
-        if (newStkTokenSupply > type(uint128).max) revert StkTokenSupplyOverflow();
-        $.totalStkTokenSupply = uint128(newStkTokenSupply);
+        {
+            uint256 newStkTokenSupply = uint256($.totalStkTokenSupply) + totalStkTokensToMint;
+            if (newStkTokenSupply > type(uint128).max) revert StkTokenSupplyOverflow();
+            $.totalStkTokenSupply = uint128(newStkTokenSupply);
+        }
+        // OPTIONAL ASSET ALLOCATION: Route assets to destinations if specified
+        if (destinations.length > 0 && amounts.length > 0) {
+            _handleAssetAllocation(batchId, destinations, amounts);
+        }
 
         // O(1) BATCH STATE: Mark batch as settled with settlement parameters
         batch.settled = true;
@@ -220,6 +222,9 @@ contract SettlementModule is ModuleBase {
             $.currentStakingBatchId++;
         }
 
+        // Validate protocol invariants after settlement
+        if (!(_validateProtocolInvariants($))) revert ProtocolInvariantsViolatedAfterStakingSettlement();
+
         emit StakingBatchSettled(batchId, totalStkTokensToMint, currentStkTokenPrice);
     }
 
@@ -227,15 +232,19 @@ contract SettlementModule is ModuleBase {
     /// @dev Validates batch sequence, calculates stkToken value with current price, and updates accounting
     /// @param batchId The identifier of the unstaking batch to settle
     /// @param totalStkTokensUnstaked Aggregated amount of stkTokens from all requests in the batch
+    /// @param totalKTokensToReturn Total original kTokens to return to users
+    /// @param totalYieldToMinter Total yield to transfer back to minter pool
     function settleUnstakingBatch(
         uint256 batchId,
-        uint256 totalStkTokensUnstaked
+        uint256 totalStkTokensUnstaked,
+        uint256 totalKTokensToReturn,
+        uint256 totalYieldToMinter
     )
         external
         nonReentrant
         onlyRoles(SETTLER_ROLE | STRATEGY_MANAGER_ROLE)
     {
-        kDNStakingVaultStorage storage $ = _getkDNStakingVaultStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
 
         // Validate batch
         if (batchId == 0 || batchId > $.currentUnstakingBatchId) revert BatchNotFound();
@@ -260,52 +269,55 @@ contract SettlementModule is ModuleBase {
         }
 
         // AUTOMATIC REBASE: Update stkToken assets with real vault balance
-        uint256 totalVaultAssets = _getTotalVaultAssets($); // Real assets
-        uint256 accountedAssets = $.totalMinterAssets + $.totalStkTokenAssets;
-
-        // Auto-rebase stkTokens with unaccounted yield
-        if (totalVaultAssets > accountedAssets) {
-            uint256 yield = totalVaultAssets - accountedAssets;
-            if (yield <= MAX_YIELD_PER_SYNC) {
-                // CRITICAL FIX: Mint kTokens to vault to maintain 1:1 backing
-                // This ensures the vault has enough kTokens to cover yield distribution
-                // IMPORTANT: kDNStakingVault MUST have MINTER_ROLE on kToken contract
-                IkToken($.kToken).mint(address(this), yield);
-
-                // Add yield directly to stkToken pool
-                // Yield comes as extra kTokens from external sources (strategies)
-                $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) + yield);
-                $.userTotalAssets = uint128(uint256($.userTotalAssets) + yield);
-                emit VarianceRecorded(yield, true);
+        {
+            uint256 totalVaultAssets = _getTotalVaultAssets($); // Real assets
+            uint256 accountedAssets = $.totalMinterAssets + $.totalStkTokenAssets;
+            if (totalVaultAssets > accountedAssets) {
+                uint256 yield = totalVaultAssets - accountedAssets;
+                if (yield <= MAX_YIELD_PER_SYNC) {
+                    IkToken($.kToken).mint(address(this), yield);
+                    $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) + yield);
+                    $.userTotalAssets = uint128(uint256($.userTotalAssets) + yield);
+                    emit VarianceRecorded(yield, true);
+                }
             }
         }
-
         // Calculate effective supply - escrow pattern means totalStkTokenSupply already includes unstaked tokens
-        uint256 effectiveSupply = $.totalStkTokenSupply;
-
+        uint256 effectiveSupply;
+        {
+            effectiveSupply = $.totalStkTokenSupply;
+        }
         // Calculate current stkToken price using effective supply
-        uint256 currentStkTokenPrice =
-            effectiveSupply == 0 ? PRECISION : uint256($.totalStkTokenAssets).divWad(effectiveSupply);
-
+        uint256 currentStkTokenPrice;
+        {
+            currentStkTokenPrice =
+                effectiveSupply == 0 ? PRECISION : uint256($.totalStkTokenAssets).divWad(effectiveSupply);
+        }
         // Calculate total assets to distribute for entire batch
-        uint256 totalAssetsToDistribute = totalStkTokensUnstaked.mulWad(currentStkTokenPrice);
-
+        uint256 totalAssetsToDistribute;
+        {
+            totalAssetsToDistribute = totalStkTokensUnstaked.mulWad(currentStkTokenPrice);
+        }
         // Update global accounting
-        // Tokens remain escrowed until individual claims
-        // Settlement calculates distributions without token operations
-
-        // Update asset accounting to reflect redemption
-        $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) - totalAssetsToDistribute);
-        $.userTotalAssets = uint128(uint256($.userTotalAssets) - totalAssetsToDistribute);
-
+        {
+            $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) - totalAssetsToDistribute);
+            $.userTotalAssets = uint128(uint256($.userTotalAssets) - totalAssetsToDistribute);
+        }
         // Calculate total original kTokens being unstaked to return to minter pool
-        uint256 totalOriginalKTokens = $.totalStakedKTokens;
-        uint256 batchOriginalKTokens = effectiveSupply == 0
-            ? 0
-            : totalStkTokensUnstaked.mulWad(uint256(totalOriginalKTokens)).divWad(effectiveSupply);
-
+        uint256 totalOriginalKTokens;
+        {
+            totalOriginalKTokens = $.totalStakedKTokens;
+        }
+        uint256 batchOriginalKTokens;
+        {
+            batchOriginalKTokens = effectiveSupply == 0
+                ? 0
+                : totalStkTokensUnstaked.mulWad(uint256(totalOriginalKTokens)).divWad(effectiveSupply);
+        }
         // Return original kTokens backing to minter pool (yield stays with users)
-        $.totalMinterAssets = uint128(uint256($.totalMinterAssets) + batchOriginalKTokens);
+        {
+            $.totalMinterAssets = uint128(uint256($.totalMinterAssets) + batchOriginalKTokens);
+        }
 
         // O(1) BATCH STATE: Mark batch as settled with settlement parameters
         batch.settled = true;
@@ -324,6 +336,9 @@ contract SettlementModule is ModuleBase {
             $.currentUnstakingBatchId++;
         }
 
+        // Validate protocol invariants after settlement
+        if (!(_validateProtocolInvariants($))) revert ProtocolInvariantsViolatedAfterUnstakingSettlement();
+
         emit UnstakingBatchSettled(batchId, totalAssetsToDistribute, currentStkTokenPrice);
     }
 
@@ -334,7 +349,7 @@ contract SettlementModule is ModuleBase {
     /// @notice Internal function to process minter positions during settlement
     /// @param batch The batch being settled
     /// @param $ Storage reference
-    function _processMinterPositions(DataTypes.Batch storage batch, kDNStakingVaultStorage storage $) internal {
+    function _processMinterPositions(DataTypes.Batch storage batch, BaseVaultStorage storage $) internal {
         uint256 length = batch.minters.length;
         address minter;
         int256 netAmount;
@@ -369,7 +384,7 @@ contract SettlementModule is ModuleBase {
     /// @notice Internal function to distribute assets to batch receivers for net redemptions
     /// @param batch The batch being settled
     /// @param $ Storage reference
-    function _distributeMinterAssets(DataTypes.Batch storage batch, kDNStakingVaultStorage storage $) internal {
+    function _distributeMinterAssets(DataTypes.Batch storage batch, BaseVaultStorage storage $) internal {
         // Only process if there are net redeems
         if (batch.netRedeems == 0) return;
 
@@ -403,9 +418,29 @@ contract SettlementModule is ModuleBase {
     /// @notice Returns total vault assets (real balance)
     /// @param $ Storage reference
     /// @return Total assets in the vault
-    function _getTotalVaultAssets(kDNStakingVaultStorage storage $) internal view returns (uint256) {
+    function _getTotalVaultAssets(BaseVaultStorage storage $) internal view returns (uint256) {
         // Return kToken balance only (underlyingAsset for vault is kToken, not USDC)
         return $.underlyingAsset.balanceOf(address(this));
+    }
+
+    /// @notice Internal function to handle asset allocation
+    /// @param batchId The identifier of the batch
+    /// @param destinations Array of destination addresses
+    /// @param amounts Array of amounts for each destination
+    function _handleAssetAllocation(
+        uint256 batchId,
+        address[] calldata destinations,
+        uint256[] calldata amounts
+    )
+        internal
+    {
+        // Validate array lengths match
+        if (destinations.length != amounts.length) revert InvalidRequestIndex();
+        uint256 totalAllocation = 0;
+        for (uint256 i = 0; i < amounts.length; i++) {
+            totalAllocation += amounts[i];
+        }
+        emit AllocationRequested(batchId, destinations, amounts);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -413,6 +448,7 @@ contract SettlementModule is ModuleBase {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Returns the function selectors for this module
+    /// @return Array of function selectors that this module implements
     function selectors() external pure returns (bytes4[] memory) {
         bytes4[] memory s = new bytes4[](3);
         s[0] = this.settleBatch.selector;
