@@ -495,7 +495,3 @@ Result:
 2. kStrategyManager can redistribute to BatchReceivers
 3. Emergency funding from protocol reserves
 4. Manual settlement of affected batches
-
----
-
-This protocol flow guide provides concrete examples and visual representations of how the KAM kTokens Protocol operates. The dual accounting system and multi-phase settlement coordination are complex but designed to maintain security and efficiency across all user types.
