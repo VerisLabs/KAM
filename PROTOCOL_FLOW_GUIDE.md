@@ -179,7 +179,7 @@ Flow:
 1. MetaVault returns 720 USDC (20 profit) - stays in MetaVault for compounding
 2. Custodial returns 315 USDC (15 profit) - stays in CEX for compounding
 3. Total strategy assets: 1035 USDC (35 profit generated)
-4. kStrategyManager validates: withdrawals (1035) > deposits (1000) ✓
+4. kStrategyManager validates: strategy assets (1035) > deployed assets (1000) ✓
 5. Protocol mints 35 kUSD tokens to represent the yield
 6. Automatic yield distribution: 35 kUSD flows to user pool
 
@@ -456,7 +456,7 @@ Result:
 **Problem**: Strategy returns less than deployed (e.g., 50 USDC loss)
 
 **Detection**:
-- withdrawals <= deposits validation fails
+- strategy assets <= deployed assets validation fails
 - kStrategyManager.validateSettlement() reverts
 - Insufficient assets for user redemptions
 

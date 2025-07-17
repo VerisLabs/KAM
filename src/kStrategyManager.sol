@@ -76,8 +76,8 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
 
     struct SettlementOperation {
         uint256 operationId;
-        uint256 totalWithdrawals;
-        uint256 totalDeposits;
+        uint256 totalStrategyAssets;
+        uint256 totalDeployedAssets;
         address[] destinations;
         uint256[] amounts;
         bytes32[] batchReceiverIds;
@@ -108,10 +108,10 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     event AdapterUpdated(address indexed adapter, bool enabled, uint256 maxAllocation);
     event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
     event SettlementIntervalUpdated(uint256 oldInterval, uint256 newInterval);
-    event SettlementValidated(uint256 indexed operationId, uint256 totalWithdrawals, uint256 totalDeposits);
+    event SettlementValidated(uint256 indexed operationId, uint256 totalStrategyAssets, uint256 totalDeployedAssets);
     event SiloTransferExecuted(bytes32 indexed operationId, address indexed destination, uint256 amount);
     event AsyncOperationTracked(bytes32 indexed operationId, address indexed metavault, uint256 amount);
-    event WithdrawalsDepositsMismatch(uint256 totalWithdrawals, uint256 totalDeposits, uint256 difference);
+    event StrategyAssetsMismatch(uint256 totalStrategyAssets, uint256 totalDeployedAssets, uint256 difference);
     event kSiloContractUpdated(address indexed oldSilo, address indexed newSilo);
 
     /*//////////////////////////////////////////////////////////////
@@ -130,7 +130,7 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     error InvalidAllocationSum();
     error TooManyAllocations();
     error ZeroAmount();
-    error InsufficientWithdrawals();
+    error InsufficientStrategyAssets();
     error SettlementNotValidated();
     error SettlementAlreadyExecuted();
     error SiloContractNotSet();
@@ -207,16 +207,16 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Validates settlement operation ensuring withdrawals > deposits
-    /// @param totalWithdrawals Total amount being withdrawn from strategies
-    /// @param totalDeposits Total amount being deposited to strategies
+    /// @param totalStrategyAssets Total amount of assets currently held by strategies
+    /// @param totalDeployedAssets Total amount originally deployed to strategies
     /// @param destinations Array of destination addresses (kBatchReceivers)
     /// @param amounts Array of amounts to transfer to each destination
     /// @param batchReceiverIds Array of batch receiver IDs for tracking
     /// @param operationType Type of settlement operation
     /// @return operationId Unique identifier for this settlement operation
     function validateSettlement(
-        uint256 totalWithdrawals,
-        uint256 totalDeposits,
+        uint256 totalStrategyAssets,
+        uint256 totalDeployedAssets,
         address[] calldata destinations,
         uint256[] calldata amounts,
         bytes32[] calldata batchReceiverIds,
@@ -230,8 +230,8 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
 
         // Validate withdrawals > deposits (key requirement)
-        if (totalWithdrawals <= totalDeposits) {
-            revert InsufficientWithdrawals();
+        if (totalStrategyAssets <= totalDeployedAssets) {
+            revert InsufficientStrategyAssets();
         }
 
         // Validate arrays match
@@ -245,8 +245,8 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         // Store settlement operation
         $.settlementOperations[operationId] = SettlementOperation({
             operationId: operationId,
-            totalWithdrawals: totalWithdrawals,
-            totalDeposits: totalDeposits,
+            totalStrategyAssets: totalStrategyAssets,
+            totalDeployedAssets: totalDeployedAssets,
             destinations: destinations,
             amounts: amounts,
             batchReceiverIds: batchReceiverIds,
@@ -256,11 +256,11 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
             operationType: operationType
         });
 
-        emit SettlementValidated(operationId, totalWithdrawals, totalDeposits);
+        emit SettlementValidated(operationId, totalStrategyAssets, totalDeployedAssets);
 
         // Log mismatch for monitoring
-        uint256 difference = totalWithdrawals - totalDeposits;
-        emit WithdrawalsDepositsMismatch(totalWithdrawals, totalDeposits, difference);
+        uint256 difference = totalStrategyAssets - totalDeployedAssets;
+        emit StrategyAssetsMismatch(totalStrategyAssets, totalDeployedAssets, difference);
 
         return operationId;
     }

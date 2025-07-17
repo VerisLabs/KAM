@@ -49,9 +49,9 @@ contract kDNStakingVault is
         address indexed minter, uint256 assetAmount, address batchReceiver, uint256 indexed batchId
     );
     event KTokenStakingRequested(
-        address indexed user, address indexed minter, uint256 kTokenAmount, uint256 indexed batchId
+        address indexed user, address indexed minter, uint256 kTokenAmount, uint256 indexed batchId, uint256 requestId
     );
-    event ShareUnstakingRequested(address indexed user, uint256 shares, uint256 indexed batchId);
+    event ShareUnstakingRequested(address indexed user, uint256 shares, uint256 indexed batchId, uint256 requestId);
     event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
     event KTokenStaked(address indexed user, uint256 kTokenAmount, uint256 shares, uint256 indexed batchId);
     event MinterDeposited(address indexed minter, uint256 assets);
@@ -265,7 +265,7 @@ contract kDNStakingVault is
 
         $.kToken.safeTransferFrom(msg.sender, address(this), amount);
 
-        emit KTokenStakingRequested(msg.sender, address(0), amount, batchId);
+        emit KTokenStakingRequested(msg.sender, address(0), amount, batchId, requestId);
     }
 
     /// @notice Request to unstake stkTokens for kTokens + yield
@@ -307,7 +307,7 @@ contract kDNStakingVault is
         batch.totalStkTokens += stkTokenAmount;
         requestId = batch.requests.length - 1; // Request index as ID
 
-        emit ShareUnstakingRequested(msg.sender, stkTokenAmount, batchId);
+        emit ShareUnstakingRequested(msg.sender, stkTokenAmount, batchId, requestId);
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -593,6 +593,23 @@ contract kDNStakingVaultHandler is BaseHandler, Test {
         _syncActualValues();
     }
 
+    function notifyMinterRedeem(uint256 amount) external {
+        // Only accept calls from the minter handler
+        if (msg.sender != minterHandler) return;
+
+        // DO NOT update expectedTotalVaultAssets here - USDC doesn't leave the vault immediately
+        // USDC only leaves the vault during batch settlement, not during requestRedeem
+
+        // When kTokens are redeemed, they are burned from total supply
+        // If they were staked in the vault, reduce the expected staked amount
+        if (actualTotalStakedKTokens >= amount) {
+            actualTotalStakedKTokens -= amount;
+        }
+
+        // Sync actual values after minter operations affect the vault
+        _syncActualValues();
+    }
+
     function getEntryPoints() public pure override returns (bytes4[] memory) {
         bytes4[] memory _entryPoints = new bytes4[](9);
         _entryPoints[0] = this.requestMinterDeposit.selector;

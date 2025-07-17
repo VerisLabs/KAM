@@ -123,6 +123,13 @@ contract kMinterHandler is BaseHandler, Test {
         vm.stopPrank();
         bytes32 requestId = minter.requestRedeem(request);
 
+        // Notify vault handler of minter redemption (kTokens are burned, vault assets decrease)
+        if (vaultHandler != address(0)) {
+            // Call vault handler to update its expected vault assets
+            (bool success,) = vaultHandler.call(abi.encodeWithSignature("notifyMinterRedeem(uint256)", amount));
+            // Don't revert on failure, just skip synchronization
+        }
+
         // Update actual state AFTER operation
         _syncActualValues();
     }

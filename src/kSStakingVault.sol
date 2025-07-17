@@ -43,7 +43,9 @@ contract kSStakingVault is
     //////////////////////////////////////////////////////////////*/
 
     event PauseState(bool isPaused);
-    event KTokenStakingRequested(address indexed user, uint256 kTokenAmount, uint256 indexed batchId);
+    event KTokenStakingRequested(
+        address indexed user, uint256 kTokenAmount, uint256 indexed batchId, uint256 requestId
+    );
     event ShareUnstakingRequested(address indexed user, uint256 shares, uint256 indexed batchId);
     event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
     event KTokenStaked(address indexed user, uint256 kTokenAmount, uint256 shares, uint256 indexed batchId);
@@ -176,7 +178,7 @@ contract kSStakingVault is
 
         $.kToken.safeTransferFrom(msg.sender, address(this), amount);
 
-        emit KTokenStakingRequested(msg.sender, amount, batchId);
+        emit KTokenStakingRequested(msg.sender, amount, batchId, requestId);
     }
 
     /// @notice Request to unstake stkTokens for kTokens + yield

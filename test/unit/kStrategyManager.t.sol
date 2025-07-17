@@ -100,8 +100,8 @@ contract kStrategyManagerTest is BaseTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_validateSettlement_success() public {
-        uint256 totalWithdrawals = _200_USDC;
-        uint256 totalDeposits = _100_USDC; // withdrawals > deposits ✓
+        uint256 totalStrategyAssets = _200_USDC;
+        uint256 totalDeployedAssets = _100_USDC; // strategy assets > deployed assets ✓
 
         address[] memory destinations = new address[](2);
         destinations[0] = mockBatchReceiver1;
@@ -116,14 +116,14 @@ contract kStrategyManagerTest is BaseTest {
         batchReceiverIds[1] = bytes32(uint256(2));
 
         vm.expectEmit(true, false, false, true);
-        emit kStrategyManager.SettlementValidated(1, totalWithdrawals, totalDeposits);
+        emit kStrategyManager.SettlementValidated(1, totalStrategyAssets, totalDeployedAssets);
 
         vm.expectEmit(false, false, false, true);
-        emit kStrategyManager.WithdrawalsDepositsMismatch(totalWithdrawals, totalDeposits, _100_USDC);
+        emit kStrategyManager.StrategyAssetsMismatch(totalStrategyAssets, totalDeployedAssets, _100_USDC);
 
         vm.prank(users.settler);
         uint256 operationId = strategyManager.validateSettlement(
-            totalWithdrawals, totalDeposits, destinations, amounts, batchReceiverIds, "test_settlement"
+            totalStrategyAssets, totalDeployedAssets, destinations, amounts, batchReceiverIds, "test_settlement"
         );
 
         assertEq(operationId, 1);
@@ -132,15 +132,15 @@ contract kStrategyManagerTest is BaseTest {
         // Verify operation was stored
         kStrategyManager.SettlementOperation memory operation = strategyManager.getSettlementOperation(operationId);
         assertEq(operation.operationId, operationId);
-        assertEq(operation.totalWithdrawals, totalWithdrawals);
-        assertEq(operation.totalDeposits, totalDeposits);
+        assertEq(operation.totalStrategyAssets, totalStrategyAssets);
+        assertEq(operation.totalDeployedAssets, totalDeployedAssets);
         assertTrue(operation.validated);
         assertFalse(operation.executed);
     }
 
-    function test_validateSettlement_revertsInsufficientWithdrawals() public {
-        uint256 totalWithdrawals = _100_USDC;
-        uint256 totalDeposits = _200_USDC; // withdrawals <= deposits ✗
+    function test_validateSettlement_revertsInsufficientStrategyAssets() public {
+        uint256 totalStrategyAssets = _100_USDC;
+        uint256 totalDeployedAssets = _200_USDC; // strategy assets <= deployed assets ✗
 
         address[] memory destinations = new address[](1);
         destinations[0] = mockBatchReceiver1;
@@ -151,16 +151,16 @@ contract kStrategyManagerTest is BaseTest {
         bytes32[] memory batchReceiverIds = new bytes32[](1);
         batchReceiverIds[0] = bytes32(uint256(1));
 
-        vm.expectRevert(kStrategyManager.InsufficientWithdrawals.selector);
+        vm.expectRevert(kStrategyManager.InsufficientStrategyAssets.selector);
         vm.prank(users.settler);
         strategyManager.validateSettlement(
-            totalWithdrawals, totalDeposits, destinations, amounts, batchReceiverIds, "test_settlement"
+            totalStrategyAssets, totalDeployedAssets, destinations, amounts, batchReceiverIds, "test_settlement"
         );
     }
 
     function test_validateSettlement_revertsArrayLengthMismatch() public {
-        uint256 totalWithdrawals = _200_USDC;
-        uint256 totalDeposits = _100_USDC;
+        uint256 totalStrategyAssets = _200_USDC;
+        uint256 totalDeployedAssets = _100_USDC;
 
         address[] memory destinations = new address[](2);
         destinations[0] = mockBatchReceiver1;
@@ -176,13 +176,13 @@ contract kStrategyManagerTest is BaseTest {
         vm.expectRevert(kStrategyManager.InvalidSettlementOperation.selector);
         vm.prank(users.settler);
         strategyManager.validateSettlement(
-            totalWithdrawals, totalDeposits, destinations, amounts, batchReceiverIds, "test_settlement"
+            totalStrategyAssets, totalDeployedAssets, destinations, amounts, batchReceiverIds, "test_settlement"
         );
     }
 
     function test_validateSettlement_revertsIfNotSettler() public {
-        uint256 totalWithdrawals = _200_USDC;
-        uint256 totalDeposits = _100_USDC;
+        uint256 totalStrategyAssets = _200_USDC;
+        uint256 totalDeployedAssets = _100_USDC;
 
         address[] memory destinations = new address[](1);
         destinations[0] = mockBatchReceiver1;
@@ -196,7 +196,7 @@ contract kStrategyManagerTest is BaseTest {
         vm.expectRevert(); // Should revert with role check
         vm.prank(users.alice);
         strategyManager.validateSettlement(
-            totalWithdrawals, totalDeposits, destinations, amounts, batchReceiverIds, "test_settlement"
+            totalStrategyAssets, totalDeployedAssets, destinations, amounts, batchReceiverIds, "test_settlement"
         );
     }
 
@@ -228,8 +228,8 @@ contract kStrategyManagerTest is BaseTest {
 
     function test_getSettlementOperation_success() public {
         // First create a settlement operation
-        uint256 totalWithdrawals = _200_USDC;
-        uint256 totalDeposits = _100_USDC;
+        uint256 totalStrategyAssets = _200_USDC;
+        uint256 totalDeployedAssets = _100_USDC;
 
         address[] memory destinations = new address[](1);
         destinations[0] = mockBatchReceiver1;
@@ -242,14 +242,14 @@ contract kStrategyManagerTest is BaseTest {
 
         vm.prank(users.settler);
         uint256 operationId = strategyManager.validateSettlement(
-            totalWithdrawals, totalDeposits, destinations, amounts, batchReceiverIds, "test_settlement"
+            totalStrategyAssets, totalDeployedAssets, destinations, amounts, batchReceiverIds, "test_settlement"
         );
 
         // Test view function
         kStrategyManager.SettlementOperation memory operation = strategyManager.getSettlementOperation(operationId);
         assertEq(operation.operationId, operationId);
-        assertEq(operation.totalWithdrawals, totalWithdrawals);
-        assertEq(operation.totalDeposits, totalDeposits);
+        assertEq(operation.totalStrategyAssets, totalStrategyAssets);
+        assertEq(operation.totalDeployedAssets, totalDeployedAssets);
         assertTrue(operation.validated);
         assertFalse(operation.executed);
     }

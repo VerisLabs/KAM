@@ -171,7 +171,7 @@ USDC/WBTC → kMinter → kDNStakingVault → kSStakingVault → Strategies
 
 **Key Functions**:
 - `settleAndAllocate(SettlementParams params, AllocationOrder order, bytes signature)` - Unified settlement
-- `validateSettlement(...)` - Validates settlement ensuring withdrawals > deposits
+- `validateSettlement(...)` - Validates settlement ensuring strategy assets > deployed assets
 - `executeSettlement(uint256 operationId)` - Executes validated settlement
 - `executeAllocation(AllocationOrder order, bytes signature)` - Processes asset allocation
 
@@ -182,14 +182,14 @@ USDC/WBTC → kMinter → kDNStakingVault → kSStakingVault → Strategies
 
 **Security Features**:
 - EIP-712 signature validation for allocation orders
-- Withdrawal > deposit validation (key security requirement)
+- Strategy assets > deployed assets validation (key security requirement)
 - Signed allocation orders with replay protection
 - Settlement operation tracking and validation
 
 **Audit Focus**:
 - Verify settlement coordination is atomic
 - Check signature validation for allocation orders
-- Validate withdrawal > deposit requirement
+- Validate strategy assets > deployed assets requirement
 - Review settlement timing and coordination
 - Ensure proper asset flow validation
 
@@ -279,7 +279,7 @@ kToken.totalSupply() == totalUnderlyingAssets across all contracts
 **Validation Points**:
 - Institutional settlements complete before user settlements
 - Asset allocation only occurs after successful settlements
-- Withdrawals > deposits validation in kStrategyManager
+- Strategy assets > deployed assets validation in kStrategyManager
 - Proper coordination between all vault types
 
 ### 4. Yield Distribution Security
@@ -368,7 +368,7 @@ vault.totalMinterAssets() + vault.totalAllocatedToStrategies() == vault.getTotal
 
 **Mitigation**:
 - Settlement validation in kStrategyManager
-- Withdrawal > deposit requirements
+- Strategy assets > deployed assets requirements
 - Emergency settlement functions
 
 ### 4. Inter-Vault Asset Drainage

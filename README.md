@@ -85,7 +85,7 @@ kTokens is a next-generation protocol providing 1:1 asset backing for institutio
   - **Asset Sourcing:** Coordinates with kStrategyManager for asset allocation
   - **Risk Profile:** Higher risk, potentially higher yields
 - **kStrategyManager:** **Central settlement orchestrator** for all asset flows
-  - **Settlement Control:** Validates withdrawals > deposits before distribution
+  - **Settlement Control:** Validates strategy assets > deployed assets before distribution
   - **Multi-Destination:** Handles custodial and metavault allocations
   - **Backend Integration:** Executes signed orders for optimal asset allocation
 - **kSiloContract:** **Secure intermediary** for custodial strategy returns
