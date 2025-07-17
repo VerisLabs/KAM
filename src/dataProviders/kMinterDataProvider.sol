@@ -1,19 +1,71 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+
 import { kMinter } from "src/kMinter.sol";
 
 /// @title kMinterDataProvider
-/// @notice Comprehensive data provider for kMinter contract using extsload pattern
-/// @dev Provides batch queries, accounting data, and complex calculations for frontend/testing
+/// @notice Data provider for kMinter contract using direct storage access pattern
+/// @dev Provides efficient batch queries and accounting data for frontend and monitoring systems
+///
+/// ARCHITECTURE:
+/// This contract provides read-only access to kMinter state using the extsload pattern,
+/// enabling gas-efficient batch queries without modifying the main contract.
+/// All storage slot calculations follow the ERC-7201 pattern used by kMinter.
+///
+/// KEY FEATURES:
+/// - Direct storage access via extsload for gas efficiency
+/// - Batch queries to minimize RPC calls
+/// - Settlement timing calculations
+/// - Accounting validation functions
+/// - Bitmap status reading for request tracking
 contract kMinterDataProvider {
-    /// @notice kMinter storage slot base (from ERC-7201)
-    bytes32 private constant STORAGE_SLOT_BASE = 0xd7df67ea9a5dbfe32636a20098d87d60f65e8140be3a76c5824fb5a4c8e19d00;
+    using SafeCastLib for uint256;
+
+    /*//////////////////////////////////////////////////////////////
+                              CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice kMinter storage location following ERC-7201 pattern
+    /// @dev keccak256(abi.encode(uint256(keccak256("kMinter.storage.kMinter")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant KMINTER_STORAGE_LOCATION =
+        0xd7df67ea9a5dbfe32636a20098d87d60f65e8140be3a76c5824fb5a4c8e19d00;
+
+    /// @notice Settlement interval matching kMinter constant
+    uint256 private constant SETTLEMENT_INTERVAL = 8 hours;
+
+    /*//////////////////////////////////////////////////////////////
+                              IMMUTABLES
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Target kMinter contract
     kMinter public immutable minter;
 
+    /*//////////////////////////////////////////////////////////////
+                              ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Thrown when a zero address is provided
+    error ZeroAddress();
+
+    /// @notice Thrown when an invalid batch ID is provided
+    error InvalidBatchId();
+
+    /// @notice Thrown when a request ID doesn't exist
+    error RequestNotFound();
+
+    /// @notice Thrown when storage slot calculation overflows
+    error StorageSlotOverflow();
+
+    /*//////////////////////////////////////////////////////////////
+                            CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Deploys the data provider for a specific kMinter instance
+    /// @param _minter Address of the kMinter contract to read from
     constructor(address _minter) {
+        if (_minter == address(0)) revert ZeroAddress();
         minter = kMinter(payable(_minter));
     }
 
@@ -32,11 +84,26 @@ contract kMinterDataProvider {
         returns (uint256 currentBatchId, uint256 totalDeposited, uint256 totalRedeemed, uint256 totalPendingRedemptions)
     {
         // Read from storage slots using extsload
+        // Storage layout in kMinterStorage:
+        // Slot 0: isPaused (bool)
+        // Slot 1: kToken (address)
+        // Slot 2: underlyingAsset (address)
+        // Slot 3: kDNStaking (address)
+        // Slot 4: kStrategyManager (address)
+        // Slot 5: batchReceiverImplementation (address)
+        // Slot 6: currentBatchId (uint256)
+        // Slot 7: requestCounter (uint256)
+        // Slots 8-13: mappings (separate storage trees)
+        // Slot 14: totalDeposited (uint256)
+        // Slot 15: totalRedeemed (uint256)
+        // Slot 16: totalPendingRedemptions (uint256)
+        // Slot 17: isAuthorizedMinter (bool)
+
         bytes32[] memory slots = new bytes32[](4);
-        slots[0] = bytes32(uint256(STORAGE_SLOT_BASE) + 5); // currentBatchId
-        slots[1] = bytes32(uint256(STORAGE_SLOT_BASE) + 66); // totalDeposited
-        slots[2] = bytes32(uint256(STORAGE_SLOT_BASE) + 67); // totalRedeemed
-        slots[3] = bytes32(uint256(STORAGE_SLOT_BASE) + 68); // totalPendingRedemptions
+        slots[0] = bytes32(uint256(KMINTER_STORAGE_LOCATION) + 6); // currentBatchId
+        slots[1] = bytes32(uint256(KMINTER_STORAGE_LOCATION) + 14); // totalDeposited
+        slots[2] = bytes32(uint256(KMINTER_STORAGE_LOCATION) + 15); // totalRedeemed
+        slots[3] = bytes32(uint256(KMINTER_STORAGE_LOCATION) + 16); // totalPendingRedemptions
 
         bytes32[] memory values = minter.extsload(slots);
 
@@ -67,7 +134,7 @@ contract kMinterDataProvider {
         )
     {
         // Calculate batch mapping slot: keccak256(batchId . slot)
-        bytes32 batchSlot = keccak256(abi.encode(batchId, uint256(STORAGE_SLOT_BASE) + 7));
+        bytes32 batchSlot = keccak256(abi.encode(batchId, uint256(KMINTER_STORAGE_LOCATION) + 7));
 
         // Read batch data from storage (DataTypes.BatchInfo struct)
         bytes32[] memory slots = new bytes32[](6);
@@ -95,7 +162,7 @@ contract kMinterDataProvider {
     /// @return batchReceiver Address of the batch receiver contract
     function getBatchReceiver(uint256 batchId) external view returns (address batchReceiver) {
         // Calculate batch mapping slot: keccak256(batchId . slot)
-        bytes32 batchSlot = keccak256(abi.encode(batchId, uint256(STORAGE_SLOT_BASE) + 7));
+        bytes32 batchSlot = keccak256(abi.encode(batchId, uint256(KMINTER_STORAGE_LOCATION) + 7));
 
         // DataTypes.BatchInfo struct layout:
         // Slot 0: startTime
@@ -131,10 +198,10 @@ contract kMinterDataProvider {
         )
     {
         bytes32[] memory slots = new bytes32[](4);
-        slots[0] = bytes32(uint256(STORAGE_SLOT_BASE) + 66); // totalDeposited
-        slots[1] = bytes32(uint256(STORAGE_SLOT_BASE) + 67); // totalRedeemed
-        slots[2] = bytes32(uint256(STORAGE_SLOT_BASE) + 68); // totalPendingRedemptions
-        slots[3] = bytes32(uint256(STORAGE_SLOT_BASE) + 69); // isAuthorizedMinter
+        slots[0] = bytes32(uint256(KMINTER_STORAGE_LOCATION) + 14); // totalDeposited
+        slots[1] = bytes32(uint256(KMINTER_STORAGE_LOCATION) + 15); // totalRedeemed
+        slots[2] = bytes32(uint256(KMINTER_STORAGE_LOCATION) + 16); // totalPendingRedemptions
+        slots[3] = bytes32(uint256(KMINTER_STORAGE_LOCATION) + 17); // isAuthorizedMinter
 
         bytes32[] memory values = minter.extsload(slots);
 
@@ -143,6 +210,7 @@ contract kMinterDataProvider {
         totalPendingRedemptions = uint256(values[2]);
         isAuthorizedMinter = uint256(values[3]) != 0;
 
+        // Calculate net deposits with underflow protection
         netDeposits = totalDeposited > totalRedeemed ? totalDeposited - totalRedeemed : 0;
     }
 
@@ -173,7 +241,7 @@ contract kMinterDataProvider {
         )
     {
         // Calculate redemption request mapping slot
-        bytes32 requestSlot = keccak256(abi.encode(requestId, uint256(STORAGE_SLOT_BASE) + 64));
+        bytes32 requestSlot = keccak256(abi.encode(requestId, uint256(KMINTER_STORAGE_LOCATION) + 64));
 
         // Read redemption request data
         bytes32[] memory slots = new bytes32[](3);
@@ -210,7 +278,7 @@ contract kMinterDataProvider {
         returns (bool canSettle, uint256 timeToSettle, uint256 batchAge)
     {
         // Get batch info first
-        bytes32 batchSlot = keccak256(abi.encode(batchId, uint256(STORAGE_SLOT_BASE) + 60));
+        bytes32 batchSlot = keccak256(abi.encode(batchId, uint256(KMINTER_STORAGE_LOCATION) + 60));
         bytes32 settledSlot = bytes32(uint256(batchSlot) + 3);
 
         bytes32 settledValue = minter.extsload(settledSlot);
@@ -236,9 +304,7 @@ contract kMinterDataProvider {
                 // Calculate time since batch creation
                 batchAge = block.timestamp - batchCreationTime;
 
-                // Settlement interval is 8 hours (from constants)
-                uint256 SETTLEMENT_INTERVAL = 8 hours;
-
+                // Use constant from contract level
                 if (batchAge >= SETTLEMENT_INTERVAL) {
                     canSettle = true;
                     timeToSettle = 0;
@@ -296,10 +362,10 @@ contract kMinterDataProvider {
         returns (address kToken, address underlyingAsset, address kDNStaking, address batchReceiverImpl)
     {
         bytes32[] memory slots = new bytes32[](4);
-        slots[0] = bytes32(uint256(STORAGE_SLOT_BASE) + 1); // kToken
-        slots[1] = bytes32(uint256(STORAGE_SLOT_BASE) + 2); // underlyingAsset
-        slots[2] = bytes32(uint256(STORAGE_SLOT_BASE) + 3); // kDNStaking
-        slots[3] = bytes32(uint256(STORAGE_SLOT_BASE) + 4); // batchReceiverImplementation
+        slots[0] = bytes32(uint256(KMINTER_STORAGE_LOCATION) + 1); // kToken
+        slots[1] = bytes32(uint256(KMINTER_STORAGE_LOCATION) + 2); // underlyingAsset
+        slots[2] = bytes32(uint256(KMINTER_STORAGE_LOCATION) + 3); // kDNStaking
+        slots[3] = bytes32(uint256(KMINTER_STORAGE_LOCATION) + 4); // batchReceiverImplementation
 
         bytes32[] memory values = minter.extsload(slots);
 
@@ -345,9 +411,9 @@ contract kMinterDataProvider {
         // Calculate storage slots for bitmap data
         // executedRequests bitmap starts at STORAGE_SLOT_BASE + 9 (after requestToKDNBatch mapping)
         // cancelledRequests bitmap starts at STORAGE_SLOT_BASE + 10 (after executedRequests bitmap)
-        bytes32 executedSlot = keccak256(abi.encode(bitmapIndex, uint256(STORAGE_SLOT_BASE) + 9)); // +9 for
+        bytes32 executedSlot = keccak256(abi.encode(bitmapIndex, uint256(KMINTER_STORAGE_LOCATION) + 9)); // +9 for
             // executedRequests offset
-        bytes32 cancelledSlot = keccak256(abi.encode(bitmapIndex, uint256(STORAGE_SLOT_BASE) + 10)); // +10 for
+        bytes32 cancelledSlot = keccak256(abi.encode(bitmapIndex, uint256(KMINTER_STORAGE_LOCATION) + 10)); // +10 for
             // cancelledRequests offset
 
         bytes32[] memory slots = new bytes32[](2);

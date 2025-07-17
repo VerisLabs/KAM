@@ -1,19 +1,74 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+
 import { kDNStakingVault } from "src/kDNStakingVault.sol";
+import { DataTypes } from "src/types/DataTypes.sol";
 
 /// @title kDNDataProvider
-/// @notice Efficient data provider for kDNStakingVault using extsload pattern
-/// @dev Provides batch queries and complex calculations for frontend/testing without adding bloat to main contract
+/// @notice Data provider for kDNStakingVault contract using direct storage access pattern
+/// @dev Provides efficient batch queries and staking data for frontend and monitoring systems
+///
+/// ARCHITECTURE:
+/// This contract provides read-only access to kDNStakingVault state using the extsload pattern,
+/// enabling gas-efficient batch queries without modifying the main contract.
+/// All storage slot calculations follow the BaseVaultStorage layout shared across vault contracts.
+///
+/// KEY FEATURES:
+/// - Direct storage access via extsload for gas efficiency
+/// - Unified batch data queries for minter operations
+/// - Staking/unstaking batch tracking with settlement status
+/// - Dual accounting validation (minter vs user pools)
+/// - User position calculations with yield tracking
 contract kDNDataProvider {
-    /// @notice kDNStakingVault storage slot base (from ERC-7201)
-    bytes32 private constant STORAGE_SLOT_BASE = 0x9d5c7e4b8f3a2d1e6f9c8b7a6d5e4f3c2b1a0e9d8c7b6a5f4e3d2c1b0a9e8d00;
+    using SafeCastLib for uint256;
+    using FixedPointMathLib for uint256;
+
+    /*//////////////////////////////////////////////////////////////
+                              CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice BaseVaultStorage location following ERC-7201 pattern
+    /// @dev keccak256(abi.encode(uint256(keccak256("BaseVault.storage.BaseVault")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant BASE_VAULT_STORAGE_LOCATION =
+        0x9d5c7e4b8f3a2d1e6f9c8b7a6d5e4f3c2b1a0e9d8c7b6a5f4e3d2c1b0a9e8d00;
+
+    /// @notice Precision constant for calculations
+    uint256 private constant PRECISION = 1e18;
+
+    /*//////////////////////////////////////////////////////////////
+                              IMMUTABLES
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Target kDNStakingVault contract
     kDNStakingVault public immutable vault;
 
+    /*//////////////////////////////////////////////////////////////
+                              ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Thrown when a zero address is provided
+    error ZeroAddress();
+
+    /// @notice Thrown when an invalid batch ID is provided
+    error InvalidBatchId();
+
+    /// @notice Thrown when a request doesn't exist
+    error RequestNotFound();
+
+    /// @notice Thrown when calculations would overflow
+    error CalculationOverflow();
+
+    /*//////////////////////////////////////////////////////////////
+                            CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Deploys the data provider for a specific kDNStakingVault instance
+    /// @param _vault Address of the kDNStakingVault contract to read from
     constructor(address _vault) {
+        if (_vault == address(0)) revert ZeroAddress();
         vault = kDNStakingVault(payable(_vault));
     }
 
@@ -42,8 +97,8 @@ contract kDNDataProvider {
     {
         // Read batch IDs from packed storage slots using extsload
         bytes32[] memory slots = new bytes32[](2);
-        slots[0] = bytes32(uint256(STORAGE_SLOT_BASE) + 5); // SLOT 5: batch IDs
-        slots[1] = bytes32(uint256(STORAGE_SLOT_BASE) + 6); // SLOT 6: more batch IDs
+        slots[0] = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 5); // SLOT 5: batch IDs
+        slots[1] = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 6); // SLOT 6: more batch IDs
 
         bytes32[] memory values = vault.extsload(slots);
 
@@ -77,9 +132,9 @@ contract kDNDataProvider {
     {
         // Read accounting data from packed storage slots per ModuleBase layout
         bytes32[] memory slots = new bytes32[](3);
-        slots[0] = bytes32(uint256(STORAGE_SLOT_BASE) + 3); // SLOT 3: totalMinterAssets + userTotalSupply
-        slots[1] = bytes32(uint256(STORAGE_SLOT_BASE) + 4); // SLOT 4: userTotalAssets + totalStakedKTokens
-        slots[2] = bytes32(uint256(STORAGE_SLOT_BASE) + 8); // SLOT 8: totalStkTokenAssets + totalVariance
+        slots[0] = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 3); // SLOT 3: totalMinterAssets + userTotalSupply
+        slots[1] = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 4); // SLOT 4: userTotalAssets + totalStakedKTokens
+        slots[2] = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 8); // SLOT 8: totalStkTokenAssets + totalVariance
 
         bytes32[] memory values = vault.extsload(slots);
 
@@ -95,7 +150,7 @@ contract kDNDataProvider {
         totalStkTokenAssets = uint256(uint128(uint256(values[2])));
 
         // Get totalStkTokenSupply from SLOT 7
-        bytes32 slot7 = bytes32(uint256(STORAGE_SLOT_BASE) + 7);
+        bytes32 slot7 = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 7);
         bytes32 value7 = vault.extsload(slot7);
         totalStkTokenSupply = uint256(uint128(uint256(value7) >> 64)); // Skip first 64 bits
     }
@@ -112,7 +167,8 @@ contract kDNDataProvider {
         returns (bool settled, uint256 totalKTokens, uint256 totalStkTokens, uint256 stkTokenPrice)
     {
         // Calculate storage slot for staking batch
-        bytes32 batchSlot = keccak256(abi.encode(batchId, uint256(STORAGE_SLOT_BASE) + 20)); // stakingBatches mapping
+        bytes32 batchSlot = keccak256(abi.encode(batchId, uint256(BASE_VAULT_STORAGE_LOCATION) + 20)); // stakingBatches
+            // mapping
 
         bytes32[] memory slots = new bytes32[](4);
         slots[0] = batchSlot; // settled flag + totalKTokens
@@ -148,7 +204,8 @@ contract kDNDataProvider {
         )
     {
         // Calculate storage slot for unstaking batch
-        bytes32 batchSlot = keccak256(abi.encode(batchId, uint256(STORAGE_SLOT_BASE) + 21)); // unstakingBatches mapping
+        bytes32 batchSlot = keccak256(abi.encode(batchId, uint256(BASE_VAULT_STORAGE_LOCATION) + 21)); // unstakingBatches
+            // mapping
 
         bytes32[] memory slots = new bytes32[](4);
         slots[0] = batchSlot; // settled + totalStkTokens

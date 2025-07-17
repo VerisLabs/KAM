@@ -2,21 +2,73 @@
 pragma solidity 0.8.30;
 
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+
 import { kSStakingVault } from "src/kSStakingVault.sol";
+import { DataTypes } from "src/types/DataTypes.sol";
 
 /// @title kSStakingDataProvider
-/// @notice Comprehensive data provider for kSStakingVault contract using extsload pattern
-/// @dev Provides staking data, user positions, asset flows, and yield analytics for frontend/testing
+/// @notice Data provider for kSStakingVault contract using direct storage access pattern
+/// @dev Provides efficient batch queries and yield analytics for frontend and monitoring systems
+///
+/// ARCHITECTURE:
+/// This contract provides read-only access to kSStakingVault state using the extsload pattern,
+/// enabling gas-efficient batch queries without modifying the main contract.
+/// All storage slot calculations follow the BaseVaultStorage layout shared across vault contracts.
+///
+/// KEY FEATURES:
+/// - Direct storage access via extsload for gas efficiency
+/// - Strategy-specific staking/unstaking batch data
+/// - User position tracking with yield calculations
+/// - Asset flow monitoring between vaults
+/// - Yield performance analytics with APR calculations
 contract kSStakingDataProvider {
+    using SafeCastLib for uint256;
     using FixedPointMathLib for uint256;
 
-    /// @notice kSStakingVault storage slot base (from ERC-7201 - same as BaseVaultStorage)
-    bytes32 private constant STORAGE_SLOT_BASE = 0x9d5c7e4b8f3a2d1e6f9c8b7a6d5e4f3c2b1a0e9d8c7b6a5f4e3d2c1b0a9e8d00;
+    /*//////////////////////////////////////////////////////////////
+                              CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice BaseVaultStorage location following ERC-7201 pattern
+    /// @dev keccak256(abi.encode(uint256(keccak256("BaseVault.storage.BaseVault")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant BASE_VAULT_STORAGE_LOCATION =
+        0x9d5c7e4b8f3a2d1e6f9c8b7a6d5e4f3c2b1a0e9d8c7b6a5f4e3d2c1b0a9e8d00;
+
+    /// @notice Precision constant for calculations
+    uint256 private constant PRECISION = 1e18;
+
+    /*//////////////////////////////////////////////////////////////
+                              IMMUTABLES
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Target kSStakingVault contract
     kSStakingVault public immutable vault;
 
+    /*//////////////////////////////////////////////////////////////
+                              ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Thrown when a zero address is provided
+    error ZeroAddress();
+
+    /// @notice Thrown when an invalid batch ID is provided
+    error InvalidBatchId();
+
+    /// @notice Thrown when a request doesn't exist
+    error RequestNotFound();
+
+    /// @notice Thrown when calculations would overflow
+    error CalculationOverflow();
+
+    /*//////////////////////////////////////////////////////////////
+                            CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Deploys the data provider for a specific kSStakingVault instance
+    /// @param _vault Address of the kSStakingVault contract to read from
     constructor(address _vault) {
+        if (_vault == address(0)) revert ZeroAddress();
         vault = kSStakingVault(payable(_vault));
     }
 
@@ -41,8 +93,8 @@ contract kSStakingDataProvider {
     {
         // Read batch IDs from packed storage slots using extsload
         bytes32[] memory slots = new bytes32[](2);
-        slots[0] = bytes32(uint256(STORAGE_SLOT_BASE) + 5); // SLOT 5: batch IDs
-        slots[1] = bytes32(uint256(STORAGE_SLOT_BASE) + 6); // SLOT 6: more batch IDs
+        slots[0] = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 5); // SLOT 5: batch IDs
+        slots[1] = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 6); // SLOT 6: more batch IDs
 
         bytes32[] memory values = vault.extsload(slots);
 
@@ -67,7 +119,7 @@ contract kSStakingDataProvider {
         returns (bool settled, uint256 stkTokenPrice, uint256 totalStkTokens, uint256 totalAssetsFromMinter)
     {
         // Calculate staking batch mapping slot
-        bytes32 batchSlot = keccak256(abi.encode(batchId, uint256(STORAGE_SLOT_BASE) + 103));
+        bytes32 batchSlot = keccak256(abi.encode(batchId, uint256(BASE_VAULT_STORAGE_LOCATION) + 103));
 
         // Read staking batch data
         bytes32[] memory slots = new bytes32[](4);
@@ -96,7 +148,7 @@ contract kSStakingDataProvider {
         returns (bool settled, uint256 stkTokenPrice, uint256 totalKTokensToReturn, uint256 originalKTokenRatio)
     {
         // Calculate unstaking batch mapping slot
-        bytes32 batchSlot = keccak256(abi.encode(batchId, uint256(STORAGE_SLOT_BASE) + 105));
+        bytes32 batchSlot = keccak256(abi.encode(batchId, uint256(BASE_VAULT_STORAGE_LOCATION) + 105));
 
         // Read unstaking batch data
         bytes32[] memory slots = new bytes32[](4);
@@ -136,10 +188,10 @@ contract kSStakingDataProvider {
     {
         // Read accounting data from packed storage slots
         bytes32[] memory slots = new bytes32[](4);
-        slots[0] = bytes32(uint256(STORAGE_SLOT_BASE) + 3); // SLOT 3: totalMinterAssets + userTotalSupply
-        slots[1] = bytes32(uint256(STORAGE_SLOT_BASE) + 4); // SLOT 4: userTotalAssets + totalStakedKTokens
-        slots[2] = bytes32(uint256(STORAGE_SLOT_BASE) + 7); // SLOT 7: totalStkTokenSupply
-        slots[3] = bytes32(uint256(STORAGE_SLOT_BASE) + 8); // SLOT 8: totalStkTokenAssets
+        slots[0] = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 3); // SLOT 3: totalMinterAssets + userTotalSupply
+        slots[1] = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 4); // SLOT 4: userTotalAssets + totalStakedKTokens
+        slots[2] = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 7); // SLOT 7: totalStkTokenSupply
+        slots[3] = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 8); // SLOT 8: totalStkTokenAssets
 
         bytes32[] memory values = vault.extsload(slots);
 
@@ -187,7 +239,7 @@ contract kSStakingDataProvider {
         stkTokenBalance = vault.balanceOf(user);
 
         // Get original kTokens from storage
-        bytes32 userSlot = keccak256(abi.encode(user, uint256(STORAGE_SLOT_BASE) + 109));
+        bytes32 userSlot = keccak256(abi.encode(user, uint256(BASE_VAULT_STORAGE_LOCATION) + 109));
         bytes32 originalValue = vault.extsload(userSlot);
         originalKTokens = uint256(originalValue);
 
@@ -217,7 +269,7 @@ contract kSStakingDataProvider {
         totalStkTokens = vault.totalSupply();
 
         // Get total staked kTokens from storage
-        bytes32 slot4 = bytes32(uint256(STORAGE_SLOT_BASE) + 4);
+        bytes32 slot4 = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 4);
         bytes32 value = vault.extsload(slot4);
         totalOriginalKTokens = uint256(uint128(uint256(value) >> 128));
 
@@ -240,12 +292,12 @@ contract kSStakingDataProvider {
         returns (address kDNVault, uint256 totalAllocatedFromDN, uint256 currentVaultBalance, int256 netAssetFlow)
     {
         // Get totalAllocatedFromDN from slot 12 (lower 128 bits)
-        bytes32 slot12 = bytes32(uint256(STORAGE_SLOT_BASE) + 12);
+        bytes32 slot12 = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 12);
         bytes32 value12 = vault.extsload(slot12);
         totalAllocatedFromDN = uint256(uint128(uint256(value12)));
 
         // Get kDNVault address from slot 13 (lower 160 bits)
-        bytes32 slot13 = bytes32(uint256(STORAGE_SLOT_BASE) + 13);
+        bytes32 slot13 = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 13);
         bytes32 value13 = vault.extsload(slot13);
         kDNVault = address(uint160(uint256(value13)));
 
@@ -263,7 +315,8 @@ contract kSStakingDataProvider {
         view
         returns (uint256 totalYieldGenerated, uint256 yieldRate, uint256 lastYieldUpdate, uint256 strategyPerformance)
     {
-        (, uint256 totalOriginalKTokens, uint256 totalCurrentValue, uint256 totalUnrealizedYield) = this.getTotalStakingData();
+        (, uint256 totalOriginalKTokens, uint256 totalCurrentValue, uint256 totalUnrealizedYield) =
+            this.getTotalStakingData();
 
         totalYieldGenerated = totalUnrealizedYield;
 
@@ -275,9 +328,8 @@ contract kSStakingDataProvider {
 
         // Strategy performance: ratio of current value to original investment
         // >1e18 indicates outperformance, <1e18 indicates underperformance, 1e18 = exact 1:1
-        strategyPerformance = totalOriginalKTokens > 0 
-            ? totalCurrentValue.divWad(totalOriginalKTokens) 
-            : 1e18; // Default to 100% if no investments yet
+        strategyPerformance = totalOriginalKTokens > 0 ? totalCurrentValue.divWad(totalOriginalKTokens) : 1e18; // Default
+            // to 100% if no investments yet
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -318,7 +370,7 @@ contract kSStakingDataProvider {
 
         // Calculate utilization rate: current balance vs total staked
         utilizationRate = totalOriginalKTokens > 0 ? currentBalance.divWad(totalOriginalKTokens) : 0;
-        
+
         // Calculate allocation ratio: allocated assets vs total allocated from DN
         // This shows what percentage of DN's allocated assets are currently deployed
         allocationRatio = totalAllocatedFromDN > 0 ? currentBalance.divWad(totalAllocatedFromDN) : 1e18;
@@ -328,7 +380,7 @@ contract kSStakingDataProvider {
         // 2. Allocation ratio should be close to 100% (assets deployed efficiently)
         bool utilizationHealthy = utilizationRate >= 0.8e18 && utilizationRate <= 1.2e18;
         bool allocationHealthy = allocationRatio >= 0.9e18 && allocationRatio <= 1.1e18;
-        
+
         isHealthy = utilizationHealthy && allocationHealthy;
     }
 
@@ -366,7 +418,7 @@ contract kSStakingDataProvider {
         // The address is in SLOT 13 due to struct packing:
         // SLOT 12: uint128 totalAllocatedToStrategies (16 bytes) + padding
         // SLOT 13: address kSStakingVault (20 bytes) + uint96 reserved6 (12 bytes)
-        bytes32 slot13 = bytes32(uint256(STORAGE_SLOT_BASE) + 13);
+        bytes32 slot13 = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 13);
         bytes32 value = vault.extsload(slot13);
         kDNVault = address(uint160(uint256(value))); // kSStakingVault address in lower 160 bits
     }
@@ -379,7 +431,7 @@ contract kSStakingDataProvider {
     /// @return timestamp Last staking settlement timestamp
     function _getLastStakingSettlement() internal view returns (uint256 timestamp) {
         // Get lastStakingSettlement from slot 6 (upper 64 bits)
-        bytes32 slot6 = bytes32(uint256(STORAGE_SLOT_BASE) + 6);
+        bytes32 slot6 = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 6);
         bytes32 value = vault.extsload(slot6);
         timestamp = uint256(uint64(uint256(value) >> 192)); // Extract lastStakingSettlement (bits 192-255)
     }
@@ -389,10 +441,14 @@ contract kSStakingDataProvider {
     /// @param yield Current unrealized yield
     /// @param lastSettlement Timestamp of last settlement
     /// @return yieldRate Annualized yield rate in 18 decimals (e.g., 5e16 = 5% APR)
-    function _calculateAnnualizedYieldRate(uint256 principal, uint256 yield, uint256 lastSettlement) 
-        internal 
-        view 
-        returns (uint256 yieldRate) 
+    function _calculateAnnualizedYieldRate(
+        uint256 principal,
+        uint256 yield,
+        uint256 lastSettlement
+    )
+        internal
+        view
+        returns (uint256 yieldRate)
     {
         // Handle edge cases
         if (principal == 0 || yield == 0 || lastSettlement == 0) {
@@ -401,7 +457,7 @@ contract kSStakingDataProvider {
 
         // Calculate time elapsed since last settlement
         uint256 timeElapsed = block.timestamp > lastSettlement ? block.timestamp - lastSettlement : 0;
-        
+
         // Avoid division by zero and ensure minimum time period (1 hour)
         if (timeElapsed < 1 hours) {
             return 0; // Too early to calculate meaningful rate
@@ -411,10 +467,10 @@ contract kSStakingDataProvider {
         // Formula: APR = (yield/principal) * (31536000 seconds / timeElapsed)
         uint256 yieldRatio = yield.divWad(principal); // Yield as percentage of principal
         uint256 annualizationFactor = (365 days * 1e18) / timeElapsed; // Annualization multiplier
-        
+
         // Apply annualization: yieldRatio * annualizationFactor
         yieldRate = yieldRatio.mulWad(annualizationFactor);
-        
+
         // Cap at reasonable maximum (1000% APR) to prevent overflow from edge cases
         if (yieldRate > 10e18) {
             yieldRate = 10e18; // 1000% APR maximum
