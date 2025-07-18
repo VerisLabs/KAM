@@ -451,9 +451,9 @@ contract kDNStakingVault is
                     }
                     emit AssetsReturnedFromCustodialWallet(source, sortedAmounts[i]);
                 } else if (destConfig.destinationType == DestinationType.METAVAULT) {
-                    // For metavaults, receive assets directly
+                    // For metavaults, redeem assets to kSilo for unified external asset management
                     // sortedAmounts[i] is in shares
-                    IMetaVault(source).redeem(sortedAmounts[i], address(this), address(this));
+                    IMetaVault(source).redeem(sortedAmounts[i], $.kSiloContract, address(this));
                     // Safe subtraction to prevent underflow in edge cases
                     if ($.totalMetavaultAllocated >= sortedAmounts[i]) {
                         $.totalMetavaultAllocated -= _safeToUint128(sortedAmounts[i]);

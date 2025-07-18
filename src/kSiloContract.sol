@@ -13,14 +13,16 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 /// @title kSiloContract
-/// @notice Secure intermediary for custodial strategy returns using direct token transfers
-/// @dev CUSTODIAL FLOW: Custodial addresses can ONLY transfer tokens (USDC/WBTC) directly to this contract.
-///      They cannot call any functions - they only do: USDC.transfer(siloAddress, amount)
+/// @notice Secure intermediary for all external strategy returns using unified asset management
+/// @dev EXTERNAL ASSET FLOW: All external sources route assets through kSilo for unified management:
+///      1. CUSTODIAL: Custodial addresses can ONLY transfer tokens (USDC/WBTC) directly to this contract.
+///         They cannot call any functions - they only do: USDC.transfer(siloAddress, amount)
+///      2. METAVAULT: MetaVault redemptions route assets directly to kSilo via redeem() calls
 ///      The kStrategyManager then validates balances and redistributes funds to kBatchReceivers for user redemptions.
 ///
-/// @dev ARCHITECTURE:
-///      1. Custodial wallets transfer USDC/WBTC directly to kSilo (no function calls)
-///      2. kSilo accumulates tokens and validates balances before transfers
+/// @dev UNIFIED ARCHITECTURE:
+///      1. External sources (custodial wallets, MetaVaults) send USDC/WBTC to kSilo
+///      2. kSilo accumulates all external assets and validates balances before transfers
 ///      3. kStrategyManager calls transferToDestination() to send funds to kBatchReceivers
 ///      4. Users redeem from kBatchReceivers during settlement
 ///
