@@ -13,8 +13,19 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 /// @title kSiloContract
-/// @notice Secure intermediary for all custodial strategy returns
-/// @dev Receives all custodial withdrawals and allows only kStrategyManager to redistribute
+/// @notice Secure intermediary for custodial strategy returns using direct token transfers
+/// @dev CUSTODIAL FLOW: Custodial addresses can ONLY transfer tokens (USDC/WBTC) directly to this contract.
+///      They cannot call any functions - they only do: USDC.transfer(siloAddress, amount)
+///      The kStrategyManager then validates balances and redistributes funds to kBatchReceivers for user redemptions.
+///
+/// @dev ARCHITECTURE:
+///      1. Custodial wallets transfer USDC/WBTC directly to kSilo (no function calls)
+///      2. kSilo accumulates tokens and validates balances before transfers
+///      3. kStrategyManager calls transferToDestination() to send funds to kBatchReceivers
+///      4. Users redeem from kBatchReceivers during settlement
+///
+/// @dev SECURITY: Only kStrategyManager can redistribute funds. All transfers validate sufficient balance
+///      using asset.balanceOf(address(this)) before executing transfers.
 contract kSiloContract is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard, Multicallable {
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
@@ -26,7 +37,6 @@ contract kSiloContract is Initializable, UUPSUpgradeable, OwnableRoles, Reentran
     uint256 public constant ADMIN_ROLE = _ROLE_0;
     uint256 public constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
     uint256 public constant STRATEGY_MANAGER_ROLE = _ROLE_2;
-    uint256 public constant CUSTODIAL_ROLE = _ROLE_3;
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -37,11 +47,7 @@ contract kSiloContract is Initializable, UUPSUpgradeable, OwnableRoles, Reentran
         bool isPaused;
         address underlyingAsset;
         address strategyManager;
-        uint256 totalReceived;
         uint256 totalDistributed;
-        mapping(bytes32 => CustodialOperation) operations;
-        mapping(address => uint256) custodialBalances;
-        bytes32[] operationIds;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kSiloContract.storage.kSiloContract")) - 1)) & ~bytes32(uint256(0xff))
@@ -54,41 +60,12 @@ contract kSiloContract is Initializable, UUPSUpgradeable, OwnableRoles, Reentran
     }
 
     /*//////////////////////////////////////////////////////////////
-                              STRUCTS
-    //////////////////////////////////////////////////////////////*/
-
-    enum OperationStatus {
-        PENDING,
-        RECEIVED,
-        DISTRIBUTED,
-        CANCELLED
-    }
-
-    struct CustodialOperation {
-        bytes32 operationId;
-        address sourceStrategy;
-        address custodialAddress;
-        uint256 amount;
-        uint256 timestamp;
-        OperationStatus status;
-        string operationType; // "funding", "shorts", "longs", "delta-neutral"
-    }
-
-    /*//////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event CustodialDeposit(
-        bytes32 indexed operationId,
-        address indexed custodialAddress,
-        address indexed sourceStrategy,
-        uint256 amount,
-        string operationType
-    );
     event AssetDistribution(
         bytes32 indexed operationId, address indexed destination, uint256 amount, string distributionType
     );
-    event OperationCancelled(bytes32 indexed operationId, string reason);
     event StrategyManagerUpdated(address indexed oldManager, address indexed newManager);
     event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
 
@@ -100,10 +77,7 @@ contract kSiloContract is Initializable, UUPSUpgradeable, OwnableRoles, Reentran
     error ZeroAddress();
     error ZeroAmount();
     error InvalidOperation();
-    error OperationNotFound();
     error InsufficientBalance();
-    error UnauthorizedCustodial();
-    error OperationAlreadyProcessed();
     error ContractNotPaused();
 
     /*//////////////////////////////////////////////////////////////
@@ -154,54 +128,7 @@ contract kSiloContract is Initializable, UUPSUpgradeable, OwnableRoles, Reentran
         $.underlyingAsset = underlyingAsset_;
         $.strategyManager = strategyManager_;
         $.isPaused = false;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        CUSTODIAL OPERATIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Receives assets from custodial addresses
-    /// @param operationId Unique identifier for this operation
-    /// @param sourceStrategy The strategy vault that initiated this operation
-    /// @param amount Amount of assets being deposited
-    /// @param operationType Type of operation ("funding", "shorts", "longs", etc.)
-    function receiveFromCustodial(
-        bytes32 operationId,
-        address sourceStrategy,
-        uint256 amount,
-        string calldata operationType
-    )
-        external
-        payable
-        nonReentrant
-        whenNotPaused
-    {
-        kSiloStorage storage $ = _getkSiloStorage();
-
-        if (operationId == bytes32(0)) revert InvalidOperation();
-        if (sourceStrategy == address(0)) revert ZeroAddress();
-        if (amount == 0) revert ZeroAmount();
-        if ($.operations[operationId].operationId != bytes32(0)) revert OperationAlreadyProcessed();
-
-        // Transfer assets from custodial address to silo
-        $.underlyingAsset.safeTransferFrom(msg.sender, address(this), amount);
-
-        // Record operation
-        $.operations[operationId] = CustodialOperation({
-            operationId: operationId,
-            sourceStrategy: sourceStrategy,
-            custodialAddress: msg.sender,
-            amount: amount,
-            timestamp: block.timestamp,
-            status: OperationStatus.RECEIVED,
-            operationType: operationType
-        });
-
-        $.operationIds.push(operationId);
-        $.custodialBalances[msg.sender] += amount;
-        $.totalReceived += amount;
-
-        emit CustodialDeposit(operationId, msg.sender, sourceStrategy, amount, operationType);
+        $.totalDistributed = 0;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -274,54 +201,36 @@ contract kSiloContract is Initializable, UUPSUpgradeable, OwnableRoles, Reentran
         if (availableBalance < totalAmount) revert InsufficientBalance();
 
         // Execute transfers
-        for (uint256 i = 0; i < destinations.length; i++) {
+        uint256 length = destinations.length;
+        uint256 totalDistributed = $.totalDistributed;
+        for (uint256 i; i < length;) {
             if (destinations[i] == address(0)) revert ZeroAddress();
             if (amounts[i] == 0) continue;
 
             $.underlyingAsset.safeTransfer(destinations[i], amounts[i]);
-            $.totalDistributed += amounts[i];
+            totalDistributed += amounts[i];
 
             emit AssetDistribution(operationIds[i], destinations[i], amounts[i], distributionType);
+
+            unchecked {
+                ++i;
+            }
         }
+
+        $.totalDistributed = totalDistributed;
     }
 
     /*//////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Get operation details
-    /// @param operationId The operation ID
-    /// @return operation The operation details
-    function getOperation(bytes32 operationId) external view returns (CustodialOperation memory operation) {
-        return _getkSiloStorage().operations[operationId];
-    }
-
-    /// @notice Get custodial balance for an address
-    /// @param custodialAddress The custodial address
-    /// @return balance The balance for this custodial address
-    function getCustodialBalance(address custodialAddress) external view returns (uint256 balance) {
-        return _getkSiloStorage().custodialBalances[custodialAddress];
-    }
-
-    /// @notice Get total received and distributed amounts
-    /// @return totalReceived Total amount received from custodials
+    /// @notice Get total distributed amounts and current balance
     /// @return totalDistributed Total amount distributed to destinations
     /// @return currentBalance Current balance in the silo
-    function getTotalAmounts()
-        external
-        view
-        returns (uint256 totalReceived, uint256 totalDistributed, uint256 currentBalance)
-    {
+    function getTotalAmounts() external view returns (uint256 totalDistributed, uint256 currentBalance) {
         kSiloStorage storage $ = _getkSiloStorage();
-        totalReceived = $.totalReceived;
         totalDistributed = $.totalDistributed;
         currentBalance = $.underlyingAsset.balanceOf(address(this));
-    }
-
-    /// @notice Get all operation IDs
-    /// @return operationIds Array of all operation IDs
-    function getAllOperationIds() external view returns (bytes32[] memory operationIds) {
-        return _getkSiloStorage().operationIds;
     }
 
     /// @notice Get underlying asset address
@@ -351,18 +260,6 @@ contract kSiloContract is Initializable, UUPSUpgradeable, OwnableRoles, Reentran
         $.strategyManager = newStrategyManager;
 
         emit StrategyManagerUpdated(oldManager, newStrategyManager);
-    }
-
-    /// @notice Grant custodial role to address
-    /// @param custodialAddress Address to grant custodial role
-    function grantCustodialRole(address custodialAddress) external onlyRoles(ADMIN_ROLE) {
-        _grantRoles(custodialAddress, CUSTODIAL_ROLE);
-    }
-
-    /// @notice Revoke custodial role from address
-    /// @param custodialAddress Address to revoke custodial role
-    function revokeCustodialRole(address custodialAddress) external onlyRoles(ADMIN_ROLE) {
-        _removeRoles(custodialAddress, CUSTODIAL_ROLE);
     }
 
     /// @notice Set pause state

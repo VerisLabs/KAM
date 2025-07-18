@@ -171,7 +171,7 @@ State After:
 - Institution still has 1000 kUSD (1:1 backing maintained)
 ```
 
-**Step 3: Strategy Returns with Yield**
+**Step 3: Strategy Returns with Yield (Profit Scenario)**
 ```
 Strategies return more than deployed (profit scenario)
 
@@ -188,6 +188,27 @@ State After:
 - Available yield for user staking: 35 kUSD tokens
 - Institution's 1:1 backing maintained: 1000 kUSD backed by 1000 USDC
 - Total kToken supply: 1035 kUSD = 1035 USDC total backing (1:1 protocol-wide)
+```
+
+**Step 3 Alternative: Strategy Returns with Loss (Loss Scenario)**
+```
+Strategies return less than deployed (loss scenario)
+
+Flow:
+1. MetaVault returns 680 USDC (20 loss) - strategy failed
+2. Custodial returns 285 USDC (15 loss) - funding strategy loss
+3. Total strategy assets: 965 USDC (35 loss incurred)
+4. kStrategyManager validates: 
+   - For kMinter: strategy assets (965) < deployed assets (1000) → REJECT ❌
+   - For kDN/kS Vaults: strategy assets (965) < deployed assets (1000) → ACCEPT ✅
+5. Protocol burns 35 kUSD tokens to maintain 1:1 backing
+6. Automatic loss distribution: 35 kUSD loss flows from user pool
+
+State After:
+- kDNStakingVault: 1000 kUSD tokens (institutions) + 0 kUSD tokens (user pool)
+- User pool absorbs the loss: -35 kUSD 
+- Institution's 1:1 backing maintained: 1000 kUSD backed by 1000 USDC
+- Total kToken supply: 965 kUSD = 965 USDC total backing (1:1 protocol-wide)
 ```
 
 **Step 4: Institutional Redemption**
@@ -251,7 +272,7 @@ State After:
 - Dual accounting maintained: 900 + 135 = 1035 total kUSD assets
 ```
 
-**Step 3: Yield Accrual**
+**Step 3: Yield Accrual (Profit Scenario)**
 ```
 Additional yield flows to user pool through strategy performance
 
@@ -267,6 +288,25 @@ State After:
 - User's 98 stkTokens now worth ~102 kUSD equivalent
 - Yield automatically distributed without manual intervention
 - Total kToken supply: 1055 kUSD = 1055 USDC total backing (1:1 protocol-wide)
+```
+
+**Step 3 Alternative: Loss Realization (Loss Scenario)**
+```
+Strategies experience losses affecting user pool
+
+Flow:
+1. Strategies lose 15 USDC in external venues (delta-neutral strategy failure)
+2. Protocol burns 15 kUSD tokens to maintain 1:1 backing
+3. Automatic loss distribution:
+   - totalMinterAssets: 900 kUSD (unchanged - institutions protected)
+   - userTotalAssets: 120 kUSD (135 - 15 loss)
+4. stkToken price decreases automatically
+
+State After:
+- User's 98 stkTokens now worth ~95 kUSD equivalent (lost 5 kUSD)
+- Loss automatically distributed to risk-bearing users only
+- Institutional 1:1 backing preserved: minter pool unaffected
+- Total kToken supply: 1020 kUSD = 1020 USDC total backing (1:1 protocol-wide)
 ```
 
 ### Example 3: Strategy Vault Interaction
@@ -326,6 +366,25 @@ State After:
 - 18 additional kUSD tokens minted to reflect profit
 - User's stkTokens-Alpha now worth ~218 kUSD equivalent
 - Protocol maintains 1:1 backing: total kToken supply = total USDC backing
+```
+
+**Step 3 Alternative: Strategy Performance (Loss Scenario)**
+```
+Alpha strategies experience 40% loss
+
+Flow:
+1. Alpha Custodial loses 64 USDC (160 → 96 USDC) - funding strategy failed
+2. Alpha MetaVault loses 16 USDC (40 → 24 USDC) - cross-chain arbitrage loss
+3. Total strategy value: 120 USDC (80 USDC loss)
+4. kStrategyManager validates negative settlement for kSStakingVault ✓
+5. Negative rebase reduces vault assets directly
+6. Loss reflected through reduced stkToken value
+
+State After:
+- No kToken burning needed (kS vault uses direct asset tracking)
+- User's stkTokens-Alpha now worth ~120 kUSD equivalent (60% of original)
+- kDNStakingVault unaffected: institutional backing preserved
+- User bears full strategy risk as designed
 ```
 
 ## Settlement Coordination
@@ -451,20 +510,32 @@ Result:
 3. Manual asset allocation if needed
 4. Batch status reset for retry
 
-### Scenario 2: Strategy Loss
+### Scenario 2: Strategy Loss (NEW BEHAVIOR)
 
 **Problem**: Strategy returns less than deployed (e.g., 50 USDC loss)
 
 **Detection**:
-- strategy assets <= deployed assets validation fails
-- kStrategyManager.validateSettlement() reverts
-- Insufficient assets for user redemptions
+- strategy assets < deployed assets for any vault type
+- Different handling based on vault type
 
-**Recovery**:
-1. Insurance fund coverage (handled by backend)
-2. Strategic kToken burning to maintain backing
-3. User pool adjustments to reflect losses
-4. Governance decision on loss distribution
+**Risk-Segregated Response**:
+
+**For kMinter (Institutional)**:
+- kStrategyManager.validateSettlement() REJECTS negative settlement
+- Institutions protected from any losses
+- External insurance/backend must cover shortfall before settlement
+
+**For kDN/kS Vaults (Risk-bearing)**:
+- kStrategyManager.validateSettlement() ACCEPTS negative settlement ✓
+- Automatic loss realization through negative rebase
+- User assets reduced proportionally to loss
+- No external coverage required - users bear risk
+
+**Recovery Flow**:
+1. **kDN Vault**: Negative rebase burns kTokens, reduces user assets
+2. **kS Vault**: Direct asset reduction, stkToken price reflects loss
+3. **Institutional Protection**: Minter 1:1 backing never affected
+4. **Economic Reality**: Users get yield for bearing risk
 
 ### Scenario 3: Dual Accounting Mismatch
 
@@ -491,7 +562,7 @@ Result:
 - Settlement validation passes but distribution fails
 
 **Recovery**:
-1. kSiloContract holds all custodial returns
+1. kSiloContract holds all custodial returns via direct token transfers
 2. kStrategyManager can redistribute to BatchReceivers
 3. Emergency funding from protocol reserves
 4. Manual settlement of affected batches

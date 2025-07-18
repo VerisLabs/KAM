@@ -164,6 +164,7 @@ contract SettlementModule is ModuleBase {
             uint256 totalVaultAssets = _getTotalVaultAssets($); // Real assets
             uint256 accountedAssets = $.totalMinterAssets + $.totalStkTokenAssets;
             if (totalVaultAssets > accountedAssets) {
+                // Positive rebase - yield generation
                 uint256 yield = totalVaultAssets - accountedAssets;
                 if (yield <= MAX_YIELD_PER_SYNC) {
                     IkToken($.kToken).mint(address(this), yield);
@@ -174,6 +175,26 @@ contract SettlementModule is ModuleBase {
                         $.userTotalAssets = uint128(newUserTotalAssetsYield);
                         emit VarianceRecorded(yield, true);
                     }
+                }
+            } else if (totalVaultAssets < accountedAssets) {
+                // Negative rebase - loss realization for user pool only
+                // NOTE: Minter assets maintain 1:1 guarantee, losses only affect user pool
+                uint256 loss = accountedAssets - totalVaultAssets;
+                if (loss <= MAX_YIELD_PER_SYNC) {
+                    // Realize losses by reducing stkToken assets and user assets
+                    uint256 newStkTokenAssets =
+                        uint256($.totalStkTokenAssets) > loss ? uint256($.totalStkTokenAssets) - loss : 0;
+                    uint256 newUserTotalAssets =
+                        uint256($.userTotalAssets) > loss ? uint256($.userTotalAssets) - loss : 0;
+
+                    // Burn kTokens to maintain 1:1 backing
+                    if (loss > 0) {
+                        IkToken($.kToken).burn(address(this), loss);
+                    }
+
+                    $.totalStkTokenAssets = uint128(newStkTokenAssets);
+                    $.userTotalAssets = uint128(newUserTotalAssets);
+                    emit VarianceRecorded(loss, false);
                 }
             }
         }
@@ -273,12 +294,32 @@ contract SettlementModule is ModuleBase {
             uint256 totalVaultAssets = _getTotalVaultAssets($); // Real assets
             uint256 accountedAssets = $.totalMinterAssets + $.totalStkTokenAssets;
             if (totalVaultAssets > accountedAssets) {
+                // Positive rebase - yield generation
                 uint256 yield = totalVaultAssets - accountedAssets;
                 if (yield <= MAX_YIELD_PER_SYNC) {
                     IkToken($.kToken).mint(address(this), yield);
                     $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) + yield);
                     $.userTotalAssets = uint128(uint256($.userTotalAssets) + yield);
                     emit VarianceRecorded(yield, true);
+                }
+            } else if (totalVaultAssets < accountedAssets) {
+                // Negative rebase - loss realization for user pool only
+                uint256 loss = accountedAssets - totalVaultAssets;
+                if (loss <= MAX_YIELD_PER_SYNC) {
+                    // Realize losses by reducing stkToken assets and user assets
+                    uint256 newStkTokenAssets =
+                        uint256($.totalStkTokenAssets) > loss ? uint256($.totalStkTokenAssets) - loss : 0;
+                    uint256 newUserTotalAssets =
+                        uint256($.userTotalAssets) > loss ? uint256($.userTotalAssets) - loss : 0;
+
+                    // Burn kTokens to maintain 1:1 backing
+                    if (loss > 0) {
+                        IkToken($.kToken).burn(address(this), loss);
+                    }
+
+                    $.totalStkTokenAssets = uint128(newStkTokenAssets);
+                    $.userTotalAssets = uint128(newUserTotalAssets);
+                    emit VarianceRecorded(loss, false);
                 }
             }
         }

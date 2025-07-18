@@ -116,13 +116,19 @@ USDC/WBTC → kMinter → kDNStakingVault → kSStakingVault → Strategies
 - `allocateAssetsToDestinations(address[] destinations, uint256[] amounts)` - Asset allocation
 
 **Dual Accounting Model**:
-- **Minter Flow**: 1:1 asset accounting, no yield appreciation
-- **User Flow**: Yield-bearing shares that appreciate with vault performance
+- **Minter Flow**: 1:1 asset accounting, no yield appreciation (institutional guarantee)
+- **User Flow**: Yield-bearing shares that appreciate/depreciate with vault performance
 - **Yield Distribution**: Unaccounted vault yield automatically flows to user shares
+- **Loss Realization**: **NEW** - Negative rebase reduces user assets, burns kTokens for 1:1 backing
 
 **Strategy Allocation**:
 - X% to Metavaults (cross-chain arbitrage)
 - Y% to Custodial wallets (delta-neutral strategies)
+
+**Risk Model**:
+- **Minter Assets**: Protected 1:1 backing (institutions never lose value)
+- **User Assets**: Risk-bearing (can experience losses from strategy failures)
+- **Loss Handling**: Automatic via negative rebase up to MAX_YIELD_PER_SYNC
 
 **Security Features**:
 - Modular architecture using MultiFacetProxy
@@ -131,11 +137,14 @@ USDC/WBTC → kMinter → kDNStakingVault → kSStakingVault → Strategies
 - Emergency functions and pausability
 
 **Audit Focus**:
-- Verify dual accounting correctness (critical)
-- Check yield distribution mechanism
+- **CRITICAL**: Verify dual accounting correctness with loss scenarios
+- **CRITICAL**: Ensure minter 1:1 backing never affected by user losses
+- **CRITICAL**: Validate negative rebase logic and kToken burning
+- Check yield distribution mechanism (both positive and negative)
 - Validate asset allocation and return flows
 - Ensure proper batch settlement coordination
 - Review inter-vault communication security
+- Test loss scenarios up to 100% (user assets → 0)
 
 ### 4. kSStakingVault.sol - Strategy Staking Vault
 
@@ -155,64 +164,87 @@ USDC/WBTC → kMinter → kDNStakingVault → kSStakingVault → Strategies
 - X% to Metavaults (cross-chain operations)
 
 **Risk Profile**:
-- Higher-risk strategies with potential for loss
-- Strategy profits/losses reflected through kToken minting/burning
+- Higher-risk strategies with potential for significant loss
+- Strategy profits/losses reflected through direct asset tracking
+- **Loss Realization**: **NEW** - Negative rebase reduces stkToken assets directly
 - Multiple instances per asset type (Alpha, Beta strategies)
 
+**Loss Handling**:
+- **Automatic Loss Realization**: Via `_rebaseIfNeeded()` function
+- **Loss Distribution**: Reduces `totalStkTokenAssets` and `userTotalAssets`
+- **No External Burning**: Uses direct asset reduction (no kToken involvement)
+- **Complete Loss Capability**: Can handle 100% strategy failure (vault → 0)
+
 **Audit Focus**:
-- Verify proper asset sourcing from kDNStakingVault
+- **CRITICAL**: Verify proper asset sourcing from kDNStakingVault
+- **CRITICAL**: Validate negative rebase logic for loss scenarios
+- **CRITICAL**: Test complete loss scenarios (strategy returns 0)
 - Check strategy allocation and return mechanisms
 - Validate inter-vault coordination security
 - Review risk management and loss handling
+- Ensure stkToken price reflects actual strategy performance
 
 ### 5. kStrategyManager.sol - Central Settlement Orchestrator
 
-**Purpose**: Coordinates all asset flows and settlement across the protocol
+**Purpose**: Coordinates all asset flows and settlement across the protocol with vault-specific risk management
 
 **Key Functions**:
 - `settleAndAllocate(SettlementParams params, AllocationOrder order, bytes signature)` - Unified settlement
-- `validateSettlement(...)` - Validates settlement ensuring strategy assets > deployed assets
+- `validateSettlement(VaultType vaultType, ...)` - **CRITICAL: Vault-type specific settlement validation**
 - `executeSettlement(uint256 operationId)` - Executes validated settlement
 - `executeAllocation(AllocationOrder order, bytes signature)` - Processes asset allocation
 
+**Settlement Validation by Vault Type**:
+- **VaultType.KMINTER**: Strict validation - `totalStrategyAssets > totalDeployedAssets` required (1:1 guarantee)
+- **VaultType.KDNSTAKING**: Risk-bearing - negative settlements allowed (users bear delta-neutral risk)
+- **VaultType.KSSTAKING**: Risk-bearing - negative settlements allowed (users bear strategy risk)
+
 **Settlement Orchestration**:
-1. **Phase 1**: Institutional Settlement (kMinter batches)
-2. **Phase 2**: Vault Settlements (kDNStaking and kSStaking)
+1. **Phase 1**: Institutional Settlement (kMinter batches) - strict validation
+2. **Phase 2**: Vault Settlements (kDNStaking and kSStaking) - risk-bearing validation
 3. **Phase 3**: Strategy Deployment (allocation orders)
 
 **Security Features**:
 - EIP-712 signature validation for allocation orders
-- Strategy assets > deployed assets validation (key security requirement)
+- **Vault-type specific risk validation** (CRITICAL NEW FEATURE)
 - Signed allocation orders with replay protection
 - Settlement operation tracking and validation
+- `NegativeSettlementProcessed` event for loss monitoring
 
 **Audit Focus**:
-- Verify settlement coordination is atomic
+- **CRITICAL**: Verify vault-type specific validation logic is correct
+- **CRITICAL**: Ensure kMinter never accepts negative settlements (institutional protection)
+- **CRITICAL**: Verify kDN/kS vaults properly handle negative settlements (user risk)
 - Check signature validation for allocation orders
-- Validate strategy assets > deployed assets requirement
 - Review settlement timing and coordination
 - Ensure proper asset flow validation
+- Validate loss realization mechanics work correctly
+- Test 100% loss scenarios (vault should be able to go to 0)
 
 ### 6. kSiloContract.sol - Custodial Withdrawal Intermediary
 
-**Purpose**: Secure intermediary for all custodial strategy returns
+**Purpose**: Secure intermediary for all custodial strategy returns via direct token transfers
 
 **Key Functions**:
-- `receiveFromCustodial(bytes32 operationId, address sourceStrategy, uint256 amount, string operationType)` - Receive custodial returns
 - `transferToDestination(address destination, uint256 amount, bytes32 operationId, string distributionType)` - Transfer to kBatchReceivers
 - `batchTransferToDestinations(...)` - Batch transfers to multiple destinations
 
+**Custodial Flow**:
+- Custodial addresses can ONLY transfer tokens directly: `USDC.transfer(siloAddress, amount)`
+- Cannot call any contract functions - only simple token transfers
+- kStrategyManager orchestrates redistribution via transferToDestination()
+
 **Security Model**:
-- Only kStrategyManager can redistribute funds
-- Complete operation tracking with unique IDs
-- Custodial address validation and role management
-- Audit trail for all asset movements
+- Only kStrategyManager can redistribute funds using transferToDestination()
+- Balance validation using asset.balanceOf(address(this)) before all transfers
+- Role-based access control (STRATEGY_MANAGER_ROLE)
+- Emergency functions for paused state
 
 **Audit Focus**:
-- Verify only kStrategyManager can withdraw
-- Check operation tracking and validation
-- Validate custodial address authorization
-- Review batch transfer security
+- Verify only kStrategyManager can withdraw via transferToDestination()
+- Check balance validation logic in all transfer functions
+- Validate sufficient balance checks prevent over-transfers
+- Review emergency withdrawal security
 
 ### 7. kBatchReceiver.sol - Minimal Proxy for Redemptions
 
@@ -236,7 +268,37 @@ USDC/WBTC → kMinter → kDNStakingVault → kSStakingVault → Strategies
 
 ## Key Security Considerations
 
-### 1. Dual Accounting Integrity
+### 1. Risk-Segregated Settlement Validation (CRITICAL NEW FEATURE)
+
+The protocol implements vault-type specific settlement validation to ensure proper risk allocation:
+
+**Implementation**: `kStrategyManager.validateSettlement(VaultType vaultType, ...)`
+
+**Risk Categories**:
+```solidity
+enum VaultType {
+    KMINTER,        // 1:1 guaranteed, no losses allowed
+    KDNSTAKING,     // Risk-bearing, losses allowed
+    KSSTAKING       // Risk-bearing, losses allowed
+}
+```
+
+**Validation Logic**:
+- **kMinter**: `if (totalStrategyAssets <= totalDeployedAssets) revert` - Strict validation
+- **kDN/kS Vaults**: No validation restriction - Can process negative settlements
+
+**Economic Model**:
+- **Institutions (kMinter)**: Get guaranteed 1:1 backing, never bear losses
+- **Retail Users (kDN/kS)**: Bear strategy risk in exchange for yield opportunities
+- **Loss Realization**: Automatic through negative rebase mechanisms
+
+**Critical Audit Points**:
+- Verify kMinter NEVER accepts negative settlements under any circumstances
+- Verify kDN/kS vaults properly handle negative settlements without affecting minter backing
+- Test 100% loss scenarios (strategy returns 0) - vaults should be able to go to 0
+- Ensure backward compatibility with legacy validateSettlement function
+
+### 2. Dual Accounting Integrity
 
 The protocol's core innovation is the dual accounting system in kDNStakingVault:
 
@@ -247,10 +309,17 @@ vault.totalMinterAssets() + vault.userTotalAssets() == vault.getTotalVaultAssets
 
 **Risk**: If dual accounting breaks, either minters lose 1:1 backing or users lose yield.
 
+**Loss Scenarios**: **NEW** - System now handles negative scenarios:
+- **Positive Rebase**: `totalVaultAssets > accountedAssets` → mint kTokens, increase user assets
+- **Negative Rebase**: `totalVaultAssets < accountedAssets` → burn kTokens, decrease user assets
+- **Minter Protection**: Minter assets maintain 1:1 backing even during user losses
+
 **Validation**:
 - Verify all asset transfers update both accounting systems correctly
 - Check yield distribution only flows to user pool
-- Ensure minter 1:1 guarantee is never violated
+- Ensure minter 1:1 guarantee is never violated **even during losses**
+- **NEW**: Validate negative rebase reduces user assets but preserves minter 1:1 backing
+- **NEW**: Test scenarios where user assets → 0 while minter assets remain intact
 
 ### 2. 1:1 Backing Guarantee
 

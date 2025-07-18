@@ -89,8 +89,9 @@ kTokens is a next-generation protocol providing 1:1 asset backing for institutio
   - **Multi-Destination:** Handles custodial and metavault allocations
   - **Backend Integration:** Executes signed orders for optimal asset allocation
 - **kSiloContract:** **Secure intermediary** for custodial strategy returns
-  - **Access Control:** Only kStrategyManager can redistribute funds
-  - **Operation Tracking:** Complete audit trail of all asset movements
+  - **Custodial Flow:** Custodial addresses can ONLY transfer tokens directly (USDC.transfer(siloAddress, amount))
+  - **Access Control:** Only kStrategyManager can redistribute funds using transferToDestination()
+  - **Balance Validation:** All transfers validate sufficient balance using asset.balanceOf(address(this))
 - **kAsyncTracker:** **Metavault operation monitor** for cross-chain delays
   - **Async Operations:** Tracks metavault request/redeem cycles (~1h delays)
   - **Status Management:** Real-time operation status and completion tracking
@@ -242,6 +243,9 @@ forge script script/base/01_Deploy.s.sol \
 
 ### kStrategyManager Functions (O(1) Settlement)
 - `settleAndAllocate(stakingBatchId, unstakingBatchId, allocationOrder, signature)` — **O(1) settlement orchestration** with asset allocation
+- `validateSettlement(vaultType, totalStrategyAssets, totalDeployedAssets, ...)` — **Vault-type specific settlement validation**
+  - **VaultType.KMINTER:** Blocks negative settlements (institutional 1:1 guarantee)
+  - **VaultType.KDNSTAKING/KSSTAKING:** Allows negative settlements (user risk bearing)
 - `emergencySettle(uint256 stakingBatchId, uint256 unstakingBatchId)` — Emergency settlement without allocation
 - `registerAdapter(address, AdapterType, maxAllocation, implementation)` — Register new strategy adapter
 - `executeAllocation(AllocationOrder, signature)` — Execute allocation with EIP712 signature validation
@@ -350,11 +354,15 @@ vault.addFunctions(selectors, address(newModule), false);
 - **Upgradeability:** Modules can be upgraded independently
 - **Size limits:** Bypass 24KB contract size limit through modularization
 
-## 🛡️ Security & Dual Accounting Model
+## 🛡️ Security & Risk Model
 
 - **Reentrancy Protection:** Checks-effects-interactions pattern applied across all contracts
 - **Dual Accounting Security:** Separate pools ensure minter 1:1 backing never affected by user yield
-- **1:1 Guarantee:** Institutions always get exact asset amounts (minter pool fixed ratio)
+- **Risk-Segregated Settlement:** Vault-type specific validation ensures proper risk allocation
+  - **kMinter:** Strict 1:1 guarantee - negative settlements blocked (institutional protection)
+  - **kDN/kS Vaults:** Risk-bearing - negative settlements allowed (users bear strategy losses)
+- **Loss Realization:** Automatic loss distribution through negative rebase and kToken burning
+- **100% Loss Capability:** Vaults can handle complete strategy failures (vault → 0)
 - **Automatic Yield Flow:** Unaccounted yield from minter assets automatically flows to user shares
 - **Role-Based Access:** All critical functions protected by Solady's OwnableRoles
 - **Bitmap Efficiency:** Request tracking and batch eligibility use gas-optimized bitmaps

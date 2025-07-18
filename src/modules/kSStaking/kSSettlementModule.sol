@@ -222,12 +222,27 @@ contract kSSettlementModule is ModuleBase {
     function _rebaseIfNeeded(BaseVaultStorage storage $) internal {
         uint256 totalVaultAssets = _getTotalVaultAssets($);
         uint256 accountedAssets = $.totalMinterAssets + $.totalStkTokenAssets;
+
         if (totalVaultAssets > accountedAssets) {
+            // Positive rebase - yield generation
             uint256 yield = totalVaultAssets - accountedAssets;
             if (yield <= MAX_YIELD_PER_SYNC) {
                 $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) + yield);
                 $.userTotalAssets = uint128(uint256($.userTotalAssets) + yield);
                 emit VarianceRecorded(yield, true);
+            }
+        } else if (totalVaultAssets < accountedAssets) {
+            // Negative rebase - loss realization
+            uint256 loss = accountedAssets - totalVaultAssets;
+            if (loss <= MAX_YIELD_PER_SYNC) {
+                // Realize losses by reducing stkToken assets and user assets
+                uint256 newStkTokenAssets =
+                    uint256($.totalStkTokenAssets) > loss ? uint256($.totalStkTokenAssets) - loss : 0;
+                uint256 newUserTotalAssets = uint256($.userTotalAssets) > loss ? uint256($.userTotalAssets) - loss : 0;
+
+                $.totalStkTokenAssets = uint128(newStkTokenAssets);
+                $.userTotalAssets = uint128(newUserTotalAssets);
+                emit VarianceRecorded(loss, false);
             }
         }
     }

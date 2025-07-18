@@ -37,6 +37,14 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Vault types for settlement validation
+    enum VaultType {
+        KMINTER, // 1:1 guaranteed, no losses allowed
+        KDNSTAKING, // Risk-bearing, losses allowed
+        KSSTAKING // Risk-bearing, losses allowed
+
+    }
+
     /// @notice EIP712 type hash for allocation orders
     bytes32 public constant ALLOCATION_ORDER_TYPEHASH = keccak256(
         "AllocationOrder(uint256 totalAmount,Allocation[] allocations,uint256 nonce,uint256 deadline)Allocation(uint8 adapterType,address target,uint256 amount,bytes data)"
@@ -113,6 +121,9 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     event AsyncOperationTracked(bytes32 indexed operationId, address indexed metavault, uint256 amount);
     event StrategyAssetsMismatch(uint256 totalStrategyAssets, uint256 totalDeployedAssets, uint256 difference);
     event kSiloContractUpdated(address indexed oldSilo, address indexed newSilo);
+    event NegativeSettlementProcessed(
+        VaultType indexed vaultType, uint256 totalStrategyAssets, uint256 totalDeployedAssets, uint256 loss
+    );
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -206,7 +217,8 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
                           SETTLEMENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Validates settlement operation ensuring withdrawals > deposits
+    /// @notice Validates settlement operation with vault-specific risk tolerance
+    /// @param vaultType Type of vault (KMINTER requires positive, kDN/kS allow losses)
     /// @param totalStrategyAssets Total amount of assets currently held by strategies
     /// @param totalDeployedAssets Total amount originally deployed to strategies
     /// @param destinations Array of destination addresses (kBatchReceivers)
@@ -215,6 +227,7 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     /// @param operationType Type of settlement operation
     /// @return operationId Unique identifier for this settlement operation
     function validateSettlement(
+        VaultType vaultType,
         uint256 totalStrategyAssets,
         uint256 totalDeployedAssets,
         address[] calldata destinations,
@@ -227,11 +240,32 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         whenNotPaused
         returns (uint256 operationId)
     {
+        return _validateSettlementInternal(
+            vaultType, totalStrategyAssets, totalDeployedAssets, destinations, amounts, batchReceiverIds, operationType
+        );
+    }
+
+    /// @notice Internal function to handle settlement validation logic
+    function _validateSettlementInternal(
+        VaultType vaultType,
+        uint256 totalStrategyAssets,
+        uint256 totalDeployedAssets,
+        address[] calldata destinations,
+        uint256[] calldata amounts,
+        bytes32[] calldata batchReceiverIds,
+        string calldata operationType
+    )
+        internal
+        returns (uint256 operationId)
+    {
         kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
 
-        // Validate withdrawals > deposits (key requirement)
-        if (totalStrategyAssets <= totalDeployedAssets) {
-            revert InsufficientStrategyAssets();
+        // Vault-specific settlement validation
+        if (vaultType == VaultType.KMINTER) {
+            // kMinter: Strict 1:1 guarantee - no losses allowed
+            if (totalStrategyAssets <= totalDeployedAssets) {
+                revert InsufficientStrategyAssets();
+            }
         }
 
         // Validate arrays match
@@ -258,11 +292,45 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
 
         emit SettlementValidated(operationId, totalStrategyAssets, totalDeployedAssets);
 
-        // Log mismatch for monitoring
-        uint256 difference = totalStrategyAssets - totalDeployedAssets;
-        emit StrategyAssetsMismatch(totalStrategyAssets, totalDeployedAssets, difference);
+        // Log settlement outcome for monitoring
+        if (totalStrategyAssets > totalDeployedAssets) {
+            // Positive settlement - profit
+            uint256 profit = totalStrategyAssets - totalDeployedAssets;
+            emit StrategyAssetsMismatch(totalStrategyAssets, totalDeployedAssets, profit);
+        } else if (totalStrategyAssets < totalDeployedAssets) {
+            // Negative settlement - loss (only allowed for risk vaults)
+            uint256 loss = totalDeployedAssets - totalStrategyAssets;
+            emit NegativeSettlementProcessed(vaultType, totalStrategyAssets, totalDeployedAssets, loss);
+        }
 
         return operationId;
+    }
+
+    /// @notice Legacy validateSettlement function for backward compatibility (defaults to kMinter behavior)
+    /// @dev This function maintains the original strict validation for existing integrations
+    function validateSettlement(
+        uint256 totalStrategyAssets,
+        uint256 totalDeployedAssets,
+        address[] calldata destinations,
+        uint256[] calldata amounts,
+        bytes32[] calldata batchReceiverIds,
+        string calldata operationType
+    )
+        external
+        onlyRoles(SETTLER_ROLE)
+        whenNotPaused
+        returns (uint256 operationId)
+    {
+        // Default to kMinter behavior (strict validation) for backward compatibility
+        return _validateSettlementInternal(
+            VaultType.KMINTER,
+            totalStrategyAssets,
+            totalDeployedAssets,
+            destinations,
+            amounts,
+            batchReceiverIds,
+            operationType
+        );
     }
 
     /// @notice Executes validated settlement by transferring from Silo to destinations
@@ -374,28 +442,6 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         $.lastSettlement = block.timestamp;
 
         emit SettlementExecuted(params.stakingBatchId, order.totalAmount, order.allocations.length);
-    }
-
-    /// @notice Processes vault batch settlement without executing any asset allocation
-    /// @dev Emergency function that bypasses allocation logic and only updates vault accounting
-    /// @notice Emergency settlement function (deprecated)
-    /// @dev Emergency settlements are now handled directly by individual vaults
-    /// @dev This function remains for compatibility but should not be used
-    function emergencySettle(
-        uint256 stakingBatchId,
-        uint256 unstakingBatchId,
-        uint256 totalKTokensStaked,
-        uint256 totalStkTokensUnstaked,
-        uint256 totalKTokensToReturn,
-        uint256 totalYieldToMinter
-    )
-        external
-        nonReentrant
-        onlyRoles(EMERGENCY_ADMIN_ROLE)
-    {
-        // Emergency settlements are now handled directly by vaults
-        // This function is deprecated but kept for interface compatibility
-        revert UseVaultSpecificEmergencySettlementFunctions();
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -158,6 +158,133 @@ contract kStrategyManagerTest is BaseTest {
         );
     }
 
+    /// @notice Test negative settlement validation for different vault types
+    function test_validateSettlement_vaultTypeSpecificBehavior() public {
+        address[] memory destinations = new address[](1);
+        destinations[0] = mockBatchReceiver1;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 100e6;
+        bytes32[] memory batchReceiverIds = new bytes32[](1);
+        batchReceiverIds[0] = bytes32(uint256(1));
+
+        vm.startPrank(users.settler);
+
+        // kMinter should revert on negative settlement (1:1 guarantee)
+        vm.expectRevert(kStrategyManager.InsufficientStrategyAssets.selector);
+        strategyManager.validateSettlement(
+            kStrategyManager.VaultType.KMINTER,
+            950e6, // Strategy has less than deployed
+            1000e6, // Original deployed amount
+            destinations,
+            amounts,
+            batchReceiverIds,
+            "kminter_loss_settlement"
+        );
+
+        // kDNStaking should allow negative settlement (risk-bearing)
+        uint256 operationId1 = strategyManager.validateSettlement(
+            kStrategyManager.VaultType.KDNSTAKING,
+            950e6, // 50 USDC loss
+            1000e6, // Original deployed amount
+            destinations,
+            amounts,
+            batchReceiverIds,
+            "kdn_loss_settlement"
+        );
+
+        // kSStaking should allow negative settlement (risk-bearing)
+        uint256 operationId2 = strategyManager.validateSettlement(
+            kStrategyManager.VaultType.KSSTAKING,
+            800e6, // 200 USDC loss
+            1000e6, // Original deployed amount
+            destinations,
+            amounts,
+            batchReceiverIds,
+            "ks_loss_settlement"
+        );
+
+        vm.stopPrank();
+
+        // Verify operation IDs are valid
+        assertGt(operationId1, 0);
+        assertGt(operationId2, 0);
+        assertEq(operationId2, operationId1 + 1);
+    }
+
+    /// @notice Test 100% loss scenario for risk vaults
+    function test_validateSettlement_100PercentLoss() public {
+        address[] memory destinations = new address[](1);
+        destinations[0] = mockBatchReceiver1;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 0; // No assets to distribute
+        bytes32[] memory batchReceiverIds = new bytes32[](1);
+        batchReceiverIds[0] = bytes32(uint256(1));
+
+        vm.startPrank(users.settler);
+
+        // Test kDN vault can handle 100% loss
+        vm.expectEmit(true, false, false, true);
+        emit kStrategyManager.NegativeSettlementProcessed(
+            kStrategyManager.VaultType.KDNSTAKING,
+            0, // Total loss
+            1000e6, // Original amount
+            1000e6 // Full loss
+        );
+
+        uint256 operationId = strategyManager.validateSettlement(
+            kStrategyManager.VaultType.KDNSTAKING,
+            0, // Complete loss of strategy assets
+            1000e6, // Original deployed amount
+            destinations,
+            amounts,
+            batchReceiverIds,
+            "100_percent_loss"
+        );
+
+        vm.stopPrank();
+
+        // Verify the settlement operation was recorded
+        kStrategyManager.SettlementOperation memory op = strategyManager.getSettlementOperation(operationId);
+        assertEq(op.totalStrategyAssets, 0);
+        assertEq(op.totalDeployedAssets, 1000e6);
+        assertTrue(op.validated);
+        assertFalse(op.executed);
+    }
+
+    /// @notice Test profit scenario still works with new vault type system
+    function test_validateSettlement_profitScenarioWithVaultTypes() public {
+        address[] memory destinations = new address[](1);
+        destinations[0] = mockBatchReceiver1;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 100e6;
+        bytes32[] memory batchReceiverIds = new bytes32[](1);
+        batchReceiverIds[0] = bytes32(uint256(1));
+
+        vm.startPrank(users.settler);
+
+        // Test profit scenario emits correct event
+        vm.expectEmit(true, false, false, true);
+        emit kStrategyManager.StrategyAssetsMismatch(
+            1100e6, // Strategy returned more
+            1000e6, // Original deployed
+            100e6 // Profit
+        );
+
+        uint256 operationId = strategyManager.validateSettlement(
+            kStrategyManager.VaultType.KSSTAKING,
+            1100e6, // 100 USDC profit
+            1000e6, // Original deployed amount
+            destinations,
+            amounts,
+            batchReceiverIds,
+            "profit_settlement"
+        );
+
+        vm.stopPrank();
+
+        assertGt(operationId, 0);
+    }
+
     function test_validateSettlement_revertsArrayLengthMismatch() public {
         uint256 totalStrategyAssets = _200_USDC;
         uint256 totalDeployedAssets = _100_USDC;
