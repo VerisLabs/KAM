@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { ModuleBase } from "src/modules/base/ModuleBase.sol";
 
@@ -9,6 +10,7 @@ import { ModuleBase } from "src/modules/base/ModuleBase.sol";
 /// @dev Contains role management, configuration, and emergency functions
 /// @dev This module is called via delegatecall and operates on the main vault's storage
 contract AdminModule is ModuleBase {
+    using SafeCastLib for uint256;
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
@@ -175,7 +177,7 @@ contract AdminModule is ModuleBase {
         onlyRoles(ADMIN_ROLE)
     {
         if (destination == address(0)) revert ZeroAddress();
-        if (maxAllocation > 10_000) revert InvalidAllocationPercentage(); // Max 100%
+        if (maxAllocation > ONE_HUNDRED_PERCENT) revert InvalidAllocationPercentage(); // Max 100%
 
         BaseVaultStorage storage $ = _getBaseVaultStorage();
 
@@ -211,7 +213,7 @@ contract AdminModule is ModuleBase {
         onlyRoles(ADMIN_ROLE)
     {
         if (destination == address(0)) revert ZeroAddress();
-        if (maxAllocation > 10_000) revert InvalidAllocationPercentage();
+        if (maxAllocation > ONE_HUNDRED_PERCENT) revert InvalidAllocationPercentage();
 
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         DestinationConfig storage config = $.destinations[destination];
@@ -236,7 +238,7 @@ contract AdminModule is ModuleBase {
         external
         onlyRoles(ADMIN_ROLE)
     {
-        if (custodialPercentage + metavaultPercentage > 10_000) {
+        if (custodialPercentage + metavaultPercentage > ONE_HUNDRED_PERCENT) {
             revert InvalidAllocationPercentage();
         }
 
@@ -310,12 +312,12 @@ contract AdminModule is ModuleBase {
         uint256 shares = _calculateShares(assets, $);
 
         // Move assets from minter pool to user pool
-        $.totalMinterAssets = uint128(uint256($.totalMinterAssets) - assets);
-        $.userTotalAssets = uint128(uint256($.userTotalAssets) + assets);
+        $.totalMinterAssets = (uint256($.totalMinterAssets) - assets).toUint128();
+        $.userTotalAssets = (uint256($.userTotalAssets) + assets).toUint128();
 
         // Mint new shares to user
         $.userShareBalances[user] += shares;
-        $.userTotalSupply = uint128(uint256($.userTotalSupply) + shares);
+        $.userTotalSupply = (uint256($.userTotalSupply) + shares).toUint128();
     }
 
     /*//////////////////////////////////////////////////////////////

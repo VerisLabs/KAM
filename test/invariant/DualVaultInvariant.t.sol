@@ -202,7 +202,7 @@ contract DualVaultInvariant is BaseTest {
         ksSettlementModule = new kSSettlementModule();
 
         // Deploy strategy data provider
-        strategyDataProvider = new kSStakingDataProvider(address(strategyvault));
+        strategyDataProvider = new kSStakingDataProvider(address(strategyvault), address(vault));
 
         // Set up handlers with cross-references for synchronization
         vaultHandler = new kDNStakingVaultHandler(vault, kTokenContract, MockToken(asset));

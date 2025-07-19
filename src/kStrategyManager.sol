@@ -59,6 +59,9 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     /// @notice Default settlement interval
     uint256 public constant DEFAULT_SETTLEMENT_INTERVAL = 8 hours;
 
+    /// @notice 100% allocation
+    uint256 public constant ONE_HUNDRED_PERCENT = 10_000;
+
     /*//////////////////////////////////////////////////////////////
                               STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -117,7 +120,9 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
     event SettlementIntervalUpdated(uint256 oldInterval, uint256 newInterval);
     event SettlementValidated(uint256 indexed operationId, uint256 totalStrategyAssets, uint256 totalDeployedAssets);
-    event SiloTransferExecuted(bytes32 indexed operationId, address indexed destination, uint256 amount);
+    event SiloTransferExecuted(
+        uint256 indexed operationId, bytes32[] batchReceiverIds, address[] destinations, uint256[] amounts
+    );
     event AsyncOperationTracked(bytes32 indexed operationId, address indexed metavault, uint256 amount);
     event StrategyAssetsMismatch(uint256 totalStrategyAssets, uint256 totalDeployedAssets, uint256 difference);
     event kSiloContractUpdated(address indexed oldSilo, address indexed newSilo);
@@ -148,7 +153,6 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
     error InvalidSettlementOperation();
     error VaultNotSet();
     error SettlementFailed();
-    error UseVaultSpecificEmergencySettlementFunctions();
     error ContractNotPaused();
 
     /*//////////////////////////////////////////////////////////////
@@ -349,20 +353,13 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         if (operation.executed) revert SettlementAlreadyExecuted();
 
         // Execute transfers from Silo to destinations
-        for (uint256 i = 0; i < operation.destinations.length; i++) {
-            if (operation.amounts[i] > 0) {
-                kSiloContract(payable($.kSiloContract)).transferToDestination(
-                    operation.destinations[i],
-                    operation.amounts[i],
-                    operation.batchReceiverIds[i],
-                    operation.operationType
-                );
+        kSiloContract(payable($.kSiloContract)).batchTransferToDestinations(
+            operation.destinations, operation.amounts, operation.batchReceiverIds, operation.operationType
+        );
 
-                emit SiloTransferExecuted(
-                    operation.batchReceiverIds[i], operation.destinations[i], operation.amounts[i]
-                );
-            }
-        }
+        emit SiloTransferExecuted(
+            operation.operationId, operation.batchReceiverIds, operation.destinations, operation.amounts
+        );
 
         // Mark as executed
         operation.executed = true;
@@ -517,7 +514,7 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         onlyRoles(ADMIN_ROLE)
     {
         if (adapter == address(0)) revert ZeroAddress();
-        if (maxAllocation > 10_000) revert AllocationExceeded(); // Max 100%
+        if (maxAllocation > ONE_HUNDRED_PERCENT) revert AllocationExceeded(); // Max 100%
 
         kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
 
@@ -535,7 +532,7 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
 
     /// @notice Updates adapter configuration
     function updateAdapter(address adapter, bool enabled, uint256 maxAllocation) external onlyRoles(ADMIN_ROLE) {
-        if (maxAllocation > 10_000) revert AllocationExceeded();
+        if (maxAllocation > ONE_HUNDRED_PERCENT) revert AllocationExceeded();
 
         kStrategyManagerStorage storage $ = _getkStrategyManagerStorage();
         DataTypes.AdapterConfig storage config = $.adapterConfigs[adapter];
@@ -650,6 +647,7 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         DataTypes.AdapterConfig storage config;
         uint256 newAllocation;
         uint256 maxAllowed;
+        uint256 currentTotalAllocation = $.currentTotalAllocation;
 
         for (uint256 i; i < length;) {
             allocation = order.allocations[i];
@@ -660,7 +658,7 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
             // Check allocation limits
             config = $.adapterConfigs[allocation.target];
             newAllocation = config.currentAllocation + allocation.amount;
-            maxAllowed = ($.currentTotalAllocation * config.maxAllocation) / 10_000;
+            maxAllowed = (currentTotalAllocation * config.maxAllocation) / ONE_HUNDRED_PERCENT;
 
             if (newAllocation > maxAllowed) revert AllocationExceeded();
 
@@ -675,7 +673,7 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
         if (totalAllocated != order.totalAmount) revert InvalidAllocationSum();
 
         // Check global allocation limit
-        if ($.currentTotalAllocation + order.totalAmount > $.maxTotalAllocation) {
+        if (currentTotalAllocation + order.totalAmount > $.maxTotalAllocation) {
             revert TotalAllocationExceeded();
         }
     }
@@ -687,11 +685,14 @@ contract kStrategyManager is Initializable, UUPSUpgradeable, OwnableRoles, EIP71
 
         // Execute each allocation in the order
         uint256 length = order.allocations.length;
+        DataTypes.Allocation calldata allocation;
+        DataTypes.AdapterConfig storage adapterConfig;
+
         for (uint256 i; i < length;) {
-            DataTypes.Allocation calldata allocation = order.allocations[i];
+            allocation = order.allocations[i];
 
             // Execute allocation based on adapter type
-            DataTypes.AdapterConfig storage adapterConfig = $.adapterConfigs[allocation.target];
+            adapterConfig = $.adapterConfigs[allocation.target];
             if (!adapterConfig.enabled || adapterConfig.implementation == address(0)) revert AdapterNotEnabled();
 
             // Call the adapter to execute the allocation

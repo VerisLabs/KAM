@@ -140,7 +140,7 @@ contract kSStakingVaultTest is BaseTest {
         strategyvault = kSStakingVault(payable(ksProxyAddress));
 
         // Deploy data provider for strategy vault
-        strategyDataProvider = new kSStakingDataProvider(address(strategyvault));
+        strategyDataProvider = new kSStakingDataProvider(address(strategyvault), address(dnVault));
     }
 
     /// @notice Setup inter-vault connections

@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { ModuleBase } from "src/modules/base/ModuleBase.sol";
 import { DataTypes } from "src/types/DataTypes.sol";
@@ -10,6 +11,7 @@ import { DataTypes } from "src/types/DataTypes.sol";
 /// @notice Handles claim operations for settled batches
 /// @dev Contains claim functions for staking and unstaking operations
 contract ClaimModule is ModuleBase {
+    using SafeCastLib for uint256;
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
 
@@ -113,7 +115,7 @@ contract ClaimModule is ModuleBase {
         uint256 totalKTokensToReturn = uint256(request.stkTokenAmount).mulWadUp(batch.stkTokenPrice);
 
         // Update accounting
-        $.totalStakedKTokens = uint128(uint256($.totalStakedKTokens) - originalKTokens);
+        $.totalStakedKTokens = (uint256($.totalStakedKTokens) - originalKTokens).toUint128();
         batch.totalKTokensClaimed += totalKTokensToReturn;
 
         // Decrement user's original kTokens tracking

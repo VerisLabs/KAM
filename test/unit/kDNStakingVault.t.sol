@@ -515,7 +515,7 @@ contract kDNStakingVaultTest is BaseTest {
 
         vm.expectRevert(); // Should revert since there's no batch to settle
         vm.prank(users.settler);
-        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, amount, 0, 0);
+        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, amount);
     }
 
     function test_settleUnstakingBatch_revertsIfNotSettler() public {
@@ -523,7 +523,7 @@ contract kDNStakingVaultTest is BaseTest {
 
         vm.expectRevert(); // OwnableRoles revert
         vm.prank(users.alice);
-        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, amount, 0, 0);
+        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -1005,7 +1005,7 @@ contract kDNStakingVaultTest is BaseTest {
 
         vm.expectRevert();
         vm.prank(users.alice);
-        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, _1000_USDC, 0, 0);
+        SettlementModule(payable(address(vault))).settleUnstakingBatch(1, _1000_USDC);
     }
 
     function test_emergencyWithdraw_revertsIfNotPausedFirst() public {

@@ -103,6 +103,7 @@ library DataTypes {
 
     /// @notice Unified batch structure for minter operations in kDNStakingVault
     /// @dev Handles both deposits and redemptions with netting to minimize actual transfers
+    /// @dev Optimized for single minter per vault architecture
     struct Batch {
         uint256 totalDeposits; // Total amount of deposits in this batch
         uint256 totalRedeems; // Total amount of redemptions in this batch
@@ -110,11 +111,10 @@ library DataTypes {
         uint256 netRedeems; // Net redemptions after netting (redeems - deposits)
         uint256 sharesCreated; // Total vault shares created for deposits
         uint256 sharesBurned; // Total vault shares burned for redemptions
-        address[] minters; // Array of minters with operations in this batch
+        address activeMinter; // Single minter address with operations in this batch
         mapping(address => uint256) depositAmounts; // Minter address => total deposit amount
         mapping(address => uint256) redeemAmounts; // Minter address => total redemption amount
         mapping(address => address) batchReceivers; // Minter address => BatchReceiver for redemptions
-        mapping(address => bool) hasMinterOperation; // Minter address => whether minter has operations
         bool settled; // Whether this batch has been settled
     }
 

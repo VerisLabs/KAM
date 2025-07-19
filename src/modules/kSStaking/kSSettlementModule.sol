@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IkDNStaking } from "src/interfaces/IkDNStaking.sol";
@@ -12,6 +13,7 @@ import { DataTypes } from "src/types/DataTypes.sol";
 /// @notice Handles strategy-based settlement operations for kSStakingVault
 /// @dev Contains batch settlement functions with inter-vault asset management
 contract kSSettlementModule is ModuleBase {
+    using SafeCastLib for uint256;
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
 
@@ -74,9 +76,14 @@ contract kSSettlementModule is ModuleBase {
         }
         address kDNVault = $.kSStakingVault;
         if (kDNVault == address(0)) revert DNVaultNotSet();
-        uint256 totalAssetsRequired = 0;
-        for (uint256 i = 0; i < amounts.length; i++) {
+        uint256 totalAssetsRequired;
+        uint256 length = amounts.length;
+
+        for (uint256 i; i < length;) {
             totalAssetsRequired += amounts[i];
+            unchecked {
+                ++i;
+            }
         }
         _handleAssetRequestAndAllocation($, kDNVault, totalAssetsRequired, destinations);
         _rebaseIfNeeded($);
@@ -227,8 +234,8 @@ contract kSSettlementModule is ModuleBase {
             // Positive rebase - yield generation
             uint256 yield = totalVaultAssets - accountedAssets;
             if (yield <= MAX_YIELD_PER_SYNC) {
-                $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) + yield);
-                $.userTotalAssets = uint128(uint256($.userTotalAssets) + yield);
+                $.totalStkTokenAssets = (uint256($.totalStkTokenAssets) + yield).toUint128();
+                $.userTotalAssets = (uint256($.userTotalAssets) + yield).toUint128();
                 emit VarianceRecorded(yield, true);
             }
         } else if (totalVaultAssets < accountedAssets) {
@@ -240,8 +247,8 @@ contract kSSettlementModule is ModuleBase {
                     uint256($.totalStkTokenAssets) > loss ? uint256($.totalStkTokenAssets) - loss : 0;
                 uint256 newUserTotalAssets = uint256($.userTotalAssets) > loss ? uint256($.userTotalAssets) - loss : 0;
 
-                $.totalStkTokenAssets = uint128(newStkTokenAssets);
-                $.userTotalAssets = uint128(newUserTotalAssets);
+                $.totalStkTokenAssets = newStkTokenAssets.toUint128();
+                $.userTotalAssets = newUserTotalAssets.toUint128();
                 emit VarianceRecorded(loss, false);
             }
         }
@@ -260,7 +267,7 @@ contract kSSettlementModule is ModuleBase {
         totalStkTokensToMint = totalKTokensStaked.divWad(currentStkTokenPrice);
         uint256 newStkTokenSupply = uint256($.totalStkTokenSupply) + totalStkTokensToMint;
         if (newStkTokenSupply > type(uint128).max) revert StkTokenSupplyOverflow();
-        $.totalStkTokenSupply = uint128(newStkTokenSupply);
+        $.totalStkTokenSupply = newStkTokenSupply.toUint128();
     }
 
     function _updateAccountingForUnstaking(
@@ -279,8 +286,8 @@ contract kSSettlementModule is ModuleBase {
         currentStkTokenPrice = effectiveSupply == 0 ? PRECISION : uint256($.totalStkTokenAssets).divWad(effectiveSupply);
         totalAssetsToDistribute = totalStkTokensUnstaked.mulWad(currentStkTokenPrice);
         totalOriginalKTokens = $.totalStakedKTokens;
-        $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) - totalAssetsToDistribute);
-        $.userTotalAssets = uint128(uint256($.userTotalAssets) - totalAssetsToDistribute);
+        $.totalStkTokenAssets = (uint256($.totalStkTokenAssets) - totalAssetsToDistribute).toUint128();
+        $.userTotalAssets = (uint256($.userTotalAssets) - totalAssetsToDistribute).toUint128();
     }
 
     function _processAssetReturn(
@@ -293,9 +300,14 @@ contract kSSettlementModule is ModuleBase {
     )
         internal
     {
-        uint256 totalAssetsToReturn = 0;
-        for (uint256 i = 0; i < amounts.length; i++) {
+        uint256 totalAssetsToReturn;
+        uint256 length = amounts.length;
+
+        for (uint256 i; i < length;) {
             totalAssetsToReturn += amounts[i];
+            unchecked {
+                ++i;
+            }
         }
         (bool returned,) = address(this).call(
             abi.encodeWithSignature("returnAssetsFromDestinations(address[],uint256[])", sources, amounts)

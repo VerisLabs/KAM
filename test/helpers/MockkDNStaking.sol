@@ -239,9 +239,13 @@ contract MockkDNStaking is IkDNStaking {
     {
         // Mock implementation - transfer assets to each destination
         if (asset != address(0)) {
-            for (uint256 i = 0; i < destinations.length; i++) {
+            uint256 length = destinations.length;
+            for (uint256 i; i < length;) {
                 if (amounts[i] > 0) {
                     asset.safeTransfer(destinations[i], amounts[i]);
+                    unchecked {
+                        ++i;
+                    }
                 }
             }
         }
@@ -258,9 +262,13 @@ contract MockkDNStaking is IkDNStaking {
     {
         // Mock implementation - receive assets from each source
         if (asset != address(0)) {
-            for (uint256 i = 0; i < sources.length; i++) {
+            uint256 length = sources.length;
+            for (uint256 i; i < length;) {
                 if (amounts[i] > 0) {
                     asset.safeTransferFrom(sources[i], address(this), amounts[i]);
+                }
+                unchecked {
+                    ++i;
                 }
             }
         }

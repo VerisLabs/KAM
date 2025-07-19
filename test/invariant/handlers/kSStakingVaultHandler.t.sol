@@ -77,13 +77,13 @@ contract kSStakingVaultHandler is BaseHandler, Test {
     ///                      SETUP                               ///
     ////////////////////////////////////////////////////////////////
 
-    constructor(kSStakingVault _vault, kToken _kToken, MockToken _underlyingAsset) {
+    constructor(kSStakingVault _vault, kToken _kToken, MockToken _underlyingAsset, address _dnVault) {
         vault = _vault;
         kToken_ = _kToken;
         underlyingAsset = _underlyingAsset;
 
         // Deploy data provider for efficient queries
-        dataProvider = new kSStakingDataProvider(address(_vault));
+        dataProvider = new kSStakingDataProvider(address(_vault), _dnVault);
 
         // Initialize actual values
         _syncActualValues();

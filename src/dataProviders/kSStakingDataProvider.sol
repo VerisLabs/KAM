@@ -44,6 +44,9 @@ contract kSStakingDataProvider {
 
     /// @notice Target kSStakingVault contract
     kSStakingVault public immutable vault;
+    
+    /// @notice Connected kDNStakingVault address
+    address public immutable kDNVaultAddress;
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -67,9 +70,12 @@ contract kSStakingDataProvider {
 
     /// @notice Deploys the data provider for a specific kSStakingVault instance
     /// @param _vault Address of the kSStakingVault contract to read from
-    constructor(address _vault) {
+    /// @param _kDNVaultAddress Address of the connected kDNStakingVault
+    constructor(address _vault, address _kDNVaultAddress) {
         if (_vault == address(0)) revert ZeroAddress();
+        if (_kDNVaultAddress == address(0)) revert ZeroAddress();
         vault = kSStakingVault(payable(_vault));
+        kDNVaultAddress = _kDNVaultAddress;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -412,15 +418,10 @@ contract kSStakingDataProvider {
         assetPerShare = userTotalSupply > 0 ? userTotalAssets.divWad(userTotalSupply) : 1e18;
     }
 
-    /// @notice Get kDN vault address (moved from main contract)
+    /// @notice Get kDN vault address
     /// @return kDNVault Address of connected kDNStakingVault
     function getKDNVaultAddress() external view returns (address kDNVault) {
-        // The address is in SLOT 13 due to struct packing:
-        // SLOT 12: uint128 totalAllocatedToStrategies (16 bytes) + padding
-        // SLOT 13: address kSStakingVault (20 bytes) + uint96 reserved6 (12 bytes)
-        bytes32 slot13 = bytes32(uint256(BASE_VAULT_STORAGE_LOCATION) + 13);
-        bytes32 value = vault.extsload(slot13);
-        kDNVault = address(uint160(uint256(value))); // kSStakingVault address in lower 160 bits
+        return kDNVaultAddress;
     }
 
     /*//////////////////////////////////////////////////////////////

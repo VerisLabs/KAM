@@ -225,7 +225,7 @@ contract kDNStakingVaultHandler is BaseHandler, Test {
         (, uint256 totalStkTokensInBatch,,,) = dataProvider.getUnstakingBatchInfo(batchId);
 
         vm.prank(settler);
-        try SettlementModule(payable(address(vault))).settleUnstakingBatch(batchId, totalStkTokensInBatch, 0, 0) {
+        try SettlementModule(payable(address(vault))).settleUnstakingBatch(batchId, totalStkTokensInBatch) {
             lastSettledUnstakingBatchId = batchId;
 
             // Track settled distributions using actual batch data

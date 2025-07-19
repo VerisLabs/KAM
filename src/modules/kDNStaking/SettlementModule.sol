@@ -2,6 +2,8 @@
 pragma solidity 0.8.30;
 
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IkToken } from "src/interfaces/IkToken.sol";
@@ -14,6 +16,7 @@ import { DataTypes } from "src/types/DataTypes.sol";
 contract SettlementModule is ModuleBase {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
+    using SafeCastLib for uint256;
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
@@ -167,7 +170,6 @@ contract SettlementModule is ModuleBase {
                 // Positive rebase - yield generation
                 uint256 yield = totalVaultAssets - accountedAssets;
                 if (yield <= MAX_YIELD_PER_SYNC) {
-                    IkToken($.kToken).mint(address(this), yield);
                     uint256 newStkTokenAssetsYield = uint256($.totalStkTokenAssets) + yield;
                     uint256 newUserTotalAssetsYield = uint256($.userTotalAssets) + yield;
                     if (newStkTokenAssetsYield <= type(uint128).max && newUserTotalAssetsYield <= type(uint128).max) {
@@ -175,6 +177,7 @@ contract SettlementModule is ModuleBase {
                         $.userTotalAssets = uint128(newUserTotalAssetsYield);
                         emit VarianceRecorded(yield, true);
                     }
+                    IkToken($.kToken).mint(address(this), yield);
                 }
             } else if (totalVaultAssets < accountedAssets) {
                 // Negative rebase - loss realization for user pool only
@@ -182,18 +185,16 @@ contract SettlementModule is ModuleBase {
                 uint256 loss = accountedAssets - totalVaultAssets;
                 if (loss <= MAX_YIELD_PER_SYNC) {
                     // Realize losses by reducing stkToken assets and user assets
-                    uint256 newStkTokenAssets =
-                        uint256($.totalStkTokenAssets) > loss ? uint256($.totalStkTokenAssets) - loss : 0;
-                    uint256 newUserTotalAssets =
-                        uint256($.userTotalAssets) > loss ? uint256($.userTotalAssets) - loss : 0;
+                    $.totalStkTokenAssets =
+                        (uint256($.totalStkTokenAssets) > loss ? uint256($.totalStkTokenAssets) - loss : 0).toUint128();
+                    $.userTotalAssets =
+                        (uint256($.userTotalAssets) > loss ? uint256($.userTotalAssets) - loss : 0).toUint128();
 
                     // Burn kTokens to maintain 1:1 backing
                     if (loss > 0) {
                         IkToken($.kToken).burn(address(this), loss);
                     }
 
-                    $.totalStkTokenAssets = uint128(newStkTokenAssets);
-                    $.userTotalAssets = uint128(newUserTotalAssets);
                     emit VarianceRecorded(loss, false);
                 }
             }
@@ -218,7 +219,7 @@ contract SettlementModule is ModuleBase {
         }
         // Reduce minter pool by the same amount to shift backing to users
         if ($.totalMinterAssets < totalKTokensStaked) revert InsufficientMinterBacking();
-        $.totalMinterAssets = uint128(uint256($.totalMinterAssets) - totalKTokensStaked);
+        $.totalMinterAssets = (uint256($.totalMinterAssets) - totalKTokensStaked).toUint128();
         // Update stkToken supply with overflow protection
         {
             uint256 newStkTokenSupply = uint256($.totalStkTokenSupply) + totalStkTokensToMint;
@@ -253,13 +254,9 @@ contract SettlementModule is ModuleBase {
     /// @dev Validates batch sequence, calculates stkToken value with current price, and updates accounting
     /// @param batchId The identifier of the unstaking batch to settle
     /// @param totalStkTokensUnstaked Aggregated amount of stkTokens from all requests in the batch
-    /// @param totalKTokensToReturn Total original kTokens to return to users
-    /// @param totalYieldToMinter Total yield to transfer back to minter pool
     function settleUnstakingBatch(
         uint256 batchId,
-        uint256 totalStkTokensUnstaked,
-        uint256 totalKTokensToReturn,
-        uint256 totalYieldToMinter
+        uint256 totalStkTokensUnstaked
     )
         external
         nonReentrant
@@ -292,33 +289,29 @@ contract SettlementModule is ModuleBase {
         // AUTOMATIC REBASE: Update stkToken assets with real vault balance
         {
             uint256 totalVaultAssets = _getTotalVaultAssets($); // Real assets
-            uint256 accountedAssets = $.totalMinterAssets + $.totalStkTokenAssets;
+            uint128 accountedAssets = $.totalMinterAssets + $.totalStkTokenAssets;
             if (totalVaultAssets > accountedAssets) {
                 // Positive rebase - yield generation
-                uint256 yield = totalVaultAssets - accountedAssets;
+                uint128 yield = totalVaultAssets.toUint128() - accountedAssets;
                 if (yield <= MAX_YIELD_PER_SYNC) {
+                    $.totalStkTokenAssets = $.totalStkTokenAssets + yield;
+                    $.userTotalAssets = $.userTotalAssets + yield;
                     IkToken($.kToken).mint(address(this), yield);
-                    $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) + yield);
-                    $.userTotalAssets = uint128(uint256($.userTotalAssets) + yield);
                     emit VarianceRecorded(yield, true);
                 }
             } else if (totalVaultAssets < accountedAssets) {
                 // Negative rebase - loss realization for user pool only
-                uint256 loss = accountedAssets - totalVaultAssets;
+                uint128 loss = accountedAssets - totalVaultAssets.toUint128();
                 if (loss <= MAX_YIELD_PER_SYNC) {
                     // Realize losses by reducing stkToken assets and user assets
-                    uint256 newStkTokenAssets =
-                        uint256($.totalStkTokenAssets) > loss ? uint256($.totalStkTokenAssets) - loss : 0;
-                    uint256 newUserTotalAssets =
-                        uint256($.userTotalAssets) > loss ? uint256($.userTotalAssets) - loss : 0;
+                    $.totalStkTokenAssets = $.totalStkTokenAssets > loss ? $.totalStkTokenAssets - loss : 0;
+                    $.userTotalAssets = $.userTotalAssets > loss ? $.userTotalAssets - loss : 0;
 
                     // Burn kTokens to maintain 1:1 backing
                     if (loss > 0) {
                         IkToken($.kToken).burn(address(this), loss);
                     }
 
-                    $.totalStkTokenAssets = uint128(newStkTokenAssets);
-                    $.userTotalAssets = uint128(newUserTotalAssets);
                     emit VarianceRecorded(loss, false);
                 }
             }
@@ -341,8 +334,8 @@ contract SettlementModule is ModuleBase {
         }
         // Update global accounting
         {
-            $.totalStkTokenAssets = uint128(uint256($.totalStkTokenAssets) - totalAssetsToDistribute);
-            $.userTotalAssets = uint128(uint256($.userTotalAssets) - totalAssetsToDistribute);
+            $.totalStkTokenAssets = (uint256($.totalStkTokenAssets) - totalAssetsToDistribute).toUint128();
+            $.userTotalAssets = (uint256($.userTotalAssets) - totalAssetsToDistribute).toUint128();
         }
         // Calculate total original kTokens being unstaked to return to minter pool
         uint256 totalOriginalKTokens;
@@ -357,7 +350,7 @@ contract SettlementModule is ModuleBase {
         }
         // Return original kTokens backing to minter pool (yield stays with users)
         {
-            $.totalMinterAssets = uint128(uint256($.totalMinterAssets) + batchOriginalKTokens);
+            $.totalMinterAssets = $.totalMinterAssets + batchOriginalKTokens.toUint128();
         }
 
         // O(1) BATCH STATE: Mark batch as settled with settlement parameters
@@ -369,8 +362,8 @@ contract SettlementModule is ModuleBase {
         // Store the ratio of original kTokens to stkTokens for efficient claims
         batch.originalKTokenRatio = effectiveSupply == 0 ? 0 : uint256(totalOriginalKTokens).divWad(effectiveSupply);
 
-        $.lastSettledUnstakingBatchId = uint64(batchId);
-        $.lastUnstakingSettlement = uint64(block.timestamp);
+        $.lastSettledUnstakingBatchId = batchId.toUint64();
+        $.lastUnstakingSettlement = block.timestamp.toUint64();
 
         // Create new unstaking batch
         unchecked {
@@ -391,35 +384,33 @@ contract SettlementModule is ModuleBase {
     /// @param batch The batch being settled
     /// @param $ Storage reference
     function _processMinterPositions(DataTypes.Batch storage batch, BaseVaultStorage storage $) internal {
-        uint256 length = batch.minters.length;
-        address minter;
-        int256 netAmount;
-        uint256 redeemAmount;
+        address minter = batch.activeMinter;
 
-        for (uint256 i; i < length;) {
-            minter = batch.minters[i];
-            netAmount = $.minterPendingNetAmounts[minter];
+        // Skip processing if no active minter
+        if (minter == address(0)) return;
 
-            if (netAmount > 0) {
-                // Net deposit: increase minter balance 1:1
-                $.minterAssetBalances[minter] += uint256(netAmount);
-                $.totalMinterAssets = uint128(uint256($.totalMinterAssets) + uint256(netAmount));
-            } else if (netAmount < 0) {
-                // Net redeem: decrease minter balance 1:1
-                redeemAmount = uint256(-netAmount);
-                if ($.minterAssetBalances[minter] >= redeemAmount) {
-                    $.minterAssetBalances[minter] -= redeemAmount;
-                    $.totalMinterAssets = uint128(uint256($.totalMinterAssets) - redeemAmount);
-                }
-            }
+        uint128 totalMinterAssets = $.totalMinterAssets;
+        int256 netAmount = $.minterPendingNetAmounts[minter];
+        uint256 minterAssetBalance = $.minterAssetBalances[minter];
 
-            // Clear pending amount
-            delete $.minterPendingNetAmounts[minter];
-
-            unchecked {
-                i++;
+        if (netAmount > 0) {
+            // Net deposit: increase minter balance 1:1
+            minterAssetBalance += uint256(netAmount);
+            totalMinterAssets = (uint256(totalMinterAssets) + uint256(netAmount)).toUint128();
+        } else if (netAmount < 0) {
+            // Net redeem: decrease minter balance 1:1
+            uint256 redeemAmount = uint256(-netAmount);
+            if (minterAssetBalance >= redeemAmount) {
+                minterAssetBalance = (uint256(minterAssetBalance) - redeemAmount).toUint128();
+                totalMinterAssets = (uint256(totalMinterAssets) - redeemAmount).toUint128();
             }
         }
+
+        $.minterAssetBalances[minter] = minterAssetBalance;
+        // Clear pending amount
+        delete $.minterPendingNetAmounts[minter];
+
+        $.totalMinterAssets = totalMinterAssets;
     }
 
     /// @notice Internal function to distribute assets to batch receivers for net redemptions
@@ -433,25 +424,20 @@ contract SettlementModule is ModuleBase {
         uint256 vaultBalance = $.underlyingAsset.balanceOf(address(this));
         if (vaultBalance < batch.netRedeems) revert InsufficientVaultBalance();
 
-        uint256 length = batch.minters.length;
-        address minter;
-        uint256 redeemAmount;
-        address batchReceiver;
-        // Distribute assets to each minter's batch receiver
-        for (uint256 i; i < length;) {
-            minter = batch.minters[i];
-            redeemAmount = batch.redeemAmounts[minter];
+        address minter = batch.activeMinter;
 
-            if (redeemAmount > 0) {
-                batchReceiver = batch.batchReceivers[minter];
-                if (batchReceiver != address(0)) {
-                    // Transfer assets to the batch receiver
-                    $.underlyingAsset.safeTransfer(batchReceiver, redeemAmount);
-                }
-            }
+        // Skip if no active minter
+        if (minter == address(0)) return;
 
-            unchecked {
-                i++;
+        uint256 redeemAmount = batch.redeemAmounts[minter];
+        address underlyingAsset = $.underlyingAsset;
+
+        // Distribute assets to the minter's batch receiver
+        if (redeemAmount > 0) {
+            address batchReceiver = batch.batchReceivers[minter];
+            if (batchReceiver != address(0)) {
+                // Transfer assets to the batch receiver
+                underlyingAsset.safeTransfer(batchReceiver, redeemAmount);
             }
         }
     }
@@ -477,9 +463,14 @@ contract SettlementModule is ModuleBase {
     {
         // Validate array lengths match
         if (destinations.length != amounts.length) revert InvalidRequestIndex();
-        uint256 totalAllocation = 0;
-        for (uint256 i = 0; i < amounts.length; i++) {
+        uint256 totalAllocation;
+        uint256 length = amounts.length;
+
+        for (uint256 i; i < length;) {
             totalAllocation += amounts[i];
+            unchecked {
+                ++i;
+            }
         }
         emit AllocationRequested(batchId, destinations, amounts);
     }

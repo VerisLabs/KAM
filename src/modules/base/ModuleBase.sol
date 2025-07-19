@@ -85,6 +85,7 @@ abstract contract ModuleBase is OwnableRoles, ReentrancyGuardTransient {
     uint256 internal constant DEFAULT_BATCH_CUTOFF_TIME = 4 hours;
     uint256 internal constant PRECISION = 1e18;
     uint256 internal constant MAX_YIELD_PER_SYNC = 500e18;
+    uint256 public constant ONE_HUNDRED_PERCENT = 10_000;
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -119,10 +120,10 @@ abstract contract ModuleBase is OwnableRoles, ReentrancyGuardTransient {
 
         // SLOT 1: Core Addresses (32 bytes)
         address underlyingAsset; // 20 bytes
-        uint96 reserved1; // 12 bytes reserved for future use
+        // 12 bytes remaining in slot 1
         // SLOT 2: Core Addresses Continued (32 bytes)
         address kToken; // 20 bytes
-        uint96 reserved2; // 12 bytes reserved for future use
+        // 12 bytes remaining in slot 2
         // SLOT 3: Asset Accounting (32 bytes packed)
         /// @dev Total assets backing minter operations with 1:1 kToken ratio
         /// These assets provide fixed backing for institutional users
@@ -150,54 +151,61 @@ abstract contract ModuleBase is OwnableRoles, ReentrancyGuardTransient {
         // SLOT 7: Settlement & stkToken (32 bytes packed)
         uint64 lastUnstakingSettlement; // 8 bytes
         uint128 totalStkTokenSupply; // 16 bytes
-        uint64 reserved3; // 8 bytes reserved
+        // 8 bytes remaining in slot 7
         // SLOT 8: stkToken & Variance (32 bytes packed)
         uint128 totalStkTokenAssets; // 16 bytes
         uint128 totalVariance; // 16 bytes
         // SLOT 9: Strategy & Admin Addresses (32 bytes)
         address strategyManager; // 20 bytes
-        uint96 reserved4; // 12 bytes reserved
-        // SLOT 10: Variance & Admin (32 bytes)
+        // 12 bytes remaining in slot 9
+        // SLOT 10: Single Minter Support (32 bytes)
+        address activeMinter; // 20 bytes - single minter address for direct access
+        // 12 bytes remaining in slot 10
+        // SLOT 11: Variance & Admin (32 bytes)
         address varianceRecipient; // 20 bytes
-        uint96 reserved5; // 12 bytes reserved
-        // SLOT 11: Admin Yield (32 bytes)
+        // 12 bytes remaining in slot 11
+        // SLOT 12: Admin Yield (32 bytes)
         uint256 pendingYieldToDistribute; // 32 bytes - needs full precision
-        // SLOT 12: Strategy Vault Integration (32 bytes packed)
+        // SLOT 13: Strategy Vault Integration (32 bytes)
         uint128 totalAllocatedToStrategies; // 16 bytes - assets allocated to strategy vaults
+        // 16 bytes remaining in slot 13
+        // SLOT 14: Strategy Vault Address (32 bytes)
         address kSStakingVault; // 20 bytes - address of strategy vault (legacy, kept for compatibility)
-        uint96 reserved6; // 12 bytes reserved
-        // SLOT 13: Multi-Destination Support (32 bytes packed)
+        // 12 bytes remaining in slot 14
+        // SLOT 15: Multi-Destination Support (32 bytes packed)
         uint64 custodialAllocationPercentage; // 8 bytes - percentage for custodial (basis points)
         uint64 metavaultAllocationPercentage; // 8 bytes - percentage for metavaults (basis points)
         uint128 totalCustodialAllocated; // 16 bytes - total allocated to custodial strategies
-        // SLOT 14: Multi-Destination Support Continued (32 bytes packed)
+        // SLOT 16: Multi-Destination Support Continued (32 bytes)
         uint128 totalMetavaultAllocated; // 16 bytes - total allocated to metavault strategies
+        // 16 bytes remaining in slot 16
+        // SLOT 17: Silo Contract Address (32 bytes)
         address kSiloContract; // 20 bytes - address of silo contract for custodial returns
-        uint96 reserved7; // 12 bytes reserved
-        // SLOT 13-14: Metadata (stored as constants instead of storage)
+        // 12 bytes remaining in slot 17
+        // SLOT 15-17: Metadata (stored as constants instead of storage)
         // name and symbol removed - use constants or immutable variables
 
-        // MAPPINGS (separate slots each)
+        // MAPPINGS (starting from slot 18)
         // DUAL ACCOUNTING MODEL
         // 1. Fixed 1:1 accounting for kMinter (assets = shares always)
-        mapping(address => uint256) minterAssetBalances; // 1:1 with deposited assets
-        mapping(address => int256) minterPendingNetAmounts; // Pending net amounts
+        mapping(address => uint256) minterAssetBalances; // SLOT 18
+        mapping(address => int256) minterPendingNetAmounts; // SLOT 19
         // 2. Yield-bearing accounting for users
-        mapping(address => uint256) userShareBalances; // User's yield-bearing shares
-        mapping(uint256 => DataTypes.Batch) batches;
+        mapping(address => uint256) userShareBalances; // SLOT 20
+        mapping(uint256 => DataTypes.Batch) batches; // SLOT 21
         // Staking batches (kToken -> shares)
-        mapping(uint256 => DataTypes.StakingBatch) stakingBatches;
+        mapping(uint256 => DataTypes.StakingBatch) stakingBatches; // SLOT 22
         // Unstaking batches (shares -> assets)
-        mapping(uint256 => DataTypes.UnstakingBatch) unstakingBatches;
+        mapping(uint256 => DataTypes.UnstakingBatch) unstakingBatches; // SLOT 23
         // stkToken tracking (rebase token for yield distribution)
-        mapping(address => uint256) userStkTokenBalances; // User stkToken balances
-        mapping(address => uint256) userUnclaimedStkTokens; // Unclaimed stkTokens from requests
-        mapping(address => uint256) userOriginalKTokens; // Track original kToken amounts per user
+        mapping(address => uint256) userStkTokenBalances; // SLOT 24
+        mapping(address => uint256) userUnclaimedStkTokens; // SLOT 25
+        mapping(address => uint256) userOriginalKTokens; // SLOT 26
         // Admin yield distribution
-        mapping(address => uint256) userPendingYield;
+        mapping(address => uint256) userPendingYield; // SLOT 27
         // Multi-destination support
-        mapping(address => DestinationConfig) destinations; // Strategy destination configurations
-        address[] registeredDestinations; // Array of all registered destination addresses
+        mapping(address => DestinationConfig) destinations; // SLOT 28
+        address[] registeredDestinations; // SLOT 29
     }
 
     bytes32 internal constant BASE_VAULT_STORAGE_LOCATION =

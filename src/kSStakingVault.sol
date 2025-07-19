@@ -390,9 +390,14 @@ contract kSStakingVault is
         if (destinations.length != amounts.length) revert InvalidRequestIndex();
         if (destinations.length == 0) revert ZeroAmount();
 
-        uint256 totalAmount = 0;
-        for (uint256 i = 0; i < amounts.length; i++) {
+        uint256 totalAmount;
+        uint256 length = amounts.length;
+
+        for (uint256 i; i < length;) {
             totalAmount += amounts[i];
+            unchecked {
+                ++i;
+            }
         }
 
         // Check if we have sufficient assets to allocate
@@ -406,34 +411,40 @@ contract kSStakingVault is
         $.totalAllocatedToStrategies = uint128(newAllocation);
 
         // Execute allocations to each strategy destination
-        uint256 length = destinations.length;
-        address destination;
+        length = destinations.length;
         DestinationConfig storage destConfig;
+        address destination;
+        address underlyingAsset = $.underlyingAsset;
+        uint128 totalCustodialAllocated = $.totalCustodialAllocated;
+        uint128 totalMetavaultAllocated = $.totalMetavaultAllocated;
+        uint256 amount;
+
         for (uint256 i; i < length;) {
-            if (amounts[i] > 0) {
+            amount = amounts[i];
+            if (amount > 0) {
                 destination = destinations[i];
                 destConfig = $.destinations[destination];
 
                 if (!destConfig.isActive) revert DestinationNotActive();
 
                 // Update destination allocation tracking
-                destConfig.currentAllocation += amounts[i];
+                destConfig.currentAllocation += amount;
 
                 // Transfer assets based on strategy destination type
                 if (destConfig.destinationType == DestinationType.CUSTODIAL_WALLET) {
                     // For custodial, transfer to CustodialWallet directly
-                    $.totalCustodialAllocated += _safeToUint128(amounts[i]);
-                    $.underlyingAsset.safeTransfer(destination, amounts[i]);
-                    emit AssetsAllocatedToCustodialWallet(destination, amounts[i]);
+                    totalCustodialAllocated += _safeToUint128(amount);
+                    underlyingAsset.safeTransfer(destination, amount);
+                    emit AssetsAllocatedToCustodialWallet(destination, amount);
                 } else if (destConfig.destinationType == DestinationType.METAVAULT) {
                     // For metavaults, transfer directly
-                    $.totalMetavaultAllocated += _safeToUint128(amounts[i]);
-                    $.underlyingAsset.safeTransfer(destination, amounts[i]);
-                    emit AssetsAllocatedToMetavault(destination, amounts[i]);
+                    totalMetavaultAllocated += _safeToUint128(amount);
+                    underlyingAsset.safeTransfer(destination, amount);
+                    emit AssetsAllocatedToMetavault(destination, amount);
                 } else if (destConfig.destinationType == DestinationType.STRATEGY_VAULT) {
                     // For other strategy vaults, transfer directly
-                    $.underlyingAsset.safeTransfer(destination, amounts[i]);
-                    emit AssetsAllocatedToStrategy(destination, amounts[i]);
+                    underlyingAsset.safeTransfer(destination, amount);
+                    emit AssetsAllocatedToStrategy(destination, amount);
                 } else {
                     revert DestinationTypeNotSupported();
                 }
@@ -466,50 +477,56 @@ contract kSStakingVault is
         if (sources.length != amounts.length) revert InvalidRequestIndex();
         if (sources.length == 0) revert ZeroAmount();
 
-        uint256 totalAmount = 0;
-        for (uint256 i = 0; i < amounts.length; i++) {
+        uint256 totalAmount;
+        uint256 length = amounts.length;
+
+        for (uint256 i; i < length;) {
             totalAmount += amounts[i];
+            unchecked {
+                ++i;
+            }
         }
 
         // Check allocation doesn't underflow
         if ($.totalAllocatedToStrategies < totalAmount) revert InsufficientMinterAssets();
 
-        // Sort sources by withdrawal priority (MetaVault first, then Custodial)
-        (address[] memory sortedSources, uint256[] memory sortedAmounts) =
-            _sortDestinationsByWithdrawalPriority(sources, amounts, $);
-
-        // Process returns from each source in priority order
-        uint256 length = sortedSources.length;
-        address source;
+        // Process returns from each source in the provided order
+        length = sources.length;
         DestinationConfig storage destConfig;
+        address source;
+        address underlyingAsset = $.underlyingAsset;
+        uint128 totalCustodialAllocated = $.totalCustodialAllocated;
+        uint128 totalMetavaultAllocated = $.totalMetavaultAllocated;
+        uint256 amount;
+
+        // Execute returns
         for (uint256 i; i < length;) {
-            if (sortedAmounts[i] > 0) {
-                source = sortedSources[i];
+            amount = amounts[i];
+            if (amount > 0) {
+                source = sources[i];
                 destConfig = $.destinations[source];
 
-                if (destConfig.currentAllocation >= sortedAmounts[i]) {
-                    destConfig.currentAllocation -= sortedAmounts[i];
+                if (destConfig.currentAllocation >= amount) {
+                    destConfig.currentAllocation -= amount;
                 }
 
                 // Handle asset returns based on destination type
                 if (destConfig.destinationType == DestinationType.CUSTODIAL_WALLET) {
                     // For custodial, assets returned directly
-                    $.totalCustodialAllocated = $.totalCustodialAllocated >= sortedAmounts[i]
-                        ? $.totalCustodialAllocated - _safeToUint128(sortedAmounts[i])
-                        : 0;
-                    $.underlyingAsset.safeTransferFrom(source, address(this), sortedAmounts[i]);
-                    emit AssetsReturnedFromCustodialWallet(source, sortedAmounts[i]);
+                    totalCustodialAllocated =
+                        totalCustodialAllocated >= amount ? totalCustodialAllocated - _safeToUint128(amount) : 0;
+                    underlyingAsset.safeTransferFrom(source, address(this), amount);
+                    emit AssetsReturnedFromCustodialWallet(source, amount);
                 } else if (destConfig.destinationType == DestinationType.METAVAULT) {
                     // For metavaults, assets returned directly
-                    $.totalMetavaultAllocated = $.totalMetavaultAllocated >= sortedAmounts[i]
-                        ? $.totalMetavaultAllocated - _safeToUint128(sortedAmounts[i])
-                        : 0;
-                    $.underlyingAsset.safeTransferFrom(source, address(this), sortedAmounts[i]);
-                    emit AssetsReturnedFromMetavault(source, sortedAmounts[i]);
+                    totalMetavaultAllocated =
+                        totalMetavaultAllocated >= amount ? totalMetavaultAllocated - _safeToUint128(amount) : 0;
+                    underlyingAsset.safeTransferFrom(source, address(this), amount);
+                    emit AssetsReturnedFromMetavault(source, amount);
                 } else if (destConfig.destinationType == DestinationType.STRATEGY_VAULT) {
                     // For strategy vaults, receive assets directly
-                    $.underlyingAsset.safeTransferFrom(source, address(this), sortedAmounts[i]);
-                    emit AssetsReturnedFromStrategy(source, sortedAmounts[i]);
+                    underlyingAsset.safeTransferFrom(source, address(this), amount);
+                    emit AssetsReturnedFromStrategy(source, amount);
                 } else {
                     revert DestinationTypeNotSupported();
                 }
@@ -520,67 +537,11 @@ contract kSStakingVault is
         }
 
         // Update tracking
-        $.totalAllocatedToStrategies = uint128(uint256($.totalAllocatedToStrategies) - totalAmount);
+        $.totalAllocatedToStrategies = uint128($.totalAllocatedToStrategies - totalAmount);
+        $.totalCustodialAllocated = totalCustodialAllocated;
+        $.totalMetavaultAllocated = totalMetavaultAllocated;
 
         return true;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        INTERNAL FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Sorts destinations by withdrawal priority (MetaVault first, then Custodial)
-    /// @dev Implements MetaVault-first business logic for optimal capital efficiency
-    /// @param sources Array of source addresses
-    /// @param amounts Array of amounts corresponding to sources
-    /// @param $ Storage reference
-    /// @return sortedSources Sources sorted by withdrawal priority
-    /// @return sortedAmounts Amounts sorted to match source order
-    function _sortDestinationsByWithdrawalPriority(
-        address[] calldata sources,
-        uint256[] calldata amounts,
-        BaseVaultStorage storage $
-    )
-        internal
-        view
-        returns (address[] memory sortedSources, uint256[] memory sortedAmounts)
-    {
-        uint256 length = sources.length;
-        sortedSources = new address[](length);
-        sortedAmounts = new uint256[](length);
-
-        // Sort by priority (MetaVault → Custodial → Strategy)
-        uint256 sortedIndex = 0;
-
-        // Priority 1: MetaVault destinations (primary liquidity)
-        for (uint256 i = 0; i < length; i++) {
-            DestinationConfig storage destConfig = $.destinations[sources[i]];
-            if (destConfig.destinationType == DestinationType.METAVAULT) {
-                sortedSources[sortedIndex] = sources[i];
-                sortedAmounts[sortedIndex] = amounts[i];
-                sortedIndex++;
-            }
-        }
-
-        // Priority 2: Custodial destinations (preserve operational capital)
-        for (uint256 i = 0; i < length; i++) {
-            DestinationConfig storage destConfig = $.destinations[sources[i]];
-            if (destConfig.destinationType == DestinationType.CUSTODIAL_WALLET) {
-                sortedSources[sortedIndex] = sources[i];
-                sortedAmounts[sortedIndex] = amounts[i];
-                sortedIndex++;
-            }
-        }
-
-        // Priority 3: Strategy Vault destinations (last resort)
-        for (uint256 i = 0; i < length; i++) {
-            DestinationConfig storage destConfig = $.destinations[sources[i]];
-            if (destConfig.destinationType == DestinationType.STRATEGY_VAULT) {
-                sortedSources[sortedIndex] = sources[i];
-                sortedAmounts[sortedIndex] = amounts[i];
-                sortedIndex++;
-            }
-        }
     }
 
     /*//////////////////////////////////////////////////////////////
