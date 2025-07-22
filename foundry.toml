@@ -6,6 +6,7 @@ gas_reports = ['*']
 solc_version = "0.8.30"
 optimizer = true
 optimizer_runs = 200
+via_ir = true
 
 [profile.deploy]
 optimization_runs = 200

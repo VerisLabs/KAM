@@ -12,9 +12,12 @@ library DataTypes {
     /// @notice Status enumeration for tracking redemption request lifecycle
     /// @dev Used to prevent double-spending and track request processing
     enum RedemptionStatus {
-        PENDING, // Request submitted but not yet processed
-        REDEEMED, // Request successfully completed
-        CANCELLED // Request cancelled before processing
+        PENDING, // Request submitted but not yet processed (tokens escrowed, not burned)
+        TOKENS_ESCROWED, // Tokens transferred to escrow, waiting for settlement
+        SETTLEMENT_CONFIRMED, // Settlement completed, assets available for claim
+        REDEEMED, // Request successfully completed and claimed
+        CANCELLED, // Request cancelled before processing (tokens returned to user)
+        SETTLEMENT_FAILED // Settlement failed, tokens available for refund
 
     }
 
@@ -32,7 +35,9 @@ library DataTypes {
         address emergencyAdmin; // Emergency administrator for pause/unpause
         address institution; // Initial institutional user address
         address settler; // Address authorized to settle batches
-        address manager; // Address of the vault manager (kDNStakingVault)
+        address manager; // Address of the vault manager (kStakingVault)
+        address kAssetRouter; // Address of the kAssetRouter for push model
+        address kBatch; // Address of the kBatch contract
         uint256 settlementInterval; // Time interval between batch settlements
     }
 
@@ -46,9 +51,9 @@ library DataTypes {
         address minter; // Initial minter address (typically kMinter)
     }
 
-    /// @notice Initialization parameters for kDNStakingVault contract deployment
+    /// @notice Initialization parameters for kStakingVault contract deployment
     /// @dev Contains all required addresses and configuration for vault setup
-    struct kDNStakingVaultInitParams {
+    struct kStakingVaultInitParams {
         uint8 decimals; // Number of decimal places for vault shares
         address asset; // Address of the underlying asset (kToken)
         address kToken; // Address of the kToken contract
@@ -57,6 +62,7 @@ library DataTypes {
         address emergencyAdmin; // Emergency administrator for pause/unpause
         address settler; // Address authorized to settle batches
         address strategyManager; // Address of the strategy manager contract
+        address kAssetRouter; // NEW: Address of the kAssetRouter for virtual balance queries
     }
 
     /// @notice Request structure for minting new kTokens
@@ -81,7 +87,6 @@ library DataTypes {
         address user; // Address of the user who made the request
         uint96 amount; // Amount of kTokens being redeemed (gas-optimized)
         address recipient; // Address that will receive the underlying assets
-        address batchReceiver; // BatchReceiver contract handling this request
         uint64 requestTimestamp; // Timestamp when the request was created (gas-optimized)
         RedemptionStatus status; // Current status of the redemption request
     }
@@ -101,7 +106,7 @@ library DataTypes {
                     KDNSTAKING VAULT STRUCTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Unified batch structure for minter operations in kDNStakingVault
+    /// @notice Unified batch structure for minter operations in kStakingVault
     /// @dev Handles both deposits and redemptions with netting to minimize actual transfers
     /// @dev Optimized for single minter per vault architecture
     struct Batch {
@@ -126,6 +131,9 @@ library DataTypes {
         uint96 stkTokenAmount; // Amount of stkTokens to be issued (gas-optimized)
         uint64 requestTimestamp; // Timestamp when the request was created (gas-optimized)
         bool claimed; // Whether the user has claimed their stkTokens
+        // Slippage protection fields
+        uint96 minStkTokens; // Minimum stkTokens user expects to receive
+        uint64 deadline; // Transaction deadline for MEV protection
     }
 
     /// @notice Batch structure for processing multiple staking requests together
@@ -147,6 +155,9 @@ library DataTypes {
         uint96 stkTokenAmount; // Amount of stkTokens to unstake (gas-optimized)
         uint64 requestTimestamp; // Timestamp when the request was created (gas-optimized)
         bool claimed; // Whether the user has claimed their assets
+        // Slippage protection fields
+        uint96 minKTokens; // Minimum kTokens (including yield) user expects to receive
+        uint64 deadline; // Transaction deadline for MEV protection
     }
 
     /// @notice Batch structure for processing multiple unstaking requests together

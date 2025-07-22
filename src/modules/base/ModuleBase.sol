@@ -2,68 +2,37 @@
 pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+
+import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { DataTypes } from "src/types/DataTypes.sol";
+import { ModuleBaseTypes } from "src/types/ModuleBaseTypes.sol";
 
 /// @title ModuleBase
-/// @notice Base contract for kDNStakingVault and all modules with dual accounting architecture
+/// @notice Base contract for all modules
 /// @dev Provides shared storage, roles, and common functionality
-///
-/// DUAL ACCOUNTING MODEL:
-/// The protocol implements a sophisticated dual accounting system that separates:
-/// 1. Minter Assets: 1:1 backing for institutional users (fixed ratio, no yield)
-/// 2. User Assets: Yield-bearing pool for retail users (appreciating value)
-///
-/// ASSET FLOW ARCHITECTURE:
-/// - kMinter: Handles actual assets (USDC/WBTC) with 1:1 kToken backing
-/// - kDNStakingVault: Uses kTokens as underlying asset, sources from minter pool
-/// - kSStakingVault: Uses underlying assets, sources from kDNStakingVault minter pool
-///
-/// YIELD DISTRIBUTION:
-/// - Institutional users (minters): Fixed 1:1 ratio, no yield appreciation
-/// - Retail users: Receive yield through kToken minting and stkToken appreciation
-/// - Yield flows automatically from minter pool to user pool via strategic kToken minting
-///
-/// INVARIANT GUARANTEES:
-/// - Total kToken supply = Total underlying assets held by protocol
-/// - Minter assets + User assets = Total vault assets (allowing 1 wei rounding)
-/// - Strategy allocations ≤ Available minter assets
-/// - Yield distribution ≤ MAX_YIELD_PER_SYNC per settlement
 abstract contract ModuleBase is OwnableRoles, ReentrancyGuardTransient {
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
+    using FixedPointMathLib for uint256;
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Emitted when invariant validation fails
-    event InvariantViolation(string indexed violationType, uint256 expected, uint256 actual);
-
-    /// @notice Emitted when asset flow occurs between vaults
-    event AssetFlow(address indexed from, address indexed to, uint256 amount, string flowType);
-
-    /// @notice Emitted when dual accounting is updated
-    event DualAccountingUpdate(uint256 minterAssets, uint256 userAssets, uint256 totalVaultAssets);
-
-    /// @notice Emitted when a new destination is registered
-    event DestinationRegistered(
-        address indexed destination, DestinationType destinationType, uint256 maxAllocation, string name
+    event StakeRequestCreated(
+        bytes32 indexed requestId,
+        address indexed user,
+        address indexed kToken,
+        uint256 amount,
+        address recipient,
+        uint256 batchId
     );
-
-    /// @notice Emitted when destination configuration is updated
-    event DestinationUpdated(address indexed destination, bool isActive, uint256 maxAllocation);
-
-    /// @notice Emitted when assets are allocated to a destination
-    event AssetsAllocatedToDestination(address indexed destination, DestinationType destinationType, uint256 amount);
-
-    /// @notice Emitted when assets are returned from a destination
-    event AssetsReturnedFromDestination(address indexed destination, DestinationType destinationType, uint256 amount);
-
-    /// @notice Emitted when allocation percentages are updated
-    event AllocationPercentagesUpdated(uint256 custodialPercentage, uint256 metavaultPercentage);
+    event StakeRequestRedeemed(bytes32 indexed requestId);
+    event StakeRequestCancelled(bytes32 indexed requestId);
 
     /*//////////////////////////////////////////////////////////////
                                 ROLES
@@ -73,139 +42,41 @@ abstract contract ModuleBase is OwnableRoles, ReentrancyGuardTransient {
     uint256 public constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
     uint256 public constant MINTER_ROLE = _ROLE_2;
     uint256 public constant SETTLER_ROLE = _ROLE_3;
-    uint256 public constant STRATEGY_MANAGER_ROLE = _ROLE_4;
-    uint256 public constant STRATEGY_VAULT_ROLE = _ROLE_5;
+    uint256 public constant VAULT_ROLE = _ROLE_4;
+    uint256 public constant ASSET_ROUTER_ROLE = _ROLE_5;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    uint256 internal constant DEFAULT_DUST_AMOUNT = 1e12;
-    uint256 internal constant DEFAULT_SETTLEMENT_INTERVAL = 8 hours;
-    uint256 internal constant DEFAULT_BATCH_CUTOFF_TIME = 4 hours;
     uint256 internal constant PRECISION = 1e18;
-    uint256 internal constant MAX_YIELD_PER_SYNC = 500e18;
     uint256 public constant ONE_HUNDRED_PERCENT = 10_000;
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Types of strategy destinations supported
-    enum DestinationType {
-        CUSTODIAL_WALLET, // Traditional custodial wallets (CEX, etc.)
-        METAVAULT, // ERC7540 async vaults for cross-chain operations
-        STRATEGY_VAULT // Other kS staking vaults
-
-    }
-
-    /// @notice Configuration for each strategy destination
-    struct DestinationConfig {
-        DestinationType destinationType;
-        bool isActive;
-        uint256 maxAllocation; // Maximum allocation in basis points (0-10000)
-        uint256 currentAllocation; // Current allocated amount
-        string name; // Human-readable name for the destination
-        address implementation; // Implementation contract if applicable
-    }
-
     /// @custom:storage-location erc7201:BaseVault.storage.BaseVault
     struct BaseVaultStorage {
-        // SLOT 0: Configuration & Status (32 bytes packed)
-        uint128 dustAmount; // 16 bytes - sufficient for dust amounts
-        uint64 settlementInterval; // 8 bytes - up to 584 years in seconds
-        uint32 decimals; // 4 bytes - supports decimals up to 4B
-        bool isPaused; // 1 byte
-        // 3 bytes remaining in slot 0
-
-        // SLOT 1: Core Addresses (32 bytes)
-        address underlyingAsset; // 20 bytes
-        // 12 bytes remaining in slot 1
-        // SLOT 2: Core Addresses Continued (32 bytes)
-        address kToken; // 20 bytes
-        // 12 bytes remaining in slot 2
-        // SLOT 3: Asset Accounting (32 bytes packed)
-        /// @dev Total assets backing minter operations with 1:1 kToken ratio
-        /// These assets provide fixed backing for institutional users
-        uint128 totalMinterAssets; // 16 bytes - up to ~3.4e20 tokens
-        /// @dev Total supply of user shares (stkTokens) that represent yield-bearing positions
-        /// Used for calculating share price and yield distribution
-        uint128 userTotalSupply; // 16 bytes - sufficient for token supply
-        // SLOT 4: Asset Accounting Continued (32 bytes packed)
-        /// @dev Total assets in user yield-bearing pool that appreciates with yield
-        /// Increases when yield flows from minter pool to user pool
-        uint128 userTotalAssets; // 16 bytes
-        /// @dev Total kTokens staked by users across all vaults
-        /// Used for tracking user positions and yield calculations
-        uint128 totalStakedKTokens; // 16 bytes
-        // SLOT 5: Batch IDs (32 bytes packed)
-        uint64 currentBatchId; // 8 bytes - 18 quintillion batches
-        uint64 lastSettledBatchId; // 8 bytes
-        uint64 currentStakingBatchId; // 8 bytes
-        uint64 lastSettledStakingBatchId; // 8 bytes
-        // SLOT 6: Batch IDs Continued & Timestamps (32 bytes packed)
-        uint64 currentUnstakingBatchId; // 8 bytes
-        uint64 lastSettledUnstakingBatchId; // 8 bytes
-        uint64 lastSettlement; // 8 bytes - timestamp
-        uint64 lastStakingSettlement; // 8 bytes - timestamp
-        // SLOT 7: Settlement & stkToken (32 bytes packed)
-        uint64 lastUnstakingSettlement; // 8 bytes
-        uint128 totalStkTokenSupply; // 16 bytes
-        // 8 bytes remaining in slot 7
-        // SLOT 8: stkToken & Variance (32 bytes packed)
-        uint128 totalStkTokenAssets; // 16 bytes
-        uint128 totalVariance; // 16 bytes
-        // SLOT 9: Strategy & Admin Addresses (32 bytes)
-        address strategyManager; // 20 bytes
-        // 12 bytes remaining in slot 9
-        // SLOT 10: Single Minter Support (32 bytes)
-        address activeMinter; // 20 bytes - single minter address for direct access
-        // 12 bytes remaining in slot 10
-        // SLOT 11: Variance & Admin (32 bytes)
-        address varianceRecipient; // 20 bytes
-        // 12 bytes remaining in slot 11
-        // SLOT 12: Admin Yield (32 bytes)
-        uint256 pendingYieldToDistribute; // 32 bytes - needs full precision
-        // SLOT 13: Strategy Vault Integration (32 bytes)
-        uint128 totalAllocatedToStrategies; // 16 bytes - assets allocated to strategy vaults
-        // 16 bytes remaining in slot 13
-        // SLOT 14: Strategy Vault Address (32 bytes)
-        address kSStakingVault; // 20 bytes - address of strategy vault (legacy, kept for compatibility)
-        // 12 bytes remaining in slot 14
-        // SLOT 15: Multi-Destination Support (32 bytes packed)
-        uint64 custodialAllocationPercentage; // 8 bytes - percentage for custodial (basis points)
-        uint64 metavaultAllocationPercentage; // 8 bytes - percentage for metavaults (basis points)
-        uint128 totalCustodialAllocated; // 16 bytes - total allocated to custodial strategies
-        // SLOT 16: Multi-Destination Support Continued (32 bytes)
-        uint128 totalMetavaultAllocated; // 16 bytes - total allocated to metavault strategies
-        // 16 bytes remaining in slot 16
-        // SLOT 17: Silo Contract Address (32 bytes)
-        address kSiloContract; // 20 bytes - address of silo contract for custodial returns
-        // 12 bytes remaining in slot 17
-        // SLOT 15-17: Metadata (stored as constants instead of storage)
-        // name and symbol removed - use constants or immutable variables
-
-        // MAPPINGS (starting from slot 18)
-        // DUAL ACCOUNTING MODEL
-        // 1. Fixed 1:1 accounting for kMinter (assets = shares always)
-        mapping(address => uint256) minterAssetBalances; // SLOT 18
-        mapping(address => int256) minterPendingNetAmounts; // SLOT 19
-        // 2. Yield-bearing accounting for users
-        mapping(address => uint256) userShareBalances; // SLOT 20
-        mapping(uint256 => DataTypes.Batch) batches; // SLOT 21
-        // Staking batches (kToken -> shares)
-        mapping(uint256 => DataTypes.StakingBatch) stakingBatches; // SLOT 22
-        // Unstaking batches (shares -> assets)
-        mapping(uint256 => DataTypes.UnstakingBatch) unstakingBatches; // SLOT 23
-        // stkToken tracking (rebase token for yield distribution)
-        mapping(address => uint256) userStkTokenBalances; // SLOT 24
-        mapping(address => uint256) userUnclaimedStkTokens; // SLOT 25
-        mapping(address => uint256) userOriginalKTokens; // SLOT 26
-        // Admin yield distribution
-        mapping(address => uint256) userPendingYield; // SLOT 27
-        // Multi-destination support
-        mapping(address => DestinationConfig) destinations; // SLOT 28
-        address[] registeredDestinations; // SLOT 29
+        bool isPaused;
+        uint256 requestCounter;
+        uint256 lastTotalAssets;
+        uint256 userTotalSupply;
+        uint128 dustAmount;
+        uint64 settlementInterval;
+        uint8 decimals;
+        address kMinter;
+        address kAssetRouter;
+        address kBatch;
+        address kToken;
+        address underlyingAsset;
+        address strategyManager;
+        address varianceRecipient;
+        address kReceiver;
+        mapping(address => uint256) userShareBalances;
+        mapping(uint256 => ModuleBaseTypes.StakeRequest) stakeRequests;
+        mapping(uint256 => ModuleBaseTypes.UnstakeRequest) unstakeRequests;
+        mapping(address => uint256[]) userRequests;
     }
 
     bytes32 internal constant BASE_VAULT_STORAGE_LOCATION =
@@ -226,19 +97,8 @@ abstract contract ModuleBase is OwnableRoles, ReentrancyGuardTransient {
     error Paused();
     error ZeroAddress();
     error ZeroAmount();
-    error InsufficientShares();
-    error BatchNotFound();
-    error BatchAlreadySettled();
-    error InvalidRequestIndex();
-    error AlreadyClaimed();
-    error NotBeneficiary();
-    error InsufficientMinterAssets();
-    error ExceedsAllocationLimit();
-    error DestinationNotFound();
-    error DestinationNotActive();
-    error InvalidAllocationPercentage();
-    error DestinationAlreadyRegistered();
-    error DestinationTypeNotSupported();
+    error AssetNotRegistered();
+    error AmountBelowDustThreshold();
 
     /*//////////////////////////////////////////////////////////////
                               MODIFIERS
@@ -251,107 +111,56 @@ abstract contract ModuleBase is OwnableRoles, ReentrancyGuardTransient {
         _;
     }
 
-    /*//////////////////////////////////////////////////////////////
-                          HELPER FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Safely casts uint256 to uint128 (main contract specific)
-    /// @param value Value to cast
-    /// @return Casted uint128 value
-    function _safeToUint128(uint256 value) internal pure virtual returns (uint128) {
-        return SafeCastLib.toUint128(value);
-    }
-
-    /// @notice Safely casts uint256 to uint96 with overflow protection
-    /// @param value The uint256 value to cast
-    /// @return The uint96 value after safe casting
-    function _safeToUint96(uint256 value) internal pure virtual returns (uint96) {
-        return SafeCastLib.toUint96(value);
-    }
-
-    /// @notice Safely casts uint256 to uint64 with overflow protection
-    /// @param value The uint256 value to cast
-    /// @return The uint64 value after safe casting
-    function _safeToUint64(uint256 value) internal pure virtual returns (uint64) {
-        return SafeCastLib.toUint64(value);
-    }
-
-    /// @notice Safely casts uint256 to uint32 (main contract specific)
-    /// @param value Value to cast
-    /// @return Casted uint32 value
-    function _safeToUint32(uint256 value) internal pure virtual returns (uint32) {
-        return SafeCastLib.toUint32(value);
+    /// @notice Checks if an asset is registered
+    /// @param asset Asset address
+    /// @return True if asset is registered
+    function _isRegisteredAsset(address asset) internal view returns (bool) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        return IkAssetRouter($.kAssetRouter).isRegisteredAsset(asset);
     }
 
     /*//////////////////////////////////////////////////////////////
-                        INVARIANT VALIDATION
+                      MATHEMATICAL HELPERS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Validates that dual accounting totals match actual vault assets
-    /// @dev Ensures minter assets + user assets = actual vault asset balance
-    /// @param $ Storage pointer to BaseVaultStorage
-    /// @return isValid True if dual accounting is consistent
-    function _validateDualAccounting(BaseVaultStorage storage $) internal returns (bool isValid) {
-        uint256 actualVaultAssets = $.underlyingAsset.balanceOf(address(this));
-        uint256 accountedAssets = uint256($.totalMinterAssets) + uint256($.userTotalAssets);
-
-        // Emit monitoring event for tracking
-        emit DualAccountingUpdate($.totalMinterAssets, $.userTotalAssets, actualVaultAssets);
-
-        // Allow small rounding differences (up to 1 wei)
-        bool isConsistent;
-        if (actualVaultAssets >= accountedAssets) {
-            isConsistent = (actualVaultAssets - accountedAssets) <= 1;
-        } else {
-            isConsistent = (accountedAssets - actualVaultAssets) <= 1;
-        }
-
-        if (!isConsistent) {
-            emit InvariantViolation("DualAccounting", accountedAssets, actualVaultAssets);
-        }
-
-        return isConsistent;
+    /// @notice Calculates stkToken price with safety checks
+    /// @dev Standard price calculation used across settlement modules
+    /// @param totalAssets Total underlying assets backing stkTokens
+    /// @param totalSupply Total stkToken supply
+    /// @return price Price per stkToken in underlying asset terms (18 decimals)
+    function _calculateStkTokenPrice(uint256 totalAssets, uint256 totalSupply) internal pure returns (uint256 price) {
+        return totalSupply == 0 ? PRECISION : totalAssets.divWad(totalSupply);
     }
 
-    /// @notice Validates that strategy allocations don't exceed minter assets
-    /// @dev Ensures total allocated to strategies <= total minter assets
-    /// @param $ Storage pointer to BaseVaultStorage
-    /// @return isValid True if strategy allocations are within limits
-    function _validateStrategyAllocations(BaseVaultStorage storage $) internal returns (bool isValid) {
-        isValid = $.totalAllocatedToStrategies <= $.totalMinterAssets;
-
-        if (!isValid) {
-            emit InvariantViolation("StrategyAllocation", $.totalMinterAssets, $.totalAllocatedToStrategies);
-        }
-
-        return isValid;
+    /// @notice Calculates stkTokens to mint for given kToken amount
+    /// @dev Used in staking settlement operations
+    /// @param kTokenAmount Amount of kTokens being staked
+    /// @param stkTokenPrice Current stkToken price
+    /// @return stkTokens Amount of stkTokens to mint
+    function _calculateStkTokensToMint(
+        uint256 kTokenAmount,
+        uint256 stkTokenPrice
+    )
+        internal
+        pure
+        returns (uint256 stkTokens)
+    {
+        return kTokenAmount.divWad(stkTokenPrice);
     }
 
-    /// @notice Validates that user share accounting is consistent
-    /// @dev Ensures user total supply and individual balances are consistent
-    /// @param $ Storage pointer to BaseVaultStorage
-    /// @return isValid True if user share accounting is consistent
-    function _validateUserShares(BaseVaultStorage storage $) internal view returns (bool isValid) {
-        // This is a basic check - more comprehensive validation would sum all user balances
-        // For now, we check that user total supply is reasonable
-        return $.userTotalSupply <= type(uint128).max;
+    /// @notice Calculates asset value for given stkToken amount
+    /// @dev Used in unstaking settlement operations
+    /// @param stkTokenAmount Amount of stkTokens being unstaked
+    /// @param stkTokenPrice Current stkToken price
+    /// @return assetValue Equivalent asset value
+    function _calculateAssetValue(
+        uint256 stkTokenAmount,
+        uint256 stkTokenPrice
+    )
+        internal
+        pure
+        returns (uint256 assetValue)
+    {
+        return stkTokenAmount.mulWad(stkTokenPrice);
     }
-
-    /// @notice Comprehensive invariant validation for protocol safety
-    /// @dev Validates all invariants that maintain protocol integrity
-    /// @param $ Storage pointer to BaseVaultStorage
-    /// @return isValid True if all invariants pass
-    function _validateProtocolInvariants(BaseVaultStorage storage $) internal returns (bool isValid) {
-        return _validateDualAccounting($) && _validateStrategyAllocations($) && _validateUserShares($);
-    }
-
-    /// @notice Validates yield distribution bounds
-    /// @dev Ensures yield distribution doesn't exceed maximum allowed per sync
-    /// @param yieldAmount The amount of yield to distribute
-    /// @return isValid True if yield is within bounds
-    function _validateYieldBounds(uint256 yieldAmount) internal pure returns (bool isValid) {
-        return yieldAmount <= MAX_YIELD_PER_SYNC;
-    }
-
-    // Module-specific functions are implemented by individual modules
 }

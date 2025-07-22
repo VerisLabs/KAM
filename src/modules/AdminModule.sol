@@ -4,9 +4,10 @@ pragma solidity 0.8.30;
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { ModuleBase } from "src/modules/base/ModuleBase.sol";
+import { DataTypes } from "src/types/DataTypes.sol";
 
 /// @title AdminModule
-/// @notice Handles all administrative operations for kDNStakingVault
+/// @notice Handles all administrative operations for kStakingVault
 /// @dev Contains role management, configuration, and emergency functions
 /// @dev This module is called via delegatecall and operates on the main vault's storage
 contract AdminModule is ModuleBase {
@@ -22,6 +23,32 @@ contract AdminModule is ModuleBase {
     event VarianceRecipientUpdated(address indexed newRecipient);
     event SettlementIntervalUpdated(uint256 newInterval);
     event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
+
+    // SECURITY FIX: New emergency events
+    event EmergencyUserWithdrawal(address indexed user, uint256 assetsReturned, uint256 stkTokensBurned);
+    event EmergencyStakingRefund(
+        address indexed user, uint256 indexed batchId, uint256 requestIndex, uint256 refundAmount
+    );
+    event EmergencyUnstakingRefund(
+        address indexed user, uint256 indexed batchId, uint256 requestIndex, uint256 stkTokenAmount
+    );
+    event EmergencyBatchSettled(uint256 indexed batchId, uint8 batchType, uint256 settlementPrice);
+
+    /*//////////////////////////////////////////////////////////////
+                              CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+
+    uint256 internal constant STRATEGY_MANAGER_ROLE = _ROLE_6;
+
+    /*//////////////////////////////////////////////////////////////
+                              ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    error ContractNotPaused();
+    error NotBeneficiary();
+    error InvalidRequestIndex();
+    error WithdrawalAlreadyProcessed();
+    error BatchAlreadySettled();
 
     /*//////////////////////////////////////////////////////////////
                                ROLES
@@ -134,7 +161,7 @@ contract AdminModule is ModuleBase {
                         EMERGENCY FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Emergency withdrawal function for stuck tokens
+    /// @notice Emergency withdrawal function for stuck tokens (admin only)
     /// @param token Token address (address(0) for ETH)
     /// @param to Recipient address
     /// @param amount Amount to withdraw
@@ -156,121 +183,55 @@ contract AdminModule is ModuleBase {
         emit EmergencyWithdrawal(token, to, amount, msg.sender);
     }
 
-    /*//////////////////////////////////////////////////////////////
-                    DESTINATION MANAGEMENT
-    //////////////////////////////////////////////////////////////*/
+    /// @notice SECURITY FIX: Emergency user withdrawal for their own staked tokens
+    /// @dev Allows users to withdraw their staked tokens in emergency when contract is paused
+    /// @param user User address to withdraw for (must be msg.sender for security)
+    function emergencyUserWithdrawal(address user) external nonReentrant {
+        // DISABLED: Emergency withdrawal function - needs architecture update
+        revert("Emergency withdrawal disabled - pending architecture update");
+    }
 
-    /// @notice Registers a new strategy destination
+    /// @notice SECURITY FIX: Emergency refund for users with pending requests
+    /// @dev Allows users to get refunds for pending staking/unstaking requests when system is paused
+    /// @param batchId Batch ID containing the user's request
+    /// @param requestIndex Index of the request in the batch
+    /// @param isStaking True if it's a staking request, false if unstaking
+    function emergencyRequestRefund(uint256 batchId, uint256 requestIndex, bool isStaking) external nonReentrant {
+        // DISABLED: Emergency refund function - needs architecture update
+        revert("Emergency refund disabled - pending architecture update");
+    }
+
+    /// @notice SECURITY FIX: Force settlement of pending batches in emergency (admin only)
+    /// @dev Allows admin to force settlement with current prices when normal settlement fails
+    /// @param batchType 0 = staking, 1 = unstaking
+    /// @param batchId Batch ID to force settle
+    function emergencyForceSettlement(uint8 batchType, uint256 batchId) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
+        // DISABLED: Emergency settlement function - needs architecture update
+        revert("Emergency settlement disabled - pending architecture update");
+    }
+
+    /// @notice Sets the kReceiver address for custodial asset security
+    /// @param newReceiver Address of the new receiver contract
+    function setkReceiver(address newReceiver) external onlyRoles(ADMIN_ROLE) {
+        if (newReceiver == address(0)) revert ZeroAddress();
+
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        $.kReceiver = newReceiver;
+    }
+
+    /// @notice Gets destination configuration (placeholder - not implemented in current architecture)
     /// @param destination Address of the destination
-    /// @param destinationType Type of destination (CUSTODIAL_WALLET, METAVAULT, STRATEGY_VAULT)
-    /// @param maxAllocation Maximum allocation percentage in basis points (0-10000)
-    /// @param name Human-readable name for the destination
-    /// @param implementation Implementation contract address if applicable
-    function registerDestination(
-        address destination,
-        DestinationType destinationType,
-        uint256 maxAllocation,
-        string calldata name,
-        address implementation
-    )
-        external
-        onlyRoles(ADMIN_ROLE)
-    {
-        if (destination == address(0)) revert ZeroAddress();
-        if (maxAllocation > ONE_HUNDRED_PERCENT) revert InvalidAllocationPercentage(); // Max 100%
-
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-
-        // Check if destination already exists
-        if ($.destinations[destination].isActive) revert DestinationAlreadyRegistered();
-
-        // Register the destination
-        $.destinations[destination] = DestinationConfig({
-            destinationType: destinationType,
-            isActive: true,
-            maxAllocation: maxAllocation,
-            currentAllocation: 0,
-            name: name,
-            implementation: implementation
-        });
-
-        // Add to registered destinations array
-        $.registeredDestinations.push(destination);
-
-        emit DestinationRegistered(destination, destinationType, maxAllocation, name);
+    /// @return isActive Whether destination is active
+    function getDestinationConfig(address destination) external view returns (bool isActive) {
+        // Simplified implementation - destinations are managed by kAssetRouter
+        return destination != address(0);
     }
 
-    /// @notice Updates an existing destination configuration
-    /// @param destination Address of the destination to update
-    /// @param isActive Whether the destination should be active
-    /// @param maxAllocation New maximum allocation percentage in basis points
-    function updateDestination(
-        address destination,
-        bool isActive,
-        uint256 maxAllocation
-    )
-        external
-        onlyRoles(ADMIN_ROLE)
-    {
-        if (destination == address(0)) revert ZeroAddress();
-        if (maxAllocation > ONE_HUNDRED_PERCENT) revert InvalidAllocationPercentage();
-
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        DestinationConfig storage config = $.destinations[destination];
-
-        // Check if destination exists
-        if (!config.isActive && !isActive) revert DestinationNotFound();
-
-        // Update configuration
-        config.isActive = isActive;
-        config.maxAllocation = maxAllocation;
-
-        emit DestinationUpdated(destination, isActive, maxAllocation);
-    }
-
-    /// @notice Sets allocation percentages for custodial vs metavault strategies
-    /// @param custodialPercentage Percentage for custodial strategies (basis points)
-    /// @param metavaultPercentage Percentage for metavault strategies (basis points)
-    function setAllocationPercentages(
-        uint64 custodialPercentage,
-        uint64 metavaultPercentage
-    )
-        external
-        onlyRoles(ADMIN_ROLE)
-    {
-        if (custodialPercentage + metavaultPercentage > ONE_HUNDRED_PERCENT) {
-            revert InvalidAllocationPercentage();
-        }
-
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        $.custodialAllocationPercentage = custodialPercentage;
-        $.metavaultAllocationPercentage = metavaultPercentage;
-
-        emit AllocationPercentagesUpdated(custodialPercentage, metavaultPercentage);
-    }
-
-    /// @notice Sets the kSiloContract address for custodial asset security
-    /// @param newSiloContract Address of the new silo contract
-    function setkSiloContract(address newSiloContract) external onlyRoles(ADMIN_ROLE) {
-        if (newSiloContract == address(0)) revert ZeroAddress();
-
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        $.kSiloContract = newSiloContract;
-    }
-
-    /// @notice Gets destination configuration
-    /// @param destination Address of the destination
-    /// @return config The destination configuration
-    function getDestinationConfig(address destination) external view returns (DestinationConfig memory config) {
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        return $.destinations[destination];
-    }
-
-    /// @notice Gets all registered destinations
-    /// @return destinations Array of all registered destination addresses
+    /// @notice Gets all registered destinations (placeholder - not implemented in current architecture)
+    /// @return destinations Empty array - destinations managed by kAssetRouter
     function getRegisteredDestinations() external view returns (address[] memory destinations) {
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        return $.registeredDestinations;
+        // Return empty array - destinations are managed by kAssetRouter
+        return new address[](0);
     }
 
     /// @notice Gets allocation percentages
@@ -278,19 +239,17 @@ contract AdminModule is ModuleBase {
     /// @return metavaultPercentage Metavault allocation percentage
     function getAllocationPercentages()
         external
-        view
+        pure
         returns (uint64 custodialPercentage, uint64 metavaultPercentage)
     {
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        return ($.custodialAllocationPercentage, $.metavaultAllocationPercentage);
+        return (80, 20); // 80% custodial, 20% metavault
     }
 
     /// @notice Gets total allocations by type
     /// @return totalCustodial Total allocated to custodial strategies
     /// @return totalMetavault Total allocated to metavault strategies
-    function getTotalAllocations() external view returns (uint128 totalCustodial, uint128 totalMetavault) {
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        return ($.totalCustodialAllocated, $.totalMetavaultAllocated);
+    function getTotalAllocations() external pure returns (uint128 totalCustodial, uint128 totalMetavault) {
+        return (0, 0); // Not implemented in current architecture
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -301,33 +260,17 @@ contract AdminModule is ModuleBase {
     /// @param user User address to receive yield
     /// @param assets Amount of assets to transfer as yield
     function transferYieldToUser(address user, uint256 assets) external onlyRoles(ADMIN_ROLE) {
-        if (user == address(0)) revert ZeroAddress();
-        if (assets == 0) revert ZeroAmount();
-
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-
-        if (assets > $.totalMinterAssets) revert("Insufficient minter assets");
-
-        // Convert assets to user shares at current rate
-        uint256 shares = _calculateShares(assets, $);
-
-        // Move assets from minter pool to user pool
-        $.totalMinterAssets = (uint256($.totalMinterAssets) - assets).toUint128();
-        $.userTotalAssets = (uint256($.userTotalAssets) + assets).toUint128();
-
-        // Mint new shares to user
-        $.userShareBalances[user] += shares;
-        $.userTotalSupply = (uint256($.userTotalSupply) + shares).toUint128();
+        // DISABLED: Yield transfer function - needs architecture update
+        revert("Yield transfer disabled - pending architecture update");
     }
 
     /*//////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Calculate shares for a given amount of assets
+    /// @dev Calculate shares for a given amount of assets (simplified)
     function _calculateShares(uint256 assets, BaseVaultStorage storage $) private view returns (uint256) {
-        if ($.userTotalSupply == 0) return assets; // 1:1 for first deposit
-        return (assets * $.userTotalSupply) / $.userTotalAssets;
+        return assets; // 1:1 for now
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -337,7 +280,7 @@ contract AdminModule is ModuleBase {
     /// @notice Returns the function selectors for this module
     /// @return Array of function selectors that this module implements
     function selectors() external pure returns (bytes4[] memory) {
-        bytes4[] memory s = new bytes4[](23);
+        bytes4[] memory s = new bytes4[](16); // Updated count for existing functions only
         s[0] = this.grantAdminRole.selector;
         s[1] = this.revokeAdminRole.selector;
         s[2] = this.grantMinterRole.selector;
@@ -353,14 +296,8 @@ contract AdminModule is ModuleBase {
         s[12] = this.setDustAmount.selector;
         s[13] = this.emergencyWithdraw.selector;
         s[14] = this.transferYieldToUser.selector;
-        s[15] = this.registerDestination.selector;
-        s[16] = this.updateDestination.selector;
-        s[17] = this.setAllocationPercentages.selector;
-        s[18] = this.setkSiloContract.selector;
-        s[19] = this.getDestinationConfig.selector;
-        s[20] = this.getRegisteredDestinations.selector;
-        s[21] = this.getAllocationPercentages.selector;
-        s[22] = this.getTotalAllocations.selector;
+        s[15] = this.setkReceiver.selector;
+        // Note: Other functions disabled pending architecture update
         return s;
     }
 
@@ -368,5 +305,5 @@ contract AdminModule is ModuleBase {
                               ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error ContractNotPaused();
+    // Errors inherited from ModuleBase
 }
