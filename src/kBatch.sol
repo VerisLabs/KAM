@@ -27,6 +27,7 @@ contract kBatch is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard
 
     uint256 internal constant ADMIN_ROLE = _ROLE_0;
     uint256 internal constant KMINTER_ROLE = _ROLE_1;
+    uint256 internal constant RELAYER_ROLE = _ROLE_2;
 
     address public immutable kMinterUSD;
     address public immutable kMinterBTC;
@@ -62,18 +63,23 @@ contract kBatch is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    event Initialized(
+        address kMinterUSD, address kMinterBTC, address USDC, address WBTC, address admin, uint256 indexed batchId
+    );
     event AssetsReceived(address indexed receiver, uint256 indexed amount);
     event BatchCreated(uint256 indexed batchId, uint256 startTime, uint256 cutoffTime, uint256 settlementTime);
+    event BatchReceiverDeployed(uint256 indexed batchId, address indexed receiver);
+    event BatchInfoUpdated(uint256 indexed batchId, address indexed asset, int256 netPosition);
+    event BatchSettled(uint256 indexed batchId);
+    event BatchClosed(uint256 indexed batchId);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
     //////////////////////////////////////////////////////////////*/
 
     error ZeroAddress();
-    error OnlyKMinter();
-    error InvalidBatchId();
-    error BatchClosed();
-    error BatchSettled();
+    error Closed();
+    error Settled();
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -115,40 +121,27 @@ contract kBatch is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard
         _grantRoles(_kMinterUSD, KMINTER_ROLE);
         _grantRoles(_kMinterBTC, KMINTER_ROLE);
 
-        _newBatch();
-    }
+        uint256 batchId = _newBatch();
 
-    /*//////////////////////////////////////////////////////////////
-                          ADMIN FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Forces creation of new time-based batch
-    function forceCreateNewBatch() external onlyRoles(ADMIN_ROLE) {
-        _newBatch();
-    }
-
-    function setBatchReceiverImplementation(address _batchReceiverImplementation) external onlyRoles(ADMIN_ROLE) {
-        kBatchStorage storage $ = _getkBatchStorage();
-        $.batchReceiverImplementation = _batchReceiverImplementation;
+        emit Initialized(_kMinterUSD, _kMinterBTC, _USDC, _WBTC, admin_, batchId);
     }
 
     /*//////////////////////////////////////////////////////////////
                           RECEIVER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function batchToUse() external onlyRoles(KMINTER_ROLE) returns (uint256) {
-        return _batchToUse();
-    }
-
-    function deployBatchReceiver(uint256 _batchId) external onlyRoles(KMINTER_ROLE) {
-        _deployBatchReceiver(_batchId);
+    /// @notice Deploys BatchReceiver for specific batch
+    /// @param _batchId Batch ID to deploy receiver for
+    /// @dev Only callable by kMinter
+    function deployBatchReceiver(uint256 _batchId) external onlyRoles(KMINTER_ROLE) returns (address) {
+        return _deployBatchReceiver(_batchId);
     }
 
     function updateBatchInfo(uint256 _batchId, address _asset, int256 _netPosition) external onlyRoles(KMINTER_ROLE) {
         kBatchStorage storage $ = _getkBatchStorage();
 
-        if ($.batches[_batchId].isClosed) revert BatchClosed();
-        if ($.batches[_batchId].isSettled) revert BatchSettled();
+        if ($.batches[_batchId].isClosed) revert Closed();
+        if ($.batches[_batchId].isSettled) revert Settled();
         if (!$.batches[_batchId].assetsInBatch[_asset]) {
             $.batches[_batchId].assetsInBatch[_asset] = true;
         }
@@ -157,11 +150,27 @@ contract kBatch is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard
         }
 
         $.batches[_batchId].assetNetPositions[_asset] += _netPosition;
+
+        emit BatchInfoUpdated(_batchId, _asset, _netPosition);
     }
 
     function settleBatch(uint256 _batchId) external onlyRoles(KMINTER_ROLE) {
         kBatchStorage storage $ = _getkBatchStorage();
         $.batches[_batchId].isSettled = true;
+
+        emit BatchSettled(_batchId);
+    }
+
+    function closeBatch(uint256 _batchId) external onlyRoles(RELAYER_ROLE) {
+        kBatchStorage storage $ = _getkBatchStorage();
+        $.batches[_batchId].isClosed = true;
+
+        emit BatchClosed(_batchId);
+    }
+
+    /// @notice Forces creation of new time-based batch
+    function createNewBatch() external onlyRoles(RELAYER_ROLE) returns (uint256) {
+        return _newBatch();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -208,18 +217,6 @@ contract kBatch is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard
         return $.batches[_batchId].batchReceiver;
     }
 
-    function getBatchAssets(uint256 _batchId) external view returns (address[] memory) {
-        // NOTE: This function would need to be implemented with additional tracking
-        // For now, return empty array
-        return new address[](0);
-    }
-
-    function getBatchVaults(uint256 _batchId) external view returns (address[] memory) {
-        // NOTE: This function would need to be implemented with additional tracking
-        // For now, return empty array
-        return new address[](0);
-    }
-
     function isAssetInBatch(uint256 _batchId, address _asset) external view returns (bool) {
         kBatchStorage storage $ = _getkBatchStorage();
         return $.batches[_batchId].assetsInBatch[_asset];
@@ -240,7 +237,7 @@ contract kBatch is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Creates new time-based batch with 4h cutoff
-    function _newBatch() internal {
+    function _newBatch() internal returns (uint256) {
         kBatchStorage storage $ = _getkBatchStorage();
         uint256 newBatchId = ++$.currentBatchId;
         uint256 startTime = block.timestamp;
@@ -255,6 +252,8 @@ contract kBatch is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard
         batch.isSettled = false;
 
         emit BatchCreated(newBatchId, startTime, startTime + BATCH_CUTOFF_TIME, startTime + SETTLEMENT_INTERVAL);
+
+        return newBatchId;
     }
 
     /// @notice Deploys BatchReceiver for specific batch
@@ -268,21 +267,9 @@ contract kBatch is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard
         receiver = address(new kBatchReceiver(kMinterUSD, kMinterBTC, batchId, USDC, WBTC));
         $.batches[batchId].batchReceiver = receiver;
 
+        emit BatchReceiverDeployed(batchId, receiver);
+
         return receiver;
-    }
-
-    /// @notice Gets target batch ID based on time cutoff
-    function _batchToUse() internal returns (uint256) {
-        kBatchStorage storage $ = _getkBatchStorage();
-        kBatchTypes.BatchInfo storage currentBatch = $.batches[$.currentBatchId];
-
-        // If past cutoff time, create new batch and use it
-        if (block.timestamp > currentBatch.cutoffTime) {
-            _newBatch();
-            return $.currentBatchId;
-        }
-
-        return $.currentBatchId;
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -25,6 +25,5 @@ interface IkBatch {
     function isVaultInBatch(uint256 _batchId, address _vault) external view returns (bool);
     function getAssetInVaultBatch(uint256 _batchId, address _vault) external view returns (address);
     function settleBatch(uint256 _batchId) external;
-    function batchToUse() external returns (uint256);
     function updateBatchInfo(uint256 _batchId, address _asset, int256 _netPosition) external;
 }

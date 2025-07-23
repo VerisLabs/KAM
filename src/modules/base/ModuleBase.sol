@@ -8,7 +8,6 @@ import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
-import { DataTypes } from "src/types/DataTypes.sol";
 import { ModuleBaseTypes } from "src/types/ModuleBaseTypes.sol";
 
 /// @title ModuleBase
@@ -97,7 +96,6 @@ abstract contract ModuleBase is OwnableRoles, ReentrancyGuardTransient {
     error Paused();
     error ZeroAddress();
     error ZeroAmount();
-    error AssetNotRegistered();
     error AmountBelowDustThreshold();
 
     /*//////////////////////////////////////////////////////////////

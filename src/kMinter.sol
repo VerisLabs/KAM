@@ -139,6 +139,7 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         // Initialize storage
         kMinterStorage storage $ = _getkMinterStorage();
         $.kBatch = params.kBatch;
+        $.kAssetRouter = params.kAssetRouter;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -165,7 +166,7 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         if (request.amount == 0) revert ZeroAmount();
         if (request.to == address(0)) revert ZeroAddress();
 
-        uint256 batchId = IkBatch($.kBatch).batchToUse();
+        uint256 batchId = IkBatch($.kBatch).getCurrentBatchId();
         IkBatch($.kBatch).updateBatchInfo(batchId, request.asset, int256(request.amount));
 
         // Transfer underlying asset from sender to this contract
@@ -206,7 +207,7 @@ contract kMinter is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuar
         if (request.amount == 0) revert ZeroAmount();
         if (request.to == address(0)) revert ZeroAddress();
 
-        uint256 batchId = IkBatch($.kBatch).batchToUse();
+        uint256 batchId = IkBatch($.kBatch).getCurrentBatchId();
         IkBatch($.kBatch).updateBatchInfo(batchId, request.asset, -int256(request.amount));
 
         // Generate request ID

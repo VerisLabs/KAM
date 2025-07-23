@@ -128,7 +128,7 @@ contract kStakingVault is
         if (IkToken($.kToken).balanceOf(msg.sender) < kTokensAmount) revert InsufficientBalance();
         if (kTokensAmount < $.dustAmount) revert AmountBelowDustThreshold();
 
-        uint256 batchId = IkBatch($.kBatch).batchToUse();
+        uint256 batchId = IkBatch($.kBatch).getCurrentBatchId();
         //IkBatch($.kBatch).updateBatchInfo(batchId, $.underlyingAsset, int256(amount));
 
         // Generate request ID
@@ -180,7 +180,7 @@ contract kStakingVault is
         if (balanceOf(msg.sender) < stkTokenAmount) revert InsufficientBalance();
         if (stkTokenAmount < $.dustAmount) revert AmountBelowDustThreshold();
 
-        uint256 batchId = IkBatch($.kBatch).batchToUse();
+        uint256 batchId = IkBatch($.kBatch).getCurrentBatchId();
 
         // Generate request ID
         requestId = _createStakeRequestId(msg.sender, stkTokenAmount, block.timestamp);
