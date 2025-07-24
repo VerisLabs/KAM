@@ -18,5 +18,6 @@ interface IkRegistry {
     function isSupportedAsset(address asset) external view returns (bool);
     function isVault(address vault) external view returns (bool);
     function isKToken(address kToken) external view returns (bool);
+    function isSingletonContract(address contractAddress) external view returns (bool);
     function isRelayer(address account) external view returns (bool);
 }

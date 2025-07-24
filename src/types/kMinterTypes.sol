@@ -5,29 +5,6 @@ pragma solidity 0.8.30;
 /// @notice Library containing all data structures used in the kMinter contract
 /// @dev Defines standardized data types for cross-contract communication and storage
 library kMinterTypes {
-    /*//////////////////////////////////////////////////////////////
-                        INITIALIZATION STRUCTS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Initialization parameters for kMinter contract deployment
-    /// @dev Contains all required addresses and configuration for minter setup
-    struct InitParams {
-        address kToken; // Address of the kToken contract to manage
-        address owner; // Contract owner with ultimate authority
-        address admin; // Administrator with operational privileges
-        address emergencyAdmin; // Emergency administrator for pause/unpause
-        address kBatch; // Address of the kBatch contract
-        address kAssetRouter; // Address of the kAssetRouter for push model
-    }
-
-    /// @notice Request structure for minting new kTokens
-    /// @dev Used by institutions to request token minting with 1:1 asset backing
-    struct Request {
-        address asset; // Address of the asset to deposit for minting
-        address to; // Address that will receive the newly minted kTokens
-        uint256 amount; // Amount of underlying assets to deposit for minting
-    }
-
     /// @notice Status enumeration for tracking redemption request lifecycle
     /// @dev Used to prevent double-spending and track request processing
     enum RequestStatus {

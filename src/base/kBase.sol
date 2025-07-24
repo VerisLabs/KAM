@@ -66,7 +66,7 @@ abstract contract kBase is OwnableRoles, ReentrancyGuardTransient {
     }
 
     /*//////////////////////////////////////////////////////////////
-                              INITIALIZER
+                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Initializes the base contract with registry and pause state
@@ -88,16 +88,6 @@ abstract contract kBase is OwnableRoles, ReentrancyGuardTransient {
 
         _initializeOwner(owner_);
         _grantRoles(admin_, ADMIN_ROLE);
-    }
-
-    /// @notice Sets the pause state of the contract
-    /// @param paused_ New pause state
-    /// @dev Only callable internally by inheriting contracts
-    function _setPaused(bool paused_) internal {
-        kBaseStorage storage $ = _getBaseStorage();
-        if (!$.initialized) revert NotInitialized();
-        $.paused = paused_;
-        emit Paused(paused_);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -222,6 +212,23 @@ abstract contract kBase is OwnableRoles, ReentrancyGuardTransient {
         return _registry().isVault(vault);
     }
 
+    /// @notice Checks if an address is a singleton contract
+    /// @param contractAddress The address to check
+    /// @return Whether the address is a singleton contract
+    function _isSingletonContract(address contractAddress) internal view returns (bool) {
+        return _registry().isSingletonContract(contractAddress);
+    }
+
+    /// @notice Sets the pause state of the contract
+    /// @param paused_ New pause state
+    /// @dev Only callable internally by inheriting contracts
+    function _setPaused(bool paused_) internal {
+        kBaseStorage storage $ = _getBaseStorage();
+        if (!$.initialized) revert NotInitialized();
+        $.paused = paused_;
+        emit Paused(paused_);
+    }
+
     /*//////////////////////////////////////////////////////////////
                           MODIFIERS
     //////////////////////////////////////////////////////////////*/
@@ -244,8 +251,10 @@ abstract contract kBase is OwnableRoles, ReentrancyGuardTransient {
         _;
     }
 
-    modifier onlyRelayer(address account) {
-        if (!_getRelayer(account)) revert OnlyRelayer();
+    /// @notice Restricts function access to the relayer
+    /// @dev Only callable internally by inheriting contracts
+    modifier onlyRelayer() {
+        if (!_getRelayer(msg.sender)) revert OnlyRelayer();
         _;
     }
 

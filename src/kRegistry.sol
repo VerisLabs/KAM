@@ -32,7 +32,7 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     //////////////////////////////////////////////////////////////*/
 
     error ZeroAddress();
-    error VaultAlreadyRegistered();
+    error AlreadyRegistered();
     error AssetNotSupported();
     error ContractNotSet();
 
@@ -67,6 +67,7 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     /// @custom:storage-location erc7201:kam.storage.kRegistry
     struct kRegistryStorage {
         mapping(bytes32 => address) singletonContracts;
+        mapping(address => bool) isSingletonContract;
         mapping(address => bool) isVault;
         mapping(address => VaultType) vaultType;
         mapping(address => address) vaultAsset;
@@ -123,7 +124,9 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     function setSingletonContract(bytes32 id, address contractAddress) external onlyRoles(ADMIN_ROLE) {
         if (contractAddress == address(0)) revert ZeroAddress();
         kRegistryStorage storage $ = _getkRegistryStorage();
+        if ($.isSingletonContract[contractAddress]) revert AlreadyRegistered();
         $.singletonContracts[id] = contractAddress;
+        $.isSingletonContract[contractAddress] = true;
         emit SingletonContractSet(id, contractAddress);
     }
 
@@ -168,7 +171,7 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     function registerVault(address vault, VaultType type_, address asset) external onlyRoles(FACTORY_ROLE) {
         if (vault == address(0)) revert ZeroAddress();
         kRegistryStorage storage $ = _getkRegistryStorage();
-        if ($.isVault[vault]) revert VaultAlreadyRegistered();
+        if ($.isVault[vault]) revert AlreadyRegistered();
         if (!$.isSupportedAsset[asset]) revert AssetNotSupported();
 
         // Register vault
@@ -244,16 +247,33 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
         return hasAnyRole(account, RELAYER_ROLE);
     }
 
+    /// @notice Check if an asset is supported
+    /// @param asset Asset address
+    /// @return Whether the asset is supported
     function isSupportedAsset(address asset) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.isSupportedAsset[asset];
     }
 
+    /// @notice Check if a vault is registered
+    /// @param vault Vault address
+    /// @return Whether the vault is registered
     function isVault(address vault) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.isVault[vault];
     }
 
+    /// @notice Check if a contract is a singleton contract
+    /// @param contractAddress Contract address
+    /// @return Whether the contract is a singleton contract
+    function isSingletonContract(address contractAddress) external view returns (bool) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        return $.isSingletonContract[contractAddress];
+    }
+
+    /// @notice Check if a kToken is registered
+    /// @param kToken KToken address
+    /// @return Whether the kToken is registered
     function isKToken(address kToken) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.isKToken[kToken];
