@@ -4,7 +4,8 @@ pragma solidity 0.8.30;
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 /// @title kBatchReceiver
-/// @notice Receives assets by batch to be redeemed by kMinter users
+/// @notice Minimal proxy contract that holds and distributes settled assets for batch redemptions
+/// @dev Deployed per batch to isolate asset distribution and enable efficient settlement
 contract kBatchReceiver {
     using SafeTransferLib for address;
 
@@ -12,8 +13,7 @@ contract kBatchReceiver {
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    address public immutable kMinterUSD;
-    address public immutable kMinterBTC;
+    address public immutable kMinter;
     address public immutable USDC;
     address public immutable WBTC;
     uint256 public immutable batchId;
@@ -22,7 +22,8 @@ contract kBatchReceiver {
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event UserReceivedAssets(address indexed receiver, address indexed asset, uint256 amount);
+    event BatchReceiverInitialized(address indexed kMinter, uint256 indexed batchId, address USDC, address WBTC);
+    event PulledAssets(address indexed receiver, address indexed asset, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -31,41 +32,46 @@ contract kBatchReceiver {
     error ZeroAddress();
     error OnlyKMinter();
     error InvalidBatchId();
-
-    /*//////////////////////////////////////////////////////////////
-                              MODIFIERS
-    //////////////////////////////////////////////////////////////*/
-
-    modifier onlyKMinterUSD() {
-        if (msg.sender != kMinterUSD) revert OnlyKMinter();
-        _;
-    }
-
-    modifier onlyKMinterBTC() {
-        if (msg.sender != kMinterBTC) revert OnlyKMinter();
-        _;
-    }
+    error ZeroAmount();
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(address _kMinterUSD, address _kMinterBTC, uint256 _batchId, address _USDC, address _WBTC) {
-        if (_kMinterUSD == address(0) || _kMinterBTC == address(0)) revert ZeroAddress();
-        kMinterUSD = _kMinterUSD;
-        kMinterBTC = _kMinterBTC;
+    /// @notice Initializes the batch receiver with immutable parameters
+    /// @param _kMinter Address of the kMinter contract (only authorized caller)
+    /// @param _batchId The batch ID this receiver serves
+    /// @param _USDC Address of the USDC token contract
+    /// @param _WBTC Address of the WBTC token contract
+    /// @dev Sets immutable variables and emits initialization event
+    constructor(address _kMinter, uint256 _batchId, address _USDC, address _WBTC) {
+        if (_kMinter == address(0)) revert ZeroAddress();
+        kMinter = _kMinter;
         batchId = _batchId;
         USDC = _USDC;
         WBTC = _WBTC;
+
+        emit BatchReceiverInitialized(kMinter, batchId, USDC, WBTC);
     }
 
     /*//////////////////////////////////////////////////////////////
                           CORE OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
-    function receiveAssets(address receiver, address asset, uint256 amount, uint256 _batchId) external {
+    /// @notice Transfers assets from kMinter to the specified receiver
+    /// @param receiver Address to receive the assets
+    /// @param asset Address of the asset to transfer
+    /// @param amount Amount of assets to transfer
+    /// @param _batchId Batch ID for validation (must match this receiver's batch)
+    /// @dev Only callable by kMinter, transfers assets from caller to receiver
+    function pullAssets(address receiver, address asset, uint256 amount, uint256 _batchId) external {
+        if (msg.sender != kMinter) revert OnlyKMinter();
         if (_batchId != batchId) revert InvalidBatchId();
+        if (amount == 0) revert ZeroAmount();
+        if (receiver == address(0)) revert ZeroAddress();
+        if (asset == address(0)) revert ZeroAddress();
+
         asset.safeTransferFrom(msg.sender, receiver, amount);
-        emit UserReceivedAssets(receiver, asset, amount);
+        emit PulledAssets(receiver, asset, amount);
     }
 }

@@ -1,58 +1,34 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-
 import { Initializable } from "solady/utils/Initializable.sol";
-import { LibClone } from "solady/utils/LibClone.sol";
-import { Multicallable } from "solady/utils/Multicallable.sol";
-import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
-import { Extsload } from "src/abstracts/Extsload.sol";
 
+import { kBase } from "src/base/kBase.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { kBatchTypes } from "src/types/kBatchTypes.sol";
 
 /// @title kBatch
-/// @notice Handles the protocol batching logic
-contract kBatch is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuardTransient, Multicallable, Extsload {
-    using SafeTransferLib for address;
-    using SafeCastLib for uint256;
-
+/// @notice Manages time-based batch processing for the KAM protocol
+/// @dev Handles batch creation, settlement, and receiver deployment for efficient asset processing
+contract kBatch is Initializable, UUPSUpgradeable, kBase {
     /*//////////////////////////////////////////////////////////////
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    uint256 internal constant ADMIN_ROLE = _ROLE_0;
-    uint256 internal constant KMINTER_ROLE = _ROLE_1;
-    uint256 internal constant RELAYER_ROLE = _ROLE_2;
-
-    address public immutable kMinterUSD;
-    address public immutable kMinterBTC;
-    address public immutable USDC;
-    address public immutable WBTC;
-
-    uint256 public constant SETTLEMENT_INTERVAL = 8 hours;
-    uint256 public constant BATCH_CUTOFF_TIME = 4 hours;
-
-    /*//////////////////////////////////////////////////////////////
-                              STORAGE
-    //////////////////////////////////////////////////////////////*/
-
-    /// @custom:storage-location erc7201:kBatch.storage.kBatch
+    /// @custom:storage-location erc7201:kam.storage.kBatch
     struct kBatchStorage {
         uint256 currentBatchId;
-        address batchReceiverImplementation;
         uint256 requestCounter;
         mapping(uint256 => kBatchTypes.BatchInfo) batches;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("kBatch.storage.kBatch")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("kam.storage.kBatch")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant kBATCH_STORAGE_LOCATION =
-        0x13c7c99a947cbbabed54ccebce1e23703834d5c9f38341d94ef7ca0fc9ab6c00;
+        0x927302f3b232a88db1c43475f2c58bc64b14d8218127eff98b943b1494942100;
 
+    /// @notice Returns the storage pointer for the kBatch contract
+    /// @return $ The storage pointer
     function _getkBatchStorage() private pure returns (kBatchStorage storage $) {
         assembly {
             $.slot := kBATCH_STORAGE_LOCATION
@@ -63,13 +39,9 @@ contract kBatch is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event Initialized(
-        address kMinterUSD, address kMinterBTC, address USDC, address WBTC, address admin, uint256 indexed batchId
-    );
-    event AssetsReceived(address indexed receiver, uint256 indexed amount);
-    event BatchCreated(uint256 indexed batchId, uint256 startTime, uint256 cutoffTime, uint256 settlementTime);
+    event Initialized(address registry, address owner, address admin, bool paused);
+    event BatchCreated(uint256 indexed batchId);
     event BatchReceiverDeployed(uint256 indexed batchId, address indexed receiver);
-    event BatchInfoUpdated(uint256 indexed batchId, address indexed asset, int256 netPosition);
     event BatchSettled(uint256 indexed batchId);
     event BatchClosed(uint256 indexed batchId);
 
@@ -77,7 +49,6 @@ contract kBatch is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard
                               ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error ZeroAddress();
     error Closed();
     error Settled();
 
@@ -85,191 +56,158 @@ contract kBatch is Initializable, UUPSUpgradeable, OwnableRoles, ReentrancyGuard
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Disables initializers to prevent implementation contract initialization
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(
-        address _kMinterUSD,
-        address _kMinterBTC,
-        address _USDC,
-        address _WBTC,
-        address admin_
-    )
-        external
-        initializer
-    {
-        if (_kMinterUSD == address(0) || _kMinterBTC == address(0) || _USDC == address(0) || _WBTC == address(0)) {
-            revert ZeroAddress();
-        }
+    /// @notice Initializes the kBatch contract
+    /// @param registry_ Address of the kRegistry contract
+    /// @param owner_ Contract owner address
+    /// @param admin_ Admin role recipient
+    /// @param paused_ Initial pause state
+    /// @dev Creates the first batch upon initialization
+    function initialize(address registry_, address owner_, address admin_, bool paused_) external initializer {
+        __kBase_init(registry_, owner_, admin_, paused_);
 
-        kBatchStorage storage $ = _getkBatchStorage();
+        _newBatch();
 
-        // Deploy BatchReceiver implementation with actual parameters
-        $.batchReceiverImplementation = address(
-            new kBatchReceiver(
-                _kMinterUSD,
-                _kMinterBTC,
-                0, // batchId placeholder
-                _USDC,
-                _WBTC
-            )
-        );
-
-        _initializeOwner(admin_);
-        _grantRoles(admin_, ADMIN_ROLE);
-        _grantRoles(_kMinterUSD, KMINTER_ROLE);
-        _grantRoles(_kMinterBTC, KMINTER_ROLE);
-
-        uint256 batchId = _newBatch();
-
-        emit Initialized(_kMinterUSD, _kMinterBTC, _USDC, _WBTC, admin_, batchId);
+        emit Initialized(registry_, owner_, admin_, paused_);
     }
 
     /*//////////////////////////////////////////////////////////////
                           RECEIVER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Deploys BatchReceiver for specific batch
-    /// @param _batchId Batch ID to deploy receiver for
-    /// @dev Only callable by kMinter
-    function deployBatchReceiver(uint256 _batchId) external onlyRoles(KMINTER_ROLE) returns (address) {
-        return _deployBatchReceiver(_batchId);
+    /// @notice Creates a new batch for processing requests
+    /// @return The new batch ID
+    /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
+    function createNewBatch() external onlyRelayer(msg.sender) returns (uint256) {
+        return _newBatch();
     }
 
-    function updateBatchInfo(uint256 _batchId, address _asset, int256 _netPosition) external onlyRoles(KMINTER_ROLE) {
+    /// @notice Closes a batch to prevent new requests
+    /// @param _batchId The batch ID to close
+    /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
+    function closeBatch(uint256 _batchId) external onlyRelayer(msg.sender) {
         kBatchStorage storage $ = _getkBatchStorage();
-
         if ($.batches[_batchId].isClosed) revert Closed();
-        if ($.batches[_batchId].isSettled) revert Settled();
-        if (!$.batches[_batchId].assetsInBatch[_asset]) {
-            $.batches[_batchId].assetsInBatch[_asset] = true;
-        }
-        if ($.batches[_batchId].vaultsInBatch[msg.sender] == address(0)) {
-            $.batches[_batchId].vaultsInBatch[msg.sender] = _asset;
-        }
-
-        $.batches[_batchId].assetNetPositions[_asset] += _netPosition;
-
-        emit BatchInfoUpdated(_batchId, _asset, _netPosition);
-    }
-
-    function settleBatch(uint256 _batchId) external onlyRoles(KMINTER_ROLE) {
-        kBatchStorage storage $ = _getkBatchStorage();
-        $.batches[_batchId].isSettled = true;
-
-        emit BatchSettled(_batchId);
-    }
-
-    function closeBatch(uint256 _batchId) external onlyRoles(RELAYER_ROLE) {
-        kBatchStorage storage $ = _getkBatchStorage();
         $.batches[_batchId].isClosed = true;
 
         emit BatchClosed(_batchId);
     }
 
-    /// @notice Forces creation of new time-based batch
-    function createNewBatch() external onlyRoles(RELAYER_ROLE) returns (uint256) {
-        return _newBatch();
+    /// @notice Marks a batch as settled
+    /// @param _batchId The batch ID to settle
+    /// @dev Only callable by kMinter, indicates assets have been distributed
+    function settleBatch(uint256 _batchId) external onlyKMinter {
+        kBatchStorage storage $ = _getkBatchStorage();
+        if ($.batches[_batchId].isSettled) revert Settled();
+        $.batches[_batchId].isSettled = true;
+
+        emit BatchSettled(_batchId);
     }
 
-    /*//////////////////////////////////////////////////////////////
-                          VIEW FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    function getCurrentBatchId() external view returns (uint256) {
+    /// @notice Deploys BatchReceiver for specific batch
+    /// @param _batchId Batch ID to deploy receiver for
+    /// @dev Only callable by kMinter
+    function deployBatchReceiver(uint256 _batchId) external onlyKMinter returns (address) {
         kBatchStorage storage $ = _getkBatchStorage();
-        return $.currentBatchId;
-    }
 
-    function isBatchSettled(uint256 _batchId) external view returns (bool) {
-        kBatchStorage storage $ = _getkBatchStorage();
-        return $.batches[_batchId].isClosed;
-    }
+        address receiver = $.batches[_batchId].batchReceiver;
+        if (receiver != address(0)) return receiver;
 
-    function getBatchInfo(uint256 _batchId)
-        external
-        view
-        returns (
-            uint256 batchId,
-            uint256 startTime,
-            uint256 cutoffTime,
-            uint256 settlementTime,
-            address batchReceiver,
-            bool isClosed,
-            bool isSettled
-        )
-    {
-        kBatchStorage storage $ = _getkBatchStorage();
-        return (
-            $.batches[_batchId].batchId,
-            $.batches[_batchId].startTime,
-            $.batches[_batchId].cutoffTime,
-            $.batches[_batchId].settlementTime,
-            $.batches[_batchId].batchReceiver,
-            $.batches[_batchId].isClosed,
-            $.batches[_batchId].isSettled
+        receiver = address(
+            new kBatchReceiver(
+                _registry().getSingletonContract(K_MINTER),
+                _batchId,
+                _registry().getSingletonAsset("USDC"),
+                _registry().getSingletonAsset("WBTC")
+            )
         );
-    }
 
-    function getBatchReceiver(uint256 _batchId) external view returns (address) {
-        kBatchStorage storage $ = _getkBatchStorage();
-        return $.batches[_batchId].batchReceiver;
-    }
+        $.batches[_batchId].batchReceiver = receiver;
 
-    function isAssetInBatch(uint256 _batchId, address _asset) external view returns (bool) {
-        kBatchStorage storage $ = _getkBatchStorage();
-        return $.batches[_batchId].assetsInBatch[_asset];
-    }
+        emit BatchReceiverDeployed(_batchId, receiver);
 
-    function isVaultInBatch(uint256 _batchId, address _vault) external view returns (bool) {
-        kBatchStorage storage $ = _getkBatchStorage();
-        return $.batches[_batchId].vaultsInBatch[_vault] != address(0);
-    }
-
-    function getAssetInVaultBatch(uint256 _batchId, address _vault) external view returns (address) {
-        kBatchStorage storage $ = _getkBatchStorage();
-        return $.batches[_batchId].vaultsInBatch[_vault];
+        return receiver;
     }
 
     /*//////////////////////////////////////////////////////////////
                           INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Creates new time-based batch with 4h cutoff
+    /// @notice Creates a new batch
+    /// @return The new batch ID
+    /// @dev Creates a new batch and returns its ID
     function _newBatch() internal returns (uint256) {
         kBatchStorage storage $ = _getkBatchStorage();
         uint256 newBatchId = ++$.currentBatchId;
-        uint256 startTime = block.timestamp;
 
         kBatchTypes.BatchInfo storage batch = $.batches[newBatchId];
         batch.batchId = newBatchId;
-        batch.startTime = startTime.toUint64();
-        batch.cutoffTime = (startTime + BATCH_CUTOFF_TIME).toUint64();
-        batch.settlementTime = (startTime + SETTLEMENT_INTERVAL).toUint64();
         batch.batchReceiver = address(0);
         batch.isClosed = false;
         batch.isSettled = false;
 
-        emit BatchCreated(newBatchId, startTime, startTime + BATCH_CUTOFF_TIME, startTime + SETTLEMENT_INTERVAL);
+        emit BatchCreated(newBatchId);
 
         return newBatchId;
     }
 
-    /// @notice Deploys BatchReceiver for specific batch
-    function _deployBatchReceiver(uint256 batchId) internal returns (address) {
+    /*//////////////////////////////////////////////////////////////
+                          VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Gets the current active batch ID
+    /// @return The current batch ID accepting new requests
+    function getCurrentBatchId() external view returns (uint256) {
         kBatchStorage storage $ = _getkBatchStorage();
+        return $.currentBatchId;
+    }
 
-        address receiver = $.batches[batchId].batchReceiver;
-        if (receiver != address(0)) return receiver;
+    /// @notice Checks if a batch has been settled
+    /// @param _batchId The batch ID to check
+    /// @return Whether the batch is settled
+    function isBatchSettled(uint256 _batchId) external view returns (bool) {
+        kBatchStorage storage $ = _getkBatchStorage();
+        return $.batches[_batchId].isSettled;
+    }
 
-        // Deploy new BatchReceiver directly (not using clone due to immutable variables)
-        receiver = address(new kBatchReceiver(kMinterUSD, kMinterBTC, batchId, USDC, WBTC));
-        $.batches[batchId].batchReceiver = receiver;
+    /// @notice Checks if a batch has been closed
+    /// @param _batchId The batch ID to check
+    /// @return Whether the batch is closed to new requests
+    function isBatchClosed(uint256 _batchId) external view returns (bool) {
+        kBatchStorage storage $ = _getkBatchStorage();
+        return $.batches[_batchId].isClosed;
+    }
 
-        emit BatchReceiverDeployed(batchId, receiver);
+    /// @notice Gets comprehensive information about a batch
+    /// @param _batchId The batch ID to query
+    /// @return batchId The batch identifier
+    /// @return batchReceiver The deployed receiver contract address (if any)
+    /// @return isClosed Whether the batch is closed to new requests
+    /// @return isSettled Whether the batch has been settled
+    function getBatchInfo(uint256 _batchId)
+        external
+        view
+        returns (uint256 batchId, address batchReceiver, bool isClosed, bool isSettled)
+    {
+        kBatchStorage storage $ = _getkBatchStorage();
+        return (
+            $.batches[_batchId].batchId,
+            $.batches[_batchId].batchReceiver,
+            $.batches[_batchId].isClosed,
+            $.batches[_batchId].isSettled
+        );
+    }
 
-        return receiver;
+    /// @notice Gets the batch receiver contract address for a batch
+    /// @param _batchId The batch ID to query
+    /// @return The batch receiver contract address (zero if not deployed)
+    function getBatchReceiver(uint256 _batchId) external view returns (address) {
+        kBatchStorage storage $ = _getkBatchStorage();
+        return $.batches[_batchId].batchReceiver;
     }
 
     /*//////////////////////////////////////////////////////////////
