@@ -15,8 +15,6 @@ abstract contract kBase is OwnableRoles, ReentrancyGuardTransient {
 
     uint256 internal constant ADMIN_ROLE = _ROLE_0;
     uint256 internal constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
-    uint256 internal constant RELAYER_ROLE = _ROLE_2;
-    uint256 internal constant MINTER_ROLE = _ROLE_3;
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
