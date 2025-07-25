@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import { Initializable } from "solady/utils/Initializable.sol";
 import { Multicallable } from "solady/utils/Multicallable.sol";
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 import { kAssetRouterTypes } from "src/types/kAssetRouterTypes.sol";
@@ -15,6 +16,7 @@ import { IkToken } from "src/interfaces/IkToken.sol";
 /// @title kAssetRouter
 contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
     using SafeTransferLib for address;
+    using SafeCastLib for uint256;
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -26,9 +28,9 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
     event AssetsTransfered(
         address indexed sourceVault, address indexed targetVault, address indexed asset, uint256 amount
     );
-    event SharesRequested(address indexed vault, uint256 batchId, uint256 amount);
+    event SharesRequested(address indexed vault, uint32 batchId, uint256 amount);
     event SharesSettled(
-        address[] vaults, uint256 batchId, uint256 totalRequestedShares, uint256[] totalAssets, uint256 sharePrice
+        address[] vaults, uint32 batchId, uint256 totalRequestedShares, uint256[] totalAssets, uint256 sharePrice
     );
     event PegProtectionActivated(address indexed vault, uint256 shortfall);
     event YieldDistributed(address indexed vault, uint256 yield, bool isProfit);
@@ -197,7 +199,7 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
 
         $.vaultRequestedShares[sourceVault][batchId] += amount;
 
-        emit SharesRequested(sourceVault, batchId, amount);
+        emit SharesRequested(sourceVault, batchId.toUint32(), amount);
     }
 
     function kSettleShares(
@@ -248,7 +250,7 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
             }
         }
 
-        emit SharesSettled(vaults, batchId, totalRequestedShares, totalAssets, sharePrice);
+        emit SharesSettled(vaults, batchId.toUint32(), totalRequestedShares, totalAssets, sharePrice);
     }
 
     /// @notice Settle assets for a batch

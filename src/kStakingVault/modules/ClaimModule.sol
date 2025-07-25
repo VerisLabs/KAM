@@ -4,9 +4,10 @@ pragma solidity 0.8.30;
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+
+import { IkBatch } from "src/interfaces/IkBatch.sol";
 import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
 import { ModuleBaseTypes } from "src/kStakingVault/types/ModuleBaseTypes.sol";
-import { IkBatch } from "src/interfaces/IkBatch.sol";
 
 /// @title ClaimModule
 /// @notice Handles claim operations for settled batches
@@ -33,8 +34,8 @@ contract ClaimModule is BaseModule {
     /// @notice ERC20 Transfer event for stkToken operations
     event Transfer(address indexed from, address indexed to, uint256 value);
 
-    event StakingSharesClaimed(uint256 indexed batchId, uint256 requestIndex, address indexed user, uint256 shares);
-    event UnstakingAssetsClaimed(uint256 indexed batchId, uint256 requestIndex, address indexed user, uint256 assets);
+    event StakingSharesClaimed(uint32 indexed batchId, uint256 requestIndex, address indexed user, uint256 shares);
+    event UnstakingAssetsClaimed(uint32 indexed batchId, uint256 requestIndex, address indexed user, uint256 assets);
     event StkTokensIssued(address indexed user, uint256 stkTokenAmount);
     event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
 
@@ -50,11 +51,11 @@ contract ClaimModule is BaseModule {
 
         if (!IkBatch(_getKBatch()).isBatchSettled(batchId)) revert BatchNotSettled();
         ModuleBaseTypes.StakeRequest storage request = $.stakeRequests[requestId];
-        if (request.batchId != batchId) revert InvalidBatchId();
-        if (request.status != ModuleBaseTypes.RequestStatus.PENDING) revert RequestNotPending();
+        if (request.batchId != batchId.toUint32()) revert InvalidBatchId();
+        if (request.status != uint8(ModuleBaseTypes.RequestStatus.PENDING)) revert RequestNotPending();
         if (msg.sender != request.user) revert NotBeneficiary();
 
-        request.status = ModuleBaseTypes.RequestStatus.CLAIMED;
+        request.status = uint8(ModuleBaseTypes.RequestStatus.CLAIMED);
 
         // Calculate stkToken amount based on current exchange rate
         uint256 stkTokensToMint = uint256(request.kTokenAmount);
@@ -64,7 +65,7 @@ contract ClaimModule is BaseModule {
             revert MinimumOutputNotMet();
         }
 
-        emit StakingSharesClaimed(batchId, 0, request.user, stkTokensToMint);
+        emit StakingSharesClaimed(batchId.toUint32(), 0, request.user, stkTokensToMint);
         emit StkTokensIssued(request.user, stkTokensToMint);
     }
 
@@ -76,11 +77,11 @@ contract ClaimModule is BaseModule {
 
         if (!IkBatch(_getKBatch()).isBatchSettled(batchId)) revert BatchNotSettled();
         ModuleBaseTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
-        if (request.batchId != batchId) revert InvalidBatchId();
-        if (request.status != ModuleBaseTypes.RequestStatus.PENDING) revert RequestNotPending();
+        if (request.batchId != batchId.toUint32()) revert InvalidBatchId();
+        if (request.status != uint8(ModuleBaseTypes.RequestStatus.PENDING)) revert RequestNotPending();
         if (msg.sender != request.user) revert NotBeneficiary();
 
-        request.status = ModuleBaseTypes.RequestStatus.CLAIMED;
+        request.status = uint8(ModuleBaseTypes.RequestStatus.CLAIMED);
 
         // Calculate total kTokens to return (simplified 1:1 for now)
         uint256 totalKTokensToReturn = uint256(request.stkTokenAmount);
@@ -90,7 +91,7 @@ contract ClaimModule is BaseModule {
             revert MinimumOutputNotMet();
         }
 
-        emit UnstakingAssetsClaimed(batchId, 0, request.user, totalKTokensToReturn);
+        emit UnstakingAssetsClaimed(batchId.toUint32(), 0, request.user, totalKTokensToReturn);
         emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensToReturn);
 
         // Transfer kTokens to user

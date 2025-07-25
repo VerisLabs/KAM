@@ -14,16 +14,14 @@ library kMinterTypes {
 
     }
 
-    /// @notice Comprehensive redemption request structure with full tracking data
-    /// @dev Stored internally to track redemption requests through the batch settlement process
     struct RedeemRequest {
-        bytes32 id; // Unique identifier for this redemption request
-        address user; // Address of the user who made the request
-        address asset; // Address of the asset to redeem
-        uint96 amount; // Amount of kTokens being redeemed (gas-optimized)
-        address recipient; // Address that will receive the underlying assets
-        uint64 requestTimestamp; // Timestamp when the request was created (gas-optimized)
-        RequestStatus status; // Current status of the redemption request
-        uint256 batchId; // Batch ID of the redemption request
+        bytes32 id;
+        address user;
+        uint96 amount;
+        address asset;
+        uint64 requestTimestamp;
+        uint8 status;
+        uint24 batchId;
+        address recipient;
     }
 }

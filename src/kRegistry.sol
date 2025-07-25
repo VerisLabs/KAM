@@ -2,6 +2,8 @@
 pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+
+import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
@@ -9,6 +11,8 @@ import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 /// @notice Central registry for KAM protocol contracts
 /// @dev Manages singleton contracts, vault registration, asset support, and kToken mapping
 contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
+    using EnumerableSetLib for EnumerableSetLib.AddressSet;
+
     /*//////////////////////////////////////////////////////////////
                               ROLES
     //////////////////////////////////////////////////////////////*/
@@ -71,14 +75,14 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
         mapping(address => bool) isVault;
         mapping(address => VaultType) vaultType;
         mapping(address => address) vaultAsset;
-        address[] allVaults;
-        mapping(address => address[]) vaultsByAsset;
+        EnumerableSetLib.AddressSet allVaults;
+        mapping(address => EnumerableSetLib.AddressSet) vaultsByAsset;
         mapping(bytes32 => address) singletonAssets;
         mapping(address => address) assetToKToken;
         mapping(address => bool) isKToken;
         mapping(address => address) kTokenToAsset;
         mapping(address => bool) isSupportedAsset;
-        address[] supportedAssets;
+        EnumerableSetLib.AddressSet supportedAssets;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kRegistry")) - 1)) & ~bytes32(uint256(0xff))
@@ -146,7 +150,7 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
         // Register asset
         if (!$.isSupportedAsset[asset]) {
             $.isSupportedAsset[asset] = true;
-            $.supportedAssets.push(asset);
+            $.supportedAssets.add(asset);
             $.singletonAssets[id] = asset;
             emit AssetSupported(asset);
         }
@@ -178,10 +182,10 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
         $.isVault[vault] = true;
         $.vaultType[vault] = type_;
         $.vaultAsset[vault] = asset;
-        $.allVaults.push(vault);
+        $.allVaults.add(vault);
 
         // Track by asset
-        $.vaultsByAsset[asset].push(vault);
+        $.vaultsByAsset[asset].add(vault);
 
         emit VaultRegistered(vault, type_, asset);
     }
@@ -238,7 +242,7 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     /// @return Array of vault addresses
     function getVaultsByAsset(address asset) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        return $.vaultsByAsset[asset];
+        return $.vaultsByAsset[asset].values();
     }
 
     /// @notice Check if the caller is the relayer

@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { kBase } from "src/base/kBase.sol";
@@ -14,6 +15,7 @@ import { kBatchTypes } from "src/types/kBatchTypes.sol";
 /// @dev Handles batch creation, settlement, and receiver deployment for efficient asset processing
 contract kBatch is Initializable, UUPSUpgradeable, kBase {
     using EnumerableSetLib for EnumerableSetLib.AddressSet;
+    using SafeCastLib for uint256;
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -21,9 +23,9 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
 
     /// @custom:storage-location erc7201:kam.storage.kBatch
     struct kBatchStorage {
-        uint256 currentBatchId;
-        uint256 requestCounter;
-        mapping(uint256 => kBatchTypes.BatchInfo) batches;
+        uint32 currentBatchId;
+        uint64 requestCounter;
+        mapping(uint32 => kBatchTypes.BatchInfo) batches;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kBatch")) - 1)) & ~bytes32(uint256(0xff))
@@ -43,11 +45,11 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
     //////////////////////////////////////////////////////////////*/
 
     event Initialized(address registry, address owner, address admin, bool paused);
-    event BatchCreated(uint256 indexed batchId);
-    event BatchReceiverDeployed(uint256 indexed batchId, address indexed receiver);
-    event BatchSettled(uint256 indexed batchId);
-    event BatchClosed(uint256 indexed batchId);
-    event VaultPushed(address indexed vault, address indexed asset, uint256 indexed batchId);
+    event BatchCreated(uint32 indexed batchId);
+    event BatchReceiverDeployed(uint32 indexed batchId, address indexed receiver);
+    event BatchSettled(uint32 indexed batchId);
+    event BatchClosed(uint32 indexed batchId);
+    event VaultPushed(address indexed vault, address indexed asset, uint32 indexed batchId);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -107,10 +109,11 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
     /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
     function closeBatch(uint256 _batchId) external onlyRelayer {
         kBatchStorage storage $ = _getkBatchStorage();
-        if ($.batches[_batchId].isClosed) revert Closed();
-        $.batches[_batchId].isClosed = true;
+        uint32 batchId32 = _batchId.toUint32();
+        if ($.batches[batchId32].isClosed) revert Closed();
+        $.batches[batchId32].isClosed = true;
 
-        emit BatchClosed(_batchId);
+        emit BatchClosed(batchId32);
     }
 
     /// @notice Marks a batch as settled
@@ -118,10 +121,11 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
     /// @dev Only callable by kMinter, indicates assets have been distributed
     function settleBatch(uint256 _batchId) external onlyKMinter {
         kBatchStorage storage $ = _getkBatchStorage();
-        if ($.batches[_batchId].isSettled) revert Settled();
-        $.batches[_batchId].isSettled = true;
+        uint32 batchId32 = _batchId.toUint32();
+        if ($.batches[batchId32].isSettled) revert Settled();
+        $.batches[batchId32].isSettled = true;
 
-        emit BatchSettled(_batchId);
+        emit BatchSettled(batchId32);
     }
 
     /// @notice Deploys BatchReceiver for specific batch
@@ -129,8 +133,9 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
     /// @dev Only callable by kMinter
     function deployBatchReceiver(uint256 _batchId) external onlyKMinter returns (address) {
         kBatchStorage storage $ = _getkBatchStorage();
+        uint32 batchId32 = _batchId.toUint32();
 
-        address receiver = $.batches[_batchId].batchReceiver;
+        address receiver = $.batches[batchId32].batchReceiver;
         if (receiver != address(0)) return receiver;
 
         receiver = address(
@@ -142,9 +147,9 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
             )
         );
 
-        $.batches[_batchId].batchReceiver = receiver;
+        $.batches[batchId32].batchReceiver = receiver;
 
-        emit BatchReceiverDeployed(_batchId, receiver);
+        emit BatchReceiverDeployed(batchId32, receiver);
 
         return receiver;
     }
@@ -154,13 +159,14 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
     /// @dev Only callable by contracts or vaults
     function pushVault(uint256 _batchId) external onlyContracts {
         kBatchStorage storage $ = _getkBatchStorage();
-        if ($.batches[_batchId].vaults.contains(msg.sender)) revert VaultAlreadyPushed();
-        $.batches[_batchId].vaults.add(msg.sender);
+        uint32 batchId32 = _batchId.toUint32();
+        if ($.batches[batchId32].vaults.contains(msg.sender)) revert VaultAlreadyPushed();
+        $.batches[batchId32].vaults.add(msg.sender);
         address _asset = _getVaultAsset(msg.sender);
-        if ($.batches[_batchId].assets.contains(_asset)) revert AssetAlreadyPushed();
-        $.batches[_batchId].assets.add(_asset);
+        if ($.batches[batchId32].assets.contains(_asset)) revert AssetAlreadyPushed();
+        $.batches[batchId32].assets.add(_asset);
 
-        emit VaultPushed(msg.sender, _asset, _batchId);
+        emit VaultPushed(msg.sender, _asset, batchId32);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -172,7 +178,7 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
     /// @dev Creates a new batch and returns its ID
     function _newBatch() internal returns (uint256) {
         kBatchStorage storage $ = _getkBatchStorage();
-        uint256 newBatchId = ++$.currentBatchId;
+        uint32 newBatchId = ++$.currentBatchId;
 
         kBatchTypes.BatchInfo storage batch = $.batches[newBatchId];
         batch.batchId = newBatchId;
@@ -182,7 +188,7 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
 
         emit BatchCreated(newBatchId);
 
-        return newBatchId;
+        return uint256(newBatchId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -201,7 +207,7 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
     /// @return Whether the batch is closed to new requests
     function isBatchClosed(uint256 _batchId) external view returns (bool) {
         kBatchStorage storage $ = _getkBatchStorage();
-        return $.batches[_batchId].isClosed;
+        return $.batches[_batchId.toUint32()].isClosed;
     }
 
     /// @notice Checks if a batch has been settled
@@ -209,7 +215,7 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
     /// @return Whether the batch is settled
     function isBatchSettled(uint256 _batchId) external view returns (bool) {
         kBatchStorage storage $ = _getkBatchStorage();
-        return $.batches[_batchId].isSettled;
+        return $.batches[_batchId.toUint32()].isSettled;
     }
 
     /// @notice Gets comprehensive information about a batch
@@ -225,12 +231,13 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
         returns (uint256 batchId, address batchReceiver, bool isClosed, bool isSettled, address[] memory vaults)
     {
         kBatchStorage storage $ = _getkBatchStorage();
+        uint32 batchId32 = _batchId.toUint32();
         return (
-            $.batches[_batchId].batchId,
-            $.batches[_batchId].batchReceiver,
-            $.batches[_batchId].isClosed,
-            $.batches[_batchId].isSettled,
-            $.batches[_batchId].vaults.values()
+            uint256($.batches[batchId32].batchId),
+            $.batches[batchId32].batchReceiver,
+            $.batches[batchId32].isClosed,
+            $.batches[batchId32].isSettled,
+            $.batches[batchId32].vaults.values()
         );
     }
 
@@ -239,7 +246,7 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
     /// @return The batch receiver contract address (zero if not deployed)
     function getBatchReceiver(uint256 _batchId) external view returns (address) {
         kBatchStorage storage $ = _getkBatchStorage();
-        return $.batches[_batchId].batchReceiver;
+        return $.batches[_batchId.toUint32()].batchReceiver;
     }
 
     /// @notice Gets the vaults in a batch
@@ -247,7 +254,7 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
     /// @return The vaults in the batch
     function getBatchVaults(uint256 _batchId) external view returns (address[] memory) {
         kBatchStorage storage $ = _getkBatchStorage();
-        return $.batches[_batchId].vaults.values();
+        return $.batches[_batchId.toUint32()].vaults.values();
     }
 
     /// @notice Checks if a vault is in a batch
@@ -256,7 +263,7 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
     /// @return Whether the vault is in the batch
     function isVaultInBatch(uint256 _batchId, address _vault) external view returns (bool) {
         kBatchStorage storage $ = _getkBatchStorage();
-        return $.batches[_batchId].vaults.contains(_vault);
+        return $.batches[_batchId.toUint32()].vaults.contains(_vault);
     }
 
     /// @notice Gets the assets in a batch
@@ -264,7 +271,7 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
     /// @return The assets in the batch
     function getBatchAssets(uint256 _batchId) external view returns (address[] memory) {
         kBatchStorage storage $ = _getkBatchStorage();
-        return $.batches[_batchId].assets.values();
+        return $.batches[_batchId.toUint32()].assets.values();
     }
 
     /// @notice Checks if an asset is in a batch
@@ -273,7 +280,7 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
     /// @return Whether the asset is in the batch
     function isAssetInBatch(uint256 _batchId, address _asset) external view returns (bool) {
         kBatchStorage storage $ = _getkBatchStorage();
-        return $.batches[_batchId].assets.contains(_asset);
+        return $.batches[_batchId.toUint32()].assets.contains(_asset);
     }
 
     /*//////////////////////////////////////////////////////////////

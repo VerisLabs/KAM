@@ -31,12 +31,12 @@ abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
         address indexed kToken,
         uint256 amount,
         address recipient,
-        uint256 batchId
+        uint32 batchId
     );
     event StakeRequestRedeemed(bytes32 indexed requestId);
     event StakeRequestCancelled(bytes32 indexed requestId);
     event UnstakeRequestCreated(
-        bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, uint256 batchId
+        bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, uint32 batchId
     );
     event Paused(bool paused);
 
@@ -73,14 +73,14 @@ abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
 
     /// @custom:storage-location erc7201.kam.storage.BaseModule
     struct BaseModuleStorage {
+        address registry;
+        uint64 requestCounter;
+        uint8 decimals;
         bool initialized;
         bool paused;
-        uint256 requestCounter;
-        uint256 lastTotalAssets;
-        uint128 dustAmount;
-        uint8 decimals;
         address underlyingAsset;
-        address registry;
+        uint96 dustAmount;
+        uint256 lastTotalAssets;
         string name;
         string symbol;
         mapping(uint256 => ModuleBaseTypes.StakeRequest) stakeRequests;

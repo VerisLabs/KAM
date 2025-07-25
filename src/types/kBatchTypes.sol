@@ -8,7 +8,7 @@ import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 /// @dev Defines standardized data types for cross-contract communication and storage
 library kBatchTypes {
     struct BatchInfo {
-        uint256 batchId;
+        uint32 batchId;
         address batchReceiver;
         bool isClosed;
         bool isSettled;

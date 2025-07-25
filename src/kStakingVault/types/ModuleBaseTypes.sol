@@ -14,27 +14,25 @@ library ModuleBaseTypes {
 
     }
 
-    /// @notice Individual staking request structure for kToken to stkToken conversion
-    /// @dev Represents a user's request to stake kTokens for yield-bearing stkTokens
     struct StakeRequest {
-        uint256 id; // Unique identifier for this staking request
-        address user; // Address of the user making the staking request
-        address recipient; // Address that will receive the stkTokens
-        uint96 kTokenAmount; // Amount of kTokens to stake
-        uint96 minStkTokens; // Minimum stkTokens user expects to receive
-        uint64 requestTimestamp; // Timestamp when the request was created
-        RequestStatus status; // Current status of the staking request
-        uint256 batchId; // Batch ID of the staking request
+        uint256 id;
+        address user;
+        uint96 kTokenAmount;
+        address recipient;
+        uint64 requestTimestamp;
+        uint8 status;
+        uint96 minStkTokens;
+        uint32 batchId;
     }
 
     struct UnstakeRequest {
-        uint256 id; // Unique identifier for this unstaking request
-        address user; // Address of the user making the unstaking request
-        address recipient; // Address that will receive the kTokens
-        uint96 stkTokenAmount; // Amount of stkTokens to unstake
-        uint96 minKTokens; // Minimum kTokens user expects to receive
-        uint64 requestTimestamp; // Timestamp when the request was created
-        RequestStatus status; // Current status of the unstaking request
-        uint256 batchId; // Batch ID of the unstaking request
+        uint256 id;
+        address user;
+        uint96 stkTokenAmount;
+        address recipient;
+        uint64 requestTimestamp;
+        uint8 status;
+        uint96 minKTokens;
+        uint32 batchId;
     }
 }

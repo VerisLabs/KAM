@@ -21,6 +21,7 @@ import { kMinterTypes } from "src/types/kMinterTypes.sol";
 contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
+    using SafeCastLib for uint64;
 
     /*//////////////////////////////////////////////////////////////
                                 ROLES
@@ -34,7 +35,7 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
 
     /// @custom:storage-location erc7201:kam.storage.kMinter
     struct kMinterStorage {
-        uint256 requestCounter;
+        uint64 requestCounter;
         mapping(bytes32 => kMinterTypes.RedeemRequest) redeemRequests;
         mapping(address => bytes32[]) userRequests;
     }
@@ -54,14 +55,14 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
     //////////////////////////////////////////////////////////////*/
 
     event Initialized(address indexed registry, address indexed owner, address admin, address emergencyAdmin);
-    event Minted(address indexed to, uint256 amount, uint256 batchId);
+    event Minted(address indexed to, uint256 amount, uint32 batchId);
     event RedeemRequestCreated(
         bytes32 indexed requestId,
         address indexed user,
         address indexed kToken,
         uint256 amount,
         address recipient,
-        uint256 batchId
+        uint24 batchId
     );
     event Redeemed(bytes32 indexed requestId);
     event Cancelled(bytes32 indexed requestId);
@@ -174,7 +175,7 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
         // Push vault to batch
         _pushVaultToBatch(batchId);
 
-        emit Minted(to_, amount_, batchId); // No batch ID in push model
+        emit Minted(to_, amount_, batchId.toUint32());
     }
 
     /// @notice Initiates redemption process by burning kTokens and creating batch redemption request
@@ -215,12 +216,12 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
         $.redeemRequests[requestId] = kMinterTypes.RedeemRequest({
             id: requestId,
             user: to_,
-            asset: asset_,
             amount: amount_.toUint96(),
-            recipient: to_, // Should we go banana?
+            asset: asset_,
             requestTimestamp: block.timestamp.toUint64(),
-            status: kMinterTypes.RequestStatus.PENDING,
-            batchId: batchId
+            status: uint8(kMinterTypes.RequestStatus.PENDING),
+            batchId: batchId.toUint24(),
+            recipient: to_
         });
 
         // Add to user requests tracking
@@ -232,7 +233,7 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
 
         _pushVaultToBatch(batchId);
 
-        emit RedeemRequestCreated(requestId, to_, kToken, amount_, to_, batchId);
+        emit RedeemRequestCreated(requestId, to_, kToken, amount_, to_, batchId.toUint24());
 
         return requestId;
     }
@@ -245,20 +246,20 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
 
         // Validate request
         if (redeemRequest.id == bytes32(0)) revert RequestNotFound();
-        if (redeemRequest.status != kMinterTypes.RequestStatus.PENDING) revert RequestNotEligible();
-        if (redeemRequest.status == kMinterTypes.RequestStatus.REDEEMED) revert RequestAlreadyProcessed();
-        if (redeemRequest.status == kMinterTypes.RequestStatus.CANCELLED) revert RequestNotEligible();
+        if (redeemRequest.status != uint8(kMinterTypes.RequestStatus.PENDING)) revert RequestNotEligible();
+        if (redeemRequest.status == uint8(kMinterTypes.RequestStatus.REDEEMED)) revert RequestAlreadyProcessed();
+        if (redeemRequest.status == uint8(kMinterTypes.RequestStatus.CANCELLED)) revert RequestNotEligible();
 
         // Update state
-        redeemRequest.status = kMinterTypes.RequestStatus.REDEEMED;
+        redeemRequest.status = uint8(kMinterTypes.RequestStatus.REDEEMED);
 
-        if (!IkBatch(_getKBatch()).isBatchSettled(redeemRequest.batchId)) revert BatchNotSettled();
-        address batchReceiver = IkBatch(_getKBatch()).getBatchReceiver(redeemRequest.batchId);
+        if (!IkBatch(_getKBatch()).isBatchSettled(uint256(redeemRequest.batchId))) revert BatchNotSettled();
+        address batchReceiver = IkBatch(_getKBatch()).getBatchReceiver(uint256(redeemRequest.batchId));
         if (batchReceiver == address(0)) revert ZeroAddress();
 
         // Withdraw from BatchReceiver to recipient (1:1 with kTokens burned)
         IkBatchReceiver(batchReceiver).pullAssets(
-            redeemRequest.recipient, redeemRequest.asset, redeemRequest.amount, redeemRequest.batchId
+            redeemRequest.recipient, redeemRequest.asset, redeemRequest.amount, uint256(redeemRequest.batchId)
         );
 
         emit Redeemed(requestId);
@@ -272,14 +273,14 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
 
         // Validate request
         if (redeemRequest.id == bytes32(0)) revert RequestNotFound();
-        if (redeemRequest.status != kMinterTypes.RequestStatus.PENDING) revert RequestNotEligible();
-        if (redeemRequest.status == kMinterTypes.RequestStatus.REDEEMED) revert RequestAlreadyProcessed();
-        if (redeemRequest.status == kMinterTypes.RequestStatus.CANCELLED) revert RequestNotEligible();
+        if (redeemRequest.status != uint8(kMinterTypes.RequestStatus.PENDING)) revert RequestNotEligible();
+        if (redeemRequest.status == uint8(kMinterTypes.RequestStatus.REDEEMED)) revert RequestAlreadyProcessed();
+        if (redeemRequest.status == uint8(kMinterTypes.RequestStatus.CANCELLED)) revert RequestNotEligible();
 
         // Update state
-        redeemRequest.status = kMinterTypes.RequestStatus.CANCELLED;
+        redeemRequest.status = uint8(kMinterTypes.RequestStatus.CANCELLED);
 
-        if (!IkBatch(_getKBatch()).isBatchSettled(redeemRequest.batchId)) revert BatchNotSettled();
+        if (!IkBatch(_getKBatch()).isBatchSettled(uint256(redeemRequest.batchId))) revert BatchNotSettled();
 
         address kToken = _getKTokenForAsset(redeemRequest.asset);
         // Validate protocol has sufficient kToken balance
@@ -311,7 +312,7 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @return Request ID
     function _createRedeemRequestId(address user, uint256 amount, uint256 timestamp) internal returns (bytes32) {
         kMinterStorage storage $ = _getkMinterStorage();
-        $.requestCounter++;
+        $.requestCounter = (uint256($.requestCounter) + 1).toUint64();
         return keccak256(abi.encode(address(this), user, amount, timestamp, $.requestCounter));
     }
 

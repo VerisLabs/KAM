@@ -14,8 +14,9 @@ import { Extsload } from "src/abstracts/Extsload.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkBatch } from "src/interfaces/IkBatch.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
-import { MultiFacetProxy } from "src/kStakingVault/modules/MultiFacetProxy.sol";
+
 import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
+import { MultiFacetProxy } from "src/kStakingVault/modules/MultiFacetProxy.sol";
 import { ModuleBaseTypes } from "src/kStakingVault/types/ModuleBaseTypes.sol";
 
 // Using imported IkAssetRouter interface
@@ -25,6 +26,8 @@ import { ModuleBaseTypes } from "src/kStakingVault/types/ModuleBaseTypes.sol";
 /// @dev Implements automatic yield distribution from minter to user pools with modular architecture
 contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, MultiFacetProxy, Extsload {
     using SafeTransferLib for address;
+    using SafeCastLib for uint256;
+    using SafeCastLib for uint128;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -76,7 +79,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
         $.symbol = symbol_;
         $.decimals = decimals_;
         $.underlyingAsset = asset_;
-        $.dustAmount = dustAmount_;
+        $.dustAmount = dustAmount_.toUint96();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -114,12 +117,12 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
         $.stakeRequests[requestId] = ModuleBaseTypes.StakeRequest({
             id: requestId,
             user: msg.sender,
-            recipient: to,
             kTokenAmount: kTokensAmount,
-            minStkTokens: minStkTokens,
+            recipient: to,
             requestTimestamp: SafeCastLib.toUint64(block.timestamp),
-            status: ModuleBaseTypes.RequestStatus.PENDING,
-            batchId: batchId
+            status: uint8(ModuleBaseTypes.RequestStatus.PENDING),
+            minStkTokens: minStkTokens,
+            batchId: SafeCastLib.toUint32(batchId)
         });
 
         // Add to user requests tracking
@@ -134,7 +137,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
         // Push vault to batch
         _pushVaultToBatch(batchId);
 
-        emit StakeRequestCreated(bytes32(requestId), msg.sender, kToken, kTokensAmount, to, batchId);
+        emit StakeRequestCreated(bytes32(requestId), msg.sender, kToken, kTokensAmount, to, batchId.toUint32());
 
         return requestId;
     }
@@ -168,12 +171,12 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
         $.unstakeRequests[requestId] = ModuleBaseTypes.UnstakeRequest({
             id: requestId,
             user: msg.sender,
-            recipient: to,
             stkTokenAmount: stkTokenAmount,
-            minKTokens: minKTokens,
+            recipient: to,
             requestTimestamp: SafeCastLib.toUint64(block.timestamp),
-            status: ModuleBaseTypes.RequestStatus.PENDING,
-            batchId: batchId
+            status: uint8(ModuleBaseTypes.RequestStatus.PENDING),
+            minKTokens: minKTokens,
+            batchId: SafeCastLib.toUint32(batchId)
         });
 
         // Add to user requests tracking
@@ -186,7 +189,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
         // Push vault to batch
         _pushVaultToBatch(batchId);
 
-        emit UnstakeRequestCreated(bytes32(requestId), msg.sender, stkTokenAmount, to, batchId);
+        emit UnstakeRequestCreated(bytes32(requestId), msg.sender, stkTokenAmount, to, batchId.toUint32());
 
         return requestId;
     }
@@ -207,7 +210,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
 
     function _createStakeRequestId(address user, uint256 amount, uint256 timestamp) internal returns (uint256) {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
-        $.requestCounter++;
+        $.requestCounter = (uint256($.requestCounter) + 1).toUint64();
         return uint256(keccak256(abi.encode(address(this), user, amount, timestamp, $.requestCounter)));
     }
 
