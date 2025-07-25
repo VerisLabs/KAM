@@ -23,7 +23,7 @@ library kAssetRouterTypes {
     }
 
     struct Balances {
-        uint256 requested;
-        uint256 deposited;
+        uint128 requested;
+        uint128 deposited;
     }
 }

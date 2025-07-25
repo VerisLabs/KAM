@@ -17,6 +17,7 @@ import { IkToken } from "src/interfaces/IkToken.sol";
 contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
+    using SafeCastLib for uint128;
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -126,7 +127,7 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
         // Transfer assets from minter to router
         _asset.safeTransferFrom(msg.sender, address(this), amount);
 
-        $.vaultBatchBalances[targetVault][batchId].deposited += amount;
+        $.vaultBatchBalances[targetVault][batchId].deposited += amount.toUint128();
         $.totalPendingDeposits += amount;
 
         emit AssetsPushed(msg.sender, targetVault, amount);
@@ -151,7 +152,7 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
         if ($.vaultBalances[targetVault][_asset] < amount) revert InsufficientVirtualBalance();
 
         $.totalPendingRedeems += amount;
-        $.vaultBatchBalances[targetVault][batchId].requested += amount;
+        $.vaultBatchBalances[targetVault][batchId].requested += amount.toUint128();
 
         emit AssetsRequestPulled(targetVault, _asset, amount);
     }
@@ -176,8 +177,8 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
         if ($.vaultBalances[sourceVault][_asset] < amount) revert InsufficientVirtualBalance();
 
         // should be when settled
-        $.vaultBatchBalances[sourceVault][batchId].requested += amount;
-        $.vaultBatchBalances[targetVault][batchId].deposited += amount;
+        $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
+        $.vaultBatchBalances[targetVault][batchId].deposited += amount.toUint128();
 
         emit AssetsTransfered(sourceVault, targetVault, _asset, amount);
     }
@@ -233,16 +234,16 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
                     kTokens = totalRequestedShares * IkStakingVault(vaults[i]).calculateStkTokenPrice(totalAssets[i]);
                     $.totalPendingRedeems -= kTokens;
                     $.vaultRequestedShares[vaults[i]][batchId] = 0;
-                    $.vaultBatchBalances[vaults[i]][batchId].requested -= kTokens;
+                    $.vaultBatchBalances[vaults[i]][batchId].requested -= kTokens.toUint128();
                 }
 
                 if (vaults[i] == kMinter) {
-                    $.vaultBatchBalances[vaults[i]][batchId].deposited += kTokens;
+                    $.vaultBatchBalances[vaults[i]][batchId].deposited += kTokens.toUint128();
                 } else {
                     // Deposit into kMinter
                     // kMinter should be last
                     // maybe every vault will deposit into kMinter
-                    $.vaultBatchBalances[kMinter][batchId].deposited += kTokens;
+                    $.vaultBatchBalances[kMinter][batchId].deposited += kTokens.toUint128();
                 }
             }
             unchecked {
