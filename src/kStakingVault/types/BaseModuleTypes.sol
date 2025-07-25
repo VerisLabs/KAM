@@ -4,14 +4,11 @@ pragma solidity 0.8.30;
 /// @title ModuleBaseTypes
 /// @notice Library containing all data structures used in the ModuleBase
 /// @dev Defines standardized data types for cross-contract communication and storage
-library ModuleBaseTypes {
-    /// @notice Status enumeration for tracking staking request lifecycle
-    /// @dev Used to prevent double-spending and track request processing
+library BaseModuleTypes {
     enum RequestStatus {
-        PENDING, // Request submitted but not yet processed (tokens escrowed, not burned)
-        CLAIMED, // Request successfully completed and claimed
-        CANCELLED // Request cancelled before processing (tokens returned to user)
-
+        PENDING,
+        CLAIMED,
+        CANCELLED
     }
 
     struct StakeRequest {
@@ -34,5 +31,12 @@ library ModuleBaseTypes {
         uint8 status;
         uint96 minKTokens;
         uint32 batchId;
+    }
+
+    struct BatchInfo {
+        uint32 batchId;
+        address batchReceiver;
+        bool isClosed;
+        bool isSettled;
     }
 }

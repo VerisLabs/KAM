@@ -5,13 +5,14 @@ import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 
+import { Extsload } from "src/abstracts/Extsload.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { ModuleBaseTypes } from "src/kStakingVault/types/ModuleBaseTypes.sol";
+import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
 
 /// @title BaseModule
 /// @notice Base contract for all modules
 /// @dev Provides shared storage, roles, and common functionality
-abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
+contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
     using FixedPointMathLib for uint256;
 
     /*//////////////////////////////////////////////////////////////
@@ -39,6 +40,7 @@ abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
         bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, uint32 batchId
     );
     event Paused(bool paused);
+    event Initialized(address registry, address owner, address admin, bool paused);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
@@ -48,7 +50,6 @@ abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
     uint256 public constant ONE_HUNDRED_PERCENT = 10_000;
 
     bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
-    bytes32 internal constant K_BATCH = keccak256("K_BATCH");
     bytes32 internal constant K_MINTER = keccak256("K_MINTER");
 
     /*//////////////////////////////////////////////////////////////
@@ -62,10 +63,13 @@ abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
     error AssetNotSupported(address asset);
     error InvalidVault(address vault);
     error OnlyKAssetRouter();
-    error OnlyKBatch();
+    error OnlyRelayer();
+    error OnlyKMinter();
     error ZeroAmount();
     error AmountBelowDustThreshold();
     error ContractPaused();
+    error Closed();
+    error Settled();
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -75,16 +79,18 @@ abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
     struct BaseModuleStorage {
         address registry;
         uint64 requestCounter;
-        uint8 decimals;
-        bool initialized;
-        bool paused;
+        uint32 currentBatchId;
         address underlyingAsset;
         uint96 dustAmount;
         uint256 lastTotalAssets;
+        uint8 decimals;
+        bool initialized;
+        bool paused;
         string name;
         string symbol;
-        mapping(uint256 => ModuleBaseTypes.StakeRequest) stakeRequests;
-        mapping(uint256 => ModuleBaseTypes.UnstakeRequest) unstakeRequests;
+        mapping(uint32 => BaseModuleTypes.BatchInfo) batches;
+        mapping(uint256 => BaseModuleTypes.StakeRequest) stakeRequests;
+        mapping(uint256 => BaseModuleTypes.UnstakeRequest) unstakeRequests;
         mapping(address => uint256[]) userRequests;
     }
 
@@ -148,7 +154,7 @@ abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
     }
 
     /*//////////////////////////////////////////////////////////////
-                          SINGLETON GETTERS
+                          GETTERS
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Gets the kMinter singleton contract address
@@ -159,20 +165,16 @@ abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
         if (minter == address(0)) revert ContractNotFound(K_MINTER);
     }
 
-    /// @notice Gets the kBatch singleton contract address
-    /// @return batch The kBatch contract address
-    /// @dev Reverts if kBatch not set in registry
-    function _getKBatch() internal view returns (address batch) {
-        batch = _registry().getSingletonContract(K_BATCH);
-        if (batch == address(0)) revert ContractNotFound(K_BATCH);
-    }
-
     /// @notice Gets the kAssetRouter singleton contract address
     /// @return router The kAssetRouter contract address
     /// @dev Reverts if kAssetRouter not set in registry
     function _getKAssetRouter() internal view returns (address router) {
         router = _registry().getSingletonContract(K_ASSET_ROUTER);
         if (router == address(0)) revert ContractNotFound(K_ASSET_ROUTER);
+    }
+
+    function _getRelayer(address account) internal view returns (bool) {
+        return _registry().isRelayer(account);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -264,9 +266,16 @@ abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
         _;
     }
 
-    /// @notice Restricts function access to the kBatch contract
-    modifier onlyKBatch() {
-        if (msg.sender != _getKBatch()) revert OnlyKBatch();
+    /// @notice Restricts function access to the relayer
+    /// @dev Only callable internally by inheriting contracts
+    modifier onlyRelayer() {
+        if (!_getRelayer(msg.sender)) revert OnlyRelayer();
+        _;
+    }
+
+    /// @notice Restricts function access to the kMinter contract
+    modifier onlyKMinter() {
+        if (msg.sender != _getKMinter()) revert OnlyKMinter();
         _;
     }
 }

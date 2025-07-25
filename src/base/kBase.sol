@@ -8,7 +8,7 @@ import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 /// @title kBase
 /// @notice Base contract providing common functionality for all KAM protocol contracts
 /// @dev Includes registry integration, role management, pause functionality, and helper methods
-abstract contract kBase is OwnableRoles, ReentrancyGuardTransient {
+contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /*//////////////////////////////////////////////////////////////
                                 ROLES
     //////////////////////////////////////////////////////////////*/
@@ -27,7 +27,6 @@ abstract contract kBase is OwnableRoles, ReentrancyGuardTransient {
     //////////////////////////////////////////////////////////////*/
 
     bytes32 internal constant K_MINTER = keccak256("K_MINTER");
-    bytes32 internal constant K_BATCH = keccak256("K_BATCH");
     bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
 
     /*//////////////////////////////////////////////////////////////
@@ -113,40 +112,29 @@ abstract contract kBase is OwnableRoles, ReentrancyGuardTransient {
     }
 
     /*//////////////////////////////////////////////////////////////
-                          SINGLETON GETTERS
+                          GETTERS
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Gets the kMinter singleton contract address
     /// @return minter The kMinter contract address
     /// @dev Reverts if kMinter not set in registry
     function _getKMinter() internal view returns (address minter) {
-        minter = _registry().getSingletonContract(K_MINTER);
+        minter = _registry().getContractById(K_MINTER);
         if (minter == address(0)) revert ContractNotFound(K_MINTER);
-    }
-
-    /// @notice Gets the kBatch singleton contract address
-    /// @return batch The kBatch contract address
-    /// @dev Reverts if kBatch not set in registry
-    function _getKBatch() internal view returns (address batch) {
-        batch = _registry().getSingletonContract(K_BATCH);
-        if (batch == address(0)) revert ContractNotFound(K_BATCH);
     }
 
     /// @notice Gets the kAssetRouter singleton contract address
     /// @return router The kAssetRouter contract address
     /// @dev Reverts if kAssetRouter not set in registry
     function _getKAssetRouter() internal view returns (address router) {
-        router = _registry().getSingletonContract(K_ASSET_ROUTER);
+        router = _registry().getContractById(K_ASSET_ROUTER);
         if (router == address(0)) revert ContractNotFound(K_ASSET_ROUTER);
     }
 
-    function _getSingletonAsset(bytes32 id) internal view returns (address asset) {
-        asset = _registry().getSingletonAsset(id);
-        if (asset == address(0)) revert ContractNotFound(id);
-    }
-
-    function _getRelayer(address account) internal view returns (bool) {
-        return _registry().isRelayer(account);
+    /// @notice Checks if an address is a relayer
+    /// @return Whether the address is a relayer
+    function _getRelayer() internal view returns (bool) {
+        return _registry().isRelayer(msg.sender);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -160,15 +148,6 @@ abstract contract kBase is OwnableRoles, ReentrancyGuardTransient {
     function _getKTokenForAsset(address asset) internal view returns (address kToken) {
         kToken = _registry().assetToKToken(asset);
         if (kToken == address(0)) revert AssetNotSupported(asset);
-    }
-
-    /// @notice Gets the underlying asset for a given kToken
-    /// @param kToken The kToken address
-    /// @return asset The underlying asset address
-    /// @dev Reverts if kToken not registered
-    function _getAssetForKToken(address kToken) internal view returns (address asset) {
-        asset = _registry().kTokenToAsset(kToken);
-        if (asset == address(0)) revert InvalidVault(kToken);
     }
 
     /// @notice Checks if an asset is supported by the protocol
@@ -191,18 +170,13 @@ abstract contract kBase is OwnableRoles, ReentrancyGuardTransient {
         if (asset == address(0)) revert InvalidVault(vault);
     }
 
-    /// @notice Gets the type of a vault
-    /// @param vault The vault address
-    /// @return The vault type (DN_VAULT or STAKING_VAULT)
-    function _getVaultType(address vault) internal view returns (IkRegistry.VaultType) {
-        return _registry().vaultType(vault);
-    }
-
-    /// @notice Gets all vaults for a specific asset
+    /// @notice Gets the DN vault address for a given asset
     /// @param asset The asset address
-    /// @return Array of vault addresses
-    function _getVaultsByAsset(address asset) internal view returns (address[] memory) {
-        return _registry().getVaultsByAsset(asset);
+    /// @return vault The corresponding DN vault address
+    /// @dev Reverts if asset not supported
+    function _getDNVaultByAsset(address asset) internal view returns (address vault) {
+        vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN_VAULT));
+        if (vault == address(0)) revert InvalidVault(vault);
     }
 
     /// @notice Checks if an address is a registered vault
@@ -210,13 +184,6 @@ abstract contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /// @return Whether the address is a registered vault
     function _isVault(address vault) internal view returns (bool) {
         return _registry().isVault(vault);
-    }
-
-    /// @notice Checks if an address is a singleton contract
-    /// @param contractAddress The address to check
-    /// @return Whether the address is a singleton contract
-    function _isSingletonContract(address contractAddress) internal view returns (bool) {
-        return _registry().isSingletonContract(contractAddress);
     }
 
     /// @notice Sets the pause state of the contract
@@ -239,22 +206,10 @@ abstract contract kBase is OwnableRoles, ReentrancyGuardTransient {
         _;
     }
 
-    /// @notice Restricts function access to the kAssetRouter contract
-    modifier onlyKAssetRouter() {
-        if (msg.sender != _getKAssetRouter()) revert OnlyKAssetRouter();
-        _;
-    }
-
-    /// @notice Restricts function access to the kBatch contract
-    modifier onlyKBatch() {
-        if (msg.sender != _getKBatch()) revert OnlyKBatch();
-        _;
-    }
-
     /// @notice Restricts function access to the relayer
     /// @dev Only callable internally by inheriting contracts
     modifier onlyRelayer() {
-        if (!_getRelayer(msg.sender)) revert OnlyRelayer();
+        if (!_getRelayer()) revert OnlyRelayer();
         _;
     }
 

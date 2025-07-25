@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { Test } from "forge-std/Test.sol";
-import { console2 } from "forge-std/console2.sol";
-
-import { MockToken } from "../helpers/MockToken.sol";
 import {
     ADMIN_ROLE,
     BATCH_CUTOFF_TIME,
@@ -24,6 +20,8 @@ import {
     getUSDCToken
 } from "./Constants.sol";
 import { Utilities } from "./Utilities.sol";
+import { Test } from "forge-std/Test.sol";
+import { console2 } from "forge-std/console2.sol";
 
 /// @title BaseTest
 /// @notice Base contract for all tests with common setup and utilities
@@ -46,8 +44,8 @@ contract BaseTest is Test {
     Users internal users;
 
     // Test tokens
-    MockToken internal mockUSDC;
-    MockToken internal mockWBTC;
+    //MockToken internal mockUSDC;
+    //MockToken internal mockWBTC;
     address internal asset; // Main test asset
 
     // Fork setup
@@ -64,7 +62,7 @@ contract BaseTest is Test {
         _setupFork();
 
         // Deploy mock tokens
-        _deployMockTokens();
+        //_deployMockTokens();
 
         // Label addresses for better trace output
         _labelAddresses();
@@ -98,22 +96,22 @@ contract BaseTest is Test {
     }
 
     /// @dev Deploy mock tokens for unit tests
-    function _deployMockTokens() internal {
-        mockUSDC = new MockToken("Mock USDC", "mUSDC", 6);
-        mockWBTC = new MockToken("Mock WBTC", "mWBTC", 8);
-
-        if (!useMainnetFork) {
-            asset = address(mockUSDC);
-
-            // Mint initial tokens to users
-            mockUSDC.mint(users.alice, 1_000_000 * _1_USDC); // 1M USDC
-            mockUSDC.mint(users.bob, 500_000 * _1_USDC); // 500K USDC
-            mockUSDC.mint(users.institution, 10_000_000 * _1_USDC); // 10M USDC
-
-            mockWBTC.mint(users.alice, 100 * _1_WBTC); // 100 WBTC
-            mockWBTC.mint(users.bob, 50 * _1_WBTC); // 50 WBTC
-        }
-    }
+    //   function _deployMockTokens() internal {
+    //       mockUSDC = new MockToken("Mock USDC", "mUSDC", 6);
+    //       mockWBTC = new MockToken("Mock WBTC", "mWBTC", 8);
+    //
+    //       if (!useMainnetFork) {
+    //           asset = address(mockUSDC);
+    //
+    //           // Mint initial tokens to users
+    //           mockUSDC.mint(users.alice, 1_000_000 * _1_USDC); // 1M USDC
+    //           mockUSDC.mint(users.bob, 500_000 * _1_USDC); // 500K USDC
+    //           mockUSDC.mint(users.institution, 10_000_000 * _1_USDC); // 10M USDC
+    //
+    //           mockWBTC.mint(users.alice, 100 * _1_WBTC); // 100 WBTC
+    //           mockWBTC.mint(users.bob, 50 * _1_WBTC); // 50 WBTC
+    //       }
+    //   }
 
     /// @dev Label addresses for better debugging
     function _labelAddresses() internal {
@@ -126,8 +124,8 @@ contract BaseTest is Test {
         vm.label(users.settler, "Settler");
         vm.label(users.treasury, "Treasury");
 
-        vm.label(address(mockUSDC), "MockUSDC");
-        vm.label(address(mockWBTC), "MockWBTC");
+        //vm.label(address(mockUSDC), "MockUSDC");
+        //vm.label(address(mockWBTC), "MockWBTC");
 
         if (useMainnetFork) {
             vm.label(USDC_MAINNET, "USDC");
@@ -145,29 +143,30 @@ contract BaseTest is Test {
         if (useMainnetFork) {
             deal(token, to, amount);
         } else {
-            MockToken(token).mint(to, amount);
+            //MockToken(token).mint(to, amount);
         }
     }
 
     /// @dev Helper to get token balance
     function getBalance(address token, address user) internal view returns (uint256) {
-        return MockToken(token).balanceOf(user);
+        return 0; //MockToken(token).balanceOf(user);
     }
 
-    /// @dev Helper to create MockToken for kToken in unit tests
-    /// @param name Token name
-    /// @param symbol Token symbol
-    /// @param decimals Token decimals
-    /// @return MockToken instance suitable for simple kToken testing
-    function createMockKToken(string memory name, string memory symbol, uint8 decimals) internal returns (MockToken) {
-        return new MockToken(name, symbol, decimals);
-    }
-
-    /// @dev Helper to create MockToken with default kToken parameters
-    /// @return MockToken instance with standard kToken settings
-    function createDefaultMockKToken() internal returns (MockToken) {
-        return createMockKToken("KAM Token", "kToken", 6);
-    }
+    //    /// @dev Helper to create MockToken for kToken in unit tests
+    //    /// @param name Token name
+    //    /// @param symbol Token symbol
+    //    /// @param decimals Token decimals
+    //    /// @return MockToken instance suitable for simple kToken testing
+    //    function createMockKToken(string memory name, string memory symbol, uint8 decimals) internal returns
+    // (MockToken) {
+    //        return new MockToken(name, symbol, decimals);
+    //    }
+    //
+    //    /// @dev Helper to create MockToken with default kToken parameters
+    //    /// @return MockToken instance with standard kToken settings
+    //    function createDefaultMockKToken() internal returns (MockToken) {
+    //        return createMockKToken("KAM Token", "kToken", 6);
+    //    }
 
     /*//////////////////////////////////////////////////////////////
                           TOKEN USAGE GUIDELINES

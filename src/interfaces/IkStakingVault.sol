@@ -19,9 +19,17 @@ interface IkStakingVault {
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    function asset() external view returns (address);
+    function name() external view returns (string memory);
+    function symbol() external view returns (string memory);
+    function decimals() external view returns (uint8);
     function calculateStkTokenPrice(uint256 totalAssets) external view returns (uint256);
-    function kToken() external view returns (address);
     function lastTotalAssets() external view returns (uint256);
+    function kToken() external view returns (address);
+    function getBatchId() external view returns (uint256);
+    function isBatchClosed() external view returns (bool);
+    function isBatchSettled() external view returns (bool);
+    function getBatchInfo() external view returns (uint256 batchId, bool isClosed, bool isSettled);
     function sharePrice() external view returns (uint256);
 
     /*//////////////////////////////////////////////////////////////

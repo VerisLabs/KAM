@@ -26,10 +26,9 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     //////////////////////////////////////////////////////////////*/
 
     event SingletonContractSet(bytes32 indexed id, address indexed contractAddress);
-    event VaultRegistered(address indexed vault, VaultType indexed vaultType, address indexed asset);
+    event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
     event KTokenRegistered(address indexed asset, address indexed kToken);
     event AssetSupported(address indexed asset);
-    event PrimaryVaultSet(address indexed asset, VaultType indexed vaultType, address indexed vault);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -46,7 +45,8 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
 
     enum VaultType {
         DN_VAULT,
-        STAKING_VAULT
+        ALPHA_VAULT,
+        BETA_VAULT
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -55,7 +55,6 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
 
     // Singleton contracts (only one instance in the protocol)
     bytes32 public constant K_MINTER = keccak256("K_MINTER");
-    bytes32 public constant K_BATCH = keccak256("K_BATCH");
     bytes32 public constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
     bytes32 public constant K_VAULT_FACTORY = keccak256("K_VAULT_FACTORY");
     bytes32 public constant K_UPGRADE_MANAGER = keccak256("K_UPGRADE_MANAGER");
@@ -73,7 +72,8 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
         mapping(bytes32 => address) singletonContracts;
         mapping(address => bool) isSingletonContract;
         mapping(address => bool) isVault;
-        mapping(address => VaultType) vaultType;
+        mapping(address => uint8 vaultType) vaultType;
+        mapping(address => mapping(uint8 vaultType => address)) assetToVault;
         mapping(address => address) vaultAsset;
         EnumerableSetLib.AddressSet allVaults;
         mapping(address => EnumerableSetLib.AddressSet) vaultsByAsset;
@@ -180,14 +180,15 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
 
         // Register vault
         $.isVault[vault] = true;
-        $.vaultType[vault] = type_;
+        $.vaultType[vault] = uint8(type_);
         $.vaultAsset[vault] = asset;
         $.allVaults.add(vault);
+        $.assetToVault[asset][uint8(type_)] = vault;
 
         // Track by asset
         $.vaultsByAsset[asset].add(vault);
 
-        emit VaultRegistered(vault, type_, asset);
+        emit VaultRegistered(vault, asset, type_);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -198,7 +199,7 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param id Contract identifier (e.g., K_MINTER, K_BATCH)
     /// @return Contract address
     /// @dev Reverts if contract not set
-    function getSingletonContract(bytes32 id) external view returns (address) {
+    function getContractById(bytes32 id) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address addr = $.singletonContracts[id];
         if (addr == address(0)) revert ContractNotSet();
@@ -209,7 +210,7 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param id Asset identifier (e.g., USDC, WBTC)
     /// @return Asset address
     /// @dev Reverts if asset not set
-    function getSingletonAsset(bytes32 id) external view returns (address) {
+    function getAssetById(bytes32 id) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address addr = $.singletonAssets[id];
         if (addr == address(0)) revert ContractNotSet();
@@ -218,19 +219,17 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
 
     /// @notice Get all core singleton contracts at once
     /// @return kMinter The kMinter contract address
-    /// @return kBatch The kBatch contract address
     /// @return kAssetRouter The kAssetRouter contract address
     /// @return kVaultFactory The kVaultFactory contract address
     /// @return upgradeManager The upgrade manager contract address
     function getCoreContracts()
         external
         view
-        returns (address kMinter, address kBatch, address kAssetRouter, address kVaultFactory, address upgradeManager)
+        returns (address kMinter, address kAssetRouter, address kVaultFactory, address upgradeManager)
     {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return (
             $.singletonContracts[K_MINTER],
-            $.singletonContracts[K_BATCH],
             $.singletonContracts[K_ASSET_ROUTER],
             $.singletonContracts[K_VAULT_FACTORY],
             $.singletonContracts[K_UPGRADE_MANAGER]
@@ -243,6 +242,16 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     function getVaultsByAsset(address asset) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.vaultsByAsset[asset].values();
+    }
+
+    /// @notice Get a vault address by asset and vault type
+    /// @param asset Asset address
+    /// @param vaultType Vault type
+    /// @return Vault address
+    /// @dev Reverts if vault not found
+    function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        return $.assetToVault[asset][vaultType];
     }
 
     /// @notice Check if the caller is the relayer

@@ -7,8 +7,9 @@ interface IkRegistry {
         STAKING_VAULT
     }
 
-    function getSingletonContract(bytes32 id) external view returns (address);
-    function getSingletonAsset(bytes32 id) external view returns (address);
+    function getContractById(bytes32 id) external view returns (address);
+    function getAssetById(bytes32 id) external view returns (address);
+    function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address);
     function assetToKToken(address asset) external view returns (address);
     function kTokenToAsset(address kToken) external view returns (address);
     function vaultAsset(address vault) external view returns (address);

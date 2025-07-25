@@ -5,9 +5,8 @@ import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IkBatch } from "src/interfaces/IkBatch.sol";
 import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
-import { ModuleBaseTypes } from "src/kStakingVault/types/ModuleBaseTypes.sol";
+import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
 
 /// @title ClaimModule
 /// @notice Handles claim operations for settled batches
@@ -49,13 +48,13 @@ contract ClaimModule is BaseModule {
     function claimStakedShares(uint256 batchId, uint256 requestId) external payable nonReentrant whenNotPaused {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
 
-        if (!IkBatch(_getKBatch()).isBatchSettled(batchId)) revert BatchNotSettled();
-        ModuleBaseTypes.StakeRequest storage request = $.stakeRequests[requestId];
+        if (!$.batches[batchId.toUint32()].isSettled) revert BatchNotSettled();
+        BaseModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
         if (request.batchId != batchId.toUint32()) revert InvalidBatchId();
-        if (request.status != uint8(ModuleBaseTypes.RequestStatus.PENDING)) revert RequestNotPending();
+        if (request.status != uint8(BaseModuleTypes.RequestStatus.PENDING)) revert RequestNotPending();
         if (msg.sender != request.user) revert NotBeneficiary();
 
-        request.status = uint8(ModuleBaseTypes.RequestStatus.CLAIMED);
+        request.status = uint8(BaseModuleTypes.RequestStatus.CLAIMED);
 
         // Calculate stkToken amount based on current exchange rate
         uint256 stkTokensToMint = uint256(request.kTokenAmount);
@@ -75,13 +74,13 @@ contract ClaimModule is BaseModule {
     function claimUnstakedAssets(uint256 batchId, uint256 requestId) external payable nonReentrant whenNotPaused {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
 
-        if (!IkBatch(_getKBatch()).isBatchSettled(batchId)) revert BatchNotSettled();
-        ModuleBaseTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
+        if (!$.batches[batchId.toUint32()].isSettled) revert BatchNotSettled();
+        BaseModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
         if (request.batchId != batchId.toUint32()) revert InvalidBatchId();
-        if (request.status != uint8(ModuleBaseTypes.RequestStatus.PENDING)) revert RequestNotPending();
+        if (request.status != uint8(BaseModuleTypes.RequestStatus.PENDING)) revert RequestNotPending();
         if (msg.sender != request.user) revert NotBeneficiary();
 
-        request.status = uint8(ModuleBaseTypes.RequestStatus.CLAIMED);
+        request.status = uint8(BaseModuleTypes.RequestStatus.CLAIMED);
 
         // Calculate total kTokens to return (simplified 1:1 for now)
         uint256 totalKTokensToReturn = uint256(request.stkTokenAmount);

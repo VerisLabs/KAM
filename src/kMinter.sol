@@ -9,8 +9,8 @@ import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 import { Extsload } from "src/abstracts/Extsload.sol";
 import { kBase } from "src/base/kBase.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
-import { IkBatch } from "src/interfaces/IkBatch.sol";
 import { IkBatchReceiver } from "src/interfaces/IkBatchReceiver.sol";
+import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 
 import { kMinterTypes } from "src/types/kMinterTypes.sol";
@@ -158,7 +158,7 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
         if (to_ == address(0)) revert ZeroAddress();
 
         address kToken = _getKTokenForAsset(asset_);
-        uint256 batchId = IkBatch(_getKBatch()).getCurrentBatchId();
+        uint256 batchId = IkStakingVault(_getDNVaultByAsset(asset_)).getBatchId();
 
         // Transfer underlying asset from sender to this contract
         asset_.safeTransferFrom(msg.sender, address(this), amount_);
@@ -171,9 +171,6 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
 
         // Mint kTokens 1:1 with deposited amount (no batch ID in push model)
         IkToken(kToken).mint(to_, amount_);
-
-        // Push vault to batch
-        _pushVaultToBatch(batchId);
 
         emit Minted(to_, amount_, batchId.toUint32());
     }
@@ -203,9 +200,10 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
         if (to_ == address(0)) revert ZeroAddress();
 
         // Should it be a variable? Validated from frontend ?
-        uint256 batchId = IkBatch(_getKBatch()).getCurrentBatchId();
-        if (IkBatch(_getKBatch()).isBatchClosed(batchId)) revert BatchClosed();
-        if (IkBatch(_getKBatch()).isBatchSettled(batchId)) revert BatchSettled();
+        address vault = _getDNVaultByAsset(asset_);
+        uint256 batchId = IkStakingVault(vault).getBatchId();
+        if (IkStakingVault(vault).isBatchClosed()) revert BatchClosed();
+        if (IkStakingVault(vault).isBatchSettled()) revert BatchSettled();
 
         // Generate request ID
         requestId = _createRedeemRequestId(to_, amount_, block.timestamp);
@@ -231,8 +229,6 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
 
         kToken.safeTransferFrom(to_, address(this), amount_);
 
-        _pushVaultToBatch(batchId);
-
         emit RedeemRequestCreated(requestId, to_, kToken, amount_, to_, batchId.toUint24());
 
         return requestId;
@@ -253,8 +249,9 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
         // Update state
         redeemRequest.status = uint8(kMinterTypes.RequestStatus.REDEEMED);
 
-        if (!IkBatch(_getKBatch()).isBatchSettled(uint256(redeemRequest.batchId))) revert BatchNotSettled();
-        address batchReceiver = IkBatch(_getKBatch()).getBatchReceiver(uint256(redeemRequest.batchId));
+        address vault = _getDNVaultByAsset(redeemRequest.asset);
+        if (!IkStakingVault(vault).isBatchSettled()) revert BatchNotSettled();
+        address batchReceiver = IkStakingVault(vault).getBatchReceiver(uint256(redeemRequest.batchId));
         if (batchReceiver == address(0)) revert ZeroAddress();
 
         // Withdraw from BatchReceiver to recipient (1:1 with kTokens burned)
@@ -280,7 +277,8 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
         // Update state
         redeemRequest.status = uint8(kMinterTypes.RequestStatus.CANCELLED);
 
-        if (!IkBatch(_getKBatch()).isBatchSettled(uint256(redeemRequest.batchId))) revert BatchNotSettled();
+        address vault = _getDNVaultByAsset(redeemRequest.asset);
+        if (!IkStakingVault(vault).isBatchSettled()) revert BatchNotSettled();
 
         address kToken = _getKTokenForAsset(redeemRequest.asset);
         // Validate protocol has sufficient kToken balance
