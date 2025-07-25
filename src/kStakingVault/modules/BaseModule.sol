@@ -4,8 +4,6 @@ pragma solidity 0.8.30;
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { ModuleBaseTypes } from "src/kStakingVault/types/ModuleBaseTypes.sol";
@@ -14,8 +12,6 @@ import { ModuleBaseTypes } from "src/kStakingVault/types/ModuleBaseTypes.sol";
 /// @notice Base contract for all modules
 /// @dev Provides shared storage, roles, and common functionality
 abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
-    using SafeTransferLib for address;
-    using SafeCastLib for uint256;
     using FixedPointMathLib for uint256;
 
     /*//////////////////////////////////////////////////////////////
@@ -65,10 +61,8 @@ abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
     error ContractNotFound(bytes32 identifier);
     error AssetNotSupported(address asset);
     error InvalidVault(address vault);
-    error OnlyKMinter();
     error OnlyKAssetRouter();
     error OnlyKBatch();
-    error OnlyRelayer();
     error ZeroAmount();
     error AmountBelowDustThreshold();
     error ContractPaused();
@@ -83,16 +77,12 @@ abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
         bool paused;
         uint256 requestCounter;
         uint256 lastTotalAssets;
-        uint256 userTotalSupply;
         uint128 dustAmount;
-        uint64 settlementInterval;
         uint8 decimals;
         address underlyingAsset;
-        address varianceRecipient;
         address registry;
         string name;
         string symbol;
-        mapping(address => uint256) userShareBalances;
         mapping(uint256 => ModuleBaseTypes.StakeRequest) stakeRequests;
         mapping(uint256 => ModuleBaseTypes.UnstakeRequest) unstakeRequests;
         mapping(address => uint256[]) userRequests;
@@ -185,15 +175,6 @@ abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
         if (router == address(0)) revert ContractNotFound(K_ASSET_ROUTER);
     }
 
-    function _getSingletonAsset(bytes32 id) internal view returns (address asset) {
-        asset = _registry().getSingletonAsset(id);
-        if (asset == address(0)) revert ContractNotFound(id);
-    }
-
-    function _getRelayer(address account) internal view returns (bool) {
-        return _registry().isRelayer(account);
-    }
-
     /*//////////////////////////////////////////////////////////////
                           ASSET HELPERS
     //////////////////////////////////////////////////////////////*/
@@ -207,62 +188,9 @@ abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
         if (kToken == address(0)) revert AssetNotSupported(asset);
     }
 
-    /// @notice Gets the underlying asset for a given kToken
-    /// @param kToken The kToken address
-    /// @return asset The underlying asset address
-    /// @dev Reverts if kToken not registered
-    function _getAssetForKToken(address kToken) internal view returns (address asset) {
-        asset = _registry().kTokenToAsset(kToken);
-        if (asset == address(0)) revert InvalidVault(kToken);
-    }
-
-    /// @notice Checks if an asset is supported by the protocol
-    /// @param asset The asset address to check
-    /// @return Whether the asset is supported
-    function _isAssetSupported(address asset) internal view returns (bool) {
-        return _registry().isSupportedAsset(asset);
-    }
-
     /*//////////////////////////////////////////////////////////////
-                          VAULT HELPERS
+                            PAUSE 
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Gets the asset managed by a vault
-    /// @param vault The vault address
-    /// @return asset The asset address managed by the vault
-    /// @dev Reverts if vault not registered
-    function _getVaultAsset(address vault) internal view returns (address asset) {
-        asset = _registry().vaultAsset(vault);
-        if (asset == address(0)) revert InvalidVault(vault);
-    }
-
-    /// @notice Gets the type of a vault
-    /// @param vault The vault address
-    /// @return The vault type (DN_VAULT or STAKING_VAULT)
-    function _getVaultType(address vault) internal view returns (IkRegistry.VaultType) {
-        return _registry().vaultType(vault);
-    }
-
-    /// @notice Gets all vaults for a specific asset
-    /// @param asset The asset address
-    /// @return Array of vault addresses
-    function _getVaultsByAsset(address asset) internal view returns (address[] memory) {
-        return _registry().getVaultsByAsset(asset);
-    }
-
-    /// @notice Checks if an address is a registered vault
-    /// @param vault The address to check
-    /// @return Whether the address is a registered vault
-    function _isVault(address vault) internal view returns (bool) {
-        return _registry().isVault(vault);
-    }
-
-    /// @notice Checks if an address is a singleton contract
-    /// @param contractAddress The address to check
-    /// @return Whether the address is a singleton contract
-    function _isSingletonContract(address contractAddress) internal view returns (bool) {
-        return _registry().isSingletonContract(contractAddress);
-    }
 
     /// @notice Sets the pause state of the contract
     /// @param paused_ New pause state
@@ -275,7 +203,7 @@ abstract contract BaseModule is OwnableRoles, ReentrancyGuardTransient {
     }
 
     /*//////////////////////////////////////////////////////////////
-                      MATHEMATICAL HELPERS
+                                MATH HELPERS
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Calculates stkToken price with safety checks

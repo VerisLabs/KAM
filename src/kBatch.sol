@@ -137,8 +137,8 @@ contract kBatch is Initializable, UUPSUpgradeable, kBase {
             new kBatchReceiver(
                 _registry().getSingletonContract(K_MINTER),
                 _batchId,
-                _registry().getSingletonAsset("USDC"),
-                _registry().getSingletonAsset("WBTC")
+                _registry().getSingletonAsset(keccak256("USDC")),
+                _registry().getSingletonAsset(keccak256("WBTC"))
             )
         );
 
