@@ -4,17 +4,14 @@ pragma solidity 0.8.30;
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { ModuleBase } from "src/modules/base/ModuleBase.sol";
-import { DataTypes } from "src/types/DataTypes.sol";
-import { ModuleBaseTypes } from "src/types/ModuleBaseTypes.sol";
-
+import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
+import { ModuleBaseTypes } from "src/kStakingVault/types/ModuleBaseTypes.sol";
 import { IkBatch } from "src/interfaces/IkBatch.sol";
-import { IkToken } from "src/interfaces/IkToken.sol";
 
 /// @title ClaimModule
 /// @notice Handles claim operations for settled batches
 /// @dev Contains claim functions for staking and unstaking operations
-contract ClaimModule is ModuleBase {
+contract ClaimModule is BaseModule {
     using SafeCastLib for uint256;
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
@@ -28,10 +25,6 @@ contract ClaimModule is ModuleBase {
     error RequestNotPending();
     error NotBeneficiary();
     error MinimumOutputNotMet();
-    error BatchNotFound();
-    error InvalidRequestIndex();
-    error AlreadyClaimed();
-    error DeadlineExpired();
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
@@ -53,9 +46,9 @@ contract ClaimModule is ModuleBase {
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
     function claimStakedShares(uint256 batchId, uint256 requestId) external payable nonReentrant whenNotPaused {
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        BaseModuleStorage storage $ = _getBaseModuleStorage();
 
-        if (!IkBatch($.kBatch).isBatchSettled(batchId)) revert BatchNotSettled();
+        if (!IkBatch(_getKBatch()).isBatchSettled(batchId)) revert BatchNotSettled();
         ModuleBaseTypes.StakeRequest storage request = $.stakeRequests[requestId];
         if (request.batchId != batchId) revert InvalidBatchId();
         if (request.status != ModuleBaseTypes.RequestStatus.PENDING) revert RequestNotPending();
@@ -79,9 +72,9 @@ contract ClaimModule is ModuleBase {
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
     function claimUnstakedAssets(uint256 batchId, uint256 requestId) external payable nonReentrant whenNotPaused {
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        BaseModuleStorage storage $ = _getBaseModuleStorage();
 
-        if (!IkBatch($.kBatch).isBatchSettled(batchId)) revert BatchNotSettled();
+        if (!IkBatch(_getKBatch()).isBatchSettled(batchId)) revert BatchNotSettled();
         ModuleBaseTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
         if (request.batchId != batchId) revert InvalidBatchId();
         if (request.status != ModuleBaseTypes.RequestStatus.PENDING) revert RequestNotPending();
@@ -101,7 +94,7 @@ contract ClaimModule is ModuleBase {
         emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensToReturn);
 
         // Transfer kTokens to user
-        $.kToken.safeTransfer(request.user, totalKTokensToReturn);
+        _getKTokenForAsset($.underlyingAsset).safeTransfer(request.user, totalKTokensToReturn);
     }
 
     /*//////////////////////////////////////////////////////////////

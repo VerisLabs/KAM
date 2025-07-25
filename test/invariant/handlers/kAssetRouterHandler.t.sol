@@ -5,7 +5,7 @@ import { kAssetRouter } from "../../../src/kAssetRouter.sol";
 
 import { kBatch } from "../../../src/kBatch.sol";
 import { kMinter } from "../../../src/kMinter.sol";
-import { kStakingVault } from "../../../src/kStakingVault.sol";
+import { kStakingVault } from "../../../src/kStakingVault/kStakingVault.sol";
 import { kToken } from "../../../src/kToken.sol";
 import { MockToken } from "../../helpers/MockToken.sol";
 import { BaseHandler } from "./BaseHandler.t.sol";

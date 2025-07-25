@@ -398,7 +398,7 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
 
     /// @notice Authorize contract upgrade
     /// @param newImplementation New implementation address
-    function _authorizeUpgrade(address newImplementation) internal override onlyRoles(ADMIN_ROLE) {
+    function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE) {
         if (newImplementation == address(0)) revert ZeroAddress();
     }
 
