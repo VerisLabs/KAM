@@ -194,7 +194,10 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
     /// @notice Updates the last total assets for the vault
     /// @param totalAssets Total assets in the vault
     function updateLastTotalAssets(uint256 totalAssets) external onlyKAssetRouter {
-        _getBaseModuleStorage().lastTotalAssets = totalAssets;
+        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        uint256 oldTotalAssets = $.lastTotalAssets;
+        $.lastTotalAssets = totalAssets;
+        emit TotalAssetsUpdated(oldTotalAssets, totalAssets);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -269,6 +272,16 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
         return _getBaseModuleStorage().currentBatchId;
     }
 
+    /// @notice Returns the safe batch ID
+    /// @return Batch ID
+    function getSafeBatchId() external view returns (uint256) {
+        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        uint32 batchId = $.currentBatchId;
+        if ($.batches[batchId].isClosed) revert Closed();
+        if ($.batches[batchId].isSettled) revert Settled();
+        return batchId;
+    }
+
     /// @notice Returns whether the current batch is closed
     /// @return Whether the current batch is closed
     function isBatchClosed() external view returns (bool) {
@@ -282,15 +295,34 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
     }
 
     /// @notice Returns the current batch ID, whether it is closed, and whether it is settled
-    /// @return Batch ID
-    /// @return Whether the current batch is closed
-    /// @return Whether the current batch is settled
-    function getBatchInfo() external view returns (uint256 batchId, bool isClosed, bool isSettled) {
+    /// @return batchId Current batch ID
+    /// @return batchReceiver Current batch receiver
+    /// @return isClosed Whether the current batch is closed
+    /// @return isSettled Whether the current batch is settled
+    function getBatchInfo()
+        external
+        view
+        returns (uint256 batchId, address batchReceiver, bool isClosed, bool isSettled)
+    {
         return (
             _getBaseModuleStorage().currentBatchId,
+            _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatchId].batchReceiver,
             _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatchId].isClosed,
             _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatchId].isSettled
         );
+    }
+
+    /// @notice Returns the batch receiver for the current batch
+    /// @return Batch receiver
+    function getBatchReceiver(uint256 batchId) external view returns (address) {
+        return _getBaseModuleStorage().batches[batchId.toUint32()].batchReceiver;
+    }
+
+    function getSafeBatchReceiver(uint256 batchId) external view returns (address) {
+        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        uint32 batchId32 = batchId.toUint32();
+        if ($.batches[batchId32].isSettled) revert Settled();
+        return $.batches[batchId32].batchReceiver;
     }
 
     /*//////////////////////////////////////////////////////////////

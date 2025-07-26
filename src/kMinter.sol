@@ -81,6 +81,7 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
     error BatchClosed();
     error BatchSettled();
     error ContractPaused();
+    error InvalidAsset();
 
     /*//////////////////////////////////////////////////////////////
                                 MODIFIERS
@@ -159,6 +160,7 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
 
         address kToken = _getKTokenForAsset(asset_);
         uint256 batchId = IkStakingVault(_getDNVaultByAsset(asset_)).getBatchId();
+        if (!_isSupportedAsset(asset_)) revert InvalidAsset();
 
         // Transfer underlying asset from sender to this contract
         asset_.safeTransferFrom(msg.sender, address(this), amount_);
@@ -167,7 +169,7 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
         asset_.safeApprove(_getKAssetRouter(), amount_);
 
         // Push assets to kAssetRouter
-        IkAssetRouter(_getKAssetRouter()).kAssetPush(address(this), asset_, amount_, batchId);
+        IkAssetRouter(_getKAssetRouter()).kAssetPush(asset_, amount_, batchId);
 
         // Mint kTokens 1:1 with deposited amount (no batch ID in push model)
         IkToken(kToken).mint(to_, amount_);
@@ -194,22 +196,19 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
         onlySupportedAsset(asset_)
         returns (bytes32 requestId)
     {
-        address kToken = _getKTokenForAsset(asset_);
-        if (kToken.balanceOf(msg.sender) < amount_) revert InsufficientBalance();
         if (amount_ == 0) revert ZeroAmount();
         if (to_ == address(0)) revert ZeroAddress();
 
-        // Should it be a variable? Validated from frontend ?
-        address vault = _getDNVaultByAsset(asset_);
-        uint256 batchId = IkStakingVault(vault).getBatchId();
-        if (IkStakingVault(vault).isBatchClosed()) revert BatchClosed();
-        if (IkStakingVault(vault).isBatchSettled()) revert BatchSettled();
+        address kToken = _getKTokenForAsset(asset_);
+        if (kToken.balanceOf(msg.sender) < amount_) revert InsufficientBalance();
 
         // Generate request ID
         requestId = _createRedeemRequestId(to_, amount_, block.timestamp);
 
-        kMinterStorage storage $ = _getkMinterStorage();
+        address vault = _getDNVaultByAsset(asset_);
+        uint256 batchId = IkStakingVault(vault).getSafeBatchId();
 
+        kMinterStorage storage $ = _getkMinterStorage();
         // Create redemption request
         $.redeemRequests[requestId] = kMinterTypes.RedeemRequest({
             id: requestId,
@@ -225,7 +224,7 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
         // Add to user requests tracking
         $.userRequests[to_].push(requestId);
 
-        IkAssetRouter(_getKAssetRouter()).kAssetRequestPull(address(this), asset_, amount_, batchId);
+        IkAssetRouter(_getKAssetRouter()).kAssetRequestPull(asset_, amount_, batchId);
 
         kToken.safeTransferFrom(to_, address(this), amount_);
 
@@ -312,12 +311,6 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
         kMinterStorage storage $ = _getkMinterStorage();
         $.requestCounter = (uint256($.requestCounter) + 1).toUint64();
         return keccak256(abi.encode(address(this), user, amount, timestamp, $.requestCounter));
-    }
-
-    function _pushVaultToBatch(uint256 batchId) internal {
-        if (!IkBatch(_getKBatch()).isVaultInBatch(batchId, address(this))) {
-            IkBatch(_getKBatch()).pushVault(batchId);
-        }
     }
 
     /*//////////////////////////////////////////////////////////////

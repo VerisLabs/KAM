@@ -23,6 +23,7 @@ contract BatchModule is BaseModule {
     event BatchReceiverDeployed(uint32 indexed batchId, address indexed receiver);
     event BatchSettled(uint32 indexed batchId);
     event BatchClosed(uint32 indexed batchId);
+    event BatchReceiverSet(address indexed batchReceiver, uint32 indexed batchId);
 
     /*//////////////////////////////////////////////////////////////
                             CORE OPERATIONS
@@ -50,7 +51,7 @@ contract BatchModule is BaseModule {
     /// @notice Marks a batch as settled
     /// @param _batchId The batch ID to settle
     /// @dev Only callable by kMinter, indicates assets have been distributed
-    function settleBatch(uint256 _batchId) external onlyKMinter {
+    function settleBatch(uint256 _batchId) external onlyKAssetRouter {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         uint32 batchId32 = _batchId.toUint32();
         if ($.batches[batchId32].isSettled) revert Settled();
@@ -61,8 +62,8 @@ contract BatchModule is BaseModule {
 
     /// @notice Deploys BatchReceiver for specific batch
     /// @param _batchId Batch ID to deploy receiver for
-    /// @dev Only callable by kMinter
-    function deployBatchReceiver(uint256 _batchId) external onlyKMinter returns (address) {
+    /// @dev Only callable by kAssetRouter
+    function deployBatchReceiver(uint256 _batchId) external onlyKAssetRouter returns (address) {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         uint32 batchId32 = _batchId.toUint32();
 
@@ -71,10 +72,10 @@ contract BatchModule is BaseModule {
 
         receiver = address(
             new kBatchReceiver(
-                _registry().getSingletonContract(K_MINTER),
+                _registry().getContractById(K_MINTER),
                 _batchId,
-                _registry().getSingletonAsset(keccak256("USDC")),
-                _registry().getSingletonAsset(keccak256("WBTC"))
+                _registry().getAssetById(keccak256("USDC")),
+                _registry().getAssetById(keccak256("WBTC"))
             )
         );
 

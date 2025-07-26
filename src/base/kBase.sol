@@ -186,6 +186,10 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
         return _registry().isVault(vault);
     }
 
+    function _isSupportedAsset(address asset) internal view returns (bool) {
+        return _registry().isSupportedAsset(asset);
+    }
+
     /// @notice Sets the pause state of the contract
     /// @param paused_ New pause state
     /// @dev Only callable internally by inheriting contracts

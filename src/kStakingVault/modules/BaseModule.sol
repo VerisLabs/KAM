@@ -41,6 +41,7 @@ contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
     );
     event Paused(bool paused);
     event Initialized(address registry, address owner, address admin, bool paused);
+    event TotalAssetsUpdated(uint256 oldTotalAssets, uint256 newTotalAssets);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
@@ -161,7 +162,7 @@ contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
     /// @return minter The kMinter contract address
     /// @dev Reverts if kMinter not set in registry
     function _getKMinter() internal view returns (address minter) {
-        minter = _registry().getSingletonContract(K_MINTER);
+        minter = _registry().getContractById(K_MINTER);
         if (minter == address(0)) revert ContractNotFound(K_MINTER);
     }
 
@@ -169,7 +170,7 @@ contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
     /// @return router The kAssetRouter contract address
     /// @dev Reverts if kAssetRouter not set in registry
     function _getKAssetRouter() internal view returns (address router) {
-        router = _registry().getSingletonContract(K_ASSET_ROUTER);
+        router = _registry().getContractById(K_ASSET_ROUTER);
         if (router == address(0)) revert ContractNotFound(K_ASSET_ROUTER);
     }
 
