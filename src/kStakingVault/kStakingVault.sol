@@ -11,6 +11,8 @@ import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { Extsload } from "src/abstracts/Extsload.sol";
 
+import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 
@@ -67,6 +69,14 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
         if (owner_ == address(0)) revert ZeroAddress();
         if (admin_ == address(0)) revert ZeroAddress();
         if (emergencyAdmin_ == address(0)) revert ZeroAddress();
+
+        // Ensure decimal consistency between asset, kToken, and stkToken
+        require(decimals_ == IERC20(asset_).decimals(), "Decimal mismatch with asset");
+
+        address kToken = _getKTokenForAsset(asset_);
+        if (kToken != address(0)) {
+            require(decimals_ == IERC20(kToken).decimals(), "Decimal mismatch with kToken");
+        }
 
         // Initialize ownership and roles
         __ModuleBase_init(registry_, owner_, admin_, paused_);
@@ -192,12 +202,22 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Updates the last total assets for the vault
-    /// @param totalAssets Total assets in the vault
-    function updateLastTotalAssets(uint256 totalAssets) external onlyKAssetRouter {
+    /// @param totalAssets_ Total assets in the vault
+    function updateLastTotalAssets(uint256 totalAssets_) external onlyKAssetRouter {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         uint256 oldTotalAssets = $.lastTotalAssets;
-        $.lastTotalAssets = totalAssets;
-        emit TotalAssetsUpdated(oldTotalAssets, totalAssets);
+        $.lastTotalAssets = totalAssets_;
+        emit TotalAssetsUpdated(oldTotalAssets, totalAssets_);
+    }
+
+    function mintStkTokens(address to, uint256 amount) external {
+        if (msg.sender != address(this)) revert OnlyKAssetRouter();
+        _mint(to, amount);
+    }
+
+    function burnStkTokens(address from, uint256 amount) external {
+        if (msg.sender != address(this)) revert OnlyKAssetRouter();
+        _burn(from, amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -240,10 +260,10 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
 
     /// @notice Calculates stkToken price with safety checks
     /// @dev Standard price calculation used across settlement modules
-    /// @param totalAssets Total underlying assets backing stkTokens
+    /// @param totalAssets_ Total underlying assets backing stkTokens
     /// @return price Price per stkToken in underlying asset terms (18 decimals)
-    function calculateStkTokenPrice(uint256 totalAssets) external view returns (uint256) {
-        return _calculateStkTokenPrice(totalAssets, totalSupply());
+    function calculateStkTokenPrice(uint256 totalAssets_) external view returns (uint256) {
+        return _calculateStkTokenPrice(totalAssets_, totalSupply());
     }
 
     /// @notice Calculates the price of stkTokens in underlying asset terms
@@ -258,6 +278,38 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
     /// @return Total assets
     function lastTotalAssets() external view returns (uint256) {
         return _getBaseModuleStorage().lastTotalAssets;
+    }
+
+    /// @notice Returns the current total assets from adapter (real-time)
+    /// @return Total assets currently deployed in strategies
+    function totalAssets() external view returns (uint256) {
+        BaseModuleStorage storage $ = _getBaseModuleStorage();
+
+        // Get adapter from registry for this specific vault
+        address adapter = _registry().getAdapter(address(this));
+
+        if (adapter != address(0) && _registry().isAdapterRegistered(adapter)) {
+            return IAdapter(adapter).totalAssets($.underlyingAsset);
+        }
+
+        // Fallback to stored value if no adapter
+        return $.lastTotalAssets;
+    }
+
+    /// @notice Returns estimated total assets including pending yield
+    /// @return Estimated total assets with unrealized gains
+    function estimatedTotalAssets() external view returns (uint256) {
+        BaseModuleStorage storage $ = _getBaseModuleStorage();
+
+        // Get adapter from registry for this specific vault
+        address adapter = _registry().getAdapter(address(this));
+
+        if (adapter != address(0) && _registry().isAdapterRegistered(adapter)) {
+            return IAdapter(adapter).estimatedTotalAssets($.underlyingAsset);
+        }
+
+        // Fallback to stored value if no adapter
+        return $.lastTotalAssets;
     }
 
     /// @notice Returns the kToken address for the vault

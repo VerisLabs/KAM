@@ -157,10 +157,10 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
     {
         if (amount_ == 0) revert ZeroAmount();
         if (to_ == address(0)) revert ZeroAddress();
+        if (!_isSupportedAsset(asset_)) revert InvalidAsset();
 
         address kToken = _getKTokenForAsset(asset_);
-        uint256 batchId = IkStakingVault(_getDNVaultByAsset(asset_)).getBatchId();
-        if (!_isSupportedAsset(asset_)) revert InvalidAsset();
+        uint256 batchId = IkStakingVault(_getDNVaultByAsset(asset_)).getSafeBatchId();
 
         // Transfer underlying asset from sender to this contract
         asset_.safeTransferFrom(msg.sender, address(this), amount_);
@@ -198,6 +198,7 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
     {
         if (amount_ == 0) revert ZeroAmount();
         if (to_ == address(0)) revert ZeroAddress();
+        if (!_isSupportedAsset(asset_)) revert InvalidAsset();
 
         address kToken = _getKTokenForAsset(asset_);
         if (kToken.balanceOf(msg.sender) < amount_) revert InsufficientBalance();
@@ -224,9 +225,10 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
         // Add to user requests tracking
         $.userRequests[to_].push(requestId);
 
-        IkAssetRouter(_getKAssetRouter()).kAssetRequestPull(asset_, amount_, batchId);
-
+        // Transfer kTokens from user to this contract until batch is settled
         kToken.safeTransferFrom(to_, address(this), amount_);
+
+        IkAssetRouter(_getKAssetRouter()).kAssetRequestPull(asset_, amount_, batchId);
 
         emit RedeemRequestCreated(requestId, to_, kToken, amount_, to_, batchId.toUint24());
 
@@ -249,9 +251,12 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
         redeemRequest.status = uint8(kMinterTypes.RequestStatus.REDEEMED);
 
         address vault = _getDNVaultByAsset(redeemRequest.asset);
-        if (!IkStakingVault(vault).isBatchSettled()) revert BatchNotSettled();
         address batchReceiver = IkStakingVault(vault).getBatchReceiver(uint256(redeemRequest.batchId));
         if (batchReceiver == address(0)) revert ZeroAddress();
+
+        // Burn kTokens
+        address kToken = _getKTokenForAsset(redeemRequest.asset);
+        IkToken(kToken).burn(address(this), redeemRequest.amount);
 
         // Withdraw from BatchReceiver to recipient (1:1 with kTokens burned)
         IkBatchReceiver(batchReceiver).pullAssets(
@@ -277,13 +282,13 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
         redeemRequest.status = uint8(kMinterTypes.RequestStatus.CANCELLED);
 
         address vault = _getDNVaultByAsset(redeemRequest.asset);
-        if (!IkStakingVault(vault).isBatchSettled()) revert BatchNotSettled();
+        if (!IkStakingVault(vault).isBatchClosed()) revert BatchClosed();
+        if (IkStakingVault(vault).isBatchSettled()) revert BatchSettled();
 
         address kToken = _getKTokenForAsset(redeemRequest.asset);
-        // Validate protocol has sufficient kToken balance
-        if (kToken.balanceOf(address(this)) < redeemRequest.amount) revert InsufficientBalance();
 
-        kToken.safeTransferFrom(address(this), redeemRequest.user, redeemRequest.amount);
+        // Transfer kTokens from this contract to user
+        kToken.safeTransfer(redeemRequest.user, redeemRequest.amount);
 
         emit Cancelled(requestId);
     }

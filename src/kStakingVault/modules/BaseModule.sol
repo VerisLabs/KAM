@@ -97,7 +97,7 @@ contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.BaseModule")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 internal constant MODULE_BASE_STORAGE_LOCATION =
-        0x7ab139db2b2a77f463059682bb9762784f22bc1cb9ca9b84dadf2770b5cfb600;
+        0x50bc60b877273d55cac3903fd4818902e5fd7aa256278ee2dc6b212f256c0b00;
 
     /// @notice Returns the base vault storage struct using ERC-7201 pattern
     /// @return $ Storage reference for base vault state variables

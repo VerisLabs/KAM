@@ -7,6 +7,8 @@ import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
+import { IAdapter } from "src/interfaces/IAdapter.sol";
+
 /// @title kRegistry
 /// @notice Central registry for KAM protocol contracts
 /// @dev Manages singleton contracts, vault registration, asset support, and kToken mapping
@@ -29,6 +31,8 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
     event KTokenRegistered(address indexed asset, address indexed kToken);
     event AssetSupported(address indexed asset);
+    event AdapterRegistered(address indexed vault, address indexed adapter);
+    event AdapterRemoved(address indexed vault, address indexed adapter);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -38,15 +42,18 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     error AlreadyRegistered();
     error AssetNotSupported();
     error ContractNotSet();
+    error AdapterNotRegistered();
+    error InvalidAdapter();
+    error AdapterAlreadySet();
 
     /*//////////////////////////////////////////////////////////////
                               ENUMS
     //////////////////////////////////////////////////////////////*/
 
     enum VaultType {
-        DN_VAULT,
-        ALPHA_VAULT,
-        BETA_VAULT
+        DN,
+        ALPHA,
+        BETA
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -83,6 +90,8 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
         mapping(address => address) kTokenToAsset;
         mapping(address => bool) isSupportedAsset;
         EnumerableSetLib.AddressSet supportedAssets;
+        mapping(address => address) vaultAdapters; // vault => adapter
+        mapping(address => bool) registeredAdapters; // adapter => registered
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kRegistry")) - 1)) & ~bytes32(uint256(0xff))
@@ -192,6 +201,47 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     }
 
     /*//////////////////////////////////////////////////////////////
+                          ADAPTER MANAGEMENT
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Registers an adapter for a specific vault
+    /// @param vault The vault address
+    /// @param adapter The adapter address
+    function registerAdapter(address vault, address adapter) external onlyRoles(ADMIN_ROLE) {
+        if (vault == address(0) || adapter == address(0)) revert InvalidAdapter();
+
+        kRegistryStorage storage $ = _getkRegistryStorage();
+
+        // Validate vault is registered
+        if (!$.isVault[vault]) revert AssetNotSupported(); // Reuse error
+
+        // Check if adapter is already set for this vault
+        if ($.vaultAdapters[vault] != address(0)) revert AdapterAlreadySet();
+
+        // Validate adapter implements IAdapter interface
+        if (!IAdapter(adapter).registered()) revert AdapterNotRegistered();
+
+        $.vaultAdapters[vault] = adapter;
+        $.registeredAdapters[adapter] = true;
+
+        emit AdapterRegistered(vault, adapter);
+    }
+
+    /// @notice Removes an adapter for a specific vault
+    /// @param vault The vault address
+    function removeAdapter(address vault) external onlyRoles(ADMIN_ROLE) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+
+        address adapter = $.vaultAdapters[vault];
+        if (adapter == address(0)) revert InvalidAdapter();
+
+        delete $.vaultAdapters[vault];
+        delete $.registeredAdapters[adapter];
+
+        emit AdapterRemoved(vault, adapter);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -215,6 +265,20 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
         address addr = $.singletonAssets[id];
         if (addr == address(0)) revert ContractNotSet();
         return addr;
+    }
+
+    /// @notice Get all supported assets
+    /// @return Array of supported asset addresses
+    function getAllAssets() external view returns (address[] memory) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        address[] memory assets = new address[]($.supportedAssets.length());
+        for (uint256 i; i < $.supportedAssets.length();) {
+            assets[i] = $.supportedAssets.at(i);
+            unchecked {
+                ++i;
+            }
+        }
+        return assets;
     }
 
     /// @notice Get all core singleton contracts at once
@@ -254,6 +318,14 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
         return $.assetToVault[asset][vaultType];
     }
 
+    /// @notice Get the type of a vault
+    /// @param vault Vault address
+    /// @return Vault type
+    function getVaultType(address vault) external view returns (VaultType) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        return VaultType($.vaultType[vault]);
+    }
+
     /// @notice Check if the caller is the relayer
     /// @return Whether the caller is the relayer
     function isRelayer(address account) external view returns (bool) {
@@ -290,6 +362,30 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     function isKToken(address kToken) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.isKToken[kToken];
+    }
+
+    /// @notice Get the adapter for a specific vault
+    /// @param vault Vault address
+    /// @return Adapter address (address(0) if none set)
+    function getAdapter(address vault) external view returns (address) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        return $.vaultAdapters[vault];
+    }
+
+    /// @notice Check if an adapter is registered
+    /// @param adapter Adapter address
+    /// @return True if adapter is registered
+    function isAdapterRegistered(address adapter) external view returns (bool) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        return $.registeredAdapters[adapter];
+    }
+
+    /// @notice Get the asset for a specific vault
+    /// @param vault Vault address
+    /// @return Asset address that the vault manages
+    function getVaultAsset(address vault) external view returns (address) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        return $.vaultAsset[vault];
     }
 
     /*//////////////////////////////////////////////////////////////

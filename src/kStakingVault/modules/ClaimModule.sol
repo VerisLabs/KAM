@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { ERC20 } from "solady/tokens/ERC20.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
 import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
 
@@ -56,13 +58,17 @@ contract ClaimModule is BaseModule {
 
         request.status = uint8(BaseModuleTypes.RequestStatus.CLAIMED);
 
-        // Calculate stkToken amount based on current exchange rate
-        uint256 stkTokensToMint = uint256(request.kTokenAmount);
+        // Calculate stkToken amount based on settlement-time share price
+        uint256 sharePrice = _calculateStkTokenPrice($.lastTotalAssets, ERC20(address(this)).totalSupply());
+        uint256 stkTokensToMint = _calculateStkTokensToMint(uint256(request.kTokenAmount), sharePrice);
 
         // Double-check slippage protection at claim time
         if (stkTokensToMint < request.minStkTokens) {
             revert MinimumOutputNotMet();
         }
+
+        // Mint stkTokens to user
+        IkStakingVault(address(this)).mintStkTokens(request.user, stkTokensToMint);
 
         emit StakingSharesClaimed(batchId.toUint32(), 0, request.user, stkTokensToMint);
         emit StkTokensIssued(request.user, stkTokensToMint);
@@ -82,13 +88,17 @@ contract ClaimModule is BaseModule {
 
         request.status = uint8(BaseModuleTypes.RequestStatus.CLAIMED);
 
-        // Calculate total kTokens to return (simplified 1:1 for now)
-        uint256 totalKTokensToReturn = uint256(request.stkTokenAmount);
+        // Calculate total kTokens to return based on settlement-time share price
+        uint256 sharePrice = _calculateStkTokenPrice($.lastTotalAssets, ERC20(address(this)).totalSupply());
+        uint256 totalKTokensToReturn = _calculateAssetValue(uint256(request.stkTokenAmount), sharePrice);
 
         // SECURITY: Validate slippage protection at claim time
         if (totalKTokensToReturn < request.minKTokens) {
             revert MinimumOutputNotMet();
         }
+
+        // Burn stkTokens from vault (already transferred to vault during request)
+        IkStakingVault(address(this)).burnStkTokens(address(this), request.stkTokenAmount);
 
         emit UnstakingAssetsClaimed(batchId.toUint32(), 0, request.user, totalKTokensToReturn);
         emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensToReturn);

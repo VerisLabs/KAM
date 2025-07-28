@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-/// @notice Interface for kAssetRouter push model
+/// @notice Interface for kAssetRouter for asset routing and settlement
 interface IkAssetRouter {
     function kAssetPush(address _asset, uint256 amount, uint256 batchId) external payable;
     function kAssetRequestPull(address _asset, uint256 amount, uint256 batchId) external payable;

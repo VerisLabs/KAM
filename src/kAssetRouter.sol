@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { Multicallable } from "solady/utils/Multicallable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
@@ -9,13 +10,17 @@ import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 import { kAssetRouterTypes } from "src/types/kAssetRouterTypes.sol";
 
 import { kBase } from "src/base/kBase.sol";
+
+import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
+
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 
 /// @title kAssetRouter
 contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
+    using FixedPointMathLib for uint256;
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
     using SafeCastLib for uint128;
@@ -38,6 +43,7 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
     event PegProtectionActivated(address indexed vault, uint256 shortfall);
     event PegProtectionExecuted(address indexed sourceVault, address indexed targetVault, uint256 amount);
     event YieldDistributed(address indexed vault, uint256 yield, bool isProfit);
+    event Deposited(address indexed vault, address indexed asset, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                                 ERRORS
@@ -47,6 +53,7 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
     error InsufficientVirtualBalance();
     error ContractPaused();
     error OnlyStakingVault();
+    error InvalidTotalAssets();
 
     /*//////////////////////////////////////////////////////////////
                             STORAGE LAYOUT
@@ -54,8 +61,6 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
 
     /// @custom:storage-location erc7201:kam.storage.kAssetRouter
     struct kAssetRouterStorage {
-        uint256 totalPendingDeposits;
-        uint256 totalPendingRedeems;
         mapping(address => mapping(uint256 => kAssetRouterTypes.Balances)) vaultBatchBalances; // vault => batchId =>
             // pending amounts
         mapping(address => mapping(address => uint256)) vaultBalances; // vault => asset => balance
@@ -129,7 +134,6 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
         _asset.safeTransferFrom(kMinter, address(this), amount);
 
         $.vaultBatchBalances[kMinter][batchId].deposited += amount.toUint128();
-        $.totalPendingDeposits += amount;
 
         emit AssetsPushed(kMinter, amount);
     }
@@ -156,7 +160,6 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
         address kMinter = msg.sender;
         if ($.vaultBalances[kMinter][_asset] < amount) revert InsufficientVirtualBalance();
 
-        $.totalPendingRedeems += amount;
         $.vaultBatchBalances[kMinter][batchId].requested += amount.toUint128();
 
         // Set batch receiver for the vault
@@ -183,8 +186,7 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
         if ($.vaultBalances[sourceVault][_asset] < amount) revert InsufficientVirtualBalance();
-
-        // should be when settled
+        // Update batch tracking for settlement
         $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
         $.vaultBatchBalances[targetVault][batchId].deposited += amount.toUint128();
 
@@ -232,69 +234,50 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
         uint256 deposited = $.vaultBatchBalances[vault][batchId].deposited;
         uint256 requested = $.vaultBatchBalances[vault][batchId].requested;
 
-        if (asset.balanceOf(address(this)) < requested) {
-            _insure(asset, requested);
+        $.vaultBalances[vault][asset] += deposited;
+        if (requested > 0) {
+            $.vaultBalances[vault][asset] -= requested;
         }
 
         if (vault == _getKMinter()) {
             // kMinter settlement: handle institutional deposits and redemptions
-            $.vaultBalances[vault][asset] += deposited;
-
             if (requested > 0) {
                 // Deploy batch receiver for this batch
                 address batchReceiver = IkStakingVault(vault).getSafeBatchReceiver(batchId);
-
                 // Transfer assets to batch receiver for redemptions
                 asset.safeTransfer(batchReceiver, requested);
-                $.vaultBalances[vault][asset] -= requested;
+            }
+
+            if (deposited > requested) {
+                address dnVault = _getDNVaultByAsset(asset);
+                uint256 netted = deposited - requested;
+                address adapter = _registry().getAdapter(vault);
+                if (dnVault != address(0)) {
+                    // deposit into adapter
+                    // MetavaultAdapter.deposit(asset, netted, vault);
+                    IAdapter(adapter).deposit(asset, netted, vault);
+                }
+
+                emit Deposited(vault, asset, netted);
             }
         } else {
             // Staking vault settlement
-            _settleStakingVault(vault, asset, deposited, requested, totalAssets_);
+            // Update virtual balances immediately for cross-vault transfers
+            _settleStakingVault(vault, asset, batchId, deposited, requested, totalAssets_);
         }
 
         // Clear batch balances
         delete $.vaultBatchBalances[vault][batchId];
-
-        // Update totals
-        $.totalPendingDeposits = deposited > $.totalPendingDeposits ? 0 : $.totalPendingDeposits - deposited;
-        $.totalPendingRedeems = requested > $.totalPendingRedeems ? 0 : $.totalPendingRedeems - requested;
+        delete $.vaultRequestedShares[vault][batchId];
 
         emit BatchSettled(vault, batchId.toUint32(), totalAssets_);
-    }
-
-    /// @notice Settle multiple vaults in parallel
-    /// @param vaults Array of vault addresses
-    /// @param batchIds Array of batch IDs (one per vault)
-    /// @param totalAssets Array of total assets (one per vault)
-    function batchSettle(
-        address[] calldata vaults,
-        uint256[] calldata batchIds,
-        uint256[] calldata totalAssets
-    )
-        external
-        payable
-        nonReentrant
-        whenNotPaused
-        onlyRelayer
-    {
-        uint256 length = vaults.length;
-        require(length == batchIds.length && length == totalAssets.length, "Array length mismatch");
-
-        for (uint256 i; i < length;) {
-            // Settle each vault individually
-            this.settleBatch(vaults[i], batchIds[i], totalAssets[i]);
-
-            unchecked {
-                ++i;
-            }
-        }
     }
 
     /// @notice Internal function to settle staking vault
     function _settleStakingVault(
         address vault,
         address asset,
+        uint256 batchId,
         uint256 deposited,
         uint256 requested,
         uint256 totalAssets
@@ -303,79 +286,66 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
     {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
-        // Handle share redemptions
-        uint256 requestedShares = $.vaultRequestedShares[vault][totalAssets];
+        uint256 requestedShares = $.vaultRequestedShares[vault][batchId];
         if (requestedShares > 0) {
             uint256 sharePrice = IkStakingVault(vault).calculateStkTokenPrice(totalAssets);
-            uint256 kTokensForShares = requestedShares * sharePrice / 1e18; // TODO: use solady FixedPointMathLic
+            uint256 kTokensForShares = requestedShares.mulWad(sharePrice);
             requested += kTokensForShares;
-            $.vaultRequestedShares[vault][totalAssets] = 0;
-        }
-
-        // Calculate net position
-        if (deposited > requested) {
-            // Net deposit to vault
-            uint256 netDeposit = deposited - requested;
-            $.vaultBalances[vault][asset] += netDeposit;
-            $.vaultBalances[_getKMinter()][asset] -= netDeposit;
-        } else if (requested > deposited) {
-            // Net withdrawal from vault
-            uint256 netWithdrawal = requested - deposited;
-            $.vaultBalances[vault][asset] -= netWithdrawal;
-            $.vaultBalances[_getKMinter()][asset] += netWithdrawal;
+            $.vaultRequestedShares[vault][batchId] = 0;
         }
 
         // Handle yield distribution
         address kToken = _getKTokenForAsset(asset);
         uint256 lastTotalAssets = IkStakingVault(vault).lastTotalAssets();
 
-        if (totalAssets > lastTotalAssets) {
-            // Positive yield - mint kTokens to vault
-            uint256 profit = totalAssets - lastTotalAssets;
-            IkToken(kToken).mint(vault, profit);
-            emit YieldDistributed(vault, profit, true);
-        } else if (totalAssets < lastTotalAssets) {
-            // Negative yield - burn kTokens from vault
-            uint256 loss = lastTotalAssets - totalAssets;
-            IkToken(kToken).burn(vault, loss);
-            emit YieldDistributed(vault, loss, false);
+        _handleYield(vault, asset, totalAssets, lastTotalAssets, kToken);
+
+        if (deposited > requested) {
+            uint256 netted = deposited - requested;
+            address adapter = _registry().getAdapter(vault);
+            IAdapter(adapter).deposit(asset, netted, vault);
+
+            emit Deposited(vault, asset, deposited);
         }
 
         // Update vault's total assets
         IkStakingVault(vault).updateLastTotalAssets(totalAssets);
     }
 
-    /// @notice Ensure 1:1 peg protection for kTokens
-    function _insure(address asset, uint256 amount) internal {
-        address kToken = _getKTokenForAsset(asset);
-        uint256 totalKTokenSupply = IkToken(kToken).totalSupply();
-
-        // Calculate total backing across all vaults
-        uint256 totalBacking = _calculateTotalAssetBacking(asset);
-
-        if (totalBacking < totalKTokenSupply) {
-            uint256 shortfall = totalKTokenSupply - totalBacking;
-
-            // TODO: implement adapter Insurance
-            // withdraw from adapter
+    function _handleYield(
+        address vault,
+        address asset,
+        uint256 totalAssets,
+        uint256 lastTotalAssets,
+        address kToken
+    )
+        internal
+    {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        if (totalAssets > lastTotalAssets) {
+            // Positive yield - mint kTokens to vault
+            uint256 profit = totalAssets - lastTotalAssets;
+            $.vaultBalances[vault][asset] += profit;
+            IkToken(kToken).mint(vault, profit);
+            emit YieldDistributed(vault, profit, true);
+        } else if (totalAssets < lastTotalAssets) {
+            // Negative yield - burn kTokens from vault
+            uint256 loss = lastTotalAssets - totalAssets;
+            $.vaultBalances[vault][asset] -= loss;
+            IkToken(kToken).burn(vault, loss);
+            emit YieldDistributed(vault, loss, false);
         }
     }
 
-    /// @notice Calculate total asset backing across all vaults
-    function _calculateTotalAssetBacking(address asset) internal view returns (uint256 totalBacking) {
-        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+    /// @notice In case of not enough funds for kTokens, pull from insurance
+    function _insure(address asset, uint256 requested) internal {
+        // TODO: Implement insurance
+        // call insurance adapter to pull from insurance
+    }
 
-        // Add kMinter balance
-        totalBacking += $.vaultBalances[_getKMinter()][asset];
-
-        // Add all vault balances
-        address[] memory vaults = _registry().getVaultsByAsset(asset);
-        for (uint256 i; i < vaults.length;) {
-            totalBacking += $.vaultBalances[vaults[i]][asset];
-            unchecked {
-                ++i;
-            }
-        }
+    /// @notice Get current batch ID for a vault
+    function _getCurrentBatchId(address vault) internal view returns (uint256) {
+        return IkStakingVault(vault).getBatchId();
     }
 
     /*////////////////////////////////////////////////////////////
@@ -413,7 +383,7 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
     /// @param batchId Batch ID
     /// @return deposited Amount deposited in this batch
     /// @return requested Amount requested in this batch
-    function getBatchBalances(
+    function getBatchIdBalances(
         address vault,
         uint256 batchId
     )
@@ -424,13 +394,6 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         kAssetRouterTypes.Balances memory balances = $.vaultBatchBalances[vault][batchId];
         return (balances.deposited, balances.requested);
-    }
-
-    /// @notice Get total asset backing across all vaults
-    /// @param asset Asset to check
-    /// @return Total backing amount
-    function getTotalBacking(address asset) external view returns (uint256) {
-        return _calculateTotalAssetBacking(asset);
     }
 
     /// @notice Get requested shares for a vault batch

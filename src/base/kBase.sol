@@ -170,12 +170,20 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
         if (asset == address(0)) revert InvalidVault(vault);
     }
 
+    /// @notice Gets the type of a vault
+    /// @param vault The vault address
+    /// @return vaultType The type of the vault
+    /// @dev Reverts if vault not registered
+    function _getVaultType(address vault) internal view returns (uint8 vaultType) {
+        vaultType = _registry().getVaultType(vault);
+    }
+
     /// @notice Gets the DN vault address for a given asset
     /// @param asset The asset address
     /// @return vault The corresponding DN vault address
     /// @dev Reverts if asset not supported
     function _getDNVaultByAsset(address asset) internal view returns (address vault) {
-        vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN_VAULT));
+        vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN));
         if (vault == address(0)) revert InvalidVault(vault);
     }
 

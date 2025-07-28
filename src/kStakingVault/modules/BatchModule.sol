@@ -39,12 +39,15 @@ contract BatchModule is BaseModule {
     // @notice Closes a batch to prevent new requests
     /// @param _batchId The batch ID to close
     /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
-    function closeBatch(uint256 _batchId) external onlyRelayer {
+    function closeBatch(uint256 _batchId, bool _create) external onlyRelayer {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         uint32 batchId32 = _batchId.toUint32();
         if ($.batches[batchId32].isClosed) revert Closed();
         $.batches[batchId32].isClosed = true;
 
+        if (_create) {
+            _newBatch();
+        }
         emit BatchClosed(batchId32);
     }
 
@@ -71,12 +74,7 @@ contract BatchModule is BaseModule {
         if (receiver != address(0)) return receiver;
 
         receiver = address(
-            new kBatchReceiver(
-                _registry().getContractById(K_MINTER),
-                _batchId,
-                _registry().getAssetById(keccak256("USDC")),
-                _registry().getAssetById(keccak256("WBTC"))
-            )
+            new kBatchReceiver(_registry().getContractById(K_MINTER), _batchId, $.underlyingAsset, $.underlyingAsset)
         );
 
         $.batches[batchId32].batchReceiver = receiver;
