@@ -55,7 +55,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         mapping(address => address) assetToKToken;
         mapping(address => bool) isKToken;
         mapping(address => address) kTokenToAsset;
-        mapping(address => bool) isSupportedAsset;
+        mapping(address => bool) isRegisteredAsset;
         EnumerableSetLib.AddressSet supportedAssets;
         mapping(address => address) vaultAdapters; // vault => adapter
         mapping(address => bool) registeredAdapters; // adapter => registered
@@ -124,8 +124,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         if (id == bytes32(0)) revert ZeroAddress();
 
         // Register asset
-        if (!$.isSupportedAsset[asset]) {
-            $.isSupportedAsset[asset] = true;
+        if (!$.isRegisteredAsset[asset]) {
+            $.isRegisteredAsset[asset] = true;
             $.supportedAssets.add(asset);
             $.singletonAssets[id] = asset;
             emit AssetSupported(asset);
@@ -152,7 +152,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         if (vault == address(0)) revert ZeroAddress();
         kRegistryStorage storage $ = _getkRegistryStorage();
         if ($.isVault[vault]) revert AlreadyRegistered();
-        if (!$.isSupportedAsset[asset]) revert AssetNotSupported();
+        if (!$.isRegisteredAsset[asset]) revert AssetNotSupported();
 
         // Register vault
         $.isVault[vault] = true;
@@ -302,9 +302,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Check if an asset is supported
     /// @param asset Asset address
     /// @return Whether the asset is supported
-    function isSupportedAsset(address asset) external view returns (bool) {
+    function isRegisteredAsset(address asset) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        return $.isSupportedAsset[asset];
+        return $.isRegisteredAsset[asset];
     }
 
     /// @notice Check if a vault is registered

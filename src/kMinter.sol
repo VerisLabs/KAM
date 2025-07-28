@@ -120,11 +120,11 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         nonReentrant
         whenNotPaused
         onlyInstitution
-        onlySupportedAsset(asset_)
+        onlyRegisteredAsset(asset_)
     {
         if (amount_ == 0) revert ZeroAmount();
         if (to_ == address(0)) revert ZeroAddress();
-        if (!_isSupportedAsset(asset_)) revert InvalidAsset();
+        if (!_isRegisteredAsset(asset_)) revert InvalidAsset();
 
         address kToken = _getKTokenForAsset(asset_);
         uint256 batchId = IkStakingVault(_getDNVaultByAsset(asset_)).getSafeBatchId();
@@ -160,12 +160,12 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         nonReentrant
         whenNotPaused
         onlyInstitution
-        onlySupportedAsset(asset_)
+        onlyRegisteredAsset(asset_)
         returns (bytes32 requestId)
     {
         if (amount_ == 0) revert ZeroAmount();
         if (to_ == address(0)) revert ZeroAddress();
-        if (!_isSupportedAsset(asset_)) revert InvalidAsset();
+        if (!_isRegisteredAsset(asset_)) revert InvalidAsset();
 
         address kToken = _getKTokenForAsset(asset_);
         if (kToken.balanceOf(msg.sender) < amount_) revert InsufficientBalance();
