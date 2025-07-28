@@ -10,15 +10,15 @@ import { Extsload } from "src/abstracts/Extsload.sol";
 import { kBase } from "src/base/kBase.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkBatchReceiver } from "src/interfaces/IkBatchReceiver.sol";
+
+import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
-
-import { kMinterTypes } from "src/types/kMinterTypes.sol";
 
 /// @title kMinter
 /// @notice Institutional minting and redemption manager for kTokens
 /// @dev Manages deposits/redemptions through kStakingVault with batch settlement
-contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
+contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
     using SafeCastLib for uint64;
@@ -36,7 +36,7 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @custom:storage-location erc7201:kam.storage.kMinter
     struct kMinterStorage {
         uint64 requestCounter;
-        mapping(bytes32 => kMinterTypes.RedeemRequest) redeemRequests;
+        mapping(bytes32 => RedeemRequest) redeemRequests;
         mapping(address => bytes32[]) userRequests;
     }
 
@@ -49,39 +49,6 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
             $.slot := KMINTER_STORAGE_LOCATION
         }
     }
-
-    /*//////////////////////////////////////////////////////////////
-                              EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event Initialized(address indexed registry, address indexed owner, address admin, address emergencyAdmin);
-    event Minted(address indexed to, uint256 amount, uint32 batchId);
-    event RedeemRequestCreated(
-        bytes32 indexed requestId,
-        address indexed user,
-        address indexed kToken,
-        uint256 amount,
-        address recipient,
-        uint24 batchId
-    );
-    event Redeemed(bytes32 indexed requestId);
-    event Cancelled(bytes32 indexed requestId);
-
-    /*//////////////////////////////////////////////////////////////
-                              ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error ZeroAmount();
-    error BatchNotSettled();
-    error InsufficientBalance();
-    error RequestNotFound();
-    error RequestNotEligible();
-    error RequestAlreadyProcessed();
-    error OnlyInstitution();
-    error BatchClosed();
-    error BatchSettled();
-    error ContractPaused();
-    error InvalidAsset();
 
     /*//////////////////////////////////////////////////////////////
                                 MODIFIERS
@@ -211,13 +178,13 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
 
         kMinterStorage storage $ = _getkMinterStorage();
         // Create redemption request
-        $.redeemRequests[requestId] = kMinterTypes.RedeemRequest({
+        $.redeemRequests[requestId] = RedeemRequest({
             id: requestId,
             user: to_,
             amount: amount_.toUint96(),
             asset: asset_,
             requestTimestamp: block.timestamp.toUint64(),
-            status: uint8(kMinterTypes.RequestStatus.PENDING),
+            status: uint8(RequestStatus.PENDING),
             batchId: batchId.toUint24(),
             recipient: to_
         });
@@ -239,16 +206,16 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @param requestId Request ID to execute
     function redeem(bytes32 requestId) external payable nonReentrant whenNotPaused onlyInstitution {
         kMinterStorage storage $ = _getkMinterStorage();
-        kMinterTypes.RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
+        RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
 
         // Validate request
         if (redeemRequest.id == bytes32(0)) revert RequestNotFound();
-        if (redeemRequest.status != uint8(kMinterTypes.RequestStatus.PENDING)) revert RequestNotEligible();
-        if (redeemRequest.status == uint8(kMinterTypes.RequestStatus.REDEEMED)) revert RequestAlreadyProcessed();
-        if (redeemRequest.status == uint8(kMinterTypes.RequestStatus.CANCELLED)) revert RequestNotEligible();
+        if (redeemRequest.status != uint8(RequestStatus.PENDING)) revert RequestNotEligible();
+        if (redeemRequest.status == uint8(RequestStatus.REDEEMED)) revert RequestAlreadyProcessed();
+        if (redeemRequest.status == uint8(RequestStatus.CANCELLED)) revert RequestNotEligible();
 
         // Update state
-        redeemRequest.status = uint8(kMinterTypes.RequestStatus.REDEEMED);
+        redeemRequest.status = uint8(RequestStatus.REDEEMED);
 
         address vault = _getDNVaultByAsset(redeemRequest.asset);
         address batchReceiver = IkStakingVault(vault).getBatchReceiver(uint256(redeemRequest.batchId));
@@ -270,16 +237,16 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @param requestId Request ID to cancel
     function cancelRequest(bytes32 requestId) external payable nonReentrant whenNotPaused onlyInstitution {
         kMinterStorage storage $ = _getkMinterStorage();
-        kMinterTypes.RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
+        RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
 
         // Validate request
         if (redeemRequest.id == bytes32(0)) revert RequestNotFound();
-        if (redeemRequest.status != uint8(kMinterTypes.RequestStatus.PENDING)) revert RequestNotEligible();
-        if (redeemRequest.status == uint8(kMinterTypes.RequestStatus.REDEEMED)) revert RequestAlreadyProcessed();
-        if (redeemRequest.status == uint8(kMinterTypes.RequestStatus.CANCELLED)) revert RequestNotEligible();
+        if (redeemRequest.status != uint8(RequestStatus.PENDING)) revert RequestNotEligible();
+        if (redeemRequest.status == uint8(RequestStatus.REDEEMED)) revert RequestAlreadyProcessed();
+        if (redeemRequest.status == uint8(RequestStatus.CANCELLED)) revert RequestNotEligible();
 
         // Update state
-        redeemRequest.status = uint8(kMinterTypes.RequestStatus.CANCELLED);
+        redeemRequest.status = uint8(RequestStatus.CANCELLED);
 
         address vault = _getDNVaultByAsset(redeemRequest.asset);
         if (!IkStakingVault(vault).isBatchClosed()) revert BatchClosed();
@@ -291,16 +258,6 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
         kToken.safeTransfer(redeemRequest.user, redeemRequest.amount);
 
         emit Cancelled(requestId);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                          ADMIN FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Set contract pause state
-    /// @param paused New pause state
-    function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
-        _setPaused(paused);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -319,6 +276,16 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
     }
 
     /*//////////////////////////////////////////////////////////////
+                          ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Set contract pause state
+    /// @param paused New pause state
+    function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
+        _setPaused(paused);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -331,14 +298,24 @@ contract kMinter is Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @notice Get a redeem request
     /// @param requestId Request ID
     /// @return Redeem request
-    function getRedeemRequest(bytes32 requestId) external view returns (kMinterTypes.RedeemRequest memory) {
+    function getRedeemRequest(bytes32 requestId) external view returns (RedeemRequest memory) {
         kMinterStorage storage $ = _getkMinterStorage();
         return $.redeemRequests[requestId];
     }
 
+    /// @notice Get all redeem requests for a user
+    /// @param user User address
+    /// @return Redeem requests
     function getUserRequests(address user) external view returns (bytes32[] memory) {
         kMinterStorage storage $ = _getkMinterStorage();
         return $.userRequests[user];
+    }
+
+    /// @notice Get the request counter
+    /// @return Request counter
+    function getRequestCounter() external view returns (uint256) {
+        kMinterStorage storage $ = _getkMinterStorage();
+        return $.requestCounter;
     }
 
     /*//////////////////////////////////////////////////////////////

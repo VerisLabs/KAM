@@ -3,15 +3,12 @@ pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ERC20 } from "solady/tokens/ERC20.sol";
-
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { Extsload } from "src/abstracts/Extsload.sol";
-
-import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
@@ -69,14 +66,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
         if (owner_ == address(0)) revert ZeroAddress();
         if (admin_ == address(0)) revert ZeroAddress();
         if (emergencyAdmin_ == address(0)) revert ZeroAddress();
-
-        // Ensure decimal consistency between asset, kToken, and stkToken
-        require(decimals_ == IERC20(asset_).decimals(), "Decimal mismatch with asset");
-
-        address kToken = _getKTokenForAsset(asset_);
-        if (kToken != address(0)) {
-            require(decimals_ == IERC20(kToken).decimals(), "Decimal mismatch with kToken");
-        }
 
         // Initialize ownership and roles
         __ModuleBase_init(registry_, owner_, admin_, paused_);

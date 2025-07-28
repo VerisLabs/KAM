@@ -2,37 +2,66 @@
 pragma solidity 0.8.30;
 
 interface IkRegistry {
+    /*//////////////////////////////////////////////////////////////
+                                ENUMS
+    //////////////////////////////////////////////////////////////*/
+
     enum VaultType {
         DN,
         ALPHA,
         BETA
     }
 
-    function getContractById(bytes32 id) external view returns (address);
+    /*//////////////////////////////////////////////////////////////
+                              EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    event SingletonContractSet(bytes32 indexed id, address indexed contractAddress);
+    event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
+    event KTokenRegistered(address indexed asset, address indexed kToken);
+    event AssetSupported(address indexed asset);
+    event AdapterRegistered(address indexed vault, address indexed adapter);
+    event AdapterRemoved(address indexed vault, address indexed adapter);
+
+    /*//////////////////////////////////////////////////////////////
+                              ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    error ZeroAddress();
+    error AlreadyRegistered();
+    error AssetNotSupported();
+    error ContractNotSet();
+    error AdapterNotRegistered();
+    error InvalidAdapter();
+    error AdapterAlreadySet();
+
+    /*//////////////////////////////////////////////////////////////
+                              FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
     function setSingletonContract(bytes32 id, address contractAddress) external;
     function registerAsset(address asset, address kToken, bytes32 id) external;
     function registerVault(address vault, VaultType type_, address asset) external;
-    function getAssetById(bytes32 id) external view returns (address);
-    function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address);
-    function assetToKToken(address asset) external view returns (address);
-    function kTokenToAsset(address kToken) external view returns (address);
-    function vaultAsset(address vault) external view returns (address);
-    function vaultType(address vault) external view returns (VaultType);
-    function getVaultsByAsset(address asset) external view returns (address[] memory);
-    function getVaultType(address vault) external view returns (uint8);
-    function getPrimaryVault(address asset, VaultType type_) external view returns (address);
-    function isSupportedAsset(address asset) external view returns (bool);
-    function isVault(address vault) external view returns (bool);
-    function isKToken(address kToken) external view returns (bool);
-    function isSingletonContract(address contractAddress) external view returns (bool);
-    function isRelayer(address account) external view returns (bool);
-
-    // Adapter management functions
     function registerAdapter(address vault, address adapter) external;
     function removeAdapter(address vault) external;
-    function notifyAdapterRemoval(address adapter) external;
+
+    function getContractById(bytes32 id) external view returns (address);
+    function getAssetById(bytes32 id) external view returns (address);
+    function getAllAssets() external view returns (address[] memory);
+    function getCoreContracts()
+        external
+        view
+        returns (address kMinter, address kAssetRouter, address kVaultFactory, address upgradeManager);
+    function getVaultsByAsset(address asset) external view returns (address[] memory);
+    function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address);
+    function getVaultType(address vault) external view returns (uint8);
+    function isRelayer(address account) external view returns (bool);
+    function isSupportedAsset(address asset) external view returns (bool);
+    function isVault(address vault) external view returns (bool);
+    function isSingletonContract(address contractAddress) external view returns (bool);
+    function isKToken(address kToken) external view returns (bool);
     function getAdapter(address vault) external view returns (address);
     function isAdapterRegistered(address adapter) external view returns (bool);
     function getVaultAsset(address vault) external view returns (address);
-    function grantRoles(address user, uint256 roles) external;
+    function assetToKToken(address asset) external view returns (address);
 }

@@ -71,14 +71,6 @@ interface IAdapter {
     function adapterBalance(address vault, address asset) external view returns (uint256);
 
     /*//////////////////////////////////////////////////////////////
-                          ADMIN FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Notifies the adapter's removal from the protocol
-    /// @dev Called by adapter owner to deregister from kAssetRouter
-    function notifyRemoval() external;
-
-    /*//////////////////////////////////////////////////////////////
                           METADATA
     //////////////////////////////////////////////////////////////*/
 

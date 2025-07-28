@@ -166,7 +166,7 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /// @return asset The asset address managed by the vault
     /// @dev Reverts if vault not registered
     function _getVaultAsset(address vault) internal view returns (address asset) {
-        asset = _registry().vaultAsset(vault);
+        asset = _registry().getVaultAsset(vault);
         if (asset == address(0)) revert InvalidVault(vault);
     }
 

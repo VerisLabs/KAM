@@ -2,17 +2,17 @@
 pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { IAdapter } from "src/interfaces/IAdapter.sol";
+import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 /// @title kRegistry
 /// @notice Central registry for KAM protocol contracts
 /// @dev Manages singleton contracts, vault registration, asset support, and kToken mapping
-contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
+contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     using EnumerableSetLib for EnumerableSetLib.AddressSet;
 
     /*//////////////////////////////////////////////////////////////
@@ -22,39 +22,6 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     uint256 internal constant ADMIN_ROLE = _ROLE_0;
     uint256 internal constant FACTORY_ROLE = _ROLE_1;
     uint256 internal constant RELAYER_ROLE = _ROLE_2;
-
-    /*//////////////////////////////////////////////////////////////
-                              EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event SingletonContractSet(bytes32 indexed id, address indexed contractAddress);
-    event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
-    event KTokenRegistered(address indexed asset, address indexed kToken);
-    event AssetSupported(address indexed asset);
-    event AdapterRegistered(address indexed vault, address indexed adapter);
-    event AdapterRemoved(address indexed vault, address indexed adapter);
-
-    /*//////////////////////////////////////////////////////////////
-                              ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error ZeroAddress();
-    error AlreadyRegistered();
-    error AssetNotSupported();
-    error ContractNotSet();
-    error AdapterNotRegistered();
-    error InvalidAdapter();
-    error AdapterAlreadySet();
-
-    /*//////////////////////////////////////////////////////////////
-                              ENUMS
-    //////////////////////////////////////////////////////////////*/
-
-    enum VaultType {
-        DN,
-        ALPHA,
-        BETA
-    }
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
@@ -321,9 +288,9 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Get the type of a vault
     /// @param vault Vault address
     /// @return Vault type
-    function getVaultType(address vault) external view returns (VaultType) {
+    function getVaultType(address vault) external view returns (uint8) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        return VaultType($.vaultType[vault]);
+        return $.vaultType[vault];
     }
 
     /// @notice Check if the caller is the relayer
@@ -388,6 +355,14 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
         return $.vaultAsset[vault];
     }
 
+    /// @notice Get the kToken for a specific asset
+    /// @param asset Asset address
+    /// @return KToken address
+    function assetToKToken(address asset) external view returns (address) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        return $.assetToKToken[asset];
+    }
+
     /*//////////////////////////////////////////////////////////////
                         UPGRADE AUTHORIZATION
     //////////////////////////////////////////////////////////////*/
@@ -398,6 +373,13 @@ contract kRegistry is Initializable, UUPSUpgradeable, OwnableRoles {
     function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
         if (newImplementation == address(0)) revert ZeroAddress();
     }
+
+    /*//////////////////////////////////////////////////////////////
+                            RECEIVE FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Receive ETH (for gas refunds, etc.)
+    receive() external payable { }
 
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO

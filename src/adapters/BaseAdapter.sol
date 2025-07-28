@@ -218,16 +218,6 @@ abstract contract BaseAdapter is IAdapter, kBase, Initializable {
                           ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Notifies the adapter's removal from the protocol
-    /// @dev Called by adapter owner to deregister from registry
-    function notifyRemoval() external override onlyOwner {
-        BaseAdapterStorage storage $ = _getBaseAdapterStorage();
-        $.registered = false;
-
-        // Notify registry of removal
-        _registry().notifyAdapterRemoval(address(this));
-    }
-
     /// @notice Emergency function to pause adapter operations
     /// @param paused New pause state
     function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE) {

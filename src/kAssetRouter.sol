@@ -7,53 +7,21 @@ import { Multicallable } from "solady/utils/Multicallable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
-import { kAssetRouterTypes } from "src/types/kAssetRouterTypes.sol";
 
 import { kBase } from "src/base/kBase.sol";
 
 import { IAdapter } from "src/interfaces/IAdapter.sol";
+import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 
-import { kBatchReceiver } from "src/kBatchReceiver.sol";
-
 /// @title kAssetRouter
-contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
+contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, Multicallable {
     using FixedPointMathLib for uint256;
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
     using SafeCastLib for uint128;
-
-    /*//////////////////////////////////////////////////////////////
-                                EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event Initialized(address indexed registry, address indexed owner, address admin, bool paused);
-    event AssetsPushed(address indexed from, uint256 amount);
-    event AssetsRequestPulled(address indexed vault, address indexed asset, uint256 amount);
-    event AssetsTransfered(
-        address indexed sourceVault, address indexed targetVault, address indexed asset, uint256 amount
-    );
-    event SharesRequested(address indexed vault, uint32 batchId, uint256 amount);
-    event SharesSettled(
-        address[] vaults, uint32 batchId, uint256 totalRequestedShares, uint256[] totalAssets, uint256 sharePrice
-    );
-    event BatchSettled(address indexed vault, uint32 indexed batchId, uint256 totalAssets);
-    event PegProtectionActivated(address indexed vault, uint256 shortfall);
-    event PegProtectionExecuted(address indexed sourceVault, address indexed targetVault, uint256 amount);
-    event YieldDistributed(address indexed vault, uint256 yield, bool isProfit);
-    event Deposited(address indexed vault, address indexed asset, uint256 amount);
-
-    /*//////////////////////////////////////////////////////////////
-                                ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error ZeroAmount();
-    error InsufficientVirtualBalance();
-    error ContractPaused();
-    error OnlyStakingVault();
-    error InvalidTotalAssets();
 
     /*//////////////////////////////////////////////////////////////
                             STORAGE LAYOUT
@@ -61,7 +29,7 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
 
     /// @custom:storage-location erc7201:kam.storage.kAssetRouter
     struct kAssetRouterStorage {
-        mapping(address => mapping(uint256 => kAssetRouterTypes.Balances)) vaultBatchBalances; // vault => batchId =>
+        mapping(address => mapping(uint256 => Balances)) vaultBatchBalances; // vault => batchId =>
             // pending amounts
         mapping(address => mapping(address => uint256)) vaultBalances; // vault => asset => balance
         mapping(address => mapping(uint256 => uint256)) vaultRequestedShares; // vault => batchId => balance
@@ -92,8 +60,12 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
     }
 
     /*//////////////////////////////////////////////////////////////
-                              INITIALIZER
+                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
+
+    constructor() {
+        _disableInitializers();
+    }
 
     /// @notice Initialize the kAssetRouter with asset and admin configuration
     /// @param registry_ Address of the kRegistry contract
@@ -107,7 +79,7 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
     }
 
     /*//////////////////////////////////////////////////////////////
-                            CORE FUNCTIONS
+                            kMINTER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Push assets from kMinter to designated DN vault
@@ -167,7 +139,16 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
 
         emit AssetsRequestPulled(kMinter, _asset, amount);
     }
+    /*//////////////////////////////////////////////////////////////
+                            kSTAKING VAULT FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
+    /// @notice Transfer assets between kStakingVaults
+    /// @param sourceVault The vault to transfer assets from
+    /// @param targetVault The vault to transfer assets to
+    /// @param _asset The asset to transfer
+    /// @param amount Amount of assets to transfer
+    /// @param batchId The batch ID for this transfer
     function kAssetTransfer(
         address sourceVault,
         address targetVault,
@@ -193,6 +174,10 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
         emit AssetsTransfered(sourceVault, targetVault, _asset, amount);
     }
 
+    /// @notice Request to pull shares for kStakingVault redemptions
+    /// @param sourceVault The vault to redeem shares from
+    /// @param amount Amount requested for redemption
+    /// @param batchId The batch ID for this redemption
     function kSharesRequestPull(
         address sourceVault,
         uint256 amount,
@@ -212,6 +197,10 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
 
         emit SharesRequested(sourceVault, batchId.toUint32(), amount);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                            SETTLEMENT FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     /// @notice Settle a single vault's batch
     /// @param vault Vault address to settle
@@ -274,6 +263,12 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
     }
 
     /// @notice Internal function to settle staking vault
+    /// @param vault The vault to settle
+    /// @param asset The asset to settle
+    /// @param batchId The batch ID to settle
+    /// @param deposited The deposited amount
+    /// @param requested The requested amount
+    /// @param totalAssets The total assets in the vault
     function _settleStakingVault(
         address vault,
         address asset,
@@ -312,6 +307,12 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
         IkStakingVault(vault).updateLastTotalAssets(totalAssets);
     }
 
+    /// @notice Handle yield distribution
+    /// @param vault The vault to handle yield for
+    /// @param asset The asset to handle yield for
+    /// @param totalAssets The total assets in the vault
+    /// @param lastTotalAssets The last total assets in the vault
+    /// @param kToken The kToken to use for yield distribution
     function _handleYield(
         address vault,
         address asset,
@@ -343,11 +344,6 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
         // call insurance adapter to pull from insurance
     }
 
-    /// @notice Get current batch ID for a vault
-    function _getCurrentBatchId(address vault) internal view returns (uint256) {
-        return IkStakingVault(vault).getBatchId();
-    }
-
     /*////////////////////////////////////////////////////////////
                           ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -363,6 +359,12 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Check if contract is paused
+    /// @return True if paused
+    function isPaused() external view returns (bool) {
+        return _getBaseStorage().paused;
+    }
+
     /// @notice Get virtual asset balance for a specific vault and asset
     /// @param _vault The vault to query (kMinter, kDNVault, kSVault)
     /// @param _asset The asset to query (USDC, WBTC, etc.)
@@ -370,12 +372,6 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
     function getBalanceOf(address _vault, address _asset) external view returns (uint256) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         return $.vaultBalances[_vault][_asset];
-    }
-
-    /// @notice Check if contract is paused
-    /// @return True if paused
-    function isPaused() external view returns (bool) {
-        return _getBaseStorage().paused;
     }
 
     /// @notice Get batch balances for a vault
@@ -392,7 +388,7 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
         returns (uint256 deposited, uint256 requested)
     {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-        kAssetRouterTypes.Balances memory balances = $.vaultBatchBalances[vault][batchId];
+        Balances memory balances = $.vaultBatchBalances[vault][batchId];
         return (balances.deposited, balances.requested);
     }
 
@@ -421,4 +417,20 @@ contract kAssetRouter is Initializable, UUPSUpgradeable, kBase, Multicallable {
 
     /// @notice Receive ETH (for gas refunds, etc.)
     receive() external payable { }
+
+    /*//////////////////////////////////////////////////////////////
+                        CONTRACT INFO
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Returns the contract name
+    /// @return Contract name
+    function contractName() external pure returns (string memory) {
+        return "kAssetRouter";
+    }
+
+    /// @notice Returns the contract version
+    /// @return Contract version
+    function contractVersion() external pure returns (string memory) {
+        return "1.0.0";
+    }
 }
