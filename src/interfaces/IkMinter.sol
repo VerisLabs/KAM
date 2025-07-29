@@ -16,14 +16,14 @@ interface IkMinter {
     }
 
     struct RedeemRequest {
-        bytes32 id;
-        address user;
-        uint96 amount;
-        address asset;
-        uint64 requestTimestamp;
-        uint8 status;
-        uint24 batchId;
-        address recipient;
+        bytes32 id;           // 32 bytes (slot 1)
+        address user;         // 20 bytes (slot 2, 12 bytes wasted)
+        uint96 amount;        // 12 bytes (slot 3)
+        address asset;        // 20 bytes (slot 4, 12 bytes wasted)
+        uint64 requestTimestamp; // 8 bytes (slot 5)
+        uint8 status;         // 1 byte  (slot 5)
+        uint24 batchId;       // 3 bytes (slot 5)
+        address recipient;    // 20 bytes (slot 6, 12 bytes wasted)
     }
 
     /*//////////////////////////////////////////////////////////////
