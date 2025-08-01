@@ -12,14 +12,14 @@ library BaseModuleTypes {
     }
 
     struct StakeRequest {
-        uint256 id;           // 32 bytes (slot 1)
-        address user;         // 20 bytes (slot 2)
-        uint96 kTokenAmount;  // 12 bytes (slot 3)
-        address recipient;    // 20 bytes (slot 4)
+        uint256 id; // 32 bytes (slot 1)
+        address user; // 20 bytes (slot 2)
+        uint96 kTokenAmount; // 12 bytes (slot 3)
+        address recipient; // 20 bytes (slot 4)
         uint64 requestTimestamp; // 8 bytes (slot 5)
-        uint8 status;         // 1 byte (slot 5)
-        uint96 minStkTokens;  // 12 bytes (slot 6)
-        uint32 batchId;       // 4 bytes (slot 6)
+        uint8 status; // 1 byte (slot 5)
+        uint96 minStkTokens; // 12 bytes (slot 6)
+        uint32 batchId; // 4 bytes (slot 6)
     }
 
     struct UnstakeRequest {

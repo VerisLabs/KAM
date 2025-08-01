@@ -40,8 +40,6 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     error AssetNotSupported(address asset);
     error InvalidVault(address vault);
     error OnlyKMinter();
-    error OnlyKAssetRouter();
-    error OnlyKBatch();
     error OnlyRelayer();
 
     /*//////////////////////////////////////////////////////////////
@@ -96,7 +94,7 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /// @notice Returns the registry contract address
     /// @return The kRegistry contract address
     /// @dev Reverts if contract not initialized
-    function registry() public view returns (address) {
+    function registry() external view returns (address) {
         kBaseStorage storage $ = _getBaseStorage();
         if (!$.initialized) revert NotInitialized();
         return $.registry;
@@ -170,14 +168,6 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
         if (asset == address(0)) revert InvalidVault(vault);
     }
 
-    /// @notice Gets the type of a vault
-    /// @param vault The vault address
-    /// @return vaultType The type of the vault
-    /// @dev Reverts if vault not registered
-    function _getVaultType(address vault) internal view returns (uint8 vaultType) {
-        vaultType = _registry().getVaultType(vault);
-    }
-
     /// @notice Gets the DN vault address for a given asset
     /// @param asset The asset address
     /// @return vault The corresponding DN vault address
@@ -194,6 +184,9 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
         return _registry().isVault(vault);
     }
 
+    /// @notice Checks if an asset is registered
+    /// @param asset The asset address to check
+    /// @return Whether the asset is registered
     function _isRegisteredAsset(address asset) internal view returns (bool) {
         return _registry().isRegisteredAsset(asset);
     }

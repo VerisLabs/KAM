@@ -205,11 +205,17 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @notice Settle a single vault's batch
     /// @param vault Vault address to settle
     /// @param batchId Batch ID to settle
-    /// @param totalAssets_ Current total assets in the vault
+    /// @param totalAssets_ total assets in the vault with Deposited and Requested and Shares
+    /// @param netted netted amount in current batch
+    /// @param yield yield in current batch
+    /// @param profit whether the batch is profitable
     function settleBatch(
         address vault,
         uint256 batchId,
-        uint256 totalAssets_
+        uint256 totalAssets_,
+        uint256 yield,
+        uint256 netted,
+        bool profit
     )
         external
         payable
@@ -219,129 +225,48 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         address asset = _getVaultAsset(vault);
-
-        uint256 deposited = $.vaultBatchBalances[vault][batchId].deposited;
+        address kToken = _getKTokenForAsset(asset);
+        bool isKMinter; // for event Deposited
         uint256 requested = $.vaultBatchBalances[vault][batchId].requested;
-
-        $.vaultBalances[vault][asset] += deposited;
-        if (requested > 0) {
-            $.vaultBalances[vault][asset] -= requested;
-        }
-
-        if (vault == _getKMinter()) {
-            // kMinter settlement: handle institutional deposits and redemptions
-            if (requested > 0) {
-                // Deploy batch receiver for this batch
-                address batchReceiver = IkStakingVault(vault).getSafeBatchReceiver(batchId);
-                // Transfer assets to batch receiver for redemptions
-                asset.safeTransfer(batchReceiver, requested);
-            }
-
-            if (deposited > requested) {
-                address dnVault = _getDNVaultByAsset(asset);
-                uint256 netted = deposited - requested;
-                address adapter = _registry().getAdapter(vault);
-                if (dnVault != address(0)) {
-                    // deposit into adapter
-                    // MetavaultAdapter.deposit(asset, netted, vault);
-                    IAdapter(adapter).deposit(asset, netted, vault);
-                }
-
-                emit Deposited(vault, asset, netted);
-            }
-        } else {
-            // Staking vault settlement
-            // Update virtual balances immediately for cross-vault transfers
-            _settleStakingVault(vault, asset, batchId, deposited, requested, totalAssets_);
-        }
 
         // Clear batch balances
         delete $.vaultBatchBalances[vault][batchId];
         delete $.vaultRequestedShares[vault][batchId];
 
-        emit BatchSettled(vault, batchId.toUint32(), totalAssets_);
-    }
+        // kMinter settlement
+        if (vault == _getKMinter()) {
+            // kMinter settlement: handle institutional deposits and redemptions
+            isKMinter = true;
 
-    /// @notice Internal function to settle staking vault
-    /// @param vault The vault to settle
-    /// @param asset The asset to settle
-    /// @param batchId The batch ID to settle
-    /// @param deposited The deposited amount
-    /// @param requested The requested amount
-    /// @param totalAssets The total assets in the vault
-    function _settleStakingVault(
-        address vault,
-        address asset,
-        uint256 batchId,
-        uint256 deposited,
-        uint256 requested,
-        uint256 totalAssets
-    )
-        internal
-    {
-        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-
-        uint256 requestedShares = $.vaultRequestedShares[vault][batchId];
-        if (requestedShares > 0) {
-            uint256 sharePrice = IkStakingVault(vault).calculateStkTokenPrice(totalAssets);
-            uint256 kTokensForShares = requestedShares.mulWad(sharePrice);
-            requested += kTokensForShares;
-            $.vaultRequestedShares[vault][batchId] = 0;
+            vault = _getDNVaultByAsset(asset);
+            if (requested > 0) {
+                // Transfer assets to batch receiver for redemptions
+                address receiver = IkStakingVault(vault).getSafeBatchReceiver(batchId);
+                if (receiver == address(0)) revert ZeroAddress();
+                asset.safeTransfer(receiver, requested);
+            }
+        } else {
+            // kMinter yield is sent to insuranceFund, cannot be minted.
+            // peg will be positive till excess withdrawn and sent to insuranceFund.
+            // Insurance fund is managed by the backend
+            if (profit) {
+                IkToken(kToken).mint(vault, yield);
+                emit YieldDistributed(vault, yield, true);
+            } else {
+                IkToken(kToken).burn(vault, yield);
+                emit YieldDistributed(vault, yield, false);
+            }
         }
 
-        // Handle yield distribution
-        address kToken = _getKTokenForAsset(asset);
-        uint256 lastTotalAssets = IkStakingVault(vault).lastTotalAssets();
-
-        _handleYield(vault, asset, totalAssets, lastTotalAssets, kToken);
-
-        if (deposited > requested) {
-            uint256 netted = deposited - requested;
-            address adapter = _registry().getAdapter(vault);
-            IAdapter(adapter).deposit(asset, netted, vault);
-
-            emit Deposited(vault, asset, deposited);
+        if (netted > 0) {
+            IAdapter(_registry().getAdapter(vault)).deposit(asset, netted, vault);
+            emit Deposited(vault, asset, netted, isKMinter);
         }
 
         // Update vault's total assets
-        IkStakingVault(vault).updateLastTotalAssets(totalAssets);
-    }
+        IkStakingVault(vault).updateLastTotalAssets(totalAssets_);
 
-    /// @notice Handle yield distribution
-    /// @param vault The vault to handle yield for
-    /// @param asset The asset to handle yield for
-    /// @param totalAssets The total assets in the vault
-    /// @param lastTotalAssets The last total assets in the vault
-    /// @param kToken The kToken to use for yield distribution
-    function _handleYield(
-        address vault,
-        address asset,
-        uint256 totalAssets,
-        uint256 lastTotalAssets,
-        address kToken
-    )
-        internal
-    {
-        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-        if (totalAssets > lastTotalAssets) {
-            // Positive yield - mint kTokens to vault
-            uint256 profit = totalAssets - lastTotalAssets;
-            $.vaultBalances[vault][asset] += profit;
-            IkToken(kToken).mint(vault, profit);
-            emit YieldDistributed(vault, profit, true);
-        } else if (totalAssets < lastTotalAssets) {
-            // Negative yield - burn kTokens from vault
-            uint256 loss = lastTotalAssets - totalAssets;
-            $.vaultBalances[vault][asset] -= loss;
-            IkToken(kToken).burn(vault, loss);
-            emit YieldDistributed(vault, loss, false);
-        }
-    }
-
-    /// @notice In case of not enough funds for kTokens, pull from insurance
-    function _insure(address asset, uint256 requested) internal {
-        // TODO: Implement insurance
-        // call insurance adapter to pull from insurance
+        emit BatchSettled(vault, batchId.toUint32(), totalAssets_);
     }
 
     /*////////////////////////////////////////////////////////////

@@ -139,7 +139,7 @@ contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
     /// @notice Returns the registry contract address
     /// @return The kRegistry contract address
     /// @dev Reverts if contract not initialized
-    function registry() public view returns (address) {
+    function registry() external view returns (address) {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         if (!$.initialized) revert NotInitialized();
         return $.registry;

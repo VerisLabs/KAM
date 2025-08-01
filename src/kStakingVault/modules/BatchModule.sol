@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
@@ -46,7 +44,7 @@ contract BatchModule is BaseModule {
         $.batches[batchId32].isClosed = true;
 
         if (_create) {
-            _newBatch();
+            batchId32 = _newBatch().toUint32();
         }
         emit BatchClosed(batchId32);
     }

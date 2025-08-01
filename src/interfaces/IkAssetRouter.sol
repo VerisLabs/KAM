@@ -30,7 +30,7 @@ interface IkAssetRouter {
     event PegProtectionActivated(address indexed vault, uint256 shortfall);
     event PegProtectionExecuted(address indexed sourceVault, address indexed targetVault, uint256 amount);
     event YieldDistributed(address indexed vault, uint256 yield, bool isProfit);
-    event Deposited(address indexed vault, address indexed asset, uint256 amount);
+    event Deposited(address indexed vault, address indexed asset, uint256 amount, bool isKMinter);
 
     /*//////////////////////////////////////////////////////////////
                                 ERRORS
@@ -62,7 +62,16 @@ interface IkAssetRouter {
         external
         payable;
     function kSharesRequestPull(address sourceVault, uint256 amount, uint256 batchId) external payable;
-    function settleBatch(address vault, uint256 batchId, uint256 totalAssets) external payable;
+    function settleBatch(
+        address vault,
+        uint256 batchId,
+        uint256 totalAssets,
+        uint256 yield,
+        uint256 netted,
+        bool profit
+    )
+        external
+        payable;
     function setPaused(bool paused) external;
 
     function getBalanceOf(address _vault, address _asset) external view returns (uint256);

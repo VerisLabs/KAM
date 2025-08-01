@@ -48,9 +48,10 @@ contract CustodialAdapter is BaseAdapter {
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Disables initializers to prevent implementation contract initialization
+    /// @notice Empty constructor to ensure clean initialization state
     constructor() {
-        _disableInitializers();
+        // Intentionally empty - do not disable initializers
+        // This allows the proxy to initialize properly
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -79,7 +80,7 @@ contract CustodialAdapter is BaseAdapter {
         address custodialAddress = $.vaultDestinations[onBehalfOf];
         if (custodialAddress == address(0)) revert VaultDestinationNotSet();
 
-        // Transfer assets to custodial address
+        // Transfer assets from kAssetRouter to custodial address
         asset.safeTransferFrom(msg.sender, custodialAddress, amount);
 
         // Update adapter balance tracking

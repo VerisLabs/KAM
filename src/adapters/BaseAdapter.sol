@@ -1,18 +1,39 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import { kBase } from "src/base/kBase.sol";
 import { IAdapter } from "src/interfaces/IAdapter.sol";
-import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
+import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 /// @title BaseAdapter
 /// @notice Abstract base contract for all protocol adapters
 /// @dev Provides common functionality and virtual balance tracking for external strategy integrations
-abstract contract BaseAdapter is IAdapter, kBase, Initializable {
+abstract contract BaseAdapter is IAdapter, OwnableRoles, Initializable, UUPSUpgradeable {
     using SafeTransferLib for address;
+
+    /*//////////////////////////////////////////////////////////////
+                                ROLES
+    //////////////////////////////////////////////////////////////*/
+
+    uint256 internal constant ADMIN_ROLE = _ROLE_0;
+    uint256 internal constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
+
+    /*//////////////////////////////////////////////////////////////
+                              CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+
+    bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
+
+    /*//////////////////////////////////////////////////////////////
+                              ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    error OnlyKAssetRouter();
+    error ContractNotFound(bytes32 identifier);
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -20,6 +41,7 @@ abstract contract BaseAdapter is IAdapter, kBase, Initializable {
 
     /// @custom:storage-location erc7201:kam.storage.BaseAdapter
     struct BaseAdapterStorage {
+        address registry;
         mapping(address vault => mapping(address asset => uint256)) adapterBalances;
         bool registered;
         string name;
@@ -43,6 +65,36 @@ abstract contract BaseAdapter is IAdapter, kBase, Initializable {
     /// @notice Restricts function access to kAssetRouter only
     modifier onlyKAssetRouter() {
         if (msg.sender != _getKAssetRouter()) revert OnlyKAssetRouter();
+        _;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          REGISTRY HELPERS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Returns the registry contract interface
+    /// @return IkRegistry interface for registry interaction
+    function _registry() internal view returns (IkRegistry) {
+        BaseAdapterStorage storage $ = _getBaseAdapterStorage();
+        return IkRegistry($.registry);
+    }
+
+    /// @notice Gets the kAssetRouter singleton contract address
+    /// @return router The kAssetRouter contract address
+    function _getKAssetRouter() internal view returns (address router) {
+        router = _registry().getContractById(K_ASSET_ROUTER);
+        if (router == address(0)) revert ContractNotFound(K_ASSET_ROUTER);
+    }
+
+    /// @notice Checks if an address is a relayer
+    /// @return Whether the address is a relayer
+    function _getRelayer() internal view returns (bool) {
+        return _registry().isRelayer(msg.sender);
+    }
+
+    /// @notice Restricts function access to the relayer
+    modifier onlyRelayer() {
+        if (!_getRelayer()) revert OnlyKAssetRouter(); // Reuse error for simplicity
         _;
     }
 
@@ -70,11 +122,15 @@ abstract contract BaseAdapter is IAdapter, kBase, Initializable {
         string memory version_
     )
         internal
-        initializer
+        onlyInitializing
     {
-        __kBase_init(registry_, owner_, admin_, false);
+        // Initialize OwnableRoles
+        _initializeOwner(owner_);
+        _grantRoles(admin_, ADMIN_ROLE);
 
+        // Initialize adapter storage
         BaseAdapterStorage storage $ = _getBaseAdapterStorage();
+        $.registry = registry_;
         $.registered = true;
         $.name = name_;
         $.version = version_;
@@ -215,16 +271,6 @@ abstract contract BaseAdapter is IAdapter, kBase, Initializable {
     }
 
     /*//////////////////////////////////////////////////////////////
-                          ADMIN FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Emergency function to pause adapter operations
-    /// @param paused New pause state
-    function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
-        _setPaused(paused);
-    }
-
-    /*//////////////////////////////////////////////////////////////
                           EMERGENCY FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -250,4 +296,14 @@ abstract contract BaseAdapter is IAdapter, kBase, Initializable {
 
     /// @notice Implementation-specific emergency withdrawal logic
     function _emergencyWithdraw(address asset, uint256 amount, address to) internal virtual;
+
+    /*//////////////////////////////////////////////////////////////
+                          UPGRADE AUTHORIZATION
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Authorize contract upgrade - only admin can upgrade
+    /// @param newImplementation New implementation address
+    function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE) {
+        if (newImplementation == address(0)) revert InvalidAsset();
+    }
 }

@@ -12,6 +12,7 @@ import { Extsload } from "src/abstracts/Extsload.sol";
 import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
+import { kBatchReceiver } from "src/kBatchReceiver.sol";
 
 import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
 import { MultiFacetProxy } from "src/kStakingVault/modules/MultiFacetProxy.sol";
@@ -207,6 +208,28 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
     function burnStkTokens(address from, uint256 amount) external {
         if (msg.sender != address(this)) revert OnlyKAssetRouter();
         _burn(from, amount);
+    }
+
+    /// @notice Deploy batch receiver for redemptions (compatibility function)
+    /// @param _batchId Batch ID to deploy receiver for
+    /// @return Batch receiver address
+    function deployBatchReceiver(uint256 _batchId) external returns (address) {
+        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        uint32 batchId32 = _batchId.toUint32();
+
+        // Check if batch receiver already exists
+        address receiver = $.batches[batchId32].batchReceiver;
+        if (receiver != address(0)) return receiver;
+
+        // Create new batch receiver
+        receiver = address(
+            new kBatchReceiver(_registry().getContractById(K_MINTER), _batchId, $.underlyingAsset, $.underlyingAsset)
+        );
+
+        // Store batch receiver
+        $.batches[batchId32].batchReceiver = receiver;
+
+        return receiver;
     }
 
     /*//////////////////////////////////////////////////////////////
