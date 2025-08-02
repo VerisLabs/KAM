@@ -28,7 +28,7 @@ interface IkStakingVault {
     function claimStakedShares(uint256 batchId, uint256 requestIndex) external payable;
     function claimUnstakedAssets(uint256 batchId, uint256 requestIndex) external payable;
     function updateLastTotalAssets(uint256 totalAssets) external;
-    function deployBatchReceiver(uint256 batchId) external returns (address);
+    function createBatchReceiver(uint256 batchId) external returns (address);
     function mintStkTokens(address to, uint256 amount) external;
     function burnStkTokens(address from, uint256 amount) external;
 

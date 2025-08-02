@@ -130,7 +130,7 @@ Manages the batch lifecycle for the vault.
   - `createNewBatch()`: Initiates new batch cycle
   - `closeBatch()`: Prevents new requests
   - `settleBatch()`: Marks batch as settled
-  - `deployBatchReceiver()`: Creates receiver contract
+  - `createBatchReceiver()`: Creates receiver contract
 - **Roles Required**: RELAYER_ROLE for batch operations
 
 ##### `ClaimModule.sol`

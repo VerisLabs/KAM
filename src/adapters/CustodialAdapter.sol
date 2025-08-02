@@ -2,14 +2,17 @@
 pragma solidity 0.8.30;
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+
+import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
 
 /// @title CustodialAdapter
 /// @notice Adapter for custodial address integrations (CEX, CEFFU, etc.)
 /// @dev Simple adapter that transfers assets to custodial addresses and tracks virtual balances
-contract CustodialAdapter is BaseAdapter {
+contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
@@ -17,6 +20,11 @@ contract CustodialAdapter is BaseAdapter {
     //////////////////////////////////////////////////////////////*/
 
     event VaultDestinationUpdated(address indexed vault, address indexed oldAddress, address indexed newAddress);
+    event TotalAssetsUpdated(address indexed vault, uint256 totalAssets);
+    event Deposited(address indexed asset, uint256 amount, address indexed onBehalfOf);
+    event RedemptionRequested(address indexed asset, uint256 amount, address indexed onBehalfOf);
+    event RedemptionProcessed(uint256 indexed requestId, uint256 assets);
+    event AdapterBalanceUpdated(address indexed vault, address indexed asset, uint256 newBalance);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -31,6 +39,9 @@ contract CustodialAdapter is BaseAdapter {
 
     /// @custom:storage-location erc7201:kam.storage.CustodialAdapter
     struct CustodialAdapterStorage {
+        uint256 nextRequestId;
+        mapping(address vault => mapping(address asset => uint256 balance)) balanceOf;
+        mapping(address vault => mapping(address asset => uint256 totalAssets)) totalAssets;
         mapping(address vault => address custodialAddress) vaultDestinations;
     }
 
@@ -50,31 +61,46 @@ contract CustodialAdapter is BaseAdapter {
 
     /// @notice Empty constructor to ensure clean initialization state
     constructor() {
-        // Intentionally empty - do not disable initializers
-        // This allows the proxy to initialize properly
+        _disableInitializers();
     }
 
     /*//////////////////////////////////////////////////////////////
                               INITIALIZER
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Initializes the custodial adapter
+    /// @notice Initializes the MetaVault adapter
     /// @param registry_ Address of the kRegistry contract
     /// @param owner_ Address of the owner
     /// @param admin_ Address of the admin
     function initialize(address registry_, address owner_, address admin_) external initializer {
         __BaseAdapter_init(registry_, owner_, admin_, "CustodialAdapter", "1.0.0");
+
+        CustodialAdapterStorage storage $ = _getCustodialAdapterStorage();
+        $.nextRequestId = 1;
     }
 
     /*//////////////////////////////////////////////////////////////
                           CORE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Deposits assets to custodial address
+    /// @notice Deposits assets to external strategy
     /// @param asset The asset to deposit
     /// @param amount The amount to deposit
     /// @param onBehalfOf The vault address this deposit is for
-    function _deposit(address asset, uint256 amount, address onBehalfOf) internal override {
+    function deposit(
+        address asset,
+        uint256 amount,
+        address onBehalfOf
+    )
+        external
+        onlyKAssetRouter
+        whenRegistered
+        nonReentrant
+    {
+        if (asset == address(0)) revert InvalidAsset();
+        if (amount == 0) revert InvalidAmount();
+        if (onBehalfOf == address(0)) revert InvalidAsset();
+
         CustodialAdapterStorage storage $ = _getCustodialAdapterStorage();
 
         address custodialAddress = $.vaultDestinations[onBehalfOf];
@@ -84,24 +110,37 @@ contract CustodialAdapter is BaseAdapter {
         asset.safeTransferFrom(msg.sender, custodialAddress, amount);
 
         // Update adapter balance tracking
-        _adapterDeposit(onBehalfOf, asset, amount);
+        $.balanceOf[onBehalfOf][asset] += amount;
 
         emit Deposited(asset, amount, onBehalfOf);
     }
 
-    /// @notice Processes redemption request for custodial assets
+    /// @notice Redeems assets from external strategy
     /// @param asset The asset to redeem
     /// @param amount The amount to redeem
     /// @param onBehalfOf The vault address this redemption is for
-    /// @dev For custodial adapters, redemption is virtual - actual settlement happens off-chain
-    function _redeem(address asset, uint256 amount, address onBehalfOf) internal override {
+    function redeem(
+        address asset,
+        uint256 amount,
+        address onBehalfOf
+    )
+        external
+        virtual
+        onlyKAssetRouter
+        whenRegistered
+        nonReentrant
+    {
+        if (asset == address(0)) revert InvalidAsset();
+        if (amount == 0) revert InvalidAmount();
+        if (onBehalfOf == address(0)) revert InvalidAsset();
+
         CustodialAdapterStorage storage $ = _getCustodialAdapterStorage();
 
         address custodialAddress = $.vaultDestinations[onBehalfOf];
         if (custodialAddress == address(0)) revert VaultDestinationNotSet();
 
         // Update adapter balance tracking
-        _adapterRedeem(onBehalfOf, asset, amount);
+        $.balanceOf[onBehalfOf][asset] -= amount;
 
         emit RedemptionRequested(asset, amount, onBehalfOf);
     }
@@ -111,51 +150,31 @@ contract CustodialAdapter is BaseAdapter {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Returns the current total assets across all custodial addresses for this asset
-    /// @param asset The asset to query
+    /// @param vault The vault to query
     /// @return Total assets currently held across all custodial addresses managed by this adapter
-    function totalAssets(address asset) external view override returns (uint256) {
+    function totalEstimatedAssets(address vault) external view returns (uint256) {
         CustodialAdapterStorage storage $ = _getCustodialAdapterStorage();
-
-        // For custodial adapters, we sum adapter balances across all vaults
-        // This represents the total assets we're managing for this asset
-        uint256 total = 0;
-
-        // Get vaults that use this adapter by checking which vaults have this asset
-        address[] memory vaults = _registry().getVaultsByAsset(asset);
-
-        for (uint256 i = 0; i < vaults.length; i++) {
-            // Only count if this vault uses this adapter
-            if (_registry().getAdapter(vaults[i]) == address(this)) {
-                total += this.adapterBalance(vaults[i], asset);
-            }
-        }
-
-        return total;
+        address asset_ = _getVaultAsset(vault);
+        address custodialAddress = $.vaultDestinations[vault];
+        return asset_.balanceOf(custodialAddress);
     }
 
-    /// @notice Returns estimated total assets (same as totalAssets for custodial)
-    /// @param asset The asset to query
-    /// @return Estimated total assets (custodial addresses don't generate yield independently)
-    function estimatedTotalAssets(address asset) external view override returns (uint256) {
-        return this.totalAssets(asset);
-    }
-
-    /// @notice Returns the current total assets for a specific vault
+    /// @notice Returns the total assets in storage for a given vault
     /// @param vault The vault address
-    /// @param asset The asset to query
-    /// @return Total assets currently held in custodial address for this vault
-    function totalAssetsForVault(address vault, address asset) external view override returns (uint256) {
-        // For custodial adapter, the adapter balance equals the total assets
-        return this.adapterBalance(vault, asset);
+    /// @return Total assets currently held in storage for this vault
+    function totalVirtualAssets(address vault) external view returns (uint256) {
+        CustodialAdapterStorage storage $ = _getCustodialAdapterStorage();
+        address asset_ = _getVaultAsset(vault);
+        return $.balanceOf[vault][asset_];
     }
 
-    /// @notice Returns estimated total assets for a specific vault (same as totalAssetsForVault for custodial)
+    /// @notice Returns the total assets for a given vault and asset
     /// @param vault The vault address
-    /// @param asset The asset to query
-    /// @return Estimated total assets for this vault
-    function estimatedTotalAssetsForVault(address vault, address asset) external view override returns (uint256) {
-        // Custodial addresses don't generate yield independently
-        return this.totalAssetsForVault(vault, asset);
+    /// @return Total assets currently held for this vault and asset
+    function totalAssets(address vault) external view returns (uint256) {
+        CustodialAdapterStorage storage $ = _getCustodialAdapterStorage();
+        address asset_ = _getVaultAsset(vault);
+        return $.totalAssets[vault][asset_];
     }
 
     /// @notice Returns the custodial address for a given vault
@@ -190,35 +209,24 @@ contract CustodialAdapter is BaseAdapter {
         emit VaultDestinationUpdated(vault, oldAddress, custodialAddress);
     }
 
-    /// @notice Manual settlement function for reconciling off-chain redemptions
-    /// @param asset The asset that was redeemed off-chain
-    /// @param amount The amount that was actually redeemed
-    /// @param vault The vault that the redemption was for
-    /// @dev Called by relayer to confirm off-chain settlements
-    function confirmRedemption(address asset, uint256 amount, address vault) external onlyRelayer {
-        // Transfer assets from custodial back to kAssetRouter
-        // This function assumes custodial has already processed the redemption off-chain
-        // and we're just reconciling the on-chain state
+    /// @notice Sets the total assets for a given vault
+    /// @param vault The vault address
+    /// @param totalAssets_ The total assets to set
+    function setTotalAssets(address vault, uint256 totalAssets_) external onlyKAssetRouter {
+        CustodialAdapterStorage storage $ = _getCustodialAdapterStorage();
+        address asset_ = _getVaultAsset(vault);
+        $.totalAssets[vault][asset_] = totalAssets_;
 
-        emit RedemptionProcessed(0, amount); // Using 0 as requestId for custodial
+        emit TotalAssetsUpdated(vault, totalAssets_);
     }
 
     /*//////////////////////////////////////////////////////////////
-                          EMERGENCY FUNCTIONS
+                          UPGRADE FUNCTION
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Emergency withdrawal from custodial address (if possible)
-    /// @param asset Asset to withdraw
-    /// @param amount Amount to withdraw
-    /// @param to Recipient address
-    /// @dev For custodial adapters, this might not be directly callable
-    function _emergencyWithdraw(address asset, uint256 amount, address to) internal override {
-        // For custodial adapters, emergency withdrawal might need to be coordinated
-        // with the custodial service off-chain. This function serves as a flag
-        // that emergency withdrawal was requested.
-
-        // Emit event for off-chain monitoring systems
-        // Actual withdrawal coordination happens off-chain
-        emit RedemptionRequested(asset, amount, to);
+    /// @notice Authorize contract upgrade
+    /// @param newImplementation New implementation address
+    function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE) {
+        if (newImplementation == address(0)) revert ZeroAddress();
     }
 }

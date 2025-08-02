@@ -6,23 +6,6 @@ pragma solidity 0.8.30;
 /// @dev All adapters must implement this interface for kAssetRouter integration
 interface IAdapter {
     /*//////////////////////////////////////////////////////////////
-                              EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event Deposited(address indexed asset, uint256 amount, address indexed onBehalfOf);
-    event RedemptionRequested(address indexed asset, uint256 amount, address indexed onBehalfOf);
-    event RedemptionProcessed(uint256 indexed requestId, uint256 assets);
-    event AdapterBalanceUpdated(address indexed vault, address indexed asset, uint256 newBalance);
-
-    /*//////////////////////////////////////////////////////////////
-                              ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error InvalidAsset();
-    error InvalidAmount();
-    error InsufficientBalance();
-
-    /*//////////////////////////////////////////////////////////////
                           CORE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -38,37 +21,19 @@ interface IAdapter {
     /// @param onBehalfOf The vault address this redemption is for
     function redeem(address asset, uint256 amount, address onBehalfOf) external;
 
+    /// @notice Sets the total assets for a given vault
+    /// @param vault The vault address
+    /// @param totalAssets_ The total assets to set
+    function setTotalAssets(address vault, uint256 totalAssets_) external;
+
     /*//////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Returns the current total assets in the external strategy
-    /// @param asset The asset to query
+    /// @param vault The vault to query
     /// @return Total assets currently deployed in strategy
-    function totalAssets(address asset) external view returns (uint256);
-
-    /// @notice Returns estimated total assets including pending yield
-    /// @param asset The asset to query
-    /// @return Estimated total assets including unrealized gains
-    function estimatedTotalAssets(address asset) external view returns (uint256);
-
-    /// @notice Returns the current total assets for a specific vault
-    /// @param vault The vault address
-    /// @param asset The asset to query
-    /// @return Total assets currently deployed for this vault
-    function totalAssetsForVault(address vault, address asset) external view returns (uint256);
-
-    /// @notice Returns estimated total assets for a specific vault including pending yield
-    /// @param vault The vault address
-    /// @param asset The asset to query
-    /// @return Estimated total assets including unrealized gains for this vault
-    function estimatedTotalAssetsForVault(address vault, address asset) external view returns (uint256);
-
-    /// @notice Returns the adapter balance for a specific vault
-    /// @param vault The vault address
-    /// @param asset The asset address
-    /// @return Adapter balance for the vault
-    function adapterBalance(address vault, address asset) external view returns (uint256);
+    function totalAssets(address vault) external view returns (uint256);
 
     /*//////////////////////////////////////////////////////////////
                           METADATA

@@ -151,7 +151,7 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /// @notice Checks if an asset is supported by the protocol
     /// @param asset The asset address to check
     /// @return Whether the asset is supported
-    function _isAssetSupported(address asset) internal view returns (bool) {
+    function _isAssetRegistered(address asset) internal view returns (bool) {
         return _registry().isRegisteredAsset(asset);
     }
 
@@ -221,7 +221,7 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /// @notice Ensures the asset is supported by the protocol
     /// @param asset The asset address to validate
     modifier onlyRegisteredAsset(address asset) {
-        if (!_isAssetSupported(asset)) revert AssetNotSupported(asset);
+        if (!_isAssetRegistered(asset)) revert AssetNotSupported(asset);
         _;
     }
 }

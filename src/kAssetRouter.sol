@@ -130,15 +130,17 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
         address kMinter = msg.sender;
-        if ($.vaultBalances[kMinter][_asset] < amount) revert InsufficientVirtualBalance();
+        if (_balance(kMinter) < amount) revert InsufficientVirtualBalance();
 
         $.vaultBatchBalances[kMinter][batchId].requested += amount.toUint128();
 
         // Set batch receiver for the vault
-        IkStakingVault(_getDNVaultByAsset(_asset)).deployBatchReceiver(batchId);
+        address batchReceiver = IkStakingVault(_getDNVaultByAsset(_asset)).createBatchReceiver(batchId);
+        if (batchReceiver == address(0)) revert ZeroAddress();
 
-        emit AssetsRequestPulled(kMinter, _asset, amount);
+        emit AssetsRequestPulled(kMinter, _asset, batchReceiver, amount);
     }
+
     /*//////////////////////////////////////////////////////////////
                             kSTAKING VAULT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -166,7 +168,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
-        if ($.vaultBalances[sourceVault][_asset] < amount) revert InsufficientVirtualBalance();
+        if (_balance(sourceVault) < amount) revert InsufficientVirtualBalance();
         // Update batch tracking for settlement
         $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
         $.vaultBatchBalances[targetVault][batchId].deposited += amount.toUint128();
@@ -213,8 +215,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         address vault,
         uint256 batchId,
         uint256 totalAssets_,
-        uint256 yield,
         uint256 netted,
+        uint256 yield,
         bool profit
     )
         external
@@ -258,13 +260,17 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             }
         }
 
+        IAdapter adapter = IAdapter(_registry().getAdapter(vault));
+
         if (netted > 0) {
-            IAdapter(_registry().getAdapter(vault)).deposit(asset, netted, vault);
+            adapter.deposit(asset, netted, vault);
             emit Deposited(vault, asset, netted, isKMinter);
         }
 
         // Update vault's total assets
-        IkStakingVault(vault).updateLastTotalAssets(totalAssets_);
+        if (_registry().getVaultType(vault) > 1) {
+            adapter.setTotalAssets(vault, totalAssets_);
+        }
 
         emit BatchSettled(vault, batchId.toUint32(), totalAssets_);
     }
@@ -283,6 +289,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /*//////////////////////////////////////////////////////////////
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    function _balance(address vault) internal view returns (uint256) {
+        return IAdapter(_registry().getAdapter(vault)).totalAssets(vault);
+    }
 
     /// @notice Check if contract is paused
     /// @return True if paused

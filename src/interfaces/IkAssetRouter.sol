@@ -18,7 +18,9 @@ interface IkAssetRouter {
 
     event Initialized(address indexed registry, address indexed owner, address admin, bool paused);
     event AssetsPushed(address indexed from, uint256 amount);
-    event AssetsRequestPulled(address indexed vault, address indexed asset, uint256 amount);
+    event AssetsRequestPulled(
+        address indexed vault, address indexed asset, address indexed batchReceiver, uint256 amount
+    );
     event AssetsTransfered(
         address indexed sourceVault, address indexed targetVault, address indexed asset, uint256 amount
     );

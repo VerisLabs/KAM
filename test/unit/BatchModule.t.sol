@@ -184,31 +184,31 @@ contract BatchModuleTest is DeploymentBaseTest {
                         DEPLOY BATCH RECEIVER TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test deployBatchReceiver requires kAssetRouter role
-    function test_DeployBatchReceiver_OnlyKAssetRouter() public {
+    /// @dev Test createBatchReceiver requires kAssetRouter role
+    function test_createBatchReceiver_OnlyKAssetRouter() public {
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.deployBatchReceiver(TEST_BATCH_ID);
+        batchModule.createBatchReceiver(TEST_BATCH_ID);
     }
 
-    /// @dev Test deployBatchReceiver access control
-    function test_DeployBatchReceiver_AccessControl() public {
+    /// @dev Test createBatchReceiver access control
+    function test_createBatchReceiver_AccessControl() public {
         // Non-kAssetRouter should fail
         vm.prank(users.admin);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.deployBatchReceiver(TEST_BATCH_ID);
+        batchModule.createBatchReceiver(TEST_BATCH_ID);
 
         vm.prank(users.owner);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.deployBatchReceiver(TEST_BATCH_ID);
+        batchModule.createBatchReceiver(TEST_BATCH_ID);
 
         vm.prank(users.institution);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.deployBatchReceiver(TEST_BATCH_ID);
+        batchModule.createBatchReceiver(TEST_BATCH_ID);
     }
 
-    /// @dev Test deployBatchReceiver with different callers
-    function test_DeployBatchReceiver_DifferentCallers() public {
+    /// @dev Test createBatchReceiver with different callers
+    function test_createBatchReceiver_DifferentCallers() public {
         address[] memory nonAssetRouters = new address[](5);
         nonAssetRouters[0] = users.alice;
         nonAssetRouters[1] = users.bob;
@@ -219,12 +219,12 @@ contract BatchModuleTest is DeploymentBaseTest {
         for (uint256 i = 0; i < nonAssetRouters.length; i++) {
             vm.prank(nonAssetRouters[i]);
             vm.expectRevert(BaseModule.NotInitialized.selector);
-            batchModule.deployBatchReceiver(TEST_BATCH_ID);
+            batchModule.createBatchReceiver(TEST_BATCH_ID);
         }
     }
 
-    /// @dev Test deployBatchReceiver with different batch IDs
-    function test_DeployBatchReceiver_DifferentBatchIds() public {
+    /// @dev Test createBatchReceiver with different batch IDs
+    function test_createBatchReceiver_DifferentBatchIds() public {
         uint256[] memory batchIds = new uint256[](4);
         batchIds[0] = 0;
         batchIds[1] = 1;
@@ -234,7 +234,7 @@ contract BatchModuleTest is DeploymentBaseTest {
         for (uint256 i = 0; i < batchIds.length; i++) {
             vm.prank(users.alice);
             vm.expectRevert(BaseModule.NotInitialized.selector);
-            batchModule.deployBatchReceiver(batchIds[i]);
+            batchModule.createBatchReceiver(batchIds[i]);
         }
     }
 
@@ -252,8 +252,8 @@ contract BatchModuleTest is DeploymentBaseTest {
         assertEq(moduleSelectors[2], BatchModule.settleBatch.selector, "Third selector should be settleBatch");
         assertEq(
             moduleSelectors[3],
-            BatchModule.deployBatchReceiver.selector,
-            "Fourth selector should be deployBatchReceiver"
+            BatchModule.createBatchReceiver.selector,
+            "Fourth selector should be createBatchReceiver"
         );
     }
 
@@ -271,7 +271,7 @@ contract BatchModuleTest is DeploymentBaseTest {
         assertEq(moduleSelectors[0], bytes4(keccak256("createNewBatch()")), "createNewBatch selector");
         assertEq(moduleSelectors[1], bytes4(keccak256("closeBatch(uint256,bool)")), "closeBatch selector");
         assertEq(moduleSelectors[2], bytes4(keccak256("settleBatch(uint256)")), "settleBatch selector");
-        assertEq(moduleSelectors[3], bytes4(keccak256("deployBatchReceiver(uint256)")), "deployBatchReceiver selector");
+        assertEq(moduleSelectors[3], bytes4(keccak256("createBatchReceiver(uint256)")), "createBatchReceiver selector");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -302,7 +302,7 @@ contract BatchModuleTest is DeploymentBaseTest {
 
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.deployBatchReceiver(TEST_BATCH_ID);
+        batchModule.createBatchReceiver(TEST_BATCH_ID);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -321,7 +321,7 @@ contract BatchModuleTest is DeploymentBaseTest {
 
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.deployBatchReceiver(0);
+        batchModule.createBatchReceiver(0);
     }
 
     /// @dev Test batch functions with maximum batch ID
@@ -338,7 +338,7 @@ contract BatchModuleTest is DeploymentBaseTest {
 
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.deployBatchReceiver(maxBatchId);
+        batchModule.createBatchReceiver(maxBatchId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -373,12 +373,12 @@ contract BatchModuleTest is DeploymentBaseTest {
         batchModule.settleBatch(1);
     }
 
-    /// @dev Test deployBatchReceiver function signature
-    function test_DeployBatchReceiver_Signature() public {
+    /// @dev Test createBatchReceiver function signature
+    function test_createBatchReceiver_Signature() public {
         // Function should take uint256 parameter and return address
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.deployBatchReceiver(1);
+        batchModule.createBatchReceiver(1);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -404,7 +404,7 @@ contract BatchModuleTest is DeploymentBaseTest {
 
             vm.prank(users.alice);
             vm.expectRevert(BaseModule.NotInitialized.selector);
-            batchModule.deployBatchReceiver(values[i]);
+            batchModule.createBatchReceiver(values[i]);
         }
     }
 
@@ -429,6 +429,6 @@ contract BatchModuleTest is DeploymentBaseTest {
 
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.deployBatchReceiver(1);
+        batchModule.createBatchReceiver(1);
     }
 }

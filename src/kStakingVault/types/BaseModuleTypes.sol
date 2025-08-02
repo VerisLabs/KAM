@@ -12,31 +12,31 @@ library BaseModuleTypes {
     }
 
     struct StakeRequest {
-        uint256 id; // 32 bytes (slot 1)
-        address user; // 20 bytes (slot 2)
-        uint96 kTokenAmount; // 12 bytes (slot 3)
-        address recipient; // 20 bytes (slot 4)
-        uint64 requestTimestamp; // 8 bytes (slot 5)
-        uint8 status; // 1 byte (slot 5)
-        uint96 minStkTokens; // 12 bytes (slot 6)
-        uint32 batchId; // 4 bytes (slot 6)
+        uint256 id; // 32 bytes - Slot 0
+        address user; // 20 bytes ┐
+        uint96 kTokenAmount; // 12 bytes ┘ Slot 1 (32 bytes total)
+        address recipient; // 20 bytes ┐
+        uint96 minStkTokens; // 12 bytes ┘ Slot 2 (32 bytes total)
+        uint256 batchId; // 32 bytes - Slot 3
+        uint64 requestTimestamp; // 8 bytes  ┐
+        uint8 status; // 1 byte   ┘ Slot 4 (9 bytes, 23 padding)
     }
 
     struct UnstakeRequest {
-        uint256 id;
-        address user;
-        uint96 stkTokenAmount;
-        address recipient;
-        uint64 requestTimestamp;
-        uint8 status;
-        uint96 minKTokens;
-        uint32 batchId;
+        uint256 id; // 32 bytes - Slot 0
+        address user; // 20 bytes ┐
+        uint96 stkTokenAmount; // 12 bytes ┘ Slot 1
+        address recipient; // 20 bytes ┐
+        uint96 minKTokens; // 12 bytes ┘ Slot 2
+        uint256 batchId; // 32 bytes - Slot 3
+        uint64 requestTimestamp; // 8 bytes  ┐
+        uint8 status; // 1 byte   ┘ Slot 4
     }
 
     struct BatchInfo {
-        uint32 batchId;
-        address batchReceiver;
-        bool isClosed;
-        bool isSettled;
+        uint256 batchId; // 32 bytes - Slot 0
+        address batchReceiver; // 20 bytes ┐
+        bool isClosed; // 1 byte   │
+        bool isSettled; // 1 byte   ┘ Slot 1 (22 bytes, 10 padding)
     }
 }

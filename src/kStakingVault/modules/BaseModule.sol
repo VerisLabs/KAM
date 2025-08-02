@@ -40,7 +40,7 @@ contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
         bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, uint32 batchId
     );
     event Paused(bool paused);
-    event Initialized(address registry, address owner, address admin, bool paused);
+    event Initialized(address registry, address owner, address admin);
     event TotalAssetsUpdated(uint256 oldTotalAssets, uint256 newTotalAssets);
 
     /*//////////////////////////////////////////////////////////////
@@ -61,11 +61,8 @@ contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
     error InvalidRegistry();
     error NotInitialized();
     error ContractNotFound(bytes32 identifier);
-    error AssetNotSupported(address asset);
-    error InvalidVault(address vault);
     error OnlyKAssetRouter();
     error OnlyRelayer();
-    error OnlyKMinter();
     error ZeroAmount();
     error AmountBelowDustThreshold();
     error ContractPaused();
@@ -78,18 +75,22 @@ contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
 
     /// @custom:storage-location erc7201.kam.storage.BaseModule
     struct BaseModuleStorage {
-        address registry;
-        uint64 requestCounter;
-        uint32 currentBatchId;
-        address underlyingAsset;
-        uint96 dustAmount;
-        uint256 lastTotalAssets;
-        uint8 decimals;
-        bool initialized;
-        bool paused;
-        string name;
-        string symbol;
-        mapping(uint32 => BaseModuleTypes.BatchInfo) batches;
+        uint256 currentBatchId; // 32 bytes
+        uint256 lastTotalAssets; // 32 bytes
+        address registry; // 20 bytes ┐
+        uint96 dustAmount; // 12 bytes ┘ = 32 bytes
+        address underlyingAsset; // 20 bytes ┐
+        uint64 requestCounter; // 8 bytes  │
+        uint32 _reserved; // 4 bytes  ┘ = 32 bytes
+        address kToken; // 20 bytes ┐
+        uint64 batchCounter; // 8 bytes  │
+        uint8 decimals; // 1 byte   │
+        bool initialized; // 1 byte   │
+        bool paused; // 1 byte   │
+        bool _reservedBool; // 1 byte   ┘ = 32 bytes
+        string name; // 32+ bytes
+        string symbol; // 32+ bytes
+        mapping(uint256 => BaseModuleTypes.BatchInfo) batches;
         mapping(uint256 => BaseModuleTypes.StakeRequest) stakeRequests;
         mapping(uint256 => BaseModuleTypes.UnstakeRequest) unstakeRequests;
         mapping(address => uint256[]) userRequests;
@@ -115,7 +116,7 @@ contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
     /// @param registry_ Address of the kRegistry contract
     /// @param paused_ Initial pause state
     /// @dev Can only be called once during initialization
-    function __ModuleBase_init(address registry_, address owner_, address admin_, bool paused_) internal {
+    function __BaseModule_init(address registry_, address owner_, address admin_, bool paused_) internal {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
 
         if ($.initialized) revert AlreadyInitialized();
@@ -176,19 +177,6 @@ contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
 
     function _getRelayer(address account) internal view returns (bool) {
         return _registry().isRelayer(account);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                          ASSET HELPERS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Gets the kToken address for a given asset
-    /// @param asset The underlying asset address
-    /// @return kToken The corresponding kToken address
-    /// @dev Reverts if asset not supported
-    function _getKTokenForAsset(address asset) internal view returns (address kToken) {
-        kToken = _registry().assetToKToken(asset);
-        if (kToken == address(0)) revert AssetNotSupported(asset);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -271,12 +259,6 @@ contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
     /// @dev Only callable internally by inheriting contracts
     modifier onlyRelayer() {
         if (!_getRelayer(msg.sender)) revert OnlyRelayer();
-        _;
-    }
-
-    /// @notice Restricts function access to the kMinter contract
-    modifier onlyKMinter() {
-        if (msg.sender != _getKMinter()) revert OnlyKMinter();
         _;
     }
 }

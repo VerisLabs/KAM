@@ -2,16 +2,20 @@
 pragma solidity 0.8.30;
 
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+
+import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
 import { IMetaVault } from "src/interfaces/IMetaVault.sol";
+import { IkToken } from "src/interfaces/IkToken.sol";
 
 /// @title MetaVaultAdapter
 /// @notice Adapter for DeFi protocol integrations using IMetaVault interface
 /// @dev Handles complex DeFi interactions with request/claim patterns and share conversions
-contract MetaVaultAdapter is BaseAdapter {
+contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
     using SafeCastLib for uint256;
@@ -22,6 +26,10 @@ contract MetaVaultAdapter is BaseAdapter {
 
     event VaultDestinationUpdated(address indexed vault, address indexed oldVault, address indexed newVault);
     event RedemptionQueued(uint256 indexed requestId, address indexed vault, uint256 shares);
+    event Deposited(address indexed asset, uint256 amount, address indexed onBehalfOf);
+    event RedemptionRequested(address indexed asset, uint256 amount, address indexed onBehalfOf);
+    event RedemptionProcessed(uint256 indexed requestId, uint256 assets);
+    event Initialized(address indexed registry, address indexed owner, address indexed admin);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -38,9 +46,10 @@ contract MetaVaultAdapter is BaseAdapter {
 
     /// @custom:storage-location erc7201:kam.storage.MetaVaultAdapter
     struct MetaVaultAdapterStorage {
-        mapping(address vault => IMetaVault metaVault) vaultDestinations;
-        mapping(uint256 requestId => PendingRedemption) pendingRedemptions;
         uint256 nextRequestId;
+        mapping(uint256 requestId => PendingRedemption) pendingRedemptions;
+        mapping(address vault => mapping(address asset => uint256 totalShares)) adapterTotalShares;
+        mapping(address vault => IMetaVault metaVault) vaultDestinations;
     }
 
     struct PendingRedemption {
@@ -67,13 +76,8 @@ contract MetaVaultAdapter is BaseAdapter {
 
     /// @notice Empty constructor to ensure clean initialization state
     constructor() {
-        // Intentionally empty - do not disable initializers
-        // This allows the proxy to initialize properly
+        _disableInitializers();
     }
-
-    /*//////////////////////////////////////////////////////////////
-                              INITIALIZER
-    //////////////////////////////////////////////////////////////*/
 
     /// @notice Initializes the MetaVault adapter
     /// @param registry_ Address of the kRegistry contract
@@ -84,6 +88,8 @@ contract MetaVaultAdapter is BaseAdapter {
 
         MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
         $.nextRequestId = 1;
+
+        emit Initialized(registry_, owner_, admin_);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -94,7 +100,16 @@ contract MetaVaultAdapter is BaseAdapter {
     /// @param asset The asset to deposit
     /// @param amount The amount to deposit
     /// @param onBehalfOf The vault address this deposit is for
-    function _deposit(address asset, uint256 amount, address onBehalfOf) internal override {
+    function deposit(
+        address asset,
+        uint256 amount,
+        address onBehalfOf
+    )
+        external
+        nonReentrant
+        onlyKAssetRouter
+        whenRegistered
+    {
         MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
 
         IMetaVault metaVault = $.vaultDestinations[onBehalfOf];
@@ -107,29 +122,41 @@ contract MetaVaultAdapter is BaseAdapter {
         asset.safeApprove(address(metaVault), amount);
 
         // Deposit to MetaVault and receive shares
-        uint256 shares = metaVault.deposit(amount, address(this));
-
-        // Track shares (not assets) in adapter balance for MetaVault
-        _adapterDeposit(onBehalfOf, asset, shares);
+        // Set Controller!?
+        uint256 shares = metaVault.deposit(amount, onBehalfOf, _getKAssetRouter());
+        $.adapterTotalShares[onBehalfOf][asset] += shares;
 
         emit Deposited(asset, amount, onBehalfOf);
     }
 
-    /// @notice Processes redemption request from MetaVault strategy
+    /// @notice Redeems assets from external strategy
     /// @param asset The asset to redeem
-    /// @param amount The amount to redeem (in underlying assets)
+    /// @param amount The amount to redeem
     /// @param onBehalfOf The vault address this redemption is for
-    function _redeem(address asset, uint256 amount, address onBehalfOf) internal override {
+    function redeem(
+        address asset,
+        uint256 amount,
+        address onBehalfOf
+    )
+        external
+        nonReentrant
+        onlyKAssetRouter
+        whenRegistered
+    {
+        if (asset == address(0)) revert InvalidAsset();
+        if (amount == 0) revert InvalidAmount();
+        if (onBehalfOf == address(0)) revert InvalidAsset();
+
         MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
 
         IMetaVault metaVault = $.vaultDestinations[onBehalfOf];
         if (address(metaVault) == address(0)) revert MetaVaultNotSet();
 
-        // Convert amount (assets) to shares
         uint256 shares = metaVault.convertToShares(amount);
+        $.adapterTotalShares[onBehalfOf][asset] -= shares;
 
         // Request redemption from MetaVault
-        uint256 metaVaultRequestId = metaVault.requestRedeem(shares, address(this), address(this));
+        uint256 metaVaultRequestId = metaVault.requestRedeem(shares, _getKAssetRouter(), onBehalfOf);
 
         // Store pending redemption with our internal request ID
         uint256 requestId = $.nextRequestId++;
@@ -140,9 +167,6 @@ contract MetaVaultAdapter is BaseAdapter {
             metaVaultRequestId: metaVaultRequestId,
             processed: false
         });
-
-        // Update adapter balance (remove shares)
-        _adapterRedeem(onBehalfOf, asset, shares);
 
         emit RedemptionRequested(asset, amount, onBehalfOf);
         emit RedemptionQueued(requestId, onBehalfOf, shares);
@@ -161,18 +185,16 @@ contract MetaVaultAdapter is BaseAdapter {
         PendingRedemption storage pending = $.pendingRedemptions[requestId];
         if (pending.vault == address(0)) revert InvalidRequestId();
         if (pending.processed) revert RedemptionNotReady();
+        pending.processed = true;
 
         IMetaVault metaVault = $.vaultDestinations[pending.vault];
 
         // Check if redemption is ready
-        uint256 claimableShares = metaVault.claimableRedeemRequest(address(this));
+        uint256 claimableShares = metaVault.claimableRedeemRequest(pending.vault);
         if (claimableShares < pending.shares) revert RedemptionNotReady();
 
         // Process redemption from MetaVault
-        assets = metaVault.redeem(pending.shares, _getKAssetRouter(), address(this));
-
-        // Mark as processed
-        pending.processed = true;
+        assets = metaVault.redeem(pending.shares, pending.vault, _getKAssetRouter());
 
         emit RedemptionProcessed(requestId, assets);
     }
@@ -194,86 +216,30 @@ contract MetaVaultAdapter is BaseAdapter {
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the current total assets across all MetaVaults for this asset
-    /// @param asset The asset to query
-    /// @return Total assets currently deployed in MetaVault strategies managed by this adapter
-    function totalAssets(address asset) external view override returns (uint256) {
+    /// @notice Returns the adapter balance for a specific vault and asset
+    /// @param vault The vault address
+    /// @param asset The asset address
+    /// @return Adapter balance for the vault
+    function totalAssets(address vault, address asset) external view returns (uint256) {
         MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
-
-        // Sum adapter balances across all vaults using this adapter for this asset
-        uint256 total = 0;
-        address[] memory vaults = _registry().getVaultsByAsset(asset);
-
-        for (uint256 i = 0; i < vaults.length; i++) {
-            // Only count if this vault uses this adapter
-            if (_registry().getAdapter(vaults[i]) == address(this)) {
-                IMetaVault metaVault = $.vaultDestinations[vaults[i]];
-                if (address(metaVault) != address(0)) {
-                    // Get shares for this vault and convert to assets
-                    uint256 shares = this.adapterBalance(vaults[i], asset);
-                    total += metaVault.convertToAssets(shares);
-                }
-            }
-        }
-
-        return total;
-    }
-
-    /// @notice Returns estimated total assets including pending yield
-    /// @param asset The asset to query
-    /// @return Estimated total assets including unrealized gains
-    function estimatedTotalAssets(address asset) external view override returns (uint256) {
-        MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
-
-        // Sum estimated assets across all vaults using this adapter for this asset
-        uint256 total = 0;
-        address[] memory vaults = _registry().getVaultsByAsset(asset);
-
-        for (uint256 i = 0; i < vaults.length; i++) {
-            // Only count if this vault uses this adapter
-            if (_registry().getAdapter(vaults[i]) == address(this)) {
-                IMetaVault metaVault = $.vaultDestinations[vaults[i]];
-                if (address(metaVault) != address(0)) {
-                    // Get shares for this vault and use share price for estimation
-                    uint256 shares = this.adapterBalance(vaults[i], asset);
-                    uint256 sharePrice = metaVault.sharePrice();
-                    total += shares.mulWad(sharePrice);
-                }
-            }
-        }
-
-        return total;
+        IMetaVault metaVault = $.vaultDestinations[vault];
+        uint256 balance = metaVault.balanceOf(vault);
+        uint256 totalAssets_ = metaVault.convertToAssets(balance); // + insuranceFund
+        uint256 totalKTokens = IkToken(asset).totalSupply();
+        if (totalAssets_ > totalKTokens) return totalKTokens;
+        return totalAssets_;
     }
 
     /// @notice Returns the current total assets for a specific vault
     /// @param vault The vault address
-    /// @param asset The asset to query
     /// @return Total assets currently deployed in MetaVault for this vault
-    function totalAssetsForVault(address vault, address asset) external view override returns (uint256) {
+    function totalShares(address vault) external view returns (uint256) {
         MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
 
         IMetaVault metaVault = $.vaultDestinations[vault];
         if (address(metaVault) == address(0)) return 0;
 
-        // Get shares for this vault and convert to assets
-        uint256 shares = this.adapterBalance(vault, asset);
-        return metaVault.convertToAssets(shares);
-    }
-
-    /// @notice Returns estimated total assets for a specific vault including pending yield
-    /// @param vault The vault address
-    /// @param asset The asset to query
-    /// @return Estimated total assets including unrealized gains for this vault
-    function estimatedTotalAssetsForVault(address vault, address asset) external view override returns (uint256) {
-        MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
-
-        IMetaVault metaVault = $.vaultDestinations[vault];
-        if (address(metaVault) == address(0)) return 0;
-
-        // Get shares for this vault and use share price for estimation
-        uint256 shares = this.adapterBalance(vault, asset);
-        uint256 sharePrice = metaVault.sharePrice();
-        return shares.mulWad(sharePrice);
+        return metaVault.balanceOf(vault);
     }
 
     /// @notice Returns the MetaVault for a given vault
@@ -345,28 +311,42 @@ contract MetaVaultAdapter is BaseAdapter {
                           EMERGENCY FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Emergency withdrawal from MetaVault
+    /// @notice Emergency withdrawal function - must be implemented by child contracts
+    /// @param vault Vault to withdraw from
     /// @param asset Asset to withdraw
-    /// @param amount Amount to withdraw (in shares)
-    /// @param to Recipient address
-    function _emergencyWithdraw(address asset, uint256 amount, address to) internal override {
-        // For emergency withdrawals, we need to withdraw from all MetaVaults
-        // This is a last resort function
+    /// @param amount Amount to withdraw
+    function emergencyWithdraw(
+        address vault,
+        address asset,
+        uint256 amount
+    )
+        external
+        virtual
+        onlyRoles(EMERGENCY_ADMIN_ROLE)
+    {
+        if (asset == address(0)) revert InvalidAsset();
+        if (amount == 0) revert InvalidAmount();
+
         MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
-
-        address[] memory vaults = _registry().getVaultsByAsset(asset);
-
-        for (uint256 i = 0; i < vaults.length; i++) {
-            if (_registry().getAdapter(vaults[i]) == address(this)) {
-                IMetaVault metaVault = $.vaultDestinations[vaults[i]];
-                if (address(metaVault) != address(0)) {
-                    // Emergency redeem all shares directly to recipient
-                    uint256 shares = metaVault.balanceOf(address(this));
-                    if (shares > 0) {
-                        metaVault.redeem(shares, to, address(this));
-                    }
+        if (_registry().getAdapter(vault) == address(this)) {
+            IMetaVault metaVault = $.vaultDestinations[vault];
+            if (address(metaVault) != address(0)) {
+                // Emergency redeem all shares directly to recipient
+                uint256 shares = metaVault.balanceOf(vault);
+                if (shares > 0) {
+                    metaVault.redeem(shares, vault, _getKAssetRouter());
                 }
             }
         }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          UPGRADE FUNCTION
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Authorize contract upgrade
+    /// @param newImplementation New implementation address
+    function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE) {
+        if (newImplementation == address(0)) revert ZeroAddress();
     }
 }

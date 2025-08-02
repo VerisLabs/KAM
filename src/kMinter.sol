@@ -227,7 +227,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         // Withdraw from BatchReceiver to recipient (1:1 with kTokens burned)
         IkBatchReceiver(batchReceiver).pullAssets(
-            redeemRequest.recipient, redeemRequest.asset, redeemRequest.amount, uint256(redeemRequest.batchId)
+            redeemRequest.recipient, redeemRequest.amount, uint256(redeemRequest.batchId)
         );
 
         emit Redeemed(requestId);

@@ -6,6 +6,7 @@ import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
 import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
@@ -34,7 +35,6 @@ contract ClaimModule is BaseModule {
 
     /// @notice ERC20 Transfer event for stkToken operations
     event Transfer(address indexed from, address indexed to, uint256 value);
-
     event StakingSharesClaimed(uint32 indexed batchId, uint256 requestIndex, address indexed user, uint256 shares);
     event UnstakingAssetsClaimed(uint32 indexed batchId, uint256 requestIndex, address indexed user, uint256 assets);
     event StkTokensIssued(address indexed user, uint256 stkTokenAmount);
@@ -89,7 +89,10 @@ contract ClaimModule is BaseModule {
         request.status = uint8(BaseModuleTypes.RequestStatus.CLAIMED);
 
         // Calculate total kTokens to return based on settlement-time share price
-        uint256 sharePrice = _calculateStkTokenPrice($.lastTotalAssets, ERC20(address(this)).totalSupply());
+        uint256 sharePrice = _calculateStkTokenPrice(
+            IAdapter(_registry().getAdapter(address(this))).totalAssets(address(this)),
+            ERC20(address(this)).totalSupply()
+        );
         uint256 totalKTokensToReturn = _calculateAssetValue(uint256(request.stkTokenAmount), sharePrice);
 
         // SECURITY: Validate slippage protection at claim time
@@ -104,7 +107,7 @@ contract ClaimModule is BaseModule {
         emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensToReturn);
 
         // Transfer kTokens to user
-        _getKTokenForAsset($.underlyingAsset).safeTransfer(request.user, totalKTokensToReturn);
+        $.kToken.safeTransfer(request.user, totalKTokensToReturn);
     }
 
     /*//////////////////////////////////////////////////////////////

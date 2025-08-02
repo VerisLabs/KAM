@@ -8,6 +8,7 @@ interface IkRegistry {
 
     enum VaultType {
         DN,
+        MINTER,
         ALPHA,
         BETA
     }
