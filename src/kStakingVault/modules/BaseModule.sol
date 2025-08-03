@@ -2,17 +2,20 @@
 pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+
+import { ERC20 } from "solady/tokens/ERC20.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 
 import { Extsload } from "src/abstracts/Extsload.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { IkToken } from "src/interfaces/IkToken.sol";
 import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
 
 /// @title BaseModule
 /// @notice Base contract for all modules
 /// @dev Provides shared storage, roles, and common functionality
-contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
+contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     using FixedPointMathLib for uint256;
 
     /*//////////////////////////////////////////////////////////////
@@ -179,6 +182,14 @@ contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
         return _registry().isRelayer(account);
     }
 
+    /// @notice Calculates stkToken price with safety checks
+    /// @dev Standard price calculation used across settlement modules
+    /// @param totalAssets_ Total underlying assets backing stkTokens
+    /// @return price Price per stkToken in underlying asset terms (18 decimals)
+    function calculateStkTokenPrice(uint256 totalAssets_) external view returns (uint256) {
+        return _calculateStkTokenPrice(totalAssets_, totalSupply());
+    }
+
     /*//////////////////////////////////////////////////////////////
                             PAUSE 
     //////////////////////////////////////////////////////////////*/
@@ -236,6 +247,14 @@ contract BaseModule is OwnableRoles, ReentrancyGuardTransient, Extsload {
         returns (uint256 assetValue)
     {
         return stkTokenAmount.mulWad(stkTokenPrice);
+    }
+
+    function _sharePrice() internal view returns (uint256) {
+        return _calculateStkTokenPrice(_totalAssets(), totalSupply());
+    }
+
+    function _totalAssets() internal view returns (uint256) {
+        return IkToken(_getBaseModuleStorage().underlyingAsset).balanceOf(address(this));
     }
 
     /*//////////////////////////////////////////////////////////////

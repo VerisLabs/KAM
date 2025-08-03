@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 /// @title kBase
 /// @notice Base contract providing common functionality for all KAM protocol contracts
@@ -133,6 +134,14 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /// @return Whether the address is a relayer
     function _getRelayer() internal view returns (bool) {
         return _registry().isRelayer(msg.sender);
+    }
+
+    /// @notice Gets the safe batch ID for a given vault
+    /// @param vault The vault address
+    /// @return batchId The safe batch ID
+    /// @dev Reverts if vault not registered
+    function _getSafeBatchId(address vault) internal view returns (uint256 batchId) {
+        return IkStakingVault(vault).getSafeBatchId();
     }
 
     /*//////////////////////////////////////////////////////////////

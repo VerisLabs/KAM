@@ -35,8 +35,8 @@ contract ClaimModule is BaseModule {
 
     /// @notice ERC20 Transfer event for stkToken operations
     event Transfer(address indexed from, address indexed to, uint256 value);
-    event StakingSharesClaimed(uint32 indexed batchId, uint256 requestIndex, address indexed user, uint256 shares);
-    event UnstakingAssetsClaimed(uint32 indexed batchId, uint256 requestIndex, address indexed user, uint256 assets);
+    event StakingSharesClaimed(uint256 indexed batchId, uint256 requestId, address indexed user, uint256 shares);
+    event UnstakingAssetsClaimed(uint256 indexed batchId, uint256 requestId, address indexed user, uint256 assets);
     event StkTokensIssued(address indexed user, uint256 stkTokenAmount);
     event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
 
@@ -49,28 +49,23 @@ contract ClaimModule is BaseModule {
     /// @param requestId Request ID to claim
     function claimStakedShares(uint256 batchId, uint256 requestId) external payable nonReentrant whenNotPaused {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
+        if (!$.batches[batchId].isSettled) revert BatchNotSettled();
 
-        if (!$.batches[batchId.toUint32()].isSettled) revert BatchNotSettled();
         BaseModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
-        if (request.batchId != batchId.toUint32()) revert InvalidBatchId();
+        if (request.batchId != batchId) revert InvalidBatchId();
         if (request.status != uint8(BaseModuleTypes.RequestStatus.PENDING)) revert RequestNotPending();
         if (msg.sender != request.user) revert NotBeneficiary();
 
         request.status = uint8(BaseModuleTypes.RequestStatus.CLAIMED);
 
         // Calculate stkToken amount based on settlement-time share price
-        uint256 sharePrice = _calculateStkTokenPrice($.lastTotalAssets, ERC20(address(this)).totalSupply());
+        uint256 sharePrice = _sharePrice();
         uint256 stkTokensToMint = _calculateStkTokensToMint(uint256(request.kTokenAmount), sharePrice);
 
-        // Double-check slippage protection at claim time
-        if (stkTokensToMint < request.minStkTokens) {
-            revert MinimumOutputNotMet();
-        }
+        emit StakingSharesClaimed(batchId, requestId, request.user, stkTokensToMint);
 
         // Mint stkTokens to user
-        IkStakingVault(address(this)).mintStkTokens(request.user, stkTokensToMint);
-
-        emit StakingSharesClaimed(batchId.toUint32(), 0, request.user, stkTokensToMint);
+        _mint(request.user, stkTokensToMint);
         emit StkTokensIssued(request.user, stkTokensToMint);
     }
 
@@ -79,35 +74,26 @@ contract ClaimModule is BaseModule {
     /// @param requestId Request ID to claim
     function claimUnstakedAssets(uint256 batchId, uint256 requestId) external payable nonReentrant whenNotPaused {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
+        if (!$.batches[batchId].isSettled) revert BatchNotSettled();
 
-        if (!$.batches[batchId.toUint32()].isSettled) revert BatchNotSettled();
         BaseModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
-        if (request.batchId != batchId.toUint32()) revert InvalidBatchId();
+        if (request.batchId != batchId) revert InvalidBatchId();
         if (request.status != uint8(BaseModuleTypes.RequestStatus.PENDING)) revert RequestNotPending();
         if (msg.sender != request.user) revert NotBeneficiary();
 
         request.status = uint8(BaseModuleTypes.RequestStatus.CLAIMED);
 
         // Calculate total kTokens to return based on settlement-time share price
-        uint256 sharePrice = _calculateStkTokenPrice(
-            IAdapter(_registry().getAdapter(address(this))).totalAssets(address(this)),
-            ERC20(address(this)).totalSupply()
-        );
+        uint256 sharePrice = _sharePrice();
         uint256 totalKTokensToReturn = _calculateAssetValue(uint256(request.stkTokenAmount), sharePrice);
 
-        // SECURITY: Validate slippage protection at claim time
-        if (totalKTokensToReturn < request.minKTokens) {
-            revert MinimumOutputNotMet();
-        }
-
         // Burn stkTokens from vault (already transferred to vault during request)
-        IkStakingVault(address(this)).burnStkTokens(address(this), request.stkTokenAmount);
-
-        emit UnstakingAssetsClaimed(batchId.toUint32(), 0, request.user, totalKTokensToReturn);
-        emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensToReturn);
+        _burn(address(this), request.stkTokenAmount);
+        emit UnstakingAssetsClaimed(batchId, requestId, request.user, totalKTokensToReturn);
 
         // Transfer kTokens to user
         $.kToken.safeTransfer(request.user, totalKTokensToReturn);
+        emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensToReturn);
     }
 
     /*//////////////////////////////////////////////////////////////

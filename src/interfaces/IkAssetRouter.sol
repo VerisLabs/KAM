@@ -53,7 +53,7 @@ interface IkAssetRouter {
     /// @param amount Amount of assets being pushed
     /// @param batchId The batch ID from the DN vault
     function kAssetPush(address _asset, uint256 amount, uint256 batchId) external payable;
-    function kAssetRequestPull(address _asset, uint256 amount, uint256 batchId) external payable;
+    function kAssetRequestPull(address _asset, address _vault, uint256 amount, uint256 batchId) external payable;
     function kAssetTransfer(
         address sourceVault,
         address targetVault,

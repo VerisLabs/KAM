@@ -116,6 +116,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @param batchId The batch ID for this redemption
     function kAssetRequestPull(
         address _asset,
+        address _vault,
         uint256 amount,
         uint256 batchId
     )
@@ -126,16 +127,14 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         onlyKMinter
     {
         if (amount == 0) revert ZeroAmount();
-
-        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-
         address kMinter = msg.sender;
         if (_balance(kMinter) < amount) revert InsufficientVirtualBalance();
 
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         $.vaultBatchBalances[kMinter][batchId].requested += amount.toUint128();
 
         // Set batch receiver for the vault
-        address batchReceiver = IkStakingVault(_getDNVaultByAsset(_asset)).createBatchReceiver(batchId);
+        address batchReceiver = IkStakingVault(_vault).createBatchReceiver(batchId);
         if (batchReceiver == address(0)) revert ZeroAddress();
 
         emit AssetsRequestPulled(kMinter, _asset, batchReceiver, amount);

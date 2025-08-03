@@ -8,6 +8,7 @@ library BaseModuleTypes {
     enum RequestStatus {
         PENDING,
         CLAIMED,
+        FAILED,
         CANCELLED
     }
 
@@ -16,7 +17,6 @@ library BaseModuleTypes {
         address user; // 20 bytes ┐
         uint96 kTokenAmount; // 12 bytes ┘ Slot 1 (32 bytes total)
         address recipient; // 20 bytes ┐
-        uint96 minStkTokens; // 12 bytes ┘ Slot 2 (32 bytes total)
         uint256 batchId; // 32 bytes - Slot 3
         uint64 requestTimestamp; // 8 bytes  ┐
         uint8 status; // 1 byte   ┘ Slot 4 (9 bytes, 23 padding)
@@ -27,7 +27,6 @@ library BaseModuleTypes {
         address user; // 20 bytes ┐
         uint96 stkTokenAmount; // 12 bytes ┘ Slot 1
         address recipient; // 20 bytes ┐
-        uint96 minKTokens; // 12 bytes ┘ Slot 2
         uint256 batchId; // 32 bytes - Slot 3
         uint64 requestTimestamp; // 8 bytes  ┐
         uint8 status; // 1 byte   ┘ Slot 4

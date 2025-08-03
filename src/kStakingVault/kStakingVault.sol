@@ -2,16 +2,13 @@
 pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { ERC20 } from "solady/tokens/ERC20.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
-import { kBatchReceiver } from "src/kBatchReceiver.sol";
 
 import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
 import { MultiFacetProxy } from "src/kStakingVault/modules/MultiFacetProxy.sol";
@@ -22,7 +19,7 @@ import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
 /// @title kStakingVault
 /// @notice Pure ERC20 vault with dual accounting for minter and user pools
 /// @dev Implements automatic yield distribution from minter to user pools with modular architecture
-contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, MultiFacetProxy {
+contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacetProxy {
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
     using SafeCastLib for uint128;
@@ -90,12 +87,10 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
     /// @notice Request to stake kTokens for stkTokens (rebase token)
     /// @param to Address to receive the stkTokens
     /// @param kTokensAmount Amount of kTokens to stake
-    /// @param minStkTokens Minimum stkTokens to receive
     /// @return requestId Request ID for this staking request
     function requestStake(
         address to,
-        uint96 kTokensAmount,
-        uint96 minStkTokens
+        uint96 kTokensAmount
     )
         external
         payable
@@ -121,18 +116,17 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
             recipient: to,
             requestTimestamp: SafeCastLib.toUint64(block.timestamp),
             status: uint8(BaseModuleTypes.RequestStatus.PENDING),
-            minStkTokens: minStkTokens,
             batchId: batchId
         });
 
         // Add to user requests tracking
         $.userRequests[msg.sender].push(requestId);
 
+        $.kToken.safeTransferFrom(msg.sender, address(this), kTokensAmount);
+
         IkAssetRouter(_getKAssetRouter()).kAssetTransfer(
             _getKMinter(), address(this), $.underlyingAsset, kTokensAmount, batchId
         );
-
-        $.kToken.safeTransferFrom(msg.sender, address(this), kTokensAmount);
 
         emit StakeRequestCreated(bytes32(requestId), msg.sender, $.kToken, kTokensAmount, to, batchId.toUint32());
 
@@ -145,8 +139,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
     /// @return requestId Request ID for this unstaking request
     function requestUnstake(
         address to,
-        uint96 stkTokenAmount,
-        uint96 minKTokens
+        uint96 stkTokenAmount
     )
         external
         payable
@@ -172,7 +165,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
             recipient: to,
             requestTimestamp: SafeCastLib.toUint64(block.timestamp),
             status: uint8(BaseModuleTypes.RequestStatus.PENDING),
-            minKTokens: minKTokens,
             batchId: batchId
         });
 
@@ -186,20 +178,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
         emit UnstakeRequestCreated(bytes32(requestId), msg.sender, stkTokenAmount, to, batchId.toUint32());
 
         return requestId;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                            ASSET ROUTER FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    function mintStkTokens(address to, uint256 amount) external {
-        if (msg.sender != address(this)) revert OnlyKAssetRouter();
-        _mint(to, amount);
-    }
-
-    function burnStkTokens(address from, uint256 amount) external {
-        if (msg.sender != address(this)) revert OnlyKAssetRouter();
-        _burn(from, amount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -252,13 +230,13 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
     /// @dev Uses the last total assets and total supply to calculate the price
     /// @return price Price per stkToken in underlying asset terms (18 decimals)
     function sharePrice() external view returns (uint256) {
-        return _calculateStkTokenPrice(totalAssets(), totalSupply());
+        return _sharePrice();
     }
 
     /// @notice Returns the current total assets from adapter (real-time)
     /// @return Total assets currently deployed in strategies
     function totalAssets() public view returns (uint256) {
-        return IkToken(_getBaseModuleStorage().underlyingAsset).balanceOf(address(this));
+        return _totalAssets();
     }
 
     /// @notice Returns the current batch ID

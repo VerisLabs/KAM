@@ -127,7 +127,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         if (!_isRegisteredAsset(asset_)) revert InvalidAsset();
 
         address kToken = _getKTokenForAsset(asset_);
-        uint256 batchId = IkStakingVault(_getDNVaultByAsset(asset_)).getSafeBatchId();
+        uint256 batchId = _getSafeBatchId(_getDNVaultByAsset(asset_));
 
         // Transfer underlying asset from sender to this contract
         asset_.safeTransferFrom(msg.sender, address(this), amount_);
@@ -174,7 +174,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         requestId = _createRedeemRequestId(to_, amount_, block.timestamp);
 
         address vault = _getDNVaultByAsset(asset_);
-        uint256 batchId = IkStakingVault(vault).getSafeBatchId();
+        uint256 batchId = _getSafeBatchId(vault);
 
         kMinterStorage storage $ = _getkMinterStorage();
         // Create redemption request
@@ -195,7 +195,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         // Transfer kTokens from user to this contract until batch is settled
         kToken.safeTransferFrom(to_, address(this), amount_);
 
-        IkAssetRouter(_getKAssetRouter()).kAssetRequestPull(asset_, amount_, batchId);
+        IkAssetRouter(_getKAssetRouter()).kAssetRequestPull(asset_, vault, amount_, batchId);
 
         emit RedeemRequestCreated(requestId, to_, kToken, amount_, to_, batchId.toUint24());
 
