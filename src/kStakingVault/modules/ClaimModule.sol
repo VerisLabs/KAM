@@ -34,7 +34,6 @@ contract ClaimModule is BaseModule {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice ERC20 Transfer event for stkToken operations
-    event Transfer(address indexed from, address indexed to, uint256 value);
     event StakingSharesClaimed(uint256 indexed batchId, uint256 requestId, address indexed user, uint256 shares);
     event UnstakingAssetsClaimed(uint256 indexed batchId, uint256 requestId, address indexed user, uint256 assets);
     event StkTokensIssued(address indexed user, uint256 stkTokenAmount);

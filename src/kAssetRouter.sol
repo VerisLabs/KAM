@@ -179,7 +179,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @param sourceVault The vault to redeem shares from
     /// @param amount Amount requested for redemption
     /// @param batchId The batch ID for this redemption
-    function kSharesRequestPull(
+    function kSharesRequestPush(
         address sourceVault,
         uint256 amount,
         uint256 batchId
@@ -196,7 +196,31 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         $.vaultRequestedShares[sourceVault][batchId] += amount;
 
-        emit SharesRequested(sourceVault, batchId.toUint32(), amount);
+        emit SharesRequestedPushed(sourceVault, batchId, amount);
+    }
+
+    /// @notice Request to pull shares for kStakingVault redemptions
+    /// @param sourceVault The vault to redeem shares from
+    /// @param amount Amount requested for redemption
+    /// @param batchId The batch ID for this redemption
+    function kSharesRequestPull(
+        address sourceVault,
+        uint256 amount,
+        uint256 batchId
+    )
+        external
+        payable
+        nonReentrant
+        whenNotPaused
+        onlyStakingVault
+    {
+        if (amount == 0) revert ZeroAmount();
+
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+
+        $.vaultRequestedShares[sourceVault][batchId] -= amount;
+
+        emit SharesRequestedPulled(sourceVault, batchId, amount);
     }
 
     /*//////////////////////////////////////////////////////////////

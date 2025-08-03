@@ -1,8 +1,7 @@
-//// SPDX-License-Identifier: UNLICENSED
-//pragma solidity 0.8.30;
-//
-//import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, _1_USDC } from
-// "../utils/Constants.sol";
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.30;
+
+import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
 //import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 //
 //import { IERC20 } from "forge-std/interfaces/IERC20.sol";
@@ -30,10 +29,10 @@
 //        address indexed kToken,
 //        uint256 amount,
 //        address recipient,
-//        uint32 batchId
+//        uint256 batchId
 //    );
 //    event UnstakeRequestCreated(
-//        bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, uint32 batchId
+//        bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, uint256 batchId
 //    );
 //    event StakeRequestRedeemed(bytes32 indexed requestId);
 //    event UnstakeRequestRedeemed(bytes32 indexed requestId);

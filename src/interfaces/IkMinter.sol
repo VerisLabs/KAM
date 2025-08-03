@@ -31,7 +31,7 @@ interface IkMinter {
     //////////////////////////////////////////////////////////////*/
 
     event Initialized(address indexed registry, address indexed owner, address admin, address emergencyAdmin);
-    event Minted(address indexed to, uint256 amount, uint32 batchId);
+    event Minted(address indexed to, uint256 amount, uint256 batchId);
     event RedeemRequestCreated(
         bytes32 indexed requestId,
         address indexed user,

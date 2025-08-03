@@ -242,9 +242,6 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         // Validate request
         if (redeemRequest.id == bytes32(0)) revert RequestNotFound();
         if (redeemRequest.status != uint8(RequestStatus.PENDING)) revert RequestNotEligible();
-        if (redeemRequest.status == uint8(RequestStatus.REDEEMED)) revert RequestAlreadyProcessed();
-        if (redeemRequest.status == uint8(RequestStatus.CANCELLED)) revert RequestNotEligible();
-
         // Update state
         redeemRequest.status = uint8(RequestStatus.CANCELLED);
 

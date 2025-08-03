@@ -8,7 +8,6 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
-import { IkToken } from "src/interfaces/IkToken.sol";
 
 import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
 import { MultiFacetProxy } from "src/kStakingVault/modules/MultiFacetProxy.sol";
@@ -173,11 +172,59 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacet
 
         _transfer(msg.sender, address(this), stkTokenAmount);
 
-        IkAssetRouter(_getKAssetRouter()).kSharesRequestPull(address(this), stkTokenAmount, batchId);
+        IkAssetRouter(_getKAssetRouter()).kSharesRequestPush(address(this), stkTokenAmount, batchId);
 
-        emit UnstakeRequestCreated(bytes32(requestId), msg.sender, stkTokenAmount, to, batchId.toUint32());
+        emit UnstakeRequestCreated(bytes32(requestId), msg.sender, stkTokenAmount, to, batchId);
 
         return requestId;
+    }
+
+    /// @notice Cancels a staking request
+    /// @param requestId Request ID to cancel
+    function cancelStakeRequest(uint256 requestId) external {
+        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        BaseModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
+
+        if (msg.sender != request.user) revert Unauthorized();
+        if (request.id == 0) revert RequestNotFound();
+        if (request.status != uint8(BaseModuleTypes.RequestStatus.PENDING)) revert RequestNotEligible();
+
+        request.status = uint8(BaseModuleTypes.RequestStatus.CANCELLED);
+
+        address vault = _getDNVaultByAsset($.underlyingAsset);
+        if ($.batches[request.batchId].isClosed) revert Closed();
+        if ($.batches[request.batchId].isSettled) revert Settled();
+
+        IkAssetRouter(_getKAssetRouter()).kAssetTransfer(
+            address(this), _getKMinter(), $.underlyingAsset, request.kTokenAmount, request.batchId
+        );
+
+        $.kToken.safeTransfer(request.user, request.kTokenAmount);
+
+        emit StakeRequestCancelled(bytes32(requestId));
+    }
+
+    /// @notice Cancels an unstaking request
+    /// @param requestId Request ID to cancel
+    function cancelUnstakeRequest(uint256 requestId) external payable nonReentrant whenNotPaused {
+        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        BaseModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
+
+        if (msg.sender != request.user) revert Unauthorized();
+        if (request.id == 0) revert RequestNotFound();
+        if (request.status != uint8(BaseModuleTypes.RequestStatus.PENDING)) revert RequestNotEligible();
+
+        request.status = uint8(BaseModuleTypes.RequestStatus.CANCELLED);
+
+        address vault = _getDNVaultByAsset($.underlyingAsset);
+        if ($.batches[request.batchId].isClosed) revert Closed();
+        if ($.batches[request.batchId].isSettled) revert Settled();
+
+        IkAssetRouter(_getKAssetRouter()).kSharesRequestPull(address(this), request.stkTokenAmount, request.batchId);
+
+        _transfer(address(this), request.user, request.stkTokenAmount);
+
+        emit UnstakeRequestCancelled(bytes32(requestId));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -193,30 +240,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacet
     /*//////////////////////////////////////////////////////////////
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Returns the underlying asset address (for compatibility)
-    /// @return Asset address
-    function asset() external view returns (address) {
-        return _getBaseModuleStorage().kToken;
-    }
-
-    /// @notice Returns the vault shares token name
-    /// @return Token name
-    function name() public view override returns (string memory) {
-        return _getBaseModuleStorage().name;
-    }
-
-    /// @notice Returns the vault shares token symbol
-    /// @return Token symbol
-    function symbol() public view override returns (string memory) {
-        return _getBaseModuleStorage().symbol;
-    }
-
-    /// @notice Returns the vault shares token decimals
-    /// @return Token decimals
-    function decimals() public view override returns (uint8) {
-        return uint8(_getBaseModuleStorage().decimals);
-    }
 
     /// @notice Calculates stkToken price with safety checks
     /// @dev Standard price calculation used across settlement modules
@@ -235,7 +258,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacet
 
     /// @notice Returns the current total assets from adapter (real-time)
     /// @return Total assets currently deployed in strategies
-    function totalAssets() public view returns (uint256) {
+    function totalAssets() external view returns (uint256) {
         return _totalAssets();
     }
 
@@ -288,14 +311,13 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacet
     /// @notice Returns the batch receiver for the current batch
     /// @return Batch receiver
     function getBatchReceiver(uint256 batchId) external view returns (address) {
-        return _getBaseModuleStorage().batches[batchId.toUint32()].batchReceiver;
+        return _getBaseModuleStorage().batches[batchId].batchReceiver;
     }
 
     function getSafeBatchReceiver(uint256 batchId) external view returns (address) {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
-        uint32 batchId32 = batchId.toUint32();
-        if ($.batches[batchId32].isSettled) revert Settled();
-        return $.batches[batchId32].batchReceiver;
+        if ($.batches[batchId].isSettled) revert Settled();
+        return $.batches[batchId].batchReceiver;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -304,7 +326,9 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacet
 
     /// @notice Authorize upgrade (only owner can upgrade)
     /// @dev This allows upgrading the main contract while keeping modules separate
-    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner { }
+    function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE) {
+        if (newImplementation == address(0)) revert ZeroAddress();
+    }
 
     /*//////////////////////////////////////////////////////////////
                             RECEIVE ETH

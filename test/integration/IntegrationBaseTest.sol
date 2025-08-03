@@ -213,7 +213,7 @@ contract IntegrationBaseTest is DeploymentBaseTest {
         uint256 startTime = block.timestamp;
 
         // Execute staking request
-        requestId = IkStakingVault(vault).requestStake(user, uint96(kTokenAmount), uint96(minStkTokens));
+        requestId = IkStakingVault(vault).requestStake(user, uint96(kTokenAmount));
 
         vm.stopPrank();
 

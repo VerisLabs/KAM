@@ -163,7 +163,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // Should fail because DN vault has no virtual balance
         vm.prank(address(minter));
         vm.expectRevert(IkAssetRouter.InsufficientVirtualBalance.selector);
-        assetRouter.kAssetRequestPull(USDC_MAINNET, amount, batchId);
+        assetRouter.kAssetRequestPull(USDC_MAINNET, address(minter), amount, batchId);
 
         // This confirms the function validates virtual balance properly
         // Full request pull testing with real balances will be done in integration tests
@@ -179,7 +179,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // Should revert due to insufficient virtual balance (expected behavior)
         vm.prank(address(minter));
         vm.expectRevert(IkAssetRouter.InsufficientVirtualBalance.selector);
-        assetRouter.kAssetRequestPull(USDC_MAINNET, amount, batchId);
+        assetRouter.kAssetRequestPull(USDC_MAINNET, address(minter), amount, batchId);
 
         // This confirms the function validates virtual balance as expected
     }
@@ -189,14 +189,14 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // No virtual balance setup - should revert
         vm.prank(address(minter));
         vm.expectRevert(IkAssetRouter.InsufficientVirtualBalance.selector);
-        assetRouter.kAssetRequestPull(USDC_MAINNET, TEST_AMOUNT, TEST_BATCH_ID);
+        assetRouter.kAssetRequestPull(USDC_MAINNET, address(minter), TEST_AMOUNT, TEST_BATCH_ID);
     }
 
     /// @dev Test asset request pull reverts with zero amount
     function test_KAssetRequestPull_RevertZeroAmount() public {
         vm.prank(address(minter));
         vm.expectRevert(IkAssetRouter.ZeroAmount.selector);
-        assetRouter.kAssetRequestPull(USDC_MAINNET, 0, TEST_BATCH_ID);
+        assetRouter.kAssetRequestPull(USDC_MAINNET, address(minter), 0, TEST_BATCH_ID);
     }
 
     /// @dev Test asset request pull reverts when paused
@@ -207,7 +207,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
         vm.prank(address(minter));
         vm.expectRevert();
-        assetRouter.kAssetRequestPull(USDC_MAINNET, TEST_AMOUNT, TEST_BATCH_ID);
+        assetRouter.kAssetRequestPull(USDC_MAINNET, address(minter), TEST_AMOUNT, TEST_BATCH_ID);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -258,7 +258,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
         vm.prank(address(alphaVault));
         vm.expectEmit(true, false, false, true);
-        emit IkAssetRouter.SharesRequested(address(alphaVault), uint32(batchId), amount);
+        emit IkAssetRouter.SharesRequestedPulled(address(alphaVault), batchId, amount);
 
         assetRouter.kSharesRequestPull(address(alphaVault), amount, batchId);
 

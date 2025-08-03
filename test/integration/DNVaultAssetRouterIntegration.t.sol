@@ -67,7 +67,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
 
         // Simulate asset request from batch
         vm.prank(address(dnVault));
-        assetRouter.kAssetRequestPull(USDC_MAINNET, requestAmount, batchId);
+        assetRouter.kAssetRequestPull(USDC_MAINNET, address(dnVault), requestAmount, batchId);
 
         // Check requested amount updated
         (deposited, requested) = assetRouter.getBatchIdBalances(address(dnVault), batchId);
@@ -217,7 +217,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         // Measure gas for asset pull request
         gasStart = gasleft();
         vm.prank(address(dnVault));
-        assetRouter.kAssetRequestPull(USDC_MAINNET, amount / 2, batchId);
+        assetRouter.kAssetRequestPull(USDC_MAINNET, address(dnVault), amount / 2, batchId);
         uint256 pullGas = gasStart - gasleft();
 
         // Measure gas for asset transfer
@@ -281,7 +281,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         // Test: Asset pull with insufficient balance
         vm.prank(address(dnVault));
         vm.expectRevert(IkAssetRouter.InsufficientVirtualBalance.selector);
-        assetRouter.kAssetRequestPull(USDC_MAINNET, amount, batchId);
+        assetRouter.kAssetRequestPull(USDC_MAINNET, address(dnVault), amount, batchId);
 
         // Test: Asset transfer with insufficient balance
         vm.expectRevert(IkAssetRouter.InsufficientVirtualBalance.selector);

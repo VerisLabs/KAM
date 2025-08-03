@@ -12,9 +12,9 @@ contract MultiFacetProxy is Proxy, OwnableRoles {
     mapping(bytes4 => address) selectorToImplementation;
 
     // 0x4fa563f6ad0f2ba943d6492a5a9c8ec6e039cc68444fb93b0b51ea1d78a61ef8 = keccak256("MultiFacetProxy")
-    constructor(uint256 _proxyAdminRole) {
+    constructor(uint256 proxyAdminRole_) {
         assembly {
-            sstore(0x4fa563f6ad0f2ba943d6492a5a9c8ec6e039cc68444fb93b0b51ea1d78a61ef8, _proxyAdminRole)
+            sstore(0x4fa563f6ad0f2ba943d6492a5a9c8ec6e039cc68444fb93b0b51ea1d78a61ef8, proxyAdminRole_)
         }
     }
 

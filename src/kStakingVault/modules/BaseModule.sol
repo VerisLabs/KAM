@@ -35,13 +35,14 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
         address indexed kToken,
         uint256 amount,
         address recipient,
-        uint32 batchId
+        uint256 batchId
     );
     event StakeRequestRedeemed(bytes32 indexed requestId);
     event StakeRequestCancelled(bytes32 indexed requestId);
     event UnstakeRequestCreated(
-        bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, uint32 batchId
+        bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, uint256 batchId
     );
+    event UnstakeRequestCancelled(bytes32 indexed requestId);
     event Paused(bool paused);
     event Initialized(address registry, address owner, address admin);
     event TotalAssetsUpdated(uint256 oldTotalAssets, uint256 newTotalAssets);
@@ -71,6 +72,9 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     error ContractPaused();
     error Closed();
     error Settled();
+    error RequestNotFound();
+    error RequestNotEligible();
+    error InvalidVault();
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -178,16 +182,41 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
         if (router == address(0)) revert ContractNotFound(K_ASSET_ROUTER);
     }
 
+    /// @notice Gets the DN vault address for a given asset
+    /// @param asset The asset address
+    /// @return vault The corresponding DN vault address
+    /// @dev Reverts if asset not supported
+    function _getDNVaultByAsset(address asset) internal view returns (address vault) {
+        vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN));
+        if (vault == address(0)) revert InvalidVault();
+    }
+
     function _getRelayer(address account) internal view returns (bool) {
         return _registry().isRelayer(account);
     }
 
-    /// @notice Calculates stkToken price with safety checks
-    /// @dev Standard price calculation used across settlement modules
-    /// @param totalAssets_ Total underlying assets backing stkTokens
-    /// @return price Price per stkToken in underlying asset terms (18 decimals)
-    function calculateStkTokenPrice(uint256 totalAssets_) external view returns (uint256) {
-        return _calculateStkTokenPrice(totalAssets_, totalSupply());
+    /// @notice Returns the underlying asset address (for compatibility)
+    /// @return Asset address
+    function asset() external view returns (address) {
+        return _getBaseModuleStorage().kToken;
+    }
+
+    /// @notice Returns the vault shares token name
+    /// @return Token name
+    function name() public view override returns (string memory) {
+        return _getBaseModuleStorage().name;
+    }
+
+    /// @notice Returns the vault shares token symbol
+    /// @return Token symbol
+    function symbol() public view override returns (string memory) {
+        return _getBaseModuleStorage().symbol;
+    }
+
+    /// @notice Returns the vault shares token decimals
+    /// @return Token decimals
+    function decimals() public view override returns (uint8) {
+        return uint8(_getBaseModuleStorage().decimals);
     }
 
     /*//////////////////////////////////////////////////////////////
