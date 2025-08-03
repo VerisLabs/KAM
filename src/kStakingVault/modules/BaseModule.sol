@@ -183,11 +183,11 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     }
 
     /// @notice Gets the DN vault address for a given asset
-    /// @param asset The asset address
+    /// @param asset_ The asset address
     /// @return vault The corresponding DN vault address
     /// @dev Reverts if asset not supported
-    function _getDNVaultByAsset(address asset) internal view returns (address vault) {
-        vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN));
+    function _getDNVaultByAsset(address asset_) internal view returns (address vault) {
+        vault = _registry().getVaultByAssetAndType(asset_, uint8(IkRegistry.VaultType.DN));
         if (vault == address(0)) revert InvalidVault();
     }
 

@@ -128,7 +128,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     {
         if (amount == 0) revert ZeroAmount();
         address kMinter = msg.sender;
-        if (_balance(kMinter) < amount) revert InsufficientVirtualBalance();
+        address vault = _getDNVaultByAsset(_asset);
+        if (_balance(vault) < amount) revert InsufficientVirtualBalance();
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         $.vaultBatchBalances[kMinter][batchId].requested += amount.toUint128();

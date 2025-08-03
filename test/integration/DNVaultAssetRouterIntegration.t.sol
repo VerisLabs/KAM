@@ -279,7 +279,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         uint256 batchId = getCurrentDNBatchId();
 
         // Test: Asset pull with insufficient balance
-        vm.prank(address(dnVault));
+        vm.prank(address(minter));
         vm.expectRevert(IkAssetRouter.InsufficientVirtualBalance.selector);
         assetRouter.kAssetRequestPull(USDC_MAINNET, address(dnVault), amount, batchId);
 

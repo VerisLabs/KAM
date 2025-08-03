@@ -131,8 +131,8 @@ contract DeploymentTest is DeploymentBaseTest {
 
         // Check vault types
         assertEq(registry.getVaultType(address(dnVault)), uint8(0), "DN Vault type incorrect"); // DN = 0
-        assertEq(registry.getVaultType(address(alphaVault)), uint8(1), "Alpha Vault type incorrect"); // ALPHA = 1
-        assertEq(registry.getVaultType(address(betaVault)), uint8(2), "Beta Vault type incorrect"); // BETA = 2
+        assertEq(registry.getVaultType(address(alphaVault)), uint8(2), "Alpha Vault type incorrect"); // ALPHA = 2
+        assertEq(registry.getVaultType(address(betaVault)), uint8(3), "Beta Vault type incorrect"); // BETA = 3
     }
 
     /// @dev Test user funding

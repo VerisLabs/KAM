@@ -246,7 +246,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         redeemRequest.status = uint8(RequestStatus.CANCELLED);
 
         address vault = _getDNVaultByAsset(redeemRequest.asset);
-        if (!IkStakingVault(vault).isBatchClosed()) revert BatchClosed();
+        if (IkStakingVault(vault).isBatchClosed()) revert BatchClosed();
         if (IkStakingVault(vault).isBatchSettled()) revert BatchSettled();
 
         address kToken = _getKTokenForAsset(redeemRequest.asset);

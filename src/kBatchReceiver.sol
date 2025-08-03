@@ -2,36 +2,21 @@
 pragma solidity 0.8.30;
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { IkBatchReceiver } from "src/interfaces/IkBatchReceiver.sol";
 
 /// @title kBatchReceiver
 /// @notice Minimal proxy contract that holds and distributes settled assets for batch redemptions
 /// @dev Deployed per batch to isolate asset distribution and enable efficient settlement
-contract kBatchReceiver {
+contract kBatchReceiver is IkBatchReceiver {
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
-                              STORAGE
+                              IMMUTABLES
     //////////////////////////////////////////////////////////////*/
 
     address public immutable kMinter;
     address public immutable asset;
     uint256 public immutable batchId;
-
-    /*//////////////////////////////////////////////////////////////
-                              EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event BatchReceiverInitialized(address indexed kMinter, uint256 indexed batchId, address asset);
-    event PulledAssets(address indexed receiver, address indexed asset, uint256 amount);
-
-    /*//////////////////////////////////////////////////////////////
-                              ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error ZeroAddress();
-    error OnlyKMinter();
-    error InvalidBatchId();
-    error ZeroAmount();
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -66,7 +51,7 @@ contract kBatchReceiver {
         if (amount == 0) revert ZeroAmount();
         if (receiver == address(0)) revert ZeroAddress();
 
-        asset.safeTransferFrom(msg.sender, receiver, amount);
+        asset.safeTransfer(receiver, amount);
         emit PulledAssets(receiver, asset, amount);
     }
 }
