@@ -8,7 +8,6 @@ library BaseModuleTypes {
     enum RequestStatus {
         PENDING,
         CLAIMED,
-        FAILED,
         CANCELLED
     }
 
