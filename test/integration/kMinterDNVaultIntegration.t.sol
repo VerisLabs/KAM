@@ -78,7 +78,7 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         assertEq(depositedInBatch, mintAmount, "kMinter batch balance should increase by mint amount");
 
         // Virtual balance will be 0 until batch settlement
-        uint256 newMinterBalance = assetRouter.getBalanceOf(address(minter), USDC_MAINNET);
+        uint256 newMinterBalance = metaVaultAdapter.totalAssets(address(minter), USDC_MAINNET);
         assertEq(newMinterBalance, 0, "kMinter virtual balance should be 0 before settlement");
 
         // Validate 1:1 backing invariant
@@ -98,7 +98,7 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         (uint256 depositedInBatch,) = assetRouter.getBatchIdBalances(address(minter), currentBatch);
         assertEq(depositedInBatch, mintAmount, "Assets should be in batch balance");
 
-        uint256 virtualBalance = assetRouter.getBalanceOf(address(minter), USDC_MAINNET);
+        uint256 virtualBalance = metaVaultAdapter.totalAssets(address(minter), USDC_MAINNET);
         assertEq(virtualBalance, 0, "Virtual balance should be 0 before settlement");
 
         // Settle kMinter batch - this automatically gives DN vault virtual balance
@@ -113,7 +113,7 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         assertEq(dnVaultBalance, mintAmount, "DN vault should receive assets after kMinter settlement");
 
         // kMinter should not have virtual balance (it was redirected to DN vault)
-        uint256 minterBalance = assetRouter.getBalanceOf(address(minter), USDC_MAINNET);
+        uint256 minterBalance = metaVaultAdapter.totalAssets(address(minter), USDC_MAINNET);
         assertEq(minterBalance, 0, "kMinter should have 0 virtual balance (assets go to DN vault)");
 
         // kMinter batch balances should be cleared after DN vault settlement
@@ -367,8 +367,8 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         uint256 transferBatchId = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(alphaVault), deployAmount, transferBatchId);
 
-        uint256 dnBalanceBeforePull = assetRouter.getBalanceOf(address(dnVault), USDC_MAINNET);
-        uint256 alphaBalanceBeforePull = assetRouter.getBalanceOf(address(alphaVault), USDC_MAINNET);
+        uint256 dnBalanceBeforePull = metaVaultAdapter.totalAssets(address(dnVault), USDC_MAINNET);
+        uint256 alphaBalanceBeforePull = metaVaultAdapter.totalAssets(address(alphaVault), USDC_MAINNET);
 
         // Verify deployment was recorded in batch balances using the same batch ID
         (uint256 alphaDeposited,) = assetRouter.getBatchIdBalances(address(alphaVault), transferBatchId);
@@ -391,13 +391,13 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
 
         // Virtual balances remain unchanged until settlement (kAssetTransfer only affects batch balances)
         assertEq(
-            assetRouter.getBalanceOf(address(dnVault), USDC_MAINNET),
+            metaVaultAdapter.totalAssets(address(dnVault), USDC_MAINNET),
             dnBalanceBeforePull,
             "DN vault virtual balance unchanged (kAssetTransfer only affects batch balances)"
         );
 
         assertEq(
-            assetRouter.getBalanceOf(address(alphaVault), USDC_MAINNET),
+            metaVaultAdapter.totalAssets(address(alphaVault), USDC_MAINNET),
             alphaBalanceBeforePull, // Should be 0
             "Alpha vault virtual balance remains 0 (no settlement occurred)"
         );

@@ -35,6 +35,18 @@ interface IAdapter {
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Returns the last total assets for a given vault and asset
+    /// @param vault The vault address
+    /// @param asset The asset address
+    /// @return The last total assets for the vault and asset
+    function getLastTotalAssets(address vault, address asset) external view returns (uint256);
+
+    /// @notice Converts shares to assets
+    /// @param vault The vault address
+    /// @param shares The number of shares to convert
+    /// @return The number of assets converted from shares
+    function convertToAssets(address vault, uint256 shares) external view returns (uint256);
+
     /// @notice Returns the current total assets in the external strategy
     /// @param vault The vault to query
     /// @param asset The asset to query

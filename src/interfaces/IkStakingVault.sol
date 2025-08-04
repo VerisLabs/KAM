@@ -24,6 +24,7 @@ interface IkStakingVault {
     //////////////////////////////////////////////////////////////*/
 
     function asset() external view returns (address);
+    function underlyingAsset() external view returns (address);
     function name() external view returns (string memory);
     function symbol() external view returns (string memory);
     function decimals() external view returns (uint8);

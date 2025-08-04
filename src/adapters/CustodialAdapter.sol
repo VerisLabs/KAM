@@ -174,6 +174,16 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         return $.totalAssets[vault][asset];
     }
 
+    /// @notice Returns the last total assets for a given vault and asset
+    /// @param vault The vault address
+    /// @param asset The asset address
+    /// @return The last total assets for the vault and asset
+    function getLastTotalAssets(address vault, address asset) external view returns (uint256) {
+        CustodialAdapterStorage storage $ = _getCustodialAdapterStorage();
+        return $.totalAssets[vault][asset];
+    }
+
+
     /// @notice Returns the custodial address for a given vault
     /// @param vault The vault address
     /// @return The custodial address for the vault

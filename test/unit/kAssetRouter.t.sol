@@ -400,31 +400,31 @@ contract kAssetRouterTest is DeploymentBaseTest {
         uint256 amount = TEST_AMOUNT;
 
         // Initially zero
-        assertEq(assetRouter.getBalanceOf(address(alphaVault), USDC_MAINNET), 0, "Should be zero initially");
+        assertEq(metaVaultAdapter.totalAssets(address(alphaVault), USDC_MAINNET), 0, "Should be zero initially");
 
         // Instead of complex setup, let's just test that the view function works
         // We'll test the actual balance setup in integration tests
 
         // The function should return 0 for non-existent balances
         assertEq(
-            assetRouter.getBalanceOf(address(dnVault), USDC_MAINNET), 0, "DN vault should have zero balance initially"
+            metaVaultAdapter.totalAssets(address(dnVault), USDC_MAINNET), 0, "DN vault should have zero balance initially"
         );
 
         assertEq(
-            assetRouter.getBalanceOf(address(alphaVault), USDC_MAINNET),
+            metaVaultAdapter.totalAssets(address(alphaVault), USDC_MAINNET),
             0,
             "Alpha vault should have zero balance initially"
         );
 
         assertEq(
-            assetRouter.getBalanceOf(address(betaVault), USDC_MAINNET),
+            metaVaultAdapter.totalAssets(address(betaVault), USDC_MAINNET),
             0,
             "Beta vault should have zero balance initially"
         );
 
         // Test with different asset
         assertEq(
-            assetRouter.getBalanceOf(address(alphaVault), WBTC_MAINNET), 0, "Should return zero for different asset"
+            metaVaultAdapter.totalAssets(address(alphaVault), WBTC_MAINNET), 0, "Should return zero for different asset"
         );
     }
 

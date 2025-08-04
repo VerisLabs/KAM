@@ -201,6 +201,12 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
         return _getBaseModuleStorage().kToken;
     }
 
+    /// @notice Returns the underlying asset address
+    /// @return Asset address
+    function underlyingAsset() external view returns (address) {
+        return _getBaseModuleStorage().underlyingAsset;
+    }
+
     /// @notice Returns the vault shares token name
     /// @return Token name
     function name() public view override returns (string memory) {

@@ -298,8 +298,8 @@ contract MultiVaultIntegrationTest is IntegrationBaseTest {
         // Validate protocol stability under extreme load
         // DN vault (type 1) uses adapter totalAssets, others use virtual balance
         uint256 finalTotalAssets = custodialAdapter.totalAssets(address(dnVault), USDC_MAINNET)
-            + assetRouter.getBalanceOf(address(alphaVault), USDC_MAINNET)
-            + assetRouter.getBalanceOf(address(betaVault), USDC_MAINNET);
+            + metaVaultAdapter.totalAssets(address(alphaVault), USDC_MAINNET)
+            + metaVaultAdapter.totalAssets(address(betaVault), USDC_MAINNET);
 
         // Only institutional assets (no retail staking in this test)
         uint256 expectedTotal = totalInstitutional;

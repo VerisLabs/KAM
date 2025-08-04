@@ -30,8 +30,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @custom:storage-location erc7201:kam.storage.kAssetRouter
     struct kAssetRouterStorage {
         mapping(address => mapping(uint256 => Balances)) vaultBatchBalances; // vault => batchId =>
-            // pending amounts
-        mapping(address => mapping(address => uint256)) vaultBalances; // vault => asset => balance
         mapping(address => mapping(uint256 => uint256)) vaultRequestedShares; // vault => batchId => balance
     }
 
@@ -349,15 +347,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     function getDNVaultByAsset(address asset) external view returns (address vault) {
         vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN));
         if (vault == address(0)) revert InvalidVault(vault);
-    }
-
-    /// @notice Get virtual asset balance for a specific vault and asset
-    /// @param _vault The vault to query (kMinter, kDNVault, kSVault)
-    /// @param _asset The asset to query (USDC, WBTC, etc.)
-    /// @return Virtual asset balance for the vault
-    function getBalanceOf(address _vault, address _asset) external view returns (uint256) {
-        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-        return $.vaultBalances[_vault][_asset];
     }
 
     /// @notice Get batch balances for a vault

@@ -343,7 +343,7 @@ contract IntegrationBaseTest is DeploymentBaseTest {
         // settlement
         // Only kMinter (type 0) uses assetRouter's virtual balance tracking
         if (vault == address(minter)) {
-            actualBalance = assetRouter.getBalanceOf(vault, asset);
+            actualBalance = metaVaultAdapter.totalAssets(vault, asset);
         } else {
             // DN vault (type 1), Alpha vault (type 2), Beta vault (type 3) all use adapter balance
             actualBalance = custodialAdapter.totalAssets(vault, asset);
@@ -364,7 +364,7 @@ contract IntegrationBaseTest is DeploymentBaseTest {
 
     /// @dev Assert kMinter balance (for institutional assets before settlement to DN)
     function assertKMinterBalance(address asset, uint256 expectedBalance, string memory message) internal {
-        uint256 actualBalance = assetRouter.getBalanceOf(address(minter), asset);
+        uint256 actualBalance = metaVaultAdapter.totalAssets(address(minter), asset);
         assertEq(actualBalance, expectedBalance, message);
         emit VirtualBalanceValidated(address(minter), asset, actualBalance);
     }
@@ -409,7 +409,7 @@ contract IntegrationBaseTest is DeploymentBaseTest {
 
     /// @dev Assert that vault balances are consistent between virtual and actual
     function assertVaultBalanceConsistency(address vault, address asset, string memory message) internal {
-        uint256 virtualBalance = assetRouter.getBalanceOf(vault, asset);
+        uint256 virtualBalance = metaVaultAdapter.totalAssets(vault, asset);
         uint256 vaultLastAssets = IkStakingVault(vault).lastTotalAssets();
 
         // For integration tests, these should be reasonably close
@@ -440,8 +440,8 @@ contract IntegrationBaseTest is DeploymentBaseTest {
     {
         // DN vault (type 0) uses adapter's virtual balance
         dnVaultBalance = custodialAdapter.totalVirtualAssets(address(dnVault), USDC_MAINNET);
-        alphaVaultBalance = assetRouter.getBalanceOf(address(alphaVault), USDC_MAINNET);
-        betaVaultBalance = assetRouter.getBalanceOf(address(betaVault), USDC_MAINNET);
+        alphaVaultBalance = metaVaultAdapter.totalAssets(address(alphaVault), USDC_MAINNET);
+        betaVaultBalance = metaVaultAdapter.totalAssets(address(betaVault), USDC_MAINNET);
         totalKUSDSupply = kUSD.totalSupply();
         assetRouterUSDCBalance = IERC20(USDC_MAINNET).balanceOf(address(assetRouter));
     }
@@ -454,8 +454,8 @@ contract IntegrationBaseTest is DeploymentBaseTest {
         // Add virtual balances - for DN vault (type 0), use adapter's virtual balance
         // For other vaults, use kAssetRouter's balance tracking
         uint256 dnBalance = custodialAdapter.totalVirtualAssets(address(dnVault), USDC_MAINNET);
-        uint256 alphaBalance = assetRouter.getBalanceOf(address(alphaVault), USDC_MAINNET);
-        uint256 betaBalance = assetRouter.getBalanceOf(address(betaVault), USDC_MAINNET);
+        uint256 alphaBalance = metaVaultAdapter.totalAssets(address(alphaVault), USDC_MAINNET);
+        uint256 betaBalance = metaVaultAdapter.totalAssets(address(betaVault), USDC_MAINNET);
 
         uint256 totalProtocolUSDC = totalUSDC + dnBalance + alphaBalance + betaBalance;
 

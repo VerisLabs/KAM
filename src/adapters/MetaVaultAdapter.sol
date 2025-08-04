@@ -31,6 +31,7 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     event RedemptionRequested(address indexed asset, uint256 amount, address indexed onBehalfOf);
     event RedemptionProcessed(uint256 indexed requestId, uint256 assets);
     event Initialized(address indexed registry, address indexed owner, address indexed admin);
+    event TotalAssetsUpdated(address indexed vault, address indexed asset, uint256 totalAssets);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -53,6 +54,7 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         mapping(address vault => address asset) vaultAsset;
         mapping(address vault => mapping(address asset => uint256 totalShares)) adapterTotalShares;
         mapping(address vault => IMetaVault metaVault) vaultDestinations;
+        mapping(address vault => mapping(address asset => uint256 lastAssets)) lastTotalAssets;
     }
 
     struct PendingRedemption {
@@ -221,9 +223,28 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         }
     }
 
+    /// @notice Sets the total assets for a given vault
+    /// @param vault The vault address
+    /// @param totalAssets_ The total assets to set
+    function setTotalAssets(address vault, address asset, uint256 totalAssets_) external onlyKAssetRouter {
+        MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
+        $.lastTotalAssets[vault][asset] = totalAssets_;
+
+        emit TotalAssetsUpdated(vault, asset, totalAssets_);
+    }
+
     /*//////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Returns the last total assets for a given vault and asset
+    /// @param vault The vault address
+    /// @param asset The asset address
+    /// @return The last total assets for the vault and asset
+    function getLastTotalAssets(address vault, address asset) external view returns (uint256) {
+        MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
+        return $.lastTotalAssets[vault][asset];
+    }
 
     /// @notice Returns the adapter balance for a specific vault and asset
     /// @param vault The vault address
@@ -294,6 +315,12 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         if (address(metaVault) == address(0)) return 0;
 
         return metaVault.claimableRedeemRequest(address(this));
+    }
+
+    function convertToAssets(address vault, uint256 shares) external view returns (uint256) {
+        MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
+        IMetaVault metaVault = $.vaultDestinations[vault];
+        return metaVault.convertToAssets(shares);
     }
 
     /*//////////////////////////////////////////////////////////////
