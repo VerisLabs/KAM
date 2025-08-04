@@ -49,10 +49,7 @@ interface IkRegistry {
     function getContractById(bytes32 id) external view returns (address);
     function getAssetById(bytes32 id) external view returns (address);
     function getAllAssets() external view returns (address[] memory);
-    function getCoreContracts()
-        external
-        view
-        returns (address kMinter, address kAssetRouter, address kVaultFactory, address upgradeManager);
+    function getCoreContracts() external view returns (address kMinter, address kAssetRouter);
     function getVaultsByAsset(address asset) external view returns (address[] memory);
     function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address);
     function getVaultType(address vault) external view returns (uint8);

@@ -21,6 +21,10 @@ interface IAdapter {
     /// @param onBehalfOf The vault address this redemption is for
     function redeem(address asset, uint256 amount, address onBehalfOf) external;
 
+    /// @notice Processes a pending redemption
+    /// @param requestId The request ID to process
+    function processRedemption(uint256 requestId) external;
+
     /// @notice Sets the total assets for a given vault
     /// @param vault The vault address
     /// @param asset The asset address
@@ -36,6 +40,22 @@ interface IAdapter {
     /// @param asset The asset to query
     /// @return Total assets currently deployed in strategy
     function totalAssets(address vault, address asset) external view returns (uint256);
+
+    /// @notice Returns the pending redemption for a request ID
+    /// @param requestId The request ID to query
+    /// @return vault The vault address
+    /// @return asset The asset address
+    /// @return shares The number of shares being redeemed
+    /// @return processed Whether the redemption has been processed
+    function getPendingRedemption(uint256 requestId)
+        external
+        view
+        returns (address vault, address asset, uint256 shares, bool processed);
+
+    /// @notice Returns the pending redemptions for a vault
+    /// @param vault The vault address
+    /// @return Pending redemptions for the vault   
+    function getPendingRedemptions(address vault) external view returns (uint256[] memory);
 
     /*//////////////////////////////////////////////////////////////
                           METADATA

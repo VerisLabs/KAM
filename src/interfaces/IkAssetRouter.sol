@@ -77,7 +77,7 @@ interface IkAssetRouter {
         external
         payable;
     function setPaused(bool paused) external;
-
+    function getDNVaultByAsset(address asset) external view returns (address vault);
     function getBalanceOf(address _vault, address _asset) external view returns (uint256);
     function getBatchIdBalances(
         address vault,

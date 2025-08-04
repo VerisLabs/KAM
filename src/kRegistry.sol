@@ -30,8 +30,6 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     // Singleton contracts (only one instance in the protocol)
     bytes32 public constant K_MINTER = keccak256("K_MINTER");
     bytes32 public constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
-    bytes32 public constant K_VAULT_FACTORY = keccak256("K_VAULT_FACTORY");
-    bytes32 public constant K_UPGRADE_MANAGER = keccak256("K_UPGRADE_MANAGER");
 
     // Singleton Assets - We might add more following the same pattern
     bytes32 public constant USDC = keccak256("USDC");
@@ -249,19 +247,15 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Get all core singleton contracts at once
     /// @return kMinter The kMinter contract address
     /// @return kAssetRouter The kAssetRouter contract address
-    /// @return kVaultFactory The kVaultFactory contract address
-    /// @return upgradeManager The upgrade manager contract address
     function getCoreContracts()
         external
         view
-        returns (address kMinter, address kAssetRouter, address kVaultFactory, address upgradeManager)
+        returns (address kMinter, address kAssetRouter)
     {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return (
             $.singletonContracts[K_MINTER],
-            $.singletonContracts[K_ASSET_ROUTER],
-            $.singletonContracts[K_VAULT_FACTORY],
-            $.singletonContracts[K_UPGRADE_MANAGER]
+            $.singletonContracts[K_ASSET_ROUTER]
         );
     }
 

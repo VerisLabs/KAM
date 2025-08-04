@@ -15,6 +15,9 @@ interface IkStakingVault {
     function claimUnstakedAssets(uint256 batchId, uint256 requestIndex) external payable;
     function updateLastTotalAssets(uint256 totalAssets) external;
     function createBatchReceiver(uint256 batchId) external returns (address);
+    function closeBatch(uint256 _batchId, bool _create) external;
+    function totalSupply() external view returns (uint256);
+    
 
     /*//////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS

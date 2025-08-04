@@ -277,7 +277,8 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         // Simulate additional redemption request that would require peg protection
         // Calculate shortfall that doesn't exceed Alpha's balance
         uint256 dnAvailableAfterRedemption = dnBalanceBeforeRedemption - redemptionAmount;
-        uint256 additionalRedemption = dnAvailableAfterRedemption + (alphaBalanceBeforeRedemption / 2); // Require half of Alpha's balance
+        uint256 additionalRedemption = dnAvailableAfterRedemption + (alphaBalanceBeforeRedemption / 2); // Require half
+            // of Alpha's balance
         uint256 shortfall = additionalRedemption - dnAvailableAfterRedemption;
 
         // Execute peg protection: Alpha transfers assets back to DN using consistent batch ID
@@ -343,12 +344,14 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
 
         // Adjust redemption amount to not exceed DN's capacity for initial redemption
         // Large redemption requiring peg protection (but within DN's current capacity)
-        uint256 adjustedRedemptionAmount = dnBalanceBeforeRedemption / 2; // Use half of DN's balance for initial redemption
+        uint256 adjustedRedemptionAmount = dnBalanceBeforeRedemption / 2; // Use half of DN's balance for initial
+            // redemption
         executeInstitutionalRedemption(users.institution, adjustedRedemptionAmount, users.institution);
 
         // Now simulate additional large redemption that would require peg protection
         uint256 dnRemainingAfterFirstRedemption = dnBalanceBeforeRedemption - adjustedRedemptionAmount;
-        uint256 additionalRedemption = dnRemainingAfterFirstRedemption + (totalRebalanced / 2); // Require more than DN has
+        uint256 additionalRedemption = dnRemainingAfterFirstRedemption + (totalRebalanced / 2); // Require more than DN
+            // has
         uint256 shortfall = additionalRedemption - dnRemainingAfterFirstRedemption;
 
         // Execute peg protection in portions (realistic scenario)
@@ -407,7 +410,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         // executeRetailStaking(users.alice, address(alphaVault), SMALL_AMOUNT, SMALL_AMOUNT);
 
         uint256 dnBatchId = transferBatch;
-        
+
         // Advance to settlement time
         advanceToSettlementTime();
 
@@ -419,9 +422,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         assertVirtualBalance(
             address(dnVault), USDC_MAINNET, dnAmount - alphaAmount, "DN vault after coordinated settlement"
         );
-        assertVirtualBalance(
-            address(alphaVault), USDC_MAINNET, alphaAmount, "Alpha vault after coordinated settlement"
-        );
+        assertVirtualBalance(address(alphaVault), USDC_MAINNET, alphaAmount, "Alpha vault after coordinated settlement");
 
         assert1to1BackingInvariant("After coordinated batch settlement");
     }
@@ -556,7 +557,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         uint256 dnBalance = massiveAmount - extremeRebalance; // 10% of original
         uint256 initialRedemption = dnBalance / 2; // Use half of DN's balance
         executeInstitutionalRedemption(users.institution, initialRedemption, users.institution);
-        
+
         // Calculate additional redemption that would require peg protection
         uint256 extremeRedemption = dnBalance + (extremeRebalance / 4); // Require 1/4 of Alpha's balance
 
@@ -574,7 +575,8 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
 
         // Validate extreme peg protection worked
         assertTrue(
-            custodialAdapter.totalAssets(address(dnVault), USDC_MAINNET) >= (dnRemainingAfterInitialRedemption + shortfall),
+            custodialAdapter.totalAssets(address(dnVault), USDC_MAINNET)
+                >= (dnRemainingAfterInitialRedemption + shortfall),
             "DN should handle extreme peg protection"
         );
 

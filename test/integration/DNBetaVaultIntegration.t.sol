@@ -111,7 +111,7 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
 
         // Setup: Deploy assets from DN to Beta
         executeInstitutionalMint(users.institution, LARGE_AMOUNT * 2, users.institution);
-        
+
         // Settlement required to move assets from kMinter to DN vault
         uint256 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, LARGE_AMOUNT * 2);
@@ -129,9 +129,9 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
 
         // Validate strategy return captured
         assertVirtualBalance(
-            address(betaVault), 
-            USDC_MAINNET, 
-            deploymentAmount + strategyReturn, 
+            address(betaVault),
+            USDC_MAINNET,
+            deploymentAmount + strategyReturn,
             "Beta vault should reflect strategy returns"
         );
 
@@ -169,9 +169,9 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
 
         // Validate loss is contained in Beta vault
         assertVirtualBalance(
-            address(betaVault), 
-            USDC_MAINNET, 
-            deploymentAmount - strategyLoss, 
+            address(betaVault),
+            USDC_MAINNET,
+            deploymentAmount - strategyLoss,
             "Beta vault should reflect strategy losses"
         );
 
@@ -268,20 +268,12 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeBatchSettlement(address(betaVault), mixedBatch, netResult);
 
         // Validate net result captured in Beta
-        assertVirtualBalance(
-            address(betaVault), 
-            USDC_MAINNET, 
-            netResult, 
-            "Beta should reflect net strategy results"
-        );
+        assertVirtualBalance(address(betaVault), USDC_MAINNET, netResult, "Beta should reflect net strategy results");
 
         // Validate DN vault unaffected by Beta strategy results
         uint256 expectedDNBalance = (LARGE_AMOUNT * 2) - deployment1 - deployment2;
         assertVirtualBalance(
-            address(dnVault), 
-            USDC_MAINNET, 
-            expectedDNBalance, 
-            "DN vault should be isolated from Beta strategy results"
+            address(dnVault), USDC_MAINNET, expectedDNBalance, "DN vault should be isolated from Beta strategy results"
         );
 
         assert1to1BackingInvariant("After multiple Beta strategy risk isolation");
@@ -326,7 +318,9 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
 
         // Settlement required for recovery
         executeBatchSettlement(address(betaVault), recoveryBatch, betaBalanceBeforeRecovery - additionalNeed);
-        executeBatchSettlement(address(dnVault), recoveryBatch, dnBalanceBeforeRecovery - smallRedemption + additionalNeed);
+        executeBatchSettlement(
+            address(dnVault), recoveryBatch, dnBalanceBeforeRecovery - smallRedemption + additionalNeed
+        );
 
         // Validate emergency recovery
         assertVirtualBalance(
@@ -429,7 +423,7 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         // Settlement for profit distribution
         uint256 betaBalanceAfterProfit = custodialAdapter.totalAssets(address(betaVault), USDC_MAINNET);
         uint256 dnBalanceBeforeDistribution = custodialAdapter.totalAssets(address(dnVault), USDC_MAINNET);
-        
+
         executeBatchSettlement(address(betaVault), distributionBatch, betaBalanceAfterProfit - dnProfitAmount);
         executeBatchSettlement(address(dnVault), distributionBatch, dnBalanceBeforeDistribution + dnProfitAmount);
 
@@ -523,10 +517,7 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
 
         // Validate extreme gain handled
         assertVirtualBalance(
-            address(betaVault), 
-            USDC_MAINNET, 
-            massiveDeployment + extremeGain, 
-            "Beta should handle extreme gains"
+            address(betaVault), USDC_MAINNET, massiveDeployment + extremeGain, "Beta should handle extreme gains"
         );
 
         // Test extreme loss scenario through settlement
@@ -535,9 +526,9 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
 
         // Validate extreme loss handled and isolated
         assertVirtualBalance(
-            address(betaVault), 
-            USDC_MAINNET, 
-            massiveDeployment + extremeGain - extremeLoss, 
+            address(betaVault),
+            USDC_MAINNET,
+            massiveDeployment + extremeGain - extremeLoss,
             "Beta should handle extreme losses"
         );
 

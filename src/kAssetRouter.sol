@@ -342,6 +342,15 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         return _getBaseStorage().paused;
     }
 
+    /// @notice Gets the DN vault address for a given asset
+    /// @param asset The asset address
+    /// @return vault The corresponding DN vault address
+    /// @dev Reverts if asset not supported
+    function getDNVaultByAsset(address asset) external view returns (address vault) {
+        vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN));
+        if (vault == address(0)) revert InvalidVault(vault);
+    }
+
     /// @notice Get virtual asset balance for a specific vault and asset
     /// @param _vault The vault to query (kMinter, kDNVault, kSVault)
     /// @param _asset The asset to query (USDC, WBTC, etc.)

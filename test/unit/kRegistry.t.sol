@@ -368,15 +368,12 @@ contract kRegistryTest is DeploymentBaseTest {
 
     /// @dev Test getCoreContracts returns correct addresses
     function test_GetCoreContracts() public {
-        (address kMinter, address kAssetRouter, address kVaultFactory, address upgradeManager) =
+        (address kMinter, address kAssetRouter) =
             registry.getCoreContracts();
 
         // Should return registered addresses or zero
         assertEq(kMinter, address(minter), "kMinter address incorrect");
         assertEq(kAssetRouter, address(assetRouter), "kAssetRouter address incorrect");
-        // Factory and upgrade manager not set in deployment test, should be zero
-        assertEq(kVaultFactory, address(0), "kVaultFactory should be zero");
-        assertEq(upgradeManager, address(0), "upgradeManager should be zero");
     }
 
     /// @dev Test isRelayer function
