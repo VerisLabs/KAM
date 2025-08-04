@@ -139,11 +139,11 @@ contract BaseAdapter is OwnableRoles, ReentrancyGuardTransient {
 
     /// @notice Gets the asset managed by a vault
     /// @param vault The vault address
-    /// @return asset The asset address managed by the vault
+    /// @return assets The asset address managed by the vault
     /// @dev Reverts if vault not registered
-    function _getVaultAsset(address vault) internal view returns (address asset) {
-        asset = _registry().getVaultAsset(vault);
-        if (asset == address(0)) revert ZeroAddress();
+    function _getVaultAssets(address vault) internal view returns (address[] memory assets) {
+        assets = _registry().getVaultAssets(vault);
+        if (assets.length == 0) revert ZeroAddress();
     }
 
     /*//////////////////////////////////////////////////////////////

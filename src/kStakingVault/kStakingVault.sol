@@ -28,7 +28,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacet
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Disables initializers to prevent implementation contract initialization
-    constructor() MultiFacetProxy(ADMIN_ROLE) {
+    constructor() {
         _disableInitializers();
     }
 
@@ -127,7 +127,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacet
             _getKMinter(), address(this), $.underlyingAsset, kTokensAmount, batchId
         );
 
-        emit StakeRequestCreated(bytes32(requestId), msg.sender, $.kToken, kTokensAmount, to, batchId.toUint32());
+        emit StakeRequestCreated(bytes32(requestId), msg.sender, $.kToken, kTokensAmount, to, batchId);
 
         return requestId;
     }
@@ -235,6 +235,65 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacet
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         $.requestCounter = (uint256($.requestCounter) + 1).toUint64();
         return uint256(keccak256(abi.encode(address(this), user, amount, timestamp, $.requestCounter)));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            PAUSE FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Sets the pause state of the contract
+    /// @param paused_ New pause state
+    /// @dev Only callable internally by inheriting contracts
+    function setPaused(bool paused_) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
+        _setPaused(paused_);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        MULTIFACET PROXY OVERRIDES
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Override addFunction with proper access control from BaseModule
+    /// @param selector The function selector to add
+    /// @param implementation The implementation contract address
+    /// @param forceOverride If true, allows overwriting existing mappings
+    function addFunction(
+        bytes4 selector,
+        address implementation,
+        bool forceOverride
+    )
+        public
+        override
+        onlyRoles(ADMIN_ROLE)
+    {
+        super.addFunction(selector, implementation, forceOverride);
+    }
+
+    /// @notice Override addFunctions with proper access control
+    /// @param selectors Array of function selectors to add
+    /// @param implementation The implementation contract address
+    /// @param forceOverride If true, allows overwriting existing mappings
+    function addFunctions(
+        bytes4[] calldata selectors,
+        address implementation,
+        bool forceOverride
+    )
+        public
+        override
+        onlyRoles(ADMIN_ROLE)
+    {
+        super.addFunctions(selectors, implementation, forceOverride);
+    }
+
+    /// @notice Override removeFunction with proper access control
+    /// @param selector The function selector to remove
+    function removeFunction(bytes4 selector) public override onlyRoles(ADMIN_ROLE) {
+        super.removeFunction(selector);
+    }
+
+    /// @notice Override removeFunctions with proper access control
+    /// @param selectors Array of function selectors to remove
+    function removeFunctions(bytes4[] calldata selectors) public override onlyRoles(ADMIN_ROLE) {
+        super.removeFunctions(selectors);
     }
 
     /*//////////////////////////////////////////////////////////////

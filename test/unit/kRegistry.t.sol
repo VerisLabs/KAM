@@ -201,7 +201,7 @@ contract kRegistryTest is DeploymentBaseTest {
         // Verify vault registration
         assertTrue(registry.isVault(TEST_VAULT), "Vault not registered");
         assertEq(registry.getVaultType(TEST_VAULT), uint8(IkRegistry.VaultType.ALPHA), "Vault type incorrect");
-        assertEq(registry.getVaultAsset(TEST_VAULT), TEST_ASSET, "Vault asset incorrect");
+        assertEq(registry.getVaultAssets(TEST_VAULT)[0], TEST_ASSET, "Vault asset incorrect");
         assertEq(
             registry.getVaultByAssetAndType(TEST_ASSET, uint8(IkRegistry.VaultType.ALPHA)),
             TEST_VAULT,
@@ -290,13 +290,15 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.prank(users.owner);
         registry.grantRoles(users.admin, 2); // FACTORY_ROLE
 
+        address kMinter = address(0x6666666666666666666666666666666666666666);
         address dnVault = address(0x7777777777777777777777777777777777777777);
         address alphaVault = address(0x8888888888888888888888888888888888888888);
         address betaVault = address(0x9999999999999999999999999999999999999999);
 
         vm.startPrank(users.admin);
 
-        // Register all three vault types
+        // Register all four vault types
+        registry.registerVault(kMinter, IkRegistry.VaultType.MINTER, TEST_ASSET);
         registry.registerVault(dnVault, IkRegistry.VaultType.DN, TEST_ASSET);
         registry.registerVault(alphaVault, IkRegistry.VaultType.ALPHA, TEST_ASSET);
         registry.registerVault(betaVault, IkRegistry.VaultType.BETA, TEST_ASSET);
@@ -304,13 +306,14 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.stopPrank();
 
         // Verify all registrations
+        assertEq(registry.getVaultByAssetAndType(TEST_ASSET, uint8(IkRegistry.VaultType.MINTER)), kMinter);
         assertEq(registry.getVaultByAssetAndType(TEST_ASSET, uint8(IkRegistry.VaultType.DN)), dnVault);
         assertEq(registry.getVaultByAssetAndType(TEST_ASSET, uint8(IkRegistry.VaultType.ALPHA)), alphaVault);
         assertEq(registry.getVaultByAssetAndType(TEST_ASSET, uint8(IkRegistry.VaultType.BETA)), betaVault);
 
         // Verify getVaultsByAsset returns all three
         address[] memory vaultsByAsset = registry.getVaultsByAsset(TEST_ASSET);
-        assertEq(vaultsByAsset.length, 3, "Should have 3 vaults for asset");
+        assertEq(vaultsByAsset.length, 4, "Should have 4 vaults for asset");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -346,12 +349,12 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RemoveAdapter_OnlyAdmin() public {
         vm.prank(users.alice);
         vm.expectRevert();
-        registry.removeAdapter(TEST_VAULT);
+        registry.removeAdapter(TEST_VAULT, TEST_ADAPTER);
     }
 
     /// @dev Test getAdapter returns zero for non-existent adapter
     function test_GetAdapter_NonExistent() public view {
-        assertEq(registry.getAdapter(TEST_VAULT), address(0), "Should return zero for non-existent adapter");
+        assertTrue(registry.getAdapters(TEST_VAULT).length == 0, "Should return empty array for non-existent adapter");
     }
 
     /// @dev Test isAdapterRegistered returns false for non-existent adapter
@@ -405,22 +408,25 @@ contract kRegistryTest is DeploymentBaseTest {
         address[] memory usdcVaults = registry.getVaultsByAsset(USDC_MAINNET);
 
         // Should contain all three deployed vaults
-        assertEq(usdcVaults.length, 3, "Should have 3 USDC vaults from deployment");
+        assertEq(usdcVaults.length, 4, "Should have 4 USDC vaults from deployment");
 
         // Verify all vault addresses are present
         bool hasDN = false;
         bool hasAlpha = false;
         bool hasBeta = false;
+        bool hasMinter = false;
 
         for (uint256 i = 0; i < usdcVaults.length; i++) {
             if (usdcVaults[i] == address(dnVault)) hasDN = true;
             if (usdcVaults[i] == address(alphaVault)) hasAlpha = true;
             if (usdcVaults[i] == address(betaVault)) hasBeta = true;
+            if (usdcVaults[i] == address(minter)) hasMinter = true;
         }
 
         assertTrue(hasDN, "DN vault should be in USDC vaults");
         assertTrue(hasAlpha, "Alpha vault should be in USDC vaults");
         assertTrue(hasBeta, "Beta vault should be in USDC vaults");
+        assertTrue(hasMinter, "Minter vault should be in USDC vaults");
     }
 
     /// @dev Test empty getVaultsByAsset
@@ -485,7 +491,7 @@ contract kRegistryTest is DeploymentBaseTest {
 
         // Step 4: Verify relationships
         assertEq(registry.assetToKToken(TEST_ASSET), TEST_KTOKEN, "Asset->kToken mapping");
-        assertEq(registry.getVaultAsset(TEST_VAULT), TEST_ASSET, "Vault->Asset mapping");
+        assertEq(registry.getVaultAssets(TEST_VAULT)[0], TEST_ASSET, "Vault->Asset mapping");
         assertEq(registry.getVaultType(TEST_VAULT), uint8(IkRegistry.VaultType.ALPHA), "Vault type");
 
         // Step 5: Verify in arrays

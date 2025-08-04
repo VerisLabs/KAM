@@ -153,14 +153,14 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(batchReceiver)), 0, "Batch receiver should be empty");
     }
 
-    /// @dev Test receiving ETH (should be able to receive)
+    /// @dev Test receiving ETH (should revert - no receive function)
     function test_ReceiveETH() public {
         uint256 ethAmount = 1 ether;
         vm.deal(address(this), ethAmount);
 
         (bool success,) = address(batchReceiver).call{ value: ethAmount }("");
-        assertTrue(success, "ETH transfer failed");
-        assertEq(address(batchReceiver).balance, ethAmount, "ETH not received");
+        assertFalse(success, "ETH transfer should fail - no receive function");
+        assertEq(address(batchReceiver).balance, 0, "No ETH should be received");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -186,9 +186,15 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         uint256 maxBalance = IERC20(USDC_MAINNET).balanceOf(address(batchReceiver));
         amount = bound(amount, 1, maxBalance);
 
+        uint256 initialBalance = IERC20(USDC_MAINNET).balanceOf(receiver);
+
         vm.prank(address(minter));
         batchReceiver.pullAssets(receiver, amount, TEST_BATCH_ID);
 
-        assertEq(IERC20(USDC_MAINNET).balanceOf(receiver), amount, "Incorrect amount transferred to receiver");
+        assertEq(
+            IERC20(USDC_MAINNET).balanceOf(receiver),
+            initialBalance + amount,
+            "Incorrect amount transferred to receiver"
+        );
     }
 }

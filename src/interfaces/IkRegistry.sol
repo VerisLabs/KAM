@@ -7,8 +7,8 @@ interface IkRegistry {
     //////////////////////////////////////////////////////////////*/
 
     enum VaultType {
-        DN,
         MINTER,
+        DN,
         ALPHA,
         BETA
     }
@@ -44,7 +44,7 @@ interface IkRegistry {
     function registerAsset(address asset, address kToken, bytes32 id) external;
     function registerVault(address vault, VaultType type_, address asset) external;
     function registerAdapter(address vault, address adapter) external;
-    function removeAdapter(address vault) external;
+    function removeAdapter(address vault, address adapter) external;
 
     function getContractById(bytes32 id) external view returns (address);
     function getAssetById(bytes32 id) external view returns (address);
@@ -61,8 +61,8 @@ interface IkRegistry {
     function isVault(address vault) external view returns (bool);
     function isSingletonContract(address contractAddress) external view returns (bool);
     function isKToken(address kToken) external view returns (bool);
-    function getAdapter(address vault) external view returns (address);
+    function getAdapters(address vault) external view returns (address[] memory);
     function isAdapterRegistered(address adapter) external view returns (bool);
-    function getVaultAsset(address vault) external view returns (address);
+    function getVaultAssets(address vault) external view returns (address[] memory);
     function assetToKToken(address asset) external view returns (address);
 }

@@ -83,7 +83,7 @@ contract BatchModule is BaseModule {
 
     function _newBatch() internal returns (uint256) {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
-        $.batchCounter = ($.batchCounter + 1).toUint64();
+        $.batchCounter = (uint256($.batchCounter) + 1).toUint64();
         $.currentBatchId = uint256(keccak256(abi.encode(address(this), block.timestamp, $.batchCounter)));
         uint256 newBatchId = $.currentBatchId;
 

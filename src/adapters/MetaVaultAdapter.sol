@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
@@ -19,6 +19,7 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
     using SafeCastLib for uint256;
+    using EnumerableSetLib for EnumerableSetLib.Uint256Set;
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
@@ -48,6 +49,8 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     struct MetaVaultAdapterStorage {
         uint256 nextRequestId;
         mapping(uint256 requestId => PendingRedemption) pendingRedemptions;
+        mapping(address vault => EnumerableSetLib.Uint256Set) vaultPendingRedemptions;
+        mapping(address vault => address asset) vaultAsset;
         mapping(address vault => mapping(address asset => uint256 totalShares)) adapterTotalShares;
         mapping(address vault => IMetaVault metaVault) vaultDestinations;
     }
@@ -168,6 +171,9 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
             processed: false
         });
 
+        if ($.vaultPendingRedemptions[onBehalfOf].contains(requestId)) revert InvalidRequestId();
+        $.vaultPendingRedemptions[onBehalfOf].add(requestId);
+
         emit RedemptionRequested(asset, amount, onBehalfOf);
         emit RedemptionQueued(requestId, onBehalfOf, shares);
     }
@@ -192,6 +198,9 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         // Check if redemption is ready
         uint256 claimableShares = metaVault.claimableRedeemRequest(pending.vault);
         if (claimableShares < pending.shares) revert RedemptionNotReady();
+
+        if (!$.vaultPendingRedemptions[pending.vault].contains(requestId)) revert InvalidRequestId();
+        $.vaultPendingRedemptions[pending.vault].remove(requestId);
 
         // Process redemption from MetaVault
         assets = metaVault.redeem(pending.shares, pending.vault, _getKAssetRouter());
@@ -267,6 +276,14 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         return (pending.vault, pending.asset, pending.shares, pending.processed);
     }
 
+    /// @notice Returns the pending redemptions for a vault
+    /// @param vault The vault address
+    /// @return Pending redemptions for the vault
+    function getPendingRedemptions(address vault) external view returns (uint256[] memory) {
+        MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
+        return $.vaultPendingRedemptions[vault].values();
+    }
+
     /// @notice Returns the number of claimable shares for this adapter
     /// @param vault The vault to query
     /// @return Claimable shares from MetaVault
@@ -286,7 +303,7 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     /// @notice Sets the MetaVault for a vault
     /// @param vault The vault address
     /// @param metaVault The MetaVault address for this vault
-    function setVaultDestination(address vault, address metaVault) external onlyRoles(ADMIN_ROLE) {
+    function setVaultDestination(address vault, address asset_, address metaVault) external onlyRoles(ADMIN_ROLE) {
         if (vault == address(0) || metaVault == address(0)) {
             revert InvalidMetaVault();
         }
@@ -296,9 +313,7 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
             revert InvalidMetaVault();
         }
 
-        // Validate MetaVault asset matches vault asset
-        address vaultAsset = _registry().getVaultAsset(vault);
-        if (IMetaVault(metaVault).asset() != vaultAsset) revert InvalidMetaVault();
+        if (IMetaVault(metaVault).asset() != asset_) revert InvalidMetaVault();
 
         MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
         address oldVault = address($.vaultDestinations[vault]);
@@ -328,14 +343,12 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         if (amount == 0) revert InvalidAmount();
 
         MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
-        if (_registry().getAdapter(vault) == address(this)) {
-            IMetaVault metaVault = $.vaultDestinations[vault];
-            if (address(metaVault) != address(0)) {
-                // Emergency redeem all shares directly to recipient
-                uint256 shares = metaVault.balanceOf(vault);
-                if (shares > 0) {
-                    metaVault.redeem(shares, vault, _getKAssetRouter());
-                }
+        IMetaVault metaVault = $.vaultDestinations[vault];
+        if (address(metaVault) != address(0)) {
+            // Emergency redeem all shares directly to recipient
+            uint256 shares = metaVault.balanceOf(vault);
+            if (shares > 0) {
+                metaVault.redeem(shares, vault, _getKAssetRouter());
             }
         }
     }

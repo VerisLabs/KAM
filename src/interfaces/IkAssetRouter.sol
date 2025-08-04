@@ -43,7 +43,6 @@ interface IkAssetRouter {
     error InsufficientVirtualBalance();
     error ContractPaused();
     error OnlyStakingVault();
-    error InvalidTotalAssets();
 
     /*//////////////////////////////////////////////////////////////
                                 FUNCTIONS
@@ -67,11 +66,12 @@ interface IkAssetRouter {
     function kSharesRequestPush(address sourceVault, uint256 amount, uint256 batchId) external payable;
     function kSharesRequestPull(address sourceVault, uint256 amount, uint256 batchId) external payable;
     function settleBatch(
+        address asset,
         address vault,
         uint256 batchId,
         uint256 totalAssets,
-        uint256 yield,
         uint256 netted,
+        uint256 yield,
         bool profit
     )
         external

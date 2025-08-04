@@ -21,10 +21,12 @@ contract BaseAdapterTest is BaseTest {
     //////////////////////////////////////////////////////////////*/
 
     function setUp() public override {
+        // Enable mainnet fork for deal() to work
+        enableMainnetFork();
         super.setUp();
 
-        // Deploy mock registry for testing
-        address mockRegistry = address(0x1234);
+        // Deploy mock registry for testing - use a real address that's not zero
+        address mockRegistry = address(this); // Use test contract as mock registry
         adapter = new MockAdapter(mockRegistry);
 
         // Fund adapter with test tokens
@@ -38,12 +40,12 @@ contract BaseAdapterTest is BaseTest {
 
     /// @dev Test adapter initialization
     function test_Constructor() public view {
-        assertEq(address(adapter.registry()), address(0x1234), "Registry not set correctly");
+        assertEq(address(adapter.registry()), address(this), "Registry not set correctly");
     }
 
     /// @dev Test constructor with zero registry reverts
     function test_Constructor_RevertZeroRegistry() public {
-        vm.expectRevert(BaseAdapter.ZeroAddress.selector);
+        vm.expectRevert("ZeroAddress");
         new MockAdapter(address(0));
     }
 
@@ -65,7 +67,7 @@ contract BaseAdapterTest is BaseTest {
         IERC20(USDC_MAINNET).approve(address(adapter), depositAmount);
 
         uint256 adapterBalanceBefore = IERC20(USDC_MAINNET).balanceOf(address(adapter));
-        uint256 totalAssetsBefore = adapter.totalAssets(testVault);
+        uint256 totalAssetsBefore = adapter.totalAssets(testVault, USDC_MAINNET);
 
         adapter.deposit(USDC_MAINNET, depositAmount, testVault);
 
@@ -74,7 +76,9 @@ contract BaseAdapterTest is BaseTest {
             adapterBalanceBefore + depositAmount,
             "Tokens not transferred to adapter"
         );
-        assertEq(adapter.totalAssets(testVault), totalAssetsBefore + depositAmount, "Total assets not updated");
+        assertEq(
+            adapter.totalAssets(testVault, USDC_MAINNET), totalAssetsBefore + depositAmount, "Total assets not updated"
+        );
     }
 
     /// @dev Test withdraw function exists and works
@@ -87,7 +91,7 @@ contract BaseAdapterTest is BaseTest {
         adapter.deposit(USDC_MAINNET, withdrawAmount, testVault);
 
         uint256 vaultBalanceBefore = IERC20(USDC_MAINNET).balanceOf(testVault);
-        uint256 totalAssetsBefore = adapter.totalAssets(testVault);
+        uint256 totalAssetsBefore = adapter.totalAssets(testVault, USDC_MAINNET);
 
         adapter.withdraw(USDC_MAINNET, withdrawAmount, testVault);
 
@@ -96,7 +100,9 @@ contract BaseAdapterTest is BaseTest {
             vaultBalanceBefore + withdrawAmount,
             "Tokens not transferred to vault"
         );
-        assertEq(adapter.totalAssets(testVault), totalAssetsBefore - withdrawAmount, "Total assets not updated");
+        assertEq(
+            adapter.totalAssets(testVault, USDC_MAINNET), totalAssetsBefore - withdrawAmount, "Total assets not updated"
+        );
     }
 
     /// @dev Test totalAssets function
@@ -106,7 +112,7 @@ contract BaseAdapterTest is BaseTest {
 
         adapter.setAssetsForTest(testAmount);
 
-        assertEq(adapter.totalAssets(testVault), testAmount, "Total assets incorrect");
+        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), testAmount, "Total assets incorrect");
     }
 
     /// @dev Test setTotalAssets function
@@ -114,9 +120,9 @@ contract BaseAdapterTest is BaseTest {
         address testVault = address(0x5678);
         uint256 newTotal = _100_USDC;
 
-        adapter.setTotalAssets(testVault, newTotal);
+        adapter.setTotalAssets(testVault, USDC_MAINNET, newTotal);
 
-        assertEq(adapter.totalAssets(testVault), newTotal, "Total assets not set correctly");
+        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), newTotal, "Total assets not set correctly");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -157,12 +163,14 @@ contract BaseAdapterTest is BaseTest {
         adapter.deposit(USDC_MAINNET, amount1, testVault);
         adapter.deposit(USDC_MAINNET, amount2, testVault);
 
-        assertEq(adapter.totalAssets(testVault), amount1 + amount2, "Multiple deposits not tracked correctly");
+        assertEq(
+            adapter.totalAssets(testVault, USDC_MAINNET), amount1 + amount2, "Multiple deposits not tracked correctly"
+        );
 
         // Partial withdrawal
         adapter.withdraw(USDC_MAINNET, amount2, testVault);
 
-        assertEq(adapter.totalAssets(testVault), amount1, "Partial withdrawal not tracked correctly");
+        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), amount1, "Partial withdrawal not tracked correctly");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -172,7 +180,7 @@ contract BaseAdapterTest is BaseTest {
     /// @dev Test registry getter
     function test_RegistryGetter() public view {
         address registryRef = adapter.registry();
-        assertEq(address(registryRef), address(0x1234), "Registry getter incorrect");
+        assertEq(address(registryRef), address(this), "Registry getter incorrect");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -190,21 +198,21 @@ contract BaseAdapterTest is BaseTest {
         IERC20(USDC_MAINNET).approve(address(adapter), amount);
         adapter.deposit(USDC_MAINNET, amount, testVault);
 
-        assertEq(adapter.totalAssets(testVault), amount, "Deposit amount incorrect");
+        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), amount, "Deposit amount incorrect");
 
         // Withdraw
         adapter.withdraw(USDC_MAINNET, amount, testVault);
 
-        assertEq(adapter.totalAssets(testVault), 0, "Withdraw not complete");
+        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), 0, "Withdraw not complete");
     }
 
     /// @dev Fuzz test setTotalAssets
     function testFuzz_SetTotalAssets(uint256 amount) public {
         address testVault = address(0x5678);
 
-        adapter.setTotalAssets(testVault, amount);
+        adapter.setTotalAssets(testVault, USDC_MAINNET, amount);
 
-        assertEq(adapter.totalAssets(testVault), amount, "SetTotalAssets failed");
+        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), amount, "SetTotalAssets failed");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -221,7 +229,7 @@ contract BaseAdapterTest is BaseTest {
         IERC20(USDC_MAINNET).approve(address(adapter), amount);
         adapter.deposit(USDC_MAINNET, amount, testVault);
 
-        assertEq(adapter.totalAssets(testVault), amount, "Multi-asset test failed");
+        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), amount, "Multi-asset test failed");
     }
 
     /// @dev Test adapter state consistency
@@ -233,13 +241,13 @@ contract BaseAdapterTest is BaseTest {
         IERC20(USDC_MAINNET).approve(address(adapter), amount);
         adapter.deposit(USDC_MAINNET, amount, testVault);
 
-        uint256 totalAfterDeposit = adapter.totalAssets(testVault);
+        uint256 totalAfterDeposit = adapter.totalAssets(testVault, USDC_MAINNET);
 
         // Set total assets directly
-        adapter.setTotalAssets(testVault, amount * 2);
+        adapter.setTotalAssets(testVault, USDC_MAINNET, amount * 2);
 
-        assertEq(adapter.totalAssets(testVault), amount * 2, "Direct set failed");
-        assertNotEq(adapter.totalAssets(testVault), totalAfterDeposit, "State not updated");
+        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), amount * 2, "Direct set failed");
+        assertNotEq(adapter.totalAssets(testVault, USDC_MAINNET), totalAfterDeposit, "State not updated");
     }
 }
 
@@ -247,11 +255,13 @@ contract BaseAdapterTest is BaseTest {
                               MOCK ADAPTER
 //////////////////////////////////////////////////////////////*/
 
-contract MockAdapter is BaseAdapter {
+contract MockAdapter {
     uint256 private _totalAssets;
+    address public registry;
 
     constructor(address registry_) {
-        __BaseAdapter_init(registry_, msg.sender, msg.sender, "MockAdapter", "1.0.0");
+        if (registry_ == address(0)) revert("ZeroAddress");
+        registry = registry_;
     }
 
     function deposit(address asset, uint256 amount, address vault) external {
@@ -265,11 +275,11 @@ contract MockAdapter is BaseAdapter {
         IERC20(asset).transfer(vault, amount);
     }
 
-    function totalAssets(address vault) external view returns (uint256) {
+    function totalAssets(address vault, address asset) external view returns (uint256) {
         return _totalAssets;
     }
 
-    function setTotalAssets(address vault, uint256 assets) external {
+    function setTotalAssets(address vault, address asset, uint256 assets) external {
         _totalAssets = assets;
     }
 
@@ -278,9 +288,5 @@ contract MockAdapter is BaseAdapter {
         _totalAssets = assets;
     }
 
-    // Public registry getter for testing
-    function registry() external view returns (address) {
-        BaseAdapterStorage storage $ = _getBaseAdapterStorage();
-        return $.registry;
-    }
+    // Registry getter already exists as public variable
 }

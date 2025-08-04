@@ -22,8 +22,8 @@ interface IkMinter {
         address asset; // 20 bytes (slot 4, 12 bytes wasted)
         uint64 requestTimestamp; // 8 bytes (slot 5)
         uint8 status; // 1 byte  (slot 5)
-        uint24 batchId; // 3 bytes (slot 5)
         address recipient; // 20 bytes (slot 6, 12 bytes wasted)
+        uint256 batchId; // 32 bytes (slot 7)
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -38,7 +38,7 @@ interface IkMinter {
         address indexed kToken,
         uint256 amount,
         address recipient,
-        uint24 batchId
+        uint256 batchId
     );
     event Redeemed(bytes32 indexed requestId);
     event Cancelled(bytes32 indexed requestId);

@@ -236,6 +236,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @param yield yield in current batch
     /// @param profit whether the batch is profitable
     function settleBatch(
+        address asset,
         address vault,
         uint256 batchId,
         uint256 totalAssets_,
@@ -250,7 +251,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         onlyRelayer
     {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-        address asset = _getVaultAsset(vault);
         address kToken = _getKTokenForAsset(asset);
         bool isKMinter; // for event Deposited
         uint256 requested = $.vaultBatchBalances[vault][batchId].requested;
@@ -284,7 +284,11 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             }
         }
 
-        IAdapter adapter = IAdapter(_registry().getAdapter(vault));
+        address[] memory adapters = _registry().getAdapters(vault);
+        // at some point we will have multiple adapters for a vault
+        // for now we just use the first one
+        if (adapters[0] == address(0)) revert ZeroAddress();
+        IAdapter adapter = IAdapter(adapters[0]);
 
         if (netted > 0) {
             adapter.deposit(asset, netted, vault);
@@ -292,11 +296,11 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         }
 
         // Update vault's total assets
-        if (_registry().getVaultType(vault) > 1) {
-            adapter.setTotalAssets(vault, totalAssets_);
+        if (_registry().getVaultType(vault) > 0) {
+            adapter.setTotalAssets(vault, asset, totalAssets_);
         }
 
-        emit BatchSettled(vault, batchId.toUint32(), totalAssets_);
+        emit BatchSettled(vault, batchId, totalAssets_);
     }
 
     /*////////////////////////////////////////////////////////////
@@ -314,8 +318,22 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _balance(address vault) internal view returns (uint256) {
-        return IAdapter(_registry().getAdapter(vault)).totalAssets(vault);
+    /// @notice gets the balance of Vault
+    /// @param vault the vault address
+    /// @return balance the balance of the vault in all adapters.
+    function _balance(address vault) internal view returns (uint256 balance) {
+        address[] memory assets = _getVaultAssets(vault);
+        address[] memory adapters = _registry().getAdapters(vault);
+        uint256 length = adapters.length;
+        for (uint256 i; i < length;) {
+            IAdapter adapter = IAdapter(adapters[i]);
+            // For now, assume single asset per vault (use first asset)
+            balance += adapter.totalAssets(vault, assets[0]);
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /// @notice Check if contract is paused

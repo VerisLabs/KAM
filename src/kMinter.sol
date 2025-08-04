@@ -141,7 +141,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         // Mint kTokens 1:1 with deposited amount (no batch ID in push model)
         IkToken(kToken).mint(to_, amount_);
 
-        emit Minted(to_, amount_, batchId.toUint32());
+        emit Minted(to_, amount_, batchId);
     }
 
     /// @notice Initiates redemption process by burning kTokens and creating batch redemption request
@@ -185,7 +185,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
             asset: asset_,
             requestTimestamp: block.timestamp.toUint64(),
             status: uint8(RequestStatus.PENDING),
-            batchId: batchId.toUint24(),
+            batchId: batchId,
             recipient: to_
         });
 
@@ -197,7 +197,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         IkAssetRouter(_getKAssetRouter()).kAssetRequestPull(asset_, vault, amount_, batchId);
 
-        emit RedeemRequestCreated(requestId, to_, kToken, amount_, to_, batchId.toUint24());
+        emit RedeemRequestCreated(requestId, to_, kToken, amount_, to_, batchId);
 
         return requestId;
     }
@@ -218,7 +218,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         redeemRequest.status = uint8(RequestStatus.REDEEMED);
 
         address vault = _getDNVaultByAsset(redeemRequest.asset);
-        address batchReceiver = IkStakingVault(vault).getBatchReceiver(uint256(redeemRequest.batchId));
+        address batchReceiver = IkStakingVault(vault).getBatchReceiver(redeemRequest.batchId);
         if (batchReceiver == address(0)) revert ZeroAddress();
 
         // Burn kTokens
@@ -226,9 +226,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         IkToken(kToken).burn(address(this), redeemRequest.amount);
 
         // Withdraw from BatchReceiver to recipient (1:1 with kTokens burned)
-        IkBatchReceiver(batchReceiver).pullAssets(
-            redeemRequest.recipient, redeemRequest.amount, uint256(redeemRequest.batchId)
-        );
+        IkBatchReceiver(batchReceiver).pullAssets(redeemRequest.recipient, redeemRequest.amount, redeemRequest.batchId);
 
         emit Redeemed(requestId);
     }

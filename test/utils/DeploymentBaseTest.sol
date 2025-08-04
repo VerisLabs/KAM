@@ -52,9 +52,10 @@ import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 /// @dev Follows DeFi best practices with fork-first testing and minimal mocks
 ///
 /// @dev VAULT ARCHITECTURE:
-/// - DN Vault (Type 0): Works directly with kMinter for institutional flows, different math model
-/// - Alpha Vault (Type 1): Retail staking vault with standard yield distribution
-/// - Beta Vault (Type 2): Advanced staking strategies with different mathematical models
+/// - kMinter (MINTER type = 0): Institutional gateway for 1:1 minting/redemption
+/// - DN Vault (DN type = 1): Works directly with kMinter for institutional flows, different math model
+/// - Alpha Vault (ALPHA type = 2): Retail staking vault with standard yield distribution
+/// - Beta Vault (BETA type = 3): Advanced staking strategies with different mathematical models
 /// All vaults are properly registered in kRegistry with correct types
 ///
 /// @dev TOKEN MINTING FLOW:
@@ -135,6 +136,9 @@ contract DeploymentBaseTest is BaseTest {
 
         // Fund test users with assets
         _fundUsers();
+
+        // Initialize batches for all vaults
+        // _initializeBatches(); // Disabled due to setup issues
     }
 
     /// @dev Deploys all protocol contracts in correct dependency order
@@ -401,13 +405,16 @@ contract DeploymentBaseTest is BaseTest {
 
         vm.startPrank(users.admin);
 
-        // Register DN vault (Type 0 - works with kMinter)
+        // Register kMinter as vault (MINTER type = 0 - for institutional operations)
+        registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, USDC_MAINNET);
+
+        // Register DN vault (DN type = 1 - works with kMinter)
         registry.registerVault(address(dnVault), IkRegistry.VaultType.DN, USDC_MAINNET);
 
-        // Register Alpha vault (Type 1 - retail staking)
+        // Register Alpha vault (ALPHA type = 2 - retail staking)
         registry.registerVault(address(alphaVault), IkRegistry.VaultType.ALPHA, USDC_MAINNET);
 
-        // Register Beta vault (Type 2 - advanced strategies)
+        // Register Beta vault (BETA type = 3 - advanced strategies)
         registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, USDC_MAINNET);
 
         // Register adapters for vaults (if adapters were deployed)
@@ -422,6 +429,55 @@ contract DeploymentBaseTest is BaseTest {
             custodialAdapter.setVaultDestination(address(alphaVault), users.treasury);
             custodialAdapter.setVaultDestination(address(betaVault), users.treasury);
         }
+
+        vm.stopPrank();
+    }
+
+    /// @dev Initialize initial batches for all vaults
+    function _initializeBatches() internal {
+        // Register the BatchModule and ClaimModule functions with the vaults
+        _registerModules();
+
+        // Create initial batches for all vaults using relayer role
+        // Note: settler has RELAYER_ROLE as set up in _setupRoles()
+        vm.startPrank(users.settler);
+
+        // Use low-level call to create initial batches since modules are dynamically registered
+        bytes4 createBatchSelector = bytes4(keccak256("createNewBatch()"));
+
+        // Create initial batch for DN vault
+        (bool success1,) = address(dnVault).call(abi.encodeWithSelector(createBatchSelector));
+        require(success1, "DN vault batch creation failed");
+
+        // Create initial batch for Alpha vault
+        (bool success2,) = address(alphaVault).call(abi.encodeWithSelector(createBatchSelector));
+        require(success2, "Alpha vault batch creation failed");
+
+        // Create initial batch for Beta vault
+        (bool success3,) = address(betaVault).call(abi.encodeWithSelector(createBatchSelector));
+        require(success3, "Beta vault batch creation failed");
+
+        vm.stopPrank();
+    }
+
+    /// @dev Register modules with vaults
+    function _registerModules() internal {
+        // Get module selectors from the modules themselves
+        bytes4[] memory batchSelectors = batchModule.selectors();
+        bytes4[] memory claimSelectors = claimModule.selectors();
+
+        // Register modules as vault admin
+        vm.startPrank(users.admin);
+
+        // Add batch module functions to all vaults
+        dnVault.addFunctions(batchSelectors, address(batchModule), true);
+        alphaVault.addFunctions(batchSelectors, address(batchModule), true);
+        betaVault.addFunctions(batchSelectors, address(batchModule), true);
+
+        // Add claim module functions to all vaults
+        dnVault.addFunctions(claimSelectors, address(claimModule), true);
+        alphaVault.addFunctions(claimSelectors, address(claimModule), true);
+        betaVault.addFunctions(claimSelectors, address(claimModule), true);
 
         vm.stopPrank();
     }
@@ -455,6 +511,8 @@ contract DeploymentBaseTest is BaseTest {
         // Grant EMERGENCY_ADMIN_ROLE to emergency admin for kAssetRouter (requires owner)
         vm.prank(users.owner);
         assetRouter.grantRoles(users.emergencyAdmin, EMERGENCY_ADMIN_ROLE);
+
+        // Note: settler is already registered as relayer during registry initialization
     }
 
     /// @dev Fund test users with mainnet assets

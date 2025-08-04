@@ -280,7 +280,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // We expect it to revert with something related to batch data, not access
         vm.prank(users.settler);
         // This will likely revert due to no batch data, but that confirms access control works
-        try assetRouter.settleBatch(address(dnVault), batchId, 0, 0, 0, false) { }
+        try assetRouter.settleBatch(USDC_MAINNET, address(dnVault), batchId, 0, 0, 0, false) { }
         catch {
             // Expected - no batch data to settle
         }
@@ -298,7 +298,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // Access control test
         vm.prank(users.settler);
         // This should not revert due to access control
-        try assetRouter.settleBatch(address(dnVault), batchId, 0, 0, 0, false) { }
+        try assetRouter.settleBatch(USDC_MAINNET, address(dnVault), batchId, 0, 0, 0, false) { }
         catch {
             // Expected to fail due to no batch data, not access control
         }
@@ -312,14 +312,14 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
         vm.prank(users.settler);
         vm.expectRevert();
-        assetRouter.settleBatch(address(dnVault), TEST_BATCH_ID, 0, 0, 0, false);
+        assetRouter.settleBatch(USDC_MAINNET, address(dnVault), TEST_BATCH_ID, 0, 0, 0, false);
     }
 
     /// @dev Test settlement reverts when called by non-relayer
     function test_SettleBatch_OnlyRelayer() public {
         vm.prank(users.alice);
         vm.expectRevert();
-        assetRouter.settleBatch(address(dnVault), TEST_BATCH_ID, 0, 0, 0, false);
+        assetRouter.settleBatch(USDC_MAINNET, address(dnVault), TEST_BATCH_ID, 0, 0, 0, false);
     }
 
     /*//////////////////////////////////////////////////////////////

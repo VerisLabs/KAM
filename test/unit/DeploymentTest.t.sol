@@ -120,17 +120,19 @@ contract DeploymentTest is DeploymentBaseTest {
     /// @dev Test vault registration
     function test_VaultRegistration() public {
         // Check all vaults are registered
+        assertTrue(registry.isVault(address(minter)), "Minter Vault not registered");
         assertTrue(registry.isVault(address(dnVault)), "DN Vault not registered");
         assertTrue(registry.isVault(address(alphaVault)), "Alpha Vault not registered");
         assertTrue(registry.isVault(address(betaVault)), "Beta Vault not registered");
 
         // Check vault asset mappings
-        assertEq(registry.getVaultAsset(address(dnVault)), USDC_MAINNET, "DN Vault asset mapping incorrect");
-        assertEq(registry.getVaultAsset(address(alphaVault)), USDC_MAINNET, "Alpha Vault asset mapping incorrect");
-        assertEq(registry.getVaultAsset(address(betaVault)), USDC_MAINNET, "Beta Vault asset mapping incorrect");
+        assertEq(registry.getVaultAssets(address(dnVault))[0], USDC_MAINNET, "DN Vault asset mapping incorrect");
+        assertEq(registry.getVaultAssets(address(alphaVault))[0], USDC_MAINNET, "Alpha Vault asset mapping incorrect");
+        assertEq(registry.getVaultAssets(address(betaVault))[0], USDC_MAINNET, "Beta Vault asset mapping incorrect");
 
         // Check vault types
-        assertEq(registry.getVaultType(address(dnVault)), uint8(0), "DN Vault type incorrect"); // DN = 0
+        assertEq(registry.getVaultType(address(minter)), uint8(0), "Minter Vault type incorrect"); // Minter = 0
+        assertEq(registry.getVaultType(address(dnVault)), uint8(1), "DN Vault type incorrect"); // DN = 1
         assertEq(registry.getVaultType(address(alphaVault)), uint8(2), "Alpha Vault type incorrect"); // ALPHA = 2
         assertEq(registry.getVaultType(address(betaVault)), uint8(3), "Beta Vault type incorrect"); // BETA = 3
     }

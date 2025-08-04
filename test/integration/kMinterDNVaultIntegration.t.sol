@@ -1,17 +1,44 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { USDC_MAINNET, _1_USDC } from "../utils/Constants.sol";
+import { ADMIN_ROLE, USDC_MAINNET, _1_USDC } from "../utils/Constants.sol";
 import { IntegrationBaseTest } from "./IntegrationBaseTest.sol";
+
+import { console } from "forge-std/console.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
+import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 /// @title kMinterDNVaultIntegrationTest
 /// @notice Integration tests for kMinter → DN Vault flows through kAssetRouter
 /// @dev Tests institutional minting, asset deployment, and redemption flows
 contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
+    /// @dev Set up modules for DN vault to support batch operations
+    function setUp() public override {
+        super.setUp();
+
+        // Register BatchModule and ClaimModule with DN vault
+        bytes4[] memory batchSelectors = batchModule.selectors();
+        bytes4[] memory claimSelectors = claimModule.selectors();
+
+        vm.prank(users.admin);
+        dnVault.addFunctions(batchSelectors, address(batchModule), false);
+
+        vm.prank(users.admin);
+        dnVault.addFunctions(claimSelectors, address(claimModule), false);
+
+        // Grant RELAYER_ROLE to settler for batch management
+        vm.prank(users.owner);
+        dnVault.grantRoles(users.settler, 4); // RELAYER_ROLE = _ROLE_2 = 4
+
+        // Create initial batch for DN vault
+        vm.prank(users.settler);
+        (bool success,) = address(dnVault).call(abi.encodeWithSignature("createNewBatch()"));
+        require(success, "Failed to create initial batch");
+    }
     /*//////////////////////////////////////////////////////////////
                         INTEGRATION TEST SCENARIOS
     //////////////////////////////////////////////////////////////*/
@@ -74,13 +101,20 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         uint256 virtualBalance = assetRouter.getBalanceOf(address(minter), USDC_MAINNET);
         assertEq(virtualBalance, 0, "Virtual balance should be 0 before settlement");
 
-        // In the current architecture, kMinter assets are intended to flow to DN vault
-        // Let's test that DN vault gets the assets after settlement
-        executeBatchSettlement(address(dnVault), currentBatch, mintAmount);
+        // Settle kMinter batch - this automatically gives DN vault virtual balance
+        // (kAssetRouter.settleBatch redirects kMinter settlements to DN vault)
+        // netted = deposited - requested = mintAmount - 0 = mintAmount
+        executeBatchSettlement(address(minter), currentBatch, mintAmount);
 
-        // Check that DN vault now has the virtual balance
-        uint256 dnVaultBalance = assetRouter.getBalanceOf(address(dnVault), USDC_MAINNET);
-        assertEq(dnVaultBalance, mintAmount, "DN vault should receive assets after settlement");
+        // Check that DN vault now has the virtual balance via adapter
+        // For DN vault (type 0), setTotalAssets is not called during settlement,
+        // so we need to check totalVirtualAssets instead of totalAssets
+        uint256 dnVaultBalance = custodialAdapter.totalVirtualAssets(address(dnVault), USDC_MAINNET);
+        assertEq(dnVaultBalance, mintAmount, "DN vault should receive assets after kMinter settlement");
+
+        // kMinter should not have virtual balance (it was redirected to DN vault)
+        uint256 minterBalance = assetRouter.getBalanceOf(address(minter), USDC_MAINNET);
+        assertEq(minterBalance, 0, "kMinter should have 0 virtual balance (assets go to DN vault)");
 
         // kMinter batch balances should be cleared after DN vault settlement
         (depositedInBatch,) = assetRouter.getBatchIdBalances(address(minter), currentBatch);
@@ -109,11 +143,11 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         uint256 currentBatch = getCurrentDNBatchId();
 
         // Settle kMinter batch first to give it virtual balance
-        executeBatchSettlement(address(minter), currentBatch, 0); // kMinter settlement
+        uint256 totalDeposited = mintAmount + redeemAmount;
+        executeBatchSettlement(address(minter), currentBatch, totalDeposited);
 
         // After kMinter settlement, DN vault should have the net deposited amount
         // (total deposits minus any redemption requests)
-        uint256 totalDeposited = mintAmount + redeemAmount;
         assertVirtualBalance(
             address(dnVault), USDC_MAINNET, totalDeposited, "DN vault should have all deposited assets"
         );
@@ -169,7 +203,7 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
 
         // Settlement required to move assets from batch to DN vault virtual balance
         uint256 currentBatch = getCurrentDNBatchId();
-        executeBatchSettlement(address(minter), currentBatch, 0); // kMinter settlement
+        executeBatchSettlement(address(minter), currentBatch, mintAmount);
 
         // Now create a redemption request with backend simulation
         bytes32 requestId = executeInstitutionalRedemptionWithBackend(institution, redeemAmount, institution);
@@ -223,7 +257,7 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         // Settle kMinter's batch first (as user specified kMinter should be settled)
         // kMinter has totalMintAmount in deposited, 0 in requested
         // This should give kMinter virtual balance and transfer net to DN vault
-        executeBatchSettlement(address(minter), currentBatch, 0); // kMinter doesn't track totalAssets
+        executeBatchSettlement(address(minter), currentBatch, totalMintAmount);
 
         uint256 expectedDNBalance = totalMintAmount;
         assertVirtualBalance(address(dnVault), USDC_MAINNET, expectedDNBalance, "DN Vault balance after both mints");
@@ -287,10 +321,10 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         // Setup: Mint to get assets into DN vault
         executeInstitutionalMint(institution, mintAmount, institution);
 
-        // Note: After mint, assets are in batch balances, need settlement to move to virtual balance
-        // For this test, we need to simulate settlement on DN vault first
+        // Note: After mint, assets are in kMinter's batch balances, need kMinter settlement to move to DN vault
+        // kMinter settlement automatically redirects assets to DN vault
         uint256 currentBatch = getCurrentDNBatchId();
-        executeBatchSettlement(address(dnVault), currentBatch, mintAmount);
+        executeBatchSettlement(address(minter), currentBatch, mintAmount);
 
         // After settlement, assets should be in DN vault, not kMinter
         assertVirtualBalance(
@@ -325,18 +359,19 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         // Setup: Mint and deploy assets to Alpha to test peg protection mechanics
         executeInstitutionalMint(institution, mintAmount, institution);
 
-        // Settlement of kMinter batch - this gives kMinter virtual balance
+        // Settlement of kMinter batch - this gives DN vault virtual balance via adapter
         uint256 currentBatch = getCurrentDNBatchId();
-        executeBatchSettlement(address(minter), currentBatch, 0); // kMinter settlement
+        executeBatchSettlement(address(minter), currentBatch, mintAmount);
 
         // Deploy assets from DN vault to Alpha vault
-        executeVaultTransfer(address(dnVault), address(alphaVault), deployAmount, getCurrentDNBatchId());
+        uint256 transferBatchId = getCurrentDNBatchId();
+        executeVaultTransfer(address(dnVault), address(alphaVault), deployAmount, transferBatchId);
 
         uint256 dnBalanceBeforePull = assetRouter.getBalanceOf(address(dnVault), USDC_MAINNET);
         uint256 alphaBalanceBeforePull = assetRouter.getBalanceOf(address(alphaVault), USDC_MAINNET);
 
-        // Verify deployment was recorded in batch balances
-        (uint256 alphaDeposited,) = assetRouter.getBatchIdBalances(address(alphaVault), getCurrentAlphaBatchId());
+        // Verify deployment was recorded in batch balances using the same batch ID
+        (uint256 alphaDeposited,) = assetRouter.getBatchIdBalances(address(alphaVault), transferBatchId);
         assertEq(alphaDeposited, deployAmount, "Alpha vault should have deployment in batch balance");
 
         // Alpha vault has no virtual balance to transfer from (only batch balance)

@@ -12,6 +12,46 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 /// @notice Comprehensive integration tests for complete KAM protocol ecosystem
 /// @dev Tests full protocol flows across DN, Alpha, and Beta vaults with kAssetRouter orchestration
 contract MultiVaultIntegrationTest is IntegrationBaseTest {
+    /// @dev Set up modules for all vaults to support batch operations
+    function setUp() public override {
+        super.setUp();
+
+        // Register BatchModule and ClaimModule with all vaults
+        bytes4[] memory batchSelectors = batchModule.selectors();
+        bytes4[] memory claimSelectors = claimModule.selectors();
+
+        // Register with DN vault
+        vm.prank(users.admin);
+        dnVault.addFunctions(batchSelectors, address(batchModule), false);
+        vm.prank(users.admin);
+        dnVault.addFunctions(claimSelectors, address(claimModule), false);
+
+        // Register with Alpha vault
+        vm.prank(users.admin);
+        alphaVault.addFunctions(batchSelectors, address(batchModule), false);
+        vm.prank(users.admin);
+        alphaVault.addFunctions(claimSelectors, address(claimModule), false);
+
+        // Register with Beta vault
+        vm.prank(users.admin);
+        betaVault.addFunctions(batchSelectors, address(batchModule), false);
+        vm.prank(users.admin);
+        betaVault.addFunctions(claimSelectors, address(claimModule), false);
+
+        // Grant RELAYER_ROLE to settler for batch management on all vaults
+        vm.prank(users.owner);
+        dnVault.grantRoles(users.settler, 4); // RELAYER_ROLE = _ROLE_2 = 4
+        vm.prank(users.owner);
+        alphaVault.grantRoles(users.settler, 4);
+        vm.prank(users.owner);
+        betaVault.grantRoles(users.settler, 4);
+
+        // Create initial batch for DN vault
+        vm.prank(users.settler);
+        (bool success,) = address(dnVault).call(abi.encodeWithSignature("createNewBatch()"));
+        require(success, "Failed to create initial batch");
+    }
+
     /*//////////////////////////////////////////////////////////////
                         COMPLETE PROTOCOL FLOW TESTS
     //////////////////////////////////////////////////////////////*/
@@ -49,10 +89,10 @@ contract MultiVaultIntegrationTest is IntegrationBaseTest {
         (, uint256 dnRequested) = assetRouter.getBatchIdBalances(address(dnVault), getCurrentDNBatchId());
         assertEq(dnRequested, alphaDeployment + betaDeployment, "DN vault should have requested transfers in batch");
 
-        (uint256 alphaDeposited,) = assetRouter.getBatchIdBalances(address(alphaVault), getCurrentAlphaBatchId());
+        (uint256 alphaDeposited,) = assetRouter.getBatchIdBalances(address(alphaVault), getCurrentDNBatchId());
         assertEq(alphaDeposited, alphaDeployment, "Alpha vault should have deposits in batch");
 
-        (uint256 betaDeposited,) = assetRouter.getBatchIdBalances(address(betaVault), getCurrentBetaBatchId());
+        (uint256 betaDeposited,) = assetRouter.getBatchIdBalances(address(betaVault), getCurrentDNBatchId());
         assertEq(betaDeposited, betaDeployment, "Beta vault should have deposits in batch");
 
         // Note: We skip Alpha/Beta settlement as adapters are not deployed in test environment
@@ -158,24 +198,27 @@ contract MultiVaultIntegrationTest is IntegrationBaseTest {
         advanceToSettlementTime();
 
         uint256 dnBatchId = getCurrentDNBatchId();
-        uint256 alphaBatchId = getCurrentAlphaBatchId();
-        uint256 betaBatchId = getCurrentBetaBatchId();
 
         // Check DN vault's actual virtual balance before settlement
-        uint256 dnVirtualBalance = assetRouter.getBalanceOf(address(dnVault), USDC_MAINNET);
+        // DN vault uses adapter's virtual assets tracking
+        uint256 dnVirtualBalance = custodialAdapter.totalVirtualAssets(address(dnVault), USDC_MAINNET);
 
-        // Only settle DN vault with its actual virtual balance (transfers only affect batch balances, not virtual
-        // balances until settlement)
-        executeBatchSettlement(address(dnVault), dnBatchId, dnVirtualBalance);
+        // Calculate net settlement amount accounting for outgoing transfers
+        (, uint256 dnRequested) = assetRouter.getBatchIdBalances(address(dnVault), dnBatchId);
+        uint256 netDNSettlement = dnVirtualBalance - dnRequested;
+
+        // Settle DN vault with net amount (initial balance minus outgoing transfers)
+        executeBatchSettlement(address(dnVault), dnBatchId, netDNSettlement);
 
         // Skip batch state validation as it depends on implementation details
         // Focus on the core multi-user functionality
 
         // Validate that Alpha and Beta received their allocations in batch balances
-        (uint256 alphaDeposited,) = assetRouter.getBatchIdBalances(address(alphaVault), alphaBatchId);
+        // Since we used DN batch ID for transfers, check deposits in that batch
+        (uint256 alphaDeposited,) = assetRouter.getBatchIdBalances(address(alphaVault), dnBatchId);
         assertEq(alphaDeposited, toAlpha, "Alpha should have received allocation in batch");
 
-        (uint256 betaDeposited,) = assetRouter.getBatchIdBalances(address(betaVault), betaBatchId);
+        (uint256 betaDeposited,) = assetRouter.getBatchIdBalances(address(betaVault), dnBatchId);
         assertEq(betaDeposited, toBeta, "Beta should have received allocation in batch");
 
         // Validate virtual balances reflect the actual state
@@ -253,7 +296,8 @@ contract MultiVaultIntegrationTest is IntegrationBaseTest {
         }
 
         // Validate protocol stability under extreme load
-        uint256 finalTotalAssets = assetRouter.getBalanceOf(address(dnVault), USDC_MAINNET)
+        // DN vault (type 1) uses adapter totalAssets, others use virtual balance
+        uint256 finalTotalAssets = custodialAdapter.totalAssets(address(dnVault), USDC_MAINNET)
             + assetRouter.getBalanceOf(address(alphaVault), USDC_MAINNET)
             + assetRouter.getBalanceOf(address(betaVault), USDC_MAINNET);
 

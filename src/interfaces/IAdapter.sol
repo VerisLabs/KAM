@@ -23,8 +23,9 @@ interface IAdapter {
 
     /// @notice Sets the total assets for a given vault
     /// @param vault The vault address
+    /// @param asset The asset address
     /// @param totalAssets_ The total assets to set
-    function setTotalAssets(address vault, uint256 totalAssets_) external;
+    function setTotalAssets(address vault, address asset, uint256 totalAssets_) external;
 
     /*//////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
@@ -32,8 +33,9 @@ interface IAdapter {
 
     /// @notice Returns the current total assets in the external strategy
     /// @param vault The vault to query
+    /// @param asset The asset to query
     /// @return Total assets currently deployed in strategy
-    function totalAssets(address vault) external view returns (uint256);
+    function totalAssets(address vault, address asset) external view returns (uint256);
 
     /*//////////////////////////////////////////////////////////////
                           METADATA

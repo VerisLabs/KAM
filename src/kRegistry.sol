@@ -48,7 +48,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         mapping(address => bool) isVault;
         mapping(address => uint8 vaultType) vaultType;
         mapping(address => mapping(uint8 vaultType => address)) assetToVault;
-        mapping(address => address) vaultAsset;
+        mapping(address => EnumerableSetLib.AddressSet) vaultAsset; // kMinter will have > 1 assets
         EnumerableSetLib.AddressSet allVaults;
         mapping(address => EnumerableSetLib.AddressSet) vaultsByAsset;
         mapping(bytes32 => address) singletonAssets;
@@ -57,7 +57,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         mapping(address => address) kTokenToAsset;
         mapping(address => bool) isRegisteredAsset;
         EnumerableSetLib.AddressSet supportedAssets;
-        mapping(address => address) vaultAdapters; // vault => adapter
+        mapping(address => EnumerableSetLib.AddressSet) vaultAdapters; // vault => adapter
         mapping(address => bool) registeredAdapters; // adapter => registered
     }
 
@@ -157,7 +157,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         // Register vault
         $.isVault[vault] = true;
         $.vaultType[vault] = uint8(type_);
-        $.vaultAsset[vault] = asset;
+        $.vaultAsset[vault].add(asset);
         $.allVaults.add(vault);
         $.assetToVault[asset][uint8(type_)] = vault;
 
@@ -183,12 +183,12 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         if (!$.isVault[vault]) revert AssetNotSupported(); // Reuse error
 
         // Check if adapter is already set for this vault
-        if ($.vaultAdapters[vault] != address(0)) revert AdapterAlreadySet();
+        if ($.vaultAdapters[vault].contains(address(0))) revert AdapterAlreadySet();
 
         // Validate adapter implements IAdapter interface
         if (!IAdapter(adapter).registered()) revert AdapterNotRegistered();
 
-        $.vaultAdapters[vault] = adapter;
+        $.vaultAdapters[vault].add(adapter);
         $.registeredAdapters[adapter] = true;
 
         emit AdapterRegistered(vault, adapter);
@@ -196,14 +196,12 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
 
     /// @notice Removes an adapter for a specific vault
     /// @param vault The vault address
-    function removeAdapter(address vault) external onlyRoles(ADMIN_ROLE) {
+    function removeAdapter(address vault, address adapter) external onlyRoles(ADMIN_ROLE) {
         kRegistryStorage storage $ = _getkRegistryStorage();
 
-        address adapter = $.vaultAdapters[vault];
-        if (adapter == address(0)) revert InvalidAdapter();
-
-        delete $.vaultAdapters[vault];
-        delete $.registeredAdapters[adapter];
+        if (!$.vaultAdapters[vault].contains(adapter)) revert InvalidAdapter();
+        $.vaultAdapters[vault].remove(adapter);
+        $.registeredAdapters[adapter] = false;
 
         emit AdapterRemoved(vault, adapter);
     }
@@ -334,9 +332,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Get the adapter for a specific vault
     /// @param vault Vault address
     /// @return Adapter address (address(0) if none set)
-    function getAdapter(address vault) external view returns (address) {
+    function getAdapters(address vault) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        return $.vaultAdapters[vault];
+        return $.vaultAdapters[vault].values();
     }
 
     /// @notice Check if an adapter is registered
@@ -350,9 +348,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Get the asset for a specific vault
     /// @param vault Vault address
     /// @return Asset address that the vault manages
-    function getVaultAsset(address vault) external view returns (address) {
+    function getVaultAssets(address vault) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        return $.vaultAsset[vault];
+        return $.vaultAsset[vault].values();
     }
 
     /// @notice Get the kToken for a specific asset

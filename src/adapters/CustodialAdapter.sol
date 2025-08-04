@@ -93,9 +93,9 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         address onBehalfOf
     )
         external
+        nonReentrant
         onlyKAssetRouter
         whenRegistered
-        nonReentrant
     {
         if (asset == address(0)) revert InvalidAsset();
         if (amount == 0) revert InvalidAmount();
@@ -126,9 +126,9 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     )
         external
         virtual
+        nonReentrant
         onlyKAssetRouter
         whenRegistered
-        nonReentrant
     {
         if (asset == address(0)) revert InvalidAsset();
         if (amount == 0) revert InvalidAmount();
@@ -152,29 +152,26 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     /// @notice Returns the current total assets across all custodial addresses for this asset
     /// @param vault The vault to query
     /// @return Total assets currently held across all custodial addresses managed by this adapter
-    function totalEstimatedAssets(address vault) external view returns (uint256) {
+    function totalEstimatedAssets(address vault, address asset) external view returns (uint256) {
         CustodialAdapterStorage storage $ = _getCustodialAdapterStorage();
-        address asset_ = _getVaultAsset(vault);
         address custodialAddress = $.vaultDestinations[vault];
-        return asset_.balanceOf(custodialAddress);
+        return asset.balanceOf(custodialAddress);
     }
 
     /// @notice Returns the total assets in storage for a given vault
     /// @param vault The vault address
     /// @return Total assets currently held in storage for this vault
-    function totalVirtualAssets(address vault) external view returns (uint256) {
+    function totalVirtualAssets(address vault, address asset) external view returns (uint256) {
         CustodialAdapterStorage storage $ = _getCustodialAdapterStorage();
-        address asset_ = _getVaultAsset(vault);
-        return $.balanceOf[vault][asset_];
+        return $.balanceOf[vault][asset];
     }
 
     /// @notice Returns the total assets for a given vault and asset
     /// @param vault The vault address
     /// @return Total assets currently held for this vault and asset
-    function totalAssets(address vault) external view returns (uint256) {
+    function totalAssets(address vault, address asset) external view returns (uint256) {
         CustodialAdapterStorage storage $ = _getCustodialAdapterStorage();
-        address asset_ = _getVaultAsset(vault);
-        return $.totalAssets[vault][asset_];
+        return $.totalAssets[vault][asset];
     }
 
     /// @notice Returns the custodial address for a given vault
@@ -212,10 +209,9 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     /// @notice Sets the total assets for a given vault
     /// @param vault The vault address
     /// @param totalAssets_ The total assets to set
-    function setTotalAssets(address vault, uint256 totalAssets_) external onlyKAssetRouter {
+    function setTotalAssets(address vault, address asset, uint256 totalAssets_) external onlyKAssetRouter {
         CustodialAdapterStorage storage $ = _getCustodialAdapterStorage();
-        address asset_ = _getVaultAsset(vault);
-        $.totalAssets[vault][asset_] = totalAssets_;
+        $.totalAssets[vault][asset] = totalAssets_;
 
         emit TotalAssetsUpdated(vault, totalAssets_);
     }
