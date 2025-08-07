@@ -11,25 +11,33 @@ contract kBatchReceiver is IkBatchReceiver {
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
-                              IMMUTABLES
+                              VARIABLES
     //////////////////////////////////////////////////////////////*/
 
     address public immutable kMinter;
-    address public immutable asset;
-    uint256 public immutable batchId;
+    address public asset;
+    uint256 public batchId;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Initializes the batch receiver with immutable parameters
+    /// @notice Sets the kMinter address immutably
     /// @param _kMinter Address of the kMinter contract (only authorized caller)
-    /// @param _batchId The batch ID this receiver serves
-    /// @param _asset Address of the asset contract
-    /// @dev Sets immutable variables and emits initialization event
-    constructor(address _kMinter, uint256 _batchId, address _asset) {
+    /// @dev Sets kMinter as immutable variable
+    constructor(address _kMinter) {
         if (_kMinter == address(0)) revert ZeroAddress();
         kMinter = _kMinter;
+    }
+
+    /// @notice Initializes the batch receiver with batch parameters
+    /// @param _batchId The batch ID this receiver serves
+    /// @param _asset Address of the asset contract
+    /// @dev Sets batch ID and asset, then emits initialization event
+    function initialize(uint256 _batchId, address _asset) external {
+        if (asset != address(0)) revert();
+        if (_asset == address(0)) revert();
+
         batchId = _batchId;
         asset = _asset;
 

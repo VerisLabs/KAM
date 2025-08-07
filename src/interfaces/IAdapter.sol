@@ -66,7 +66,7 @@ interface IAdapter {
 
     /// @notice Returns the pending redemptions for a vault
     /// @param vault The vault address
-    /// @return Pending redemptions for the vault   
+    /// @return Pending redemptions for the vault
     function getPendingRedemptions(address vault) external view returns (uint256[] memory);
 
     /*//////////////////////////////////////////////////////////////

@@ -368,8 +368,7 @@ contract kRegistryTest is DeploymentBaseTest {
 
     /// @dev Test getCoreContracts returns correct addresses
     function test_GetCoreContracts() public {
-        (address kMinter, address kAssetRouter) =
-            registry.getCoreContracts();
+        (address kMinter, address kAssetRouter) = registry.getCoreContracts();
 
         // Should return registered addresses or zero
         assertEq(kMinter, address(minter), "kMinter address incorrect");

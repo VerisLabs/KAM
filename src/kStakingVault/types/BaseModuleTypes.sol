@@ -12,23 +12,21 @@ library BaseModuleTypes {
     }
 
     struct StakeRequest {
-        uint256 id; // 32 bytes - Slot 0
         address user; // 20 bytes ┐
-        uint96 kTokenAmount; // 12 bytes ┘ Slot 1 (32 bytes total)
+        uint128 kTokenAmount; // 12 bytes ┘ Slot 1 (32 bytes total)
         address recipient; // 20 bytes ┐
         uint256 batchId; // 32 bytes - Slot 3
         uint64 requestTimestamp; // 8 bytes  ┐
-        uint8 status; // 1 byte   ┘ Slot 4 (9 bytes, 23 padding)
+        RequestStatus status; // 1 byte   ┘ Slot 4 (9 bytes, 23 padding)
     }
 
     struct UnstakeRequest {
-        uint256 id; // 32 bytes - Slot 0
         address user; // 20 bytes ┐
-        uint96 stkTokenAmount; // 12 bytes ┘ Slot 1
+        uint128 stkTokenAmount; // 12 bytes ┘ Slot 1
         address recipient; // 20 bytes ┐
         uint256 batchId; // 32 bytes - Slot 3
         uint64 requestTimestamp; // 8 bytes  ┐
-        uint8 status; // 1 byte   ┘ Slot 4
+        RequestStatus status; // 1 byte   ┘ Slot 4
     }
 
     struct BatchInfo {

@@ -4,6 +4,8 @@ pragma solidity 0.8.30;
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 
 import { ERC20 } from "solady/tokens/ERC20.sol";
+
+import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 
@@ -17,6 +19,7 @@ import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
 /// @dev Provides shared storage, roles, and common functionality
 contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     using FixedPointMathLib for uint256;
+    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
 
     /*//////////////////////////////////////////////////////////////
                                 ROLES
@@ -51,7 +54,6 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    uint256 internal constant PRECISION = 1e18;
     uint256 public constant ONE_HUNDRED_PERCENT = 10_000;
 
     bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
@@ -82,25 +84,29 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
 
     /// @custom:storage-location erc7201.kam.storage.BaseModule
     struct BaseModuleStorage {
-        uint256 currentBatchId; // 32 bytes
-        uint256 lastTotalAssets; // 32 bytes
-        address registry; // 20 bytes ┐
-        uint96 dustAmount; // 12 bytes ┘ = 32 bytes
-        address underlyingAsset; // 20 bytes ┐
-        uint64 requestCounter; // 8 bytes  │
-        uint32 _reserved; // 4 bytes  ┘ = 32 bytes
-        address kToken; // 20 bytes ┐
-        uint64 batchCounter; // 8 bytes  │
-        uint8 decimals; // 1 byte   │
-        bool initialized; // 1 byte   │
-        bool paused; // 1 byte   │
-        bool _reservedBool; // 1 byte   ┘ = 32 bytes
-        string name; // 32+ bytes
-        string symbol; // 32+ bytes
+        uint256 currentBatch;
+        bytes32 currentBatchId;
+        uint256 lastTotalAssets;
+        uint256 sharePriceWatermark;
+        uint256 lastFeesCharged;
+        address registry;
+        address receiverImplementation;
+        uint96 dustAmount;
+        address underlyingAsset;
+        uint256 requestCounter;
+        address kToken;
+        uint8 decimals;
+        bool initialized;
+        bool paused;
+        string name;
+        string symbol;
+        uint16 performanceFee;
+        uint16 managementFee;
+        address feeReceiver;
         mapping(uint256 => BaseModuleTypes.BatchInfo) batches;
-        mapping(uint256 => BaseModuleTypes.StakeRequest) stakeRequests;
-        mapping(uint256 => BaseModuleTypes.UnstakeRequest) unstakeRequests;
-        mapping(address => uint256[]) userRequests;
+        mapping(bytes32 => BaseModuleTypes.StakeRequest) stakeRequests;
+        mapping(bytes32 => BaseModuleTypes.UnstakeRequest) unstakeRequests;
+        mapping(address => EnumerableSetLib.Bytes32Set) userRequests;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.BaseModule")) - 1)) & ~bytes32(uint256(0xff))
@@ -123,7 +129,15 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     /// @param registry_ Address of the kRegistry contract
     /// @param paused_ Initial pause state
     /// @dev Can only be called once during initialization
-    function __BaseModule_init(address registry_, address owner_, address admin_, bool paused_) internal {
+    function __BaseModule_init(
+        address registry_,
+        address owner_,
+        address admin_,
+        address feeReceiver_,
+        bool paused_
+    )
+        internal
+    {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
 
         if ($.initialized) revert AlreadyInitialized();
@@ -134,6 +148,7 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
 
         $.registry = registry_;
         $.paused = paused_;
+        $.feeReceiver = feeReceiver_;
         $.initialized = true;
 
         _initializeOwner(owner_);
@@ -191,6 +206,9 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
         if (vault == address(0)) revert InvalidVault();
     }
 
+    /// @notice Checks if an account has relayer role
+    /// @param account The account to check
+    /// @return Whether the account has relayer role
     function _getRelayer(address account) internal view returns (bool) {
         return _registry().isRelayer(account);
     }
@@ -245,11 +263,27 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
 
     /// @notice Calculates stkToken price with safety checks
     /// @dev Standard price calculation used across settlement modules
-    /// @param totalAssets Total underlying assets backing stkTokens
-    /// @param totalSupply Total stkToken supply
     /// @return price Price per stkToken in underlying asset terms (18 decimals)
-    function _calculateStkTokenPrice(uint256 totalAssets, uint256 totalSupply) internal pure returns (uint256 price) {
-        return totalSupply == 0 ? PRECISION : totalAssets.divWad(totalSupply);
+    function _calculateStkTokenPrice() internal view returns (uint256 price) {
+        return _convertToAssets(10 ** _getBaseModuleStorage().decimals);
+    }
+
+    /// @notice Converts shares to assets
+    /// @param shares Amount of shares to convert
+    /// @return assets Amount of assets
+    function _convertToAssets(uint256 shares) internal view returns (uint256 assets) {
+        uint256 totalSupply_ = totalSupply();
+        if (totalSupply_ == 0) return shares;
+        return shares.fullMulDiv(totalSupply_, _totalAssets());
+    }
+
+    /// @notice Converts assets to shares
+    /// @param assets Amount of assets to convert
+    /// @return shares Amount of shares
+    function _convertToShares(uint256 assets) internal view returns (uint256 shares) {
+        uint256 totalSupply_ = totalSupply();
+        if (totalSupply_ == 0) return assets;
+        return assets.fullMulDiv(_totalAssets(), totalSupply_);
     }
 
     /// @notice Calculates stkTokens to mint for given kToken amount
@@ -284,10 +318,14 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
         return stkTokenAmount.mulWad(stkTokenPrice);
     }
 
+    /// @notice Calculates share price for stkToken
+    /// @return sharePrice Price per stkToken in underlying asset terms (18 decimals)
     function _sharePrice() internal view returns (uint256) {
-        return _calculateStkTokenPrice(_totalAssets(), totalSupply());
+        return _calculateStkTokenPrice();
     }
 
+    /// @notice Returns the total assets in the vault
+    /// @return totalAssets Total assets in the vault
     function _totalAssets() internal view returns (uint256) {
         return IkToken(_getBaseModuleStorage().underlyingAsset).balanceOf(address(this));
     }

@@ -183,7 +183,6 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         return $.totalAssets[vault][asset];
     }
 
-
     /// @notice Returns the custodial address for a given vault
     /// @param vault The vault address
     /// @return The custodial address for the vault

@@ -247,16 +247,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Get all core singleton contracts at once
     /// @return kMinter The kMinter contract address
     /// @return kAssetRouter The kAssetRouter contract address
-    function getCoreContracts()
-        external
-        view
-        returns (address kMinter, address kAssetRouter)
-    {
+    function getCoreContracts() external view returns (address kMinter, address kAssetRouter) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        return (
-            $.singletonContracts[K_MINTER],
-            $.singletonContracts[K_ASSET_ROUTER]
-        );
+        return ($.singletonContracts[K_MINTER], $.singletonContracts[K_ASSET_ROUTER]);
     }
 
     /// @notice Get all vaults registered for a specific asset

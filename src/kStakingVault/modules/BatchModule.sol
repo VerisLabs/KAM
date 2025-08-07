@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { LibClone } from "solady/utils/LibClone.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
-import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
+import { BaseModule } from "src/kStakingVault/modules/base/BaseModule.sol";
 import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
 
-/// @title ClaimModule
-/// @notice Handles claim operations for settled batches
-/// @dev Contains claim functions for staking and unstaking operations
+/// @title BatchModule
+/// @notice Handles batch operations for staking and unstaking
+/// @dev Contains batch functions for staking and unstaking operations
 contract BatchModule is BaseModule {
     using SafeCastLib for uint256;
     using SafeCastLib for uint64;
@@ -68,7 +69,8 @@ contract BatchModule is BaseModule {
         address receiver = $.batches[_batchId].batchReceiver;
         if (receiver != address(0)) return receiver;
 
-        receiver = address(new kBatchReceiver(_registry().getContractById(K_MINTER), _batchId, $.underlyingAsset));
+        receiver = LibClone.clone($.receiverImplementation);
+        kBatchReceiver(receiver).initialize(_batchId, $.underlyingAsset);
 
         $.batches[_batchId].batchReceiver = receiver;
 
@@ -83,19 +85,18 @@ contract BatchModule is BaseModule {
 
     function _newBatch() internal returns (uint256) {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
-        $.batchCounter = (uint256($.batchCounter) + 1).toUint64();
-        $.currentBatchId = uint256(keccak256(abi.encode(address(this), block.timestamp, $.batchCounter)));
-        uint256 newBatchId = $.currentBatchId;
+        $.currentBatch++;
+        uint256 newBatch = $.currentBatch;
 
-        BaseModuleTypes.BatchInfo storage batch = $.batches[newBatchId];
-        batch.batchId = newBatchId;
+        BaseModuleTypes.BatchInfo storage batch = $.batches[newBatch];
+        batch.batchId = newBatch;
         batch.batchReceiver = address(0);
         batch.isClosed = false;
         batch.isSettled = false;
 
-        emit BatchCreated(newBatchId);
+        emit BatchCreated(newBatch);
 
-        return newBatchId;
+        return newBatch;
     }
 
     /// @notice Returns the selectors for functions in this module

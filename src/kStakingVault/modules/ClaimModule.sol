@@ -8,7 +8,7 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
-import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
+import { BaseModule } from "src/kStakingVault/modules/base/BaseModule.sol";
 import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
 
 /// @title ClaimModule
@@ -34,8 +34,8 @@ contract ClaimModule is BaseModule {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice ERC20 Transfer event for stkToken operations
-    event StakingSharesClaimed(uint256 indexed batchId, uint256 requestId, address indexed user, uint256 shares);
-    event UnstakingAssetsClaimed(uint256 indexed batchId, uint256 requestId, address indexed user, uint256 assets);
+    event StakingSharesClaimed(uint256 indexed batchId, bytes32 requestId, address indexed user, uint256 shares);
+    event UnstakingAssetsClaimed(uint256 indexed batchId, bytes32 requestId, address indexed user, uint256 assets);
     event StkTokensIssued(address indexed user, uint256 stkTokenAmount);
     event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
 
@@ -46,16 +46,16 @@ contract ClaimModule is BaseModule {
     /// @notice Claims stkTokens from a settled staking batch
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
-    function claimStakedShares(uint256 batchId, uint256 requestId) external payable nonReentrant whenNotPaused {
+    function claimStakedShares(uint256 batchId, bytes32 requestId) external payable nonReentrant whenNotPaused {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         if (!$.batches[batchId].isSettled) revert BatchNotSettled();
 
         BaseModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
         if (request.batchId != batchId) revert InvalidBatchId();
-        if (request.status != uint8(BaseModuleTypes.RequestStatus.PENDING)) revert RequestNotPending();
+        if (request.status != BaseModuleTypes.RequestStatus.PENDING) revert RequestNotPending();
         if (msg.sender != request.user) revert NotBeneficiary();
 
-        request.status = uint8(BaseModuleTypes.RequestStatus.CLAIMED);
+        request.status = BaseModuleTypes.RequestStatus.CLAIMED;
 
         // Calculate stkToken amount based on settlement-time share price
         uint256 sharePrice = _sharePrice();
@@ -71,16 +71,16 @@ contract ClaimModule is BaseModule {
     /// @notice Claims kTokens from a settled unstaking batch (simplified implementation)
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
-    function claimUnstakedAssets(uint256 batchId, uint256 requestId) external payable nonReentrant whenNotPaused {
+    function claimUnstakedAssets(uint256 batchId, bytes32 requestId) external payable nonReentrant whenNotPaused {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         if (!$.batches[batchId].isSettled) revert BatchNotSettled();
 
         BaseModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
         if (request.batchId != batchId) revert InvalidBatchId();
-        if (request.status != uint8(BaseModuleTypes.RequestStatus.PENDING)) revert RequestNotPending();
+        if (request.status != BaseModuleTypes.RequestStatus.PENDING) revert RequestNotPending();
         if (msg.sender != request.user) revert NotBeneficiary();
 
-        request.status = uint8(BaseModuleTypes.RequestStatus.CLAIMED);
+        request.status = BaseModuleTypes.RequestStatus.CLAIMED;
 
         // Calculate total kTokens to return based on settlement-time share price
         uint256 sharePrice = _sharePrice();

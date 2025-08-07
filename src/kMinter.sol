@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
@@ -22,6 +23,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
     using SafeCastLib for uint64;
+    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
 
     /*//////////////////////////////////////////////////////////////
                                 ROLES
@@ -37,7 +39,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     struct kMinterStorage {
         uint64 requestCounter;
         mapping(bytes32 => RedeemRequest) redeemRequests;
-        mapping(address => bytes32[]) userRequests;
+        mapping(address => EnumerableSetLib.Bytes32Set) userRequests;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kMinter")) - 1)) & ~bytes32(uint256(0xff))
@@ -127,16 +129,15 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         if (!_isRegisteredAsset(asset_)) revert InvalidAsset();
 
         address kToken = _getKTokenForAsset(asset_);
-        uint256 batchId = _getSafeBatchId(_getDNVaultByAsset(asset_));
+        uint256 batchId = _getBatchId(_getDNVaultByAsset(asset_));
+
+        address router = _getKAssetRouter();
 
         // Transfer underlying asset from sender to this contract
-        asset_.safeTransferFrom(msg.sender, address(this), amount_);
-
-        // Approve kAssetRouter to pull the assets
-        asset_.safeApprove(_getKAssetRouter(), amount_);
+        asset_.safeTransferFrom(msg.sender, router, amount_);
 
         // Push assets to kAssetRouter
-        IkAssetRouter(_getKAssetRouter()).kAssetPush(asset_, amount_, batchId);
+        IkAssetRouter(router).kAssetPush(asset_, amount_, batchId);
 
         // Mint kTokens 1:1 with deposited amount (no batch ID in push model)
         IkToken(kToken).mint(to_, amount_);
@@ -174,26 +175,25 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         requestId = _createRedeemRequestId(to_, amount_, block.timestamp);
 
         address vault = _getDNVaultByAsset(asset_);
-        uint256 batchId = _getSafeBatchId(vault);
+        uint256 batchId = _getBatchId(vault);
 
         kMinterStorage storage $ = _getkMinterStorage();
         // Create redemption request
         $.redeemRequests[requestId] = RedeemRequest({
-            id: requestId,
-            user: to_,
-            amount: amount_.toUint96(),
+            user: msg.sender,
+            amount: amount_,
             asset: asset_,
             requestTimestamp: block.timestamp.toUint64(),
-            status: uint8(RequestStatus.PENDING),
+            status: RequestStatus.PENDING,
             batchId: batchId,
             recipient: to_
         });
 
         // Add to user requests tracking
-        $.userRequests[to_].push(requestId);
+        $.userRequests[to_].add(requestId);
 
         // Transfer kTokens from user to this contract until batch is settled
-        kToken.safeTransferFrom(to_, address(this), amount_);
+        kToken.safeTransferFrom(msg.sender, address(this), amount_);
 
         IkAssetRouter(_getKAssetRouter()).kAssetRequestPull(asset_, vault, amount_, batchId);
 
@@ -209,13 +209,13 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
 
         // Validate request
-        if (redeemRequest.id == bytes32(0)) revert RequestNotFound();
-        if (redeemRequest.status != uint8(RequestStatus.PENDING)) revert RequestNotEligible();
-        if (redeemRequest.status == uint8(RequestStatus.REDEEMED)) revert RequestAlreadyProcessed();
-        if (redeemRequest.status == uint8(RequestStatus.CANCELLED)) revert RequestNotEligible();
+        if (!$.userRequests[redeemRequest.user].contains(requestId)) revert RequestNotFound();
+        if (redeemRequest.status != RequestStatus.PENDING) revert RequestNotEligible();
+        if (redeemRequest.status == RequestStatus.REDEEMED) revert RequestAlreadyProcessed();
+        if (redeemRequest.status == RequestStatus.CANCELLED) revert RequestNotEligible();
 
         // Update state
-        redeemRequest.status = uint8(RequestStatus.REDEEMED);
+        redeemRequest.status = RequestStatus.REDEEMED;
 
         address vault = _getDNVaultByAsset(redeemRequest.asset);
         address batchReceiver = IkStakingVault(vault).getBatchReceiver(redeemRequest.batchId);
@@ -225,7 +225,11 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         address kToken = _getKTokenForAsset(redeemRequest.asset);
         IkToken(kToken).burn(address(this), redeemRequest.amount);
 
-        // Withdraw from BatchReceiver to recipient (1:1 with kTokens burned)
+        // Delete request
+        $.userRequests[redeemRequest.user].remove(requestId);
+
+        // Optimistically ithdraw from BatchReceiver to recipient (1:1 with kTokens burned)
+        // If batch is not settled, this will fail
         IkBatchReceiver(batchReceiver).pullAssets(redeemRequest.recipient, redeemRequest.amount, redeemRequest.batchId);
 
         emit Redeemed(requestId);
@@ -238,10 +242,12 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
 
         // Validate request
-        if (redeemRequest.id == bytes32(0)) revert RequestNotFound();
-        if (redeemRequest.status != uint8(RequestStatus.PENDING)) revert RequestNotEligible();
+        if (!$.userRequests[redeemRequest.user].contains(requestId)) revert RequestNotFound();
+        if (redeemRequest.status != RequestStatus.PENDING) revert RequestNotEligible();
         // Update state
-        redeemRequest.status = uint8(RequestStatus.CANCELLED);
+        redeemRequest.status = RequestStatus.CANCELLED;
+        // Remove request from user's requests
+        $.userRequests[redeemRequest.user].remove(requestId);
 
         address vault = _getDNVaultByAsset(redeemRequest.asset);
         if (IkStakingVault(vault).isBatchClosed()) revert BatchClosed();
@@ -303,7 +309,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @return Redeem requests
     function getUserRequests(address user) external view returns (bytes32[] memory) {
         kMinterStorage storage $ = _getkMinterStorage();
-        return $.userRequests[user];
+        return $.userRequests[user].values();
     }
 
     /// @notice Get the request counter

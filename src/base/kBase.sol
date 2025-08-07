@@ -57,6 +57,12 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kBase")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant KBASE_STORAGE_LOCATION = 0xe91688684975c4d7d54a65dd96da5d4dcbb54b8971c046d5351d3c111e43a800;
 
+    /*//////////////////////////////////////////////////////////////
+                              STORAGE GETTER
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Returns the kBase storage
+    /// @return Storage struct containing registry, initialized, and paused states
     function _getBaseStorage() internal pure returns (kBaseStorage storage $) {
         assembly {
             $.slot := KBASE_STORAGE_LOCATION
@@ -96,9 +102,7 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /// @return The kRegistry contract address
     /// @dev Reverts if contract not initialized
     function registry() external view returns (address) {
-        kBaseStorage storage $ = _getBaseStorage();
-        if (!$.initialized) revert NotInitialized();
-        return $.registry;
+        return address(_registry());
     }
 
     /// @notice Returns the registry contract interface
@@ -136,12 +140,12 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
         return _registry().isRelayer(msg.sender);
     }
 
-    /// @notice Gets the safe batch ID for a given vault
+    /// @notice Gets the current batch ID for a given vault
     /// @param vault The vault address
-    /// @return batchId The safe batch ID
+    /// @return batchId The current batch ID
     /// @dev Reverts if vault not registered
-    function _getSafeBatchId(address vault) internal view returns (uint256 batchId) {
-        return IkStakingVault(vault).getSafeBatchId();
+    function _getBatchId(address vault) internal view returns (uint256 batchId) {
+        return IkStakingVault(vault).getBatchId();
     }
 
     /*//////////////////////////////////////////////////////////////

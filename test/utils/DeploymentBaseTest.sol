@@ -34,9 +34,9 @@ import { kToken } from "src/kToken.sol";
 
 // Modules
 
+import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { BatchModule } from "src/kStakingVault/modules/BatchModule.sol";
 import { ClaimModule } from "src/kStakingVault/modules/ClaimModule.sol";
-import { MultiFacetProxy } from "src/kStakingVault/modules/MultiFacetProxy.sol";
 
 // Adapters
 

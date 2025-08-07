@@ -389,7 +389,6 @@ contract kMinterTest is DeploymentBaseTest {
         bytes32 invalidRequestId = keccak256("invalid");
 
         IkMinter.RedeemRequest memory request = minter.getRedeemRequest(invalidRequestId);
-        assertEq(request.id, bytes32(0), "Should return empty request");
         assertEq(request.user, address(0), "User should be zero");
         assertEq(request.amount, 0, "Amount should be zero");
     }

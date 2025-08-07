@@ -5,8 +5,9 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
+
 import { BatchModule } from "src/kStakingVault/modules/BatchModule.sol";
+import { BaseModule } from "src/kStakingVault/modules/base/BaseModule.sol";
 import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
 
 /// @title BatchModuleTest

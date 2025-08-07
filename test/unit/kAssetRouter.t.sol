@@ -407,7 +407,9 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
         // The function should return 0 for non-existent balances
         assertEq(
-            metaVaultAdapter.totalAssets(address(dnVault), USDC_MAINNET), 0, "DN vault should have zero balance initially"
+            metaVaultAdapter.totalAssets(address(dnVault), USDC_MAINNET),
+            0,
+            "DN vault should have zero balance initially"
         );
 
         assertEq(

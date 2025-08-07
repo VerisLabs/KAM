@@ -6,8 +6,9 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
-import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
+
 import { ClaimModule } from "src/kStakingVault/modules/ClaimModule.sol";
+import { BaseModule } from "src/kStakingVault/modules/base/BaseModule.sol";
 import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
 
 /// @title ClaimModuleTest
