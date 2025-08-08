@@ -11,11 +11,11 @@ interface IkStakingVault {
 
     function requestStake(address to, uint96 kTokensAmount) external payable returns (uint256 requestId);
     function requestUnstake(address to, uint96 stkTokenAmount) external payable returns (uint256 requestId);
-    function claimStakedShares(uint256 batchId, uint256 requestIndex) external payable;
-    function claimUnstakedAssets(uint256 batchId, uint256 requestIndex) external payable;
+    function claimStakedShares(bytes32 batchId, uint256 requestIndex) external payable;
+    function claimUnstakedAssets(bytes32 batchId, uint256 requestIndex) external payable;
     function updateLastTotalAssets(uint256 totalAssets) external;
-    function createBatchReceiver(uint256 batchId) external returns (address);
-    function closeBatch(uint256 _batchId, bool _create) external;
+    function createBatchReceiver(bytes32 batchId) external returns (address);
+    function closeBatch(bytes32 _batchId, bool _create) external;
     function totalSupply() external view returns (uint256);
 
     /*//////////////////////////////////////////////////////////////
@@ -30,16 +30,16 @@ interface IkStakingVault {
     function calculateStkTokenPrice(uint256 totalAssets) external view returns (uint256);
     function lastTotalAssets() external view returns (uint256);
     function kToken() external view returns (address);
-    function getBatchId() external view returns (uint256);
-    function getSafeBatchId() external view returns (uint256);
-    function getSafeBatchReceiver(uint256 batchId) external view returns (address);
+    function getBatchId() external view returns (bytes32);
+    function getSafeBatchId() external view returns (bytes32);
+    function getSafeBatchReceiver(bytes32 batchId) external view returns (address);
     function isBatchClosed() external view returns (bool);
     function isBatchSettled() external view returns (bool);
     function getBatchInfo()
         external
         view
-        returns (uint256 batchId, address batchReceiver, bool isClosed, bool isSettled);
-    function getBatchReceiver(uint256 batchId) external view returns (address);
+        returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled);
+    function getBatchReceiver(bytes32 batchId) external view returns (address);
     function sharePrice() external view returns (uint256);
 
     /*//////////////////////////////////////////////////////////////

@@ -67,7 +67,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, institutionalMint, users.institution);
 
         // Settlement required to move assets from kMinter to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, institutionalMint);
 
         // Validate initial state
@@ -78,7 +78,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         assertVirtualBalance(address(alphaVault), USDC_MAINNET, 0, "Alpha vault should start empty");
 
         // Execute rebalancing: Move excess assets to Alpha for yield generation
-        uint256 batchId = getCurrentDNBatchId();
+        bytes32 batchId = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(alphaVault), rebalanceAmount, batchId);
 
         // Settlement required to update virtual balances
@@ -111,11 +111,11 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, institutionalMint, users.institution);
 
         // Settlement required to move assets to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, institutionalMint);
 
         // Execute rebalancing using consistent batch ID
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(alphaVault), rebalanceAmount, transferBatch);
 
         // Settle the transfer
@@ -156,11 +156,11 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, LARGE_AMOUNT * 2, users.institution);
 
         // Settlement required to move assets to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, LARGE_AMOUNT * 2);
 
         // Execute rebalancing
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(alphaVault), rebalanceAmount, transferBatch);
 
         // Settle the transfer
@@ -174,7 +174,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         // executeRetailStaking(users.alice, address(alphaVault), stakingAmount, stakingAmount);
 
         // Simulate yield generation directly through settlement
-        uint256 yieldBatch = getCurrentAlphaBatchId();
+        bytes32 yieldBatch = getCurrentAlphaBatchId();
         executeBatchSettlement(address(alphaVault), yieldBatch, rebalanceAmount + yieldAmount);
 
         // Validate yield was captured in Alpha vault
@@ -199,13 +199,13 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, LARGE_AMOUNT * 2, users.institution);
 
         // Settlement required to move assets to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, LARGE_AMOUNT * 2);
 
         uint256 initialDNBalance = custodialAdapter.totalAssets(address(dnVault), USDC_MAINNET);
 
         // Execute rebalancing
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(alphaVault), rebalanceAmount, transferBatch);
 
         // Settle the transfer
@@ -213,14 +213,14 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         executeBatchSettlement(address(alphaVault), transferBatch, rebalanceAmount);
 
         // Simulate yield generation in Alpha - add yield through settlement
-        uint256 yieldBatch = getCurrentAlphaBatchId();
+        bytes32 yieldBatch = getCurrentAlphaBatchId();
         executeBatchSettlement(address(alphaVault), yieldBatch, rebalanceAmount + yieldAmount);
 
         // Calculate DN vault's share of yield
         uint256 dnYieldShare = (yieldAmount * dnSharePercent) / 100;
 
         // Simulate yield distribution back to DN vault using consistent batch ID
-        uint256 distributionBatch = getCurrentDNBatchId();
+        bytes32 distributionBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(alphaVault), address(dnVault), dnYieldShare, distributionBatch);
 
         // Settle the yield distribution
@@ -257,11 +257,11 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, institutionalMint, users.institution);
 
         // Settlement required to move assets to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, institutionalMint);
 
         // Execute rebalancing
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(alphaVault), rebalanceAmount, transferBatch);
 
         // Settle the transfer
@@ -282,7 +282,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         uint256 shortfall = additionalRedemption - dnAvailableAfterRedemption;
 
         // Execute peg protection: Alpha transfers assets back to DN using consistent batch ID
-        uint256 protectionBatch = getCurrentDNBatchId();
+        bytes32 protectionBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(alphaVault), address(dnVault), shortfall, protectionBatch);
 
         // Settle the peg protection transfer
@@ -318,11 +318,11 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, mintAmount, users.institution);
 
         // Settlement required to move assets to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, mintAmount);
 
         // First rebalancing
-        uint256 transferBatch1 = getCurrentDNBatchId();
+        bytes32 transferBatch1 = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(alphaVault), rebalance1, transferBatch1);
 
         // Settle first transfer
@@ -331,7 +331,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
 
         // Advance time and second rebalancing
         advanceToNextBatchCutoff();
-        uint256 transferBatch2 = getCurrentDNBatchId();
+        bytes32 transferBatch2 = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(alphaVault), rebalance2, transferBatch2);
 
         // Settle second transfer
@@ -359,7 +359,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         uint256 secondPull = shortfall - firstPull;
 
         // Use consistent batch ID for both pulls
-        uint256 protectionBatch = getCurrentDNBatchId();
+        bytes32 protectionBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(alphaVault), address(dnVault), firstPull, protectionBatch);
         executeVaultTransfer(address(alphaVault), address(dnVault), secondPull, protectionBatch);
 
@@ -396,11 +396,11 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, dnAmount, users.institution);
 
         // Settlement required to move assets to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, dnAmount);
 
         // Execute transfer using consistent batch ID
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(alphaVault), alphaAmount, transferBatch);
 
         // Skip retail staking due to Alpha vault configuration issue in test environment
@@ -409,7 +409,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         kUSD.transfer(users.alice, SMALL_AMOUNT);
         // executeRetailStaking(users.alice, address(alphaVault), SMALL_AMOUNT, SMALL_AMOUNT);
 
-        uint256 dnBatchId = transferBatch;
+        bytes32 dnBatchId = transferBatch;
 
         // Advance to settlement time
         advanceToSettlementTime();
@@ -435,7 +435,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, baseAmount, users.institution);
 
         // Settlement required to move assets to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, baseAmount);
 
         // Simulate multiple small rebalancing operations (inefficient)
@@ -443,7 +443,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         uint256 smallAmount = baseAmount / (numOperations * 2);
 
         // Use consistent batch ID for all small transfers
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         for (uint256 i = 0; i < numOperations; i++) {
             executeVaultTransfer(address(dnVault), address(alphaVault), smallAmount, transferBatch);
         }
@@ -460,7 +460,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
 
         // Now simulate optimization: Large reverse transfer
         uint256 optimizationAmount = totalTransferred / 2;
-        uint256 reverseBatch = getCurrentDNBatchId();
+        bytes32 reverseBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(alphaVault), address(dnVault), optimizationAmount, reverseBatch);
 
         // Settle the optimization transfer
@@ -493,12 +493,12 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, totalAmount, users.institution);
 
         // Settlement required to move assets to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, totalAmount);
 
         // Execute high-frequency DN to Alpha transfers using consistent batch ID
         uint256 netToAlpha = 0;
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
 
         for (uint256 i = 0; i < numRebalances; i++) {
             // Only DN to Alpha transfers for simplicity (Alpha needs settled balance to transfer back)
@@ -534,12 +534,12 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, massiveAmount, users.institution);
 
         // Settlement required to move assets to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, massiveAmount);
 
         // Extreme rebalancing: 90% to Alpha
         uint256 extremeRebalance = (massiveAmount * 90) / 100;
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(alphaVault), extremeRebalance, transferBatch);
 
         // Settle extreme rebalancing
@@ -566,7 +566,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         uint256 shortfall = extremeRedemption - dnRemainingAfterInitialRedemption;
 
         // Execute massive peg protection
-        uint256 protectionBatch = getCurrentDNBatchId();
+        bytes32 protectionBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(alphaVault), address(dnVault), shortfall, protectionBatch);
 
         // Settle the massive peg protection

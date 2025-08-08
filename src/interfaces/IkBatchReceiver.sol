@@ -7,7 +7,7 @@ interface IkBatchReceiver {
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event BatchReceiverInitialized(address indexed kMinter, uint256 indexed batchId, address asset);
+    event BatchReceiverInitialized(address indexed kMinter, bytes32 indexed batchId, address asset);
     event PulledAssets(address indexed receiver, address indexed asset, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
@@ -25,11 +25,11 @@ interface IkBatchReceiver {
 
     function kMinter() external view returns (address);
     function asset() external view returns (address);
-    function batchId() external view returns (uint256);
+    function batchId() external view returns (bytes32);
 
     /*//////////////////////////////////////////////////////////////
                               FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function pullAssets(address receiver, uint256 amount, uint256 _batchId) external;
+    function pullAssets(address receiver, uint256 amount, bytes32 _batchId) external;
 }

@@ -24,12 +24,16 @@ interface IkAssetRouter {
     event AssetsTransfered(
         address indexed sourceVault, address indexed targetVault, address indexed asset, uint256 amount
     );
-    event SharesRequestedPushed(address indexed vault, uint256 batchId, uint256 amount);
-    event SharesRequestedPulled(address indexed vault, uint256 batchId, uint256 amount);
+    event SharesRequestedPushed(address indexed vault, bytes32 indexed batchId, uint256 amount);
+    event SharesRequestedPulled(address indexed vault, bytes32 indexed batchId, uint256 amount);
     event SharesSettled(
-        address[] vaults, uint256 batchId, uint256 totalRequestedShares, uint256[] totalAssets, uint256 sharePrice
+        address[] vaults,
+        bytes32 indexed batchId,
+        uint256 totalRequestedShares,
+        uint256[] totalAssets,
+        uint256 sharePrice
     );
-    event BatchSettled(address indexed vault, uint256 indexed batchId, uint256 totalAssets);
+    event BatchSettled(address indexed vault, bytes32 indexed batchId, uint256 totalAssets);
     event PegProtectionActivated(address indexed vault, uint256 shortfall);
     event PegProtectionExecuted(address indexed sourceVault, address indexed targetVault, uint256 amount);
     event YieldDistributed(address indexed vault, uint256 yield, bool isProfit);
@@ -52,23 +56,23 @@ interface IkAssetRouter {
     /// @param _asset The asset being deposited
     /// @param amount Amount of assets being pushed
     /// @param batchId The batch ID from the DN vault
-    function kAssetPush(address _asset, uint256 amount, uint256 batchId) external payable;
-    function kAssetRequestPull(address _asset, address _vault, uint256 amount, uint256 batchId) external payable;
+    function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable;
+    function kAssetRequestPull(address _asset, address _vault, uint256 amount, bytes32 batchId) external payable;
     function kAssetTransfer(
         address sourceVault,
         address targetVault,
         address _asset,
         uint256 amount,
-        uint256 batchId
+        bytes32 batchId
     )
         external
         payable;
-    function kSharesRequestPush(address sourceVault, uint256 amount, uint256 batchId) external payable;
-    function kSharesRequestPull(address sourceVault, uint256 amount, uint256 batchId) external payable;
+    function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable;
+    function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable;
     function settleBatch(
         address asset,
         address vault,
-        uint256 batchId,
+        bytes32 batchId,
         uint256 totalAssets,
         uint256 netted,
         uint256 yield,
@@ -80,11 +84,11 @@ interface IkAssetRouter {
     function getDNVaultByAsset(address asset) external view returns (address vault);
     function getBatchIdBalances(
         address vault,
-        uint256 batchId
+        bytes32 batchId
     )
         external
         view
         returns (uint256 deposited, uint256 requested);
-    function getRequestedShares(address vault, uint256 batchId) external view returns (uint256);
+    function getRequestedShares(address vault, bytes32 batchId) external view returns (uint256);
     function isPaused() external view returns (bool);
 }

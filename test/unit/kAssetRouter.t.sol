@@ -28,7 +28,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     using LibClone for address;
 
     // Test constants
-    uint256 internal constant TEST_BATCH_ID = 1;
+    bytes32 internal constant TEST_BATCH_ID = bytes32(uint256(1));
     uint256 internal constant TEST_AMOUNT = 1000 * _1_USDC;
     uint256 internal constant TEST_PROFIT = 100 * _1_USDC;
     uint256 internal constant TEST_LOSS = 50 * _1_USDC;
@@ -105,7 +105,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     /// @dev Test successful asset push from kMinter
     function test_KAssetPush_Success() public {
         uint256 amount = TEST_AMOUNT;
-        uint256 batchId = TEST_BATCH_ID;
+        bytes32 batchId = TEST_BATCH_ID;
 
         // Fund minter with USDC
         deal(USDC_MAINNET, address(minter), amount);
@@ -162,7 +162,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // Testing access control instead
 
         uint256 amount = TEST_AMOUNT;
-        uint256 batchId = TEST_BATCH_ID;
+        bytes32 batchId = TEST_BATCH_ID;
 
         // Should revert due to access control - only kMinter can call
         vm.prank(users.alice);
@@ -205,7 +205,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     /// @dev Test asset transfer access control and validation
     function test_KAssetTransfer_Success() public {
         uint256 amount = TEST_AMOUNT;
-        uint256 batchId = TEST_BATCH_ID;
+        bytes32 batchId = TEST_BATCH_ID;
 
         // This test focuses on access control rather than complex setup
         // First test that it fails without virtual balance (expected behavior)
@@ -242,7 +242,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     /// @dev Test successful shares request pull
     function test_KSharesRequestPull_Success() public {
         uint256 amount = TEST_AMOUNT;
-        uint256 batchId = TEST_BATCH_ID;
+        bytes32 batchId = TEST_BATCH_ID;
 
         // First push shares to have something to pull
         vm.prank(address(alphaVault));
@@ -274,7 +274,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
     /// @dev Test settlement access control
     function test_SettleBatch_AccessControl() public {
-        uint256 batchId = TEST_BATCH_ID;
+        bytes32 batchId = TEST_BATCH_ID;
 
         // Should work with settler (basic access control test)
         // We expect it to revert with something related to batch data, not access
@@ -290,7 +290,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
     /// @dev Test settlement with basic validation
     function test_SettleBatch_BasicValidation() public {
-        uint256 batchId = TEST_BATCH_ID;
+        bytes32 batchId = TEST_BATCH_ID;
 
         // Test that settlement function exists and has basic validation
         // Complex settlement scenarios will be tested in integration tests
@@ -432,7 +432,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
     /// @dev Test getBatchIdBalances returns correct amounts
     function test_GetBatchIdBalances() public {
-        uint256 batchId = TEST_BATCH_ID;
+        bytes32 batchId = TEST_BATCH_ID;
 
         // Initially zero for any vault/batch combination
         (uint256 dep, uint256 req) = assetRouter.getBatchIdBalances(address(alphaVault), batchId);
@@ -445,7 +445,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(req, 0, "DN vault requested should be zero initially");
 
         // Test with different batch ID
-        (dep, req) = assetRouter.getBatchIdBalances(address(alphaVault), batchId + 1);
+        (dep, req) = assetRouter.getBatchIdBalances(address(alphaVault), bytes32(uint256(batchId) + 1));
         assertEq(dep, 0, "Different batch should be zero");
         assertEq(req, 0, "Different batch should be zero");
 
@@ -455,7 +455,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     /// @dev Test getRequestedShares returns correct amount
     function test_GetRequestedShares() public {
         uint256 amount = TEST_AMOUNT;
-        uint256 batchId = TEST_BATCH_ID;
+        bytes32 batchId = TEST_BATCH_ID;
 
         // Initially zero
         assertEq(assetRouter.getRequestedShares(address(alphaVault), batchId), 0, "Should be zero initially");

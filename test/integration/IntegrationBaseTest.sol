@@ -34,7 +34,7 @@ contract IntegrationBaseTest is DeploymentBaseTest {
     event IntegrationFlowStarted(string flowName, uint256 timestamp);
     event IntegrationFlowCompleted(string flowName, uint256 duration);
     event VirtualBalanceValidated(address vault, address asset, uint256 balance);
-    event BatchStateValidated(uint256 batchId, bool isClosed, bool isSettled);
+    event BatchStateValidated(bytes32 batchId, bool isClosed, bool isSettled);
 
     /*//////////////////////////////////////////////////////////////
                         SETUP FUNCTIONS
@@ -80,22 +80,22 @@ contract IntegrationBaseTest is DeploymentBaseTest {
     }
 
     /// @dev Get current batch ID for a vault
-    function getCurrentBatchId(IkStakingVault vault) internal view returns (uint256) {
+    function getCurrentBatchId(IkStakingVault vault) internal view returns (bytes32) {
         return vault.getBatchId();
     }
 
     /// @dev Get current batch ID for DN vault
-    function getCurrentDNBatchId() internal view returns (uint256) {
+    function getCurrentDNBatchId() internal view returns (bytes32) {
         return IkStakingVault(address(dnVault)).getBatchId();
     }
 
     /// @dev Get current batch ID for Alpha vault
-    function getCurrentAlphaBatchId() internal view returns (uint256) {
+    function getCurrentAlphaBatchId() internal view returns (bytes32) {
         return IkStakingVault(address(alphaVault)).getBatchId();
     }
 
     /// @dev Get current batch ID for Beta vault
-    function getCurrentBetaBatchId() internal view returns (uint256) {
+    function getCurrentBetaBatchId() internal view returns (bytes32) {
         return IkStakingVault(address(betaVault)).getBatchId();
     }
 
@@ -181,7 +181,7 @@ contract IntegrationBaseTest is DeploymentBaseTest {
 
     /// @dev Execute asset transfer between vaults via kAssetRouter
     /// @notice This must be called from a registered staking vault
-    function executeVaultTransfer(address sourceVault, address targetVault, uint256 amount, uint256 batchId) internal {
+    function executeVaultTransfer(address sourceVault, address targetVault, uint256 amount, bytes32 batchId) internal {
         emit IntegrationFlowStarted("VaultTransfer", block.timestamp);
         uint256 startTime = block.timestamp;
 
@@ -223,7 +223,7 @@ contract IntegrationBaseTest is DeploymentBaseTest {
     }
 
     /// @dev Execute batch settlement for a vault
-    function executeBatchSettlement(address vault, uint256 batchId, uint256 totalAssets) internal {
+    function executeBatchSettlement(address vault, bytes32 batchId, uint256 totalAssets) internal {
         emit IntegrationFlowStarted("BatchSettlement", block.timestamp);
         uint256 startTime = block.timestamp;
 
@@ -305,7 +305,7 @@ contract IntegrationBaseTest is DeploymentBaseTest {
     /// @param assetsNeeded Assets that need to be retrieved from external strategies
     function simulateCompleteBatchCycle(
         address vault,
-        uint256 batchId,
+        bytes32 batchId,
         uint256 totalAssets,
         uint256 assetsNeeded
     )
@@ -372,14 +372,14 @@ contract IntegrationBaseTest is DeploymentBaseTest {
     /// @dev Validate batch state for a vault
     function assertBatchState(
         address vault,
-        uint256 expectedBatchId,
+        bytes32 expectedBatchId,
         bool shouldBeClosed,
         bool shouldBeSettled,
         string memory message
     )
         internal
     {
-        (uint256 batchId,, bool isClosed, bool isSettled) = IkStakingVault(vault).getBatchInfo();
+        (bytes32 batchId,, bool isClosed, bool isSettled) = IkStakingVault(vault).getBatchInfo();
 
         assertEq(batchId, expectedBatchId, string(abi.encodePacked(message, ": batch ID")));
         assertEq(isClosed, shouldBeClosed, string(abi.encodePacked(message, ": closed state")));

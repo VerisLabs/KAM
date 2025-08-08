@@ -178,7 +178,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //    /// @dev Test getBatchInfo function
 //    function test_GetBatchInfo_AllVaultTypes() public view {
 //        // Test Alpha vault
-//        (uint256 batchId, address batchReceiver, bool isClosed, bool isSettled) = alphaVault.getBatchInfo();
+//        (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled) = alphaVault.getBatchInfo();
 //        assertEq(batchId, 0, "Alpha vault batch ID should be zero");
 //        assertEq(batchReceiver, address(0), "Alpha vault batch receiver should be zero");
 //        assertFalse(isClosed, "Alpha vault batch should not be closed");

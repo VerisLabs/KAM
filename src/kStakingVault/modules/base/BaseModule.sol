@@ -38,12 +38,12 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
         address indexed kToken,
         uint256 amount,
         address recipient,
-        uint256 batchId
+        bytes32 batchId
     );
     event StakeRequestRedeemed(bytes32 indexed requestId);
     event StakeRequestCancelled(bytes32 indexed requestId);
     event UnstakeRequestCreated(
-        bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, uint256 batchId
+        bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, bytes32 batchId
     );
     event UnstakeRequestCancelled(bytes32 indexed requestId);
     event Paused(bool paused);
@@ -103,7 +103,7 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
         uint16 performanceFee;
         uint16 managementFee;
         address feeReceiver;
-        mapping(uint256 => BaseModuleTypes.BatchInfo) batches;
+        mapping(bytes32 => BaseModuleTypes.BatchInfo) batches;
         mapping(bytes32 => BaseModuleTypes.StakeRequest) stakeRequests;
         mapping(bytes32 => BaseModuleTypes.UnstakeRequest) unstakeRequests;
         mapping(address => EnumerableSetLib.Bytes32Set) userRequests;

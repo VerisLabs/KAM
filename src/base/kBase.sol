@@ -62,7 +62,7 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Returns the kBase storage
-    /// @return Storage struct containing registry, initialized, and paused states
+    /// @return $ Storage struct containing registry, initialized, and paused states
     function _getBaseStorage() internal pure returns (kBaseStorage storage $) {
         assembly {
             $.slot := KBASE_STORAGE_LOCATION
@@ -144,7 +144,7 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /// @param vault The vault address
     /// @return batchId The current batch ID
     /// @dev Reverts if vault not registered
-    function _getBatchId(address vault) internal view returns (uint256 batchId) {
+    function _getBatchId(address vault) internal view returns (bytes32 batchId) {
         return IkStakingVault(vault).getBatchId();
     }
 

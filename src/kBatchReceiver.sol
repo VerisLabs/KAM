@@ -16,7 +16,7 @@ contract kBatchReceiver is IkBatchReceiver {
 
     address public immutable kMinter;
     address public asset;
-    uint256 public batchId;
+    bytes32 public batchId;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -34,7 +34,7 @@ contract kBatchReceiver is IkBatchReceiver {
     /// @param _batchId The batch ID this receiver serves
     /// @param _asset Address of the asset contract
     /// @dev Sets batch ID and asset, then emits initialization event
-    function initialize(uint256 _batchId, address _asset) external {
+    function initialize(bytes32 _batchId, address _asset) external {
         if (asset != address(0)) revert();
         if (_asset == address(0)) revert();
 
@@ -53,7 +53,7 @@ contract kBatchReceiver is IkBatchReceiver {
     /// @param amount Amount of assets to transfer
     /// @param _batchId Batch ID for validation (must match this receiver's batch)
     /// @dev Only callable by kMinter, transfers assets from caller to receiver
-    function pullAssets(address receiver, uint256 amount, uint256 _batchId) external {
+    function pullAssets(address receiver, uint256 amount, bytes32 _batchId) external {
         if (msg.sender != kMinter) revert OnlyKMinter();
         if (_batchId != batchId) revert InvalidBatchId();
         if (amount == 0) revert ZeroAmount();

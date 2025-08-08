@@ -129,7 +129,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         if (!_isRegisteredAsset(asset_)) revert InvalidAsset();
 
         address kToken = _getKTokenForAsset(asset_);
-        uint256 batchId = _getBatchId(_getDNVaultByAsset(asset_));
+        bytes32 batchId = _getBatchId(_getDNVaultByAsset(asset_));
 
         address router = _getKAssetRouter();
 
@@ -175,7 +175,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         requestId = _createRedeemRequestId(to_, amount_, block.timestamp);
 
         address vault = _getDNVaultByAsset(asset_);
-        uint256 batchId = _getBatchId(vault);
+        bytes32 batchId = _getBatchId(vault);
 
         kMinterStorage storage $ = _getkMinterStorage();
         // Create redemption request

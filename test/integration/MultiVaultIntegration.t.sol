@@ -170,7 +170,7 @@ contract MultiVaultIntegrationTest is IntegrationBaseTest {
 
         // Settlement required to move assets from kMinter batch balance to DN vault virtual balance
         uint256 totalInstitutional = mint1 + mint2;
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(dnVault), currentBatch, totalInstitutional);
 
         assertVirtualBalance(
@@ -197,7 +197,7 @@ contract MultiVaultIntegrationTest is IntegrationBaseTest {
         // Phase 4: Validate batch state without Alpha/Beta settlement (adapters not deployed)
         advanceToSettlementTime();
 
-        uint256 dnBatchId = getCurrentDNBatchId();
+        bytes32 dnBatchId = getCurrentDNBatchId();
 
         // Check DN vault's actual virtual balance before settlement
         // DN vault uses adapter's virtual assets tracking
@@ -266,7 +266,7 @@ contract MultiVaultIntegrationTest is IntegrationBaseTest {
 
         // Settlement required to move assets from kMinter batch balance to DN vault virtual balance
         uint256 totalInstitutional = numInstitutions * baseInstitutionalAmount;
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(dnVault), currentBatch, totalInstitutional);
 
         assertVirtualBalance(address(dnVault), USDC_MAINNET, totalInstitutional, "DN vault after mass minting");
@@ -289,10 +289,11 @@ contract MultiVaultIntegrationTest is IntegrationBaseTest {
         uint256 numOperations = 20; // Reduced for stability
         for (uint256 i = 0; i < numOperations; i++) {
             // Only DN to Alpha/Beta transfers (which don't require Alpha/Beta to have virtual balance)
-            executeVaultTransfer(address(dnVault), address(alphaVault), SMALL_AMOUNT, getCurrentDNBatchId() + i);
-            executeVaultTransfer(
-                address(dnVault), address(betaVault), SMALL_AMOUNT / 2, getCurrentDNBatchId() + i + 100
-            );
+            // Note: getCurrentDNBatchId() returns bytes32, and we can't directly add numbers to it
+            // Instead, we'll use the same batch ID for all operations in this stress test
+            bytes32 batchId = getCurrentDNBatchId();
+            executeVaultTransfer(address(dnVault), address(alphaVault), SMALL_AMOUNT, batchId);
+            executeVaultTransfer(address(dnVault), address(betaVault), SMALL_AMOUNT / 2, batchId);
         }
 
         // Validate protocol stability under extreme load

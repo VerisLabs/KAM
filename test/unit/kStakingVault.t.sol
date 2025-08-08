@@ -29,10 +29,10 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //        address indexed kToken,
 //        uint256 amount,
 //        address recipient,
-//        uint256 batchId
+//        bytes32 batchId
 //    );
 //    event UnstakeRequestCreated(
-//        bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, uint256 batchId
+//        bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, bytes32 batchId
 //    );
 //    event StakeRequestRedeemed(bytes32 indexed requestId);
 //    event UnstakeRequestRedeemed(bytes32 indexed requestId);
@@ -342,7 +342,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //        assertFalse(alphaVault.isBatchSettled(), "Initial batch should not be settled");
 //
 //        // Test getBatchInfo
-//        (uint256 batchId, address batchReceiver, bool isClosed, bool isSettled) = alphaVault.getBatchInfo();
+//        (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled) = alphaVault.getBatchInfo();
 //        assertEq(batchId, 0, "Batch ID should be zero");
 //        assertEq(batchReceiver, address(0), "Batch receiver should be zero");
 //        assertFalse(isClosed, "Batch should not be closed");

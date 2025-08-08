@@ -19,7 +19,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
     kBatchReceiver public batchReceiver;
 
     // Test constants
-    uint256 constant TEST_BATCH_ID = 1;
+    bytes32 constant TEST_BATCH_ID = bytes32(uint256(1));
     uint256 constant TEST_AMOUNT = _100_USDC;
     address constant TEST_RECEIVER = address(0x1234);
 
@@ -31,7 +31,8 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         super.setUp();
 
         // Deploy a test batch receiver directly
-        batchReceiver = new kBatchReceiver(address(minter), TEST_BATCH_ID, USDC_MAINNET);
+        batchReceiver = new kBatchReceiver(address(minter));
+        batchReceiver.initialize(TEST_BATCH_ID, USDC_MAINNET);
 
         // Fund the batch receiver with test USDC
         deal(USDC_MAINNET, address(batchReceiver), TEST_AMOUNT * 10);
@@ -103,7 +104,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
     function test_PullAssets_RevertInvalidBatchId() public {
         vm.prank(address(minter));
         vm.expectRevert(IkBatchReceiver.InvalidBatchId.selector);
-        batchReceiver.pullAssets(TEST_RECEIVER, TEST_AMOUNT, TEST_BATCH_ID + 1);
+        batchReceiver.pullAssets(TEST_RECEIVER, TEST_AMOUNT, bytes32(uint256(TEST_BATCH_ID) + 1));
     }
 
     /// @dev Test pull assets reverts with zero amount

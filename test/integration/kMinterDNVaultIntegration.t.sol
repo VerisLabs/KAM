@@ -73,7 +73,7 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
 
         // Validate that assets were pushed to kAssetRouter batch balances for kMinter
         // Note: getBalanceOf shows settled balance, batch balances are separate until settlement
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         (uint256 depositedInBatch,) = assetRouter.getBatchIdBalances(address(minter), currentBatch);
         assertEq(depositedInBatch, mintAmount, "kMinter batch balance should increase by mint amount");
 
@@ -94,7 +94,7 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(institution, mintAmount, institution);
 
         // Validate assets are in batch balances, not virtual balances yet
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         (uint256 depositedInBatch,) = assetRouter.getBatchIdBalances(address(minter), currentBatch);
         assertEq(depositedInBatch, mintAmount, "Assets should be in batch balance");
 
@@ -140,7 +140,7 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
 
         // Step 2: Settle only part of the assets to DN vault, leaving some for kMinter
         // In practice, this would happen through peg protection mechanisms
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
 
         // Settle kMinter batch first to give it virtual balance
         uint256 totalDeposited = mintAmount + redeemAmount;
@@ -202,7 +202,7 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(institution, mintAmount, institution);
 
         // Settlement required to move assets from batch to DN vault virtual balance
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, mintAmount);
 
         // Now create a redemption request with backend simulation
@@ -214,7 +214,7 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         // 2. kAssetRouter has sufficient assets for redemption settlement
         // 3. BatchReceiver gets funded for user claims
 
-        uint256 redemptionBatch = getCurrentDNBatchId();
+        bytes32 redemptionBatch = getCurrentDNBatchId();
 
         // Settlement should work now that backend has retrieved assets
         executeBatchSettlement(address(minter), redemptionBatch, 0);
@@ -241,18 +241,18 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
 
         // Operation 1: Institution 1 mints
         executeInstitutionalMint(institution1, mint1Amount, institution1);
-        uint256 batch1 = getCurrentDNBatchId();
+        bytes32 batch1 = getCurrentDNBatchId();
 
         // Operation 2: Institution 2 mints
         executeInstitutionalMint(institution2, mint2Amount, institution2);
-        uint256 batch2 = getCurrentDNBatchId();
+        bytes32 batch2 = getCurrentDNBatchId();
 
         // Debug: Check if both mints are in the same batch
         assertEq(batch1, batch2, "Both mints should be in the same batch");
 
         // Settle both mints together since they should be in the same batch
         uint256 totalMintAmount = mint1Amount + mint2Amount;
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
 
         // Settle kMinter's batch first (as user specified kMinter should be settled)
         // kMinter has totalMintAmount in deposited, 0 in requested
@@ -298,7 +298,7 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         assertEq(kUSD.totalSupply(), initialSupply + largeAmount, "kUSD supply should increase by large amount");
 
         // After mint, assets are in kMinter's batch balance, need settlement to move to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(dnVault), currentBatch, largeAmount);
 
         assertVirtualBalance(
@@ -323,7 +323,7 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
 
         // Note: After mint, assets are in kMinter's batch balances, need kMinter settlement to move to DN vault
         // kMinter settlement automatically redirects assets to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, mintAmount);
 
         // After settlement, assets should be in DN vault, not kMinter
@@ -360,11 +360,11 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(institution, mintAmount, institution);
 
         // Settlement of kMinter batch - this gives DN vault virtual balance via adapter
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, mintAmount);
 
         // Deploy assets from DN vault to Alpha vault
-        uint256 transferBatchId = getCurrentDNBatchId();
+        bytes32 transferBatchId = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(alphaVault), deployAmount, transferBatchId);
 
         uint256 dnBalanceBeforePull = metaVaultAdapter.totalAssets(address(dnVault), USDC_MAINNET);
@@ -450,7 +450,7 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
         assertTrue(gasUsed < 500_000, "Mint operation should be gas efficient");
 
         // Need to settle the mint first to have assets in DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(dnVault), currentBatch, amount);
 
         // Skip redemption gas test due to architectural constraints with kMinter virtual balance

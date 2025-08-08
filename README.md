@@ -377,7 +377,7 @@ claimModule.claimUnstakedAssets(batchId, unstakeId);
 
 ```solidity
 // Create new batch
-uint256 batchId = batchModule.createNewBatch();
+bytes32 batchId = batchModule.createNewBatch();
 
 // Close batch at cutoff time
 batchModule.closeBatch(batchId, _create); // if create a new batch on close.
@@ -385,7 +385,7 @@ batchModule.closeBatch(batchId, _create); // if create a new batch on close.
 // Settle batch with total assets
 kAssetRouter.settleBatch(
   address vault,
-  uint256 batchId,
+  bytes32 batchId,
   uint256 totalAssets,
   uint256 yield,
   uint256 netted,

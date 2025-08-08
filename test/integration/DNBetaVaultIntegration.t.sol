@@ -67,7 +67,7 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, institutionalMint, users.institution);
 
         // Settlement required to move assets from kMinter to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, institutionalMint);
 
         // Validate initial state
@@ -78,7 +78,7 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         assertVirtualBalance(address(betaVault), USDC_MAINNET, 0, "Beta vault should start empty");
 
         // Execute strategy deployment: Move assets to Beta for advanced strategies
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(betaVault), strategyDeployment, transferBatch);
 
         // Settlement required to update virtual balances
@@ -113,10 +113,10 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, LARGE_AMOUNT * 2, users.institution);
 
         // Settlement required to move assets from kMinter to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, LARGE_AMOUNT * 2);
 
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(betaVault), deploymentAmount, transferBatch);
 
         // Settlement required to move assets to Beta vault
@@ -124,7 +124,7 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeBatchSettlement(address(betaVault), transferBatch, deploymentAmount);
 
         // Simulate advanced strategy execution with positive return through settlement
-        uint256 yieldBatch = getCurrentBetaBatchId();
+        bytes32 yieldBatch = getCurrentBetaBatchId();
         executeBatchSettlement(address(betaVault), yieldBatch, deploymentAmount + strategyReturn);
 
         // Validate strategy return captured
@@ -151,12 +151,12 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, LARGE_AMOUNT * 2, users.institution);
 
         // Settlement required to move assets from kMinter to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, LARGE_AMOUNT * 2);
 
         uint256 initialDNBalance = custodialAdapter.totalAssets(address(dnVault), USDC_MAINNET);
 
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(betaVault), deploymentAmount, transferBatch);
 
         // Settlement required to move assets
@@ -164,7 +164,7 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeBatchSettlement(address(betaVault), transferBatch, deploymentAmount);
 
         // Simulate strategy loss in Beta vault through settlement with reduced amount
-        uint256 lossBatch = getCurrentBetaBatchId();
+        bytes32 lossBatch = getCurrentBetaBatchId();
         executeBatchSettlement(address(betaVault), lossBatch, deploymentAmount - strategyLoss);
 
         // Validate loss is contained in Beta vault
@@ -198,10 +198,10 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, mintAmount, users.institution);
 
         // Settlement required to move assets from kMinter to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, mintAmount);
 
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(betaVault), deploymentAmount, transferBatch);
 
         // Settlement required to move assets
@@ -209,7 +209,7 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeBatchSettlement(address(betaVault), transferBatch, deploymentAmount);
 
         // Simulate Beta strategy loss through settlement
-        uint256 lossBatch = getCurrentBetaBatchId();
+        bytes32 lossBatch = getCurrentBetaBatchId();
         executeBatchSettlement(address(betaVault), lossBatch, deploymentAmount - strategyLoss);
 
         // Institution requests redemption (within DN capacity)
@@ -240,11 +240,11 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, LARGE_AMOUNT * 2, users.institution);
 
         // Settlement required to move assets from kMinter to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, LARGE_AMOUNT * 2);
 
         // First strategy deployment
-        uint256 transferBatch1 = getCurrentDNBatchId();
+        bytes32 transferBatch1 = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(betaVault), deployment1, transferBatch1);
 
         // Settlement for first deployment
@@ -254,7 +254,7 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         advanceToNextBatchCutoff();
 
         // Second strategy deployment
-        uint256 transferBatch2 = getCurrentDNBatchId();
+        bytes32 transferBatch2 = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(betaVault), deployment2, transferBatch2);
 
         // Settlement for second deployment
@@ -264,7 +264,7 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
 
         // Simulate mixed results: net effect through settlement
         uint256 netResult = deployment1 + deployment2 - loss1 + gain2;
-        uint256 mixedBatch = getCurrentBetaBatchId();
+        bytes32 mixedBatch = getCurrentBetaBatchId();
         executeBatchSettlement(address(betaVault), mixedBatch, netResult);
 
         // Validate net result captured in Beta
@@ -292,10 +292,10 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, LARGE_AMOUNT * 2, users.institution);
 
         // Settlement required to move assets from kMinter to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, LARGE_AMOUNT * 2);
 
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(betaVault), deploymentAmount, transferBatch);
 
         // Settlement required to move assets
@@ -313,7 +313,7 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         uint256 additionalNeed = emergencyRecoveryAmount;
 
         // Execute emergency recovery from Beta to DN using consistent batch ID
-        uint256 recoveryBatch = getCurrentDNBatchId();
+        bytes32 recoveryBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(betaVault), address(dnVault), additionalNeed, recoveryBatch);
 
         // Settlement required for recovery
@@ -349,10 +349,10 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, LARGE_AMOUNT * 2, users.institution);
 
         // Settlement required to move assets from kMinter to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, LARGE_AMOUNT * 2);
 
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(betaVault), deploymentAmount, transferBatch);
 
         // Settlement required to move assets
@@ -361,11 +361,11 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
 
         // Simulate major strategy failure through settlement with loss
         uint256 postLossAssets = deploymentAmount - majorLoss;
-        uint256 lossBatch = getCurrentBetaBatchId();
+        bytes32 lossBatch = getCurrentBetaBatchId();
         executeBatchSettlement(address(betaVault), lossBatch, postLossAssets);
 
         // Execute emergency liquidation - recover remaining assets
-        uint256 recoveryBatch = getCurrentDNBatchId();
+        bytes32 recoveryBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(betaVault), address(dnVault), postLossAssets, recoveryBatch);
 
         // Settlement for liquidation
@@ -399,12 +399,12 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, LARGE_AMOUNT * 2, users.institution);
 
         // Settlement required to move assets from kMinter to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, LARGE_AMOUNT * 2);
 
         uint256 initialDNBalance = custodialAdapter.totalAssets(address(dnVault), USDC_MAINNET);
 
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(betaVault), deploymentAmount, transferBatch);
 
         // Settlement required to move assets
@@ -412,12 +412,12 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeBatchSettlement(address(betaVault), transferBatch, deploymentAmount);
 
         // Simulate significant Beta strategy profit through settlement
-        uint256 profitBatch = getCurrentBetaBatchId();
+        bytes32 profitBatch = getCurrentBetaBatchId();
         executeBatchSettlement(address(betaVault), profitBatch, deploymentAmount + strategyProfit);
 
         // Calculate and distribute profit share to DN
         uint256 dnProfitAmount = (strategyProfit * dnProfitShare) / 100;
-        uint256 distributionBatch = getCurrentDNBatchId();
+        bytes32 distributionBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(betaVault), address(dnVault), dnProfitAmount, distributionBatch);
 
         // Settlement for profit distribution
@@ -448,12 +448,12 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, LARGE_AMOUNT * 2, users.institution);
 
         // Settlement required to move assets from kMinter to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, LARGE_AMOUNT * 2);
 
         uint256 initialDNBalance = custodialAdapter.totalAssets(address(dnVault), USDC_MAINNET);
 
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(betaVault), deploymentAmount, transferBatch);
 
         // Settlement required to move assets
@@ -461,7 +461,7 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeBatchSettlement(address(betaVault), transferBatch, deploymentAmount);
 
         // Simulate Beta strategy loss through settlement
-        uint256 lossBatch = getCurrentBetaBatchId();
+        bytes32 lossBatch = getCurrentBetaBatchId();
         executeBatchSettlement(address(betaVault), lossBatch, deploymentAmount - strategyLoss);
 
         // No transfer back to DN - loss is absorbed by Beta
@@ -501,10 +501,10 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(users.institution, massiveDeployment * 2, users.institution);
 
         // Settlement required to move assets from kMinter to DN vault
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = getCurrentDNBatchId();
         executeBatchSettlement(address(minter), currentBatch, massiveDeployment * 2);
 
-        uint256 transferBatch = getCurrentDNBatchId();
+        bytes32 transferBatch = getCurrentDNBatchId();
         executeVaultTransfer(address(dnVault), address(betaVault), massiveDeployment, transferBatch);
 
         // Settlement required to move assets
@@ -512,7 +512,7 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         executeBatchSettlement(address(betaVault), transferBatch, massiveDeployment);
 
         // Test extreme gain scenario through settlement
-        uint256 gainBatch = getCurrentBetaBatchId();
+        bytes32 gainBatch = getCurrentBetaBatchId();
         executeBatchSettlement(address(betaVault), gainBatch, massiveDeployment + extremeGain);
 
         // Validate extreme gain handled
@@ -521,7 +521,7 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
         );
 
         // Test extreme loss scenario through settlement
-        uint256 lossBatch = getCurrentBetaBatchId();
+        bytes32 lossBatch = getCurrentBetaBatchId();
         executeBatchSettlement(address(betaVault), lossBatch, massiveDeployment + extremeGain - extremeLoss);
 
         // Validate extreme loss handled and isolated

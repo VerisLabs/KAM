@@ -69,7 +69,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(institution, mintAmount, institution);
 
         // Assets are now in kMinter batch balance, settle to move to DN vault virtual balance
-        uint256 currentBatch = getCurrentDNBatchId();
+        bytes32 currentBatch = bytes32(getCurrentDNBatchId());
         executeBatchSettlement(address(minter), currentBatch, mintAmount);
 
         // Validate virtual balance increased through adapter
@@ -88,7 +88,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
 
     /// @dev Test batch balance tracking for DN vault
     function test_BatchBalanceTracking() public {
-        uint256 batchId = getCurrentDNBatchId();
+        bytes32 batchId = bytes32(getCurrentDNBatchId());
         uint256 depositAmount = LARGE_AMOUNT;
         uint256 requestAmount = MEDIUM_AMOUNT;
 
@@ -120,7 +120,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         bytes32 requestId = executeInstitutionalRedemption(institution, requestAmount, institution);
 
         // Check requested amount updated for minter in the new redemption
-        uint256 redeemBatchId = minter.getRedeemRequest(requestId).batchId;
+        bytes32 redeemBatchId = minter.getRedeemRequest(requestId).batchId;
         (, requested) = assetRouter.getBatchIdBalances(address(minter), redeemBatchId);
 
         assertEq(requested, requestAmount, "Requested amount should be updated");
@@ -135,7 +135,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         executeInstitutionalMint(institution, LARGE_AMOUNT, institution);
 
         // Settle the mint to move assets to DN vault virtual balance
-        uint256 batchId = getCurrentDNBatchId();
+        bytes32 batchId = bytes32(getCurrentDNBatchId());
         executeBatchSettlement(address(minter), batchId, LARGE_AMOUNT);
 
         // Record initial balances using adapters
@@ -143,7 +143,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         uint256 initialAlphaBalance = custodialAdapter.totalAssets(address(alphaVault), USDC_MAINNET);
 
         // Execute transfer from DN to Alpha vault
-        uint256 newBatchId = batchId + 1;
+        bytes32 newBatchId = bytes32(uint256(batchId) + 1);
         executeVaultTransfer(address(dnVault), address(alphaVault), transferAmount, newBatchId);
 
         // Need to settle the transfer batch to update adapter balances
@@ -172,7 +172,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
 
     /// @dev Test batch lifecycle for DN vault
     function test_BatchLifecycle() public {
-        uint256 initialBatchId = getCurrentDNBatchId();
+        bytes32 batchId = bytes32(getCurrentDNBatchId());
         uint256 settleAmount = MEDIUM_AMOUNT;
 
         // Add some activity to the batch using minter
@@ -180,7 +180,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         vm.prank(address(minter));
         IERC20(USDC_MAINNET).approve(address(assetRouter), settleAmount);
         vm.prank(address(minter));
-        assetRouter.kAssetPush(USDC_MAINNET, settleAmount, initialBatchId);
+        assetRouter.kAssetPush(USDC_MAINNET, settleAmount, batchId);
 
         // Advance time to batch cutoff
         advanceToNextBatchCutoff();
@@ -189,7 +189,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         advanceToSettlementTime();
 
         // Execute batch settlement for minter
-        executeBatchSettlement(address(minter), initialBatchId, settleAmount);
+        executeBatchSettlement(address(minter), batchId, settleAmount);
 
         // After settlement, the DN vault should have the assets
         uint256 dnVaultBalance = custodialAdapter.totalAssets(address(dnVault), USDC_MAINNET);
@@ -207,7 +207,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         uint256 batch2Amount = SMALL_AMOUNT;
 
         // Get initial batch ID
-        uint256 batch1Id = getCurrentDNBatchId();
+        bytes32 batch1Id = bytes32(getCurrentDNBatchId());
 
         // Add assets to first batch
         deal(USDC_MAINNET, address(minter), batch1Amount + batch2Amount);
@@ -220,7 +220,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         advanceToNextBatchCutoff();
 
         // Get new batch ID (would increment in real implementation)
-        uint256 batch2Id = batch1Id + 1;
+        bytes32 batch2Id = bytes32(uint256(batch1Id) + 1);
 
         // Add assets to second batch
         vm.prank(address(minter));
@@ -251,7 +251,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
     /// @dev Test gas efficiency of virtual balance operations
     function test_VirtualBalanceGasEfficiency() public {
         uint256 amount = MEDIUM_AMOUNT;
-        uint256 batchId = getCurrentDNBatchId();
+        bytes32 batchId = bytes32(getCurrentDNBatchId());
 
         // Measure gas for asset push
         deal(USDC_MAINNET, address(minter), amount);
@@ -274,7 +274,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         uint256 pullGas = gasStart - gasleft();
 
         // Test transfer between vaults
-        uint256 newBatchId = batchId + 1;
+        bytes32 newBatchId = bytes32(uint256(batchId) + 1);
         gasStart = gasleft();
         executeVaultTransfer(address(dnVault), address(alphaVault), amount / 4, newBatchId);
         uint256 transferGas = gasStart - gasleft();
@@ -290,7 +290,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
     function test_VirtualBalanceHighLoad() public {
         uint256 numOperations = 10;
         uint256 operationAmount = SMALL_AMOUNT;
-        uint256 batchId = getCurrentDNBatchId();
+        bytes32 batchId = bytes32(getCurrentDNBatchId());
 
         // Perform multiple push operations
         deal(USDC_MAINNET, address(minter), numOperations * operationAmount);
@@ -309,9 +309,11 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         assertEq(dnBalanceAfterSettle, numOperations * operationAmount, "DN vault balance after high load operations");
 
         // Perform multiple transfer operations in new batches
-        uint256 newBatchId = batchId + 1;
+        bytes32 newBatchId = bytes32(uint256(batchId) + 1);
         for (uint256 i = 0; i < numOperations / 2; i++) {
-            executeVaultTransfer(address(dnVault), address(alphaVault), operationAmount, newBatchId + i);
+            executeVaultTransfer(
+                address(dnVault), address(alphaVault), operationAmount, bytes32(uint256(newBatchId) + i)
+            );
         }
 
         // Settle transfers
@@ -339,7 +341,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
     /// @dev Test error conditions in asset routing
     function test_AssetRoutingErrorConditions() public {
         uint256 amount = MEDIUM_AMOUNT;
-        uint256 batchId = getCurrentDNBatchId();
+        bytes32 batchId = bytes32(getCurrentDNBatchId());
 
         // Test: Asset pull with insufficient balance
         vm.prank(address(minter));
@@ -359,7 +361,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
     /// @dev Test vault balance consistency checks
     function test_VaultBalanceConsistency() public {
         uint256 amount = LARGE_AMOUNT;
-        uint256 batchId = getCurrentDNBatchId();
+        bytes32 batchId = bytes32(getCurrentDNBatchId());
 
         // Setup: Add assets to DN vault
         deal(USDC_MAINNET, address(minter), amount);
@@ -376,7 +378,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         assertEq(dnBalance, amount, "DN vault balance after settlement");
 
         // Transfer some assets and settle
-        uint256 newBatchId = batchId + 1;
+        bytes32 newBatchId = bytes32(uint256(batchId) + 1);
         uint256 transferAmount = amount / 3;
         executeVaultTransfer(address(dnVault), address(alphaVault), transferAmount, newBatchId);
 
@@ -400,7 +402,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
     function test_AssetRoutingDuringBatchSettlement() public {
         uint256 settleAmount = MEDIUM_AMOUNT;
         uint256 transferAmount = SMALL_AMOUNT;
-        uint256 batchId = getCurrentDNBatchId();
+        bytes32 batchId = bytes32(getCurrentDNBatchId());
 
         // Setup batch with assets
         deal(USDC_MAINNET, address(minter), settleAmount);
@@ -416,7 +418,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         executeBatchSettlement(address(minter), batchId, settleAmount);
 
         // Now DN vault has assets, we can transfer
-        uint256 newBatchId = batchId + 1;
+        bytes32 newBatchId = bytes32(uint256(batchId) + 1);
         executeVaultTransfer(address(dnVault), address(alphaVault), transferAmount, newBatchId);
 
         // Need to settle the transfer batch to update adapter balances
@@ -435,7 +437,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
     /// @dev Test cross-vault balance reconciliation
     function test_CrossVaultBalanceReconciliation() public {
         uint256 baseAmount = LARGE_AMOUNT;
-        uint256 batchId = getCurrentDNBatchId();
+        bytes32 batchId = bytes32(getCurrentDNBatchId());
 
         // Setup: First settle assets to DN vault
         deal(USDC_MAINNET, address(minter), baseAmount);
@@ -448,15 +450,15 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         executeBatchSettlement(address(minter), batchId, baseAmount);
 
         // Now distribute assets across vaults in new batches
-        uint256 newBatchId = batchId + 1;
+        bytes32 newBatchId = bytes32(uint256(batchId) + 1);
         executeVaultTransfer(address(dnVault), address(alphaVault), baseAmount / 3, newBatchId);
-        executeVaultTransfer(address(dnVault), address(betaVault), baseAmount / 3, newBatchId + 1);
+        executeVaultTransfer(address(dnVault), address(betaVault), baseAmount / 3, bytes32(uint256(newBatchId) + 1));
 
         // Settle all transfers
         uint256 remainingDN = baseAmount - (2 * baseAmount / 3);
         executeBatchSettlement(address(dnVault), newBatchId, remainingDN);
         executeBatchSettlement(address(alphaVault), newBatchId, baseAmount / 3);
-        executeBatchSettlement(address(betaVault), newBatchId + 1, baseAmount / 3);
+        executeBatchSettlement(address(betaVault), bytes32(uint256(newBatchId) + 1), baseAmount / 3);
 
         // Validate all vault balances through adapters
         uint256 finalDNBalance = custodialAdapter.totalAssets(address(dnVault), USDC_MAINNET);

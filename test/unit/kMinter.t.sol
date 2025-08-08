@@ -21,7 +21,7 @@ contract kMinterTest is DeploymentBaseTest {
 
     // Events to test
     event Initialized(address indexed registry, address indexed owner, address admin, address emergencyAdmin);
-    event Minted(address indexed to, uint256 amount, uint256 batchId);
+    event Minted(address indexed to, uint256 amount, bytes32 batchId);
     event RedeemRequestCreated(
         bytes32 indexed requestId,
         address indexed user,

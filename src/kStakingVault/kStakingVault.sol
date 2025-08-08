@@ -71,7 +71,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacet
         if (emergencyAdmin_ == address(0)) revert ZeroAddress();
 
         // Initialize ownership and roles
-        __BaseModule_init(registry_, owner_, admin_,feeCollector_,paused_);
+        __BaseModule_init(registry_, owner_, admin_, feeCollector_, paused_);
         __MultiFacetProxy__init(ADMIN_ROLE);
         _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);
 
@@ -112,7 +112,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacet
         if ($.kToken.balanceOf(msg.sender) < kTokensAmount) revert InsufficientBalance();
         if (kTokensAmount < $.dustAmount) revert AmountBelowDustThreshold();
 
-        uint256 batchId = $.currentBatch;
+        bytes32 batchId = $.currentBatchId;
 
         // Generate request ID
         requestId = _createStakeRequestId(msg.sender, kTokensAmount, block.timestamp);
@@ -161,7 +161,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacet
         if (balanceOf(msg.sender) < stkTokenAmount) revert InsufficientBalance();
         if (stkTokenAmount < $.dustAmount) revert AmountBelowDustThreshold();
 
-        uint256 batchId = $.currentBatch;
+        bytes32 batchId = $.currentBatchId;
 
         // Generate request ID
         requestId = _createStakeRequestId(msg.sender, stkTokenAmount, block.timestamp);
@@ -237,7 +237,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacet
 
         _transfer(address(this), request.user, request.stkTokenAmount);
 
-        emit UnstakeRequestCancelled(bytes32(requestId));
+        emit UnstakeRequestCancelled(requestId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -301,30 +301,31 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacet
     /// @return Batch
     function getBatchId() public view returns (bytes32) {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
-        uint256 currentBatch = $currentBatch;
-        return keccak256(abi.encodePacked(address(this), currentBatch, block.chainid, block.timestamp, $.underlyingAsset));
+        uint256 currentBatch = $.currentBatch;
+        return
+            keccak256(abi.encodePacked(address(this), currentBatch, block.chainid, block.timestamp, $.underlyingAsset));
     }
 
     /// @notice Returns the safe batch
     /// @return Batch
     function getSafeBatchId() external view returns (bytes32) {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
-        bytes32 batch = getBatchId();
-        if ($.batches[batch].isClosed) revert Closed();
-        if ($.batches[batch].isSettled) revert Settled();
-        return batch;
+        bytes32 batchId = getBatchId();
+        if ($.batches[batchId].isClosed) revert Closed();
+        if ($.batches[batchId].isSettled) revert Settled();
+        return batchId;
     }
 
     /// @notice Returns whether the current batch is closed
     /// @return Whether the current batch is closed
     function isBatchClosed() external view returns (bool) {
-        return _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatch].isClosed;
+        return _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatchId].isClosed;
     }
 
     /// @notice Returns whether the current batch is settled
     /// @return Whether the current batch is settled
     function isBatchSettled() external view returns (bool) {
-        return _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatch].isSettled;
+        return _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatchId].isSettled;
     }
 
     /// @notice Returns the current batch ID, whether it is closed, and whether it is settled
@@ -335,23 +336,23 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseModule, MultiFacet
     function getBatchIdInfo()
         external
         view
-        returns (uint256 batchId, address batchReceiver, bool isClosed, bool isSettled)
+        returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled)
     {
         return (
-            _getBaseModuleStorage().currentBatch,
-            _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatch].batchReceiver,
-            _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatch].isClosed,
-            _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatch].isSettled
+            _getBaseModuleStorage().currentBatchId,
+            _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatchId].batchReceiver,
+            _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatchId].isClosed,
+            _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatchId].isSettled
         );
     }
 
     /// @notice Returns the batch receiver for the current batch
     /// @return Batch receiver
-    function getBatchIdReceiver(uint256 batchId) external view returns (address) {
+    function getBatchIdReceiver(bytes32 batchId) external view returns (address) {
         return _getBaseModuleStorage().batches[batchId].batchReceiver;
     }
 
-    function getSafeBatchReceiver(uint256 batchId) external view returns (address) {
+    function getSafeBatchReceiver(bytes32 batchId) external view returns (address) {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         if ($.batches[batchId].isSettled) revert Settled();
         return $.batches[batchId].batchReceiver;

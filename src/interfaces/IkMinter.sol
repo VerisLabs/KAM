@@ -21,7 +21,7 @@ interface IkMinter {
         address asset;
         uint64 requestTimestamp;
         RequestStatus status;
-        uint256 batchId;
+        bytes32 batchId;
         address recipient;
     }
 
@@ -30,14 +30,14 @@ interface IkMinter {
     //////////////////////////////////////////////////////////////*/
 
     event Initialized(address indexed registry, address indexed owner, address admin, address emergencyAdmin);
-    event Minted(address indexed to, uint256 amount, uint256 batchId);
+    event Minted(address indexed to, uint256 amount, bytes32 batchId);
     event RedeemRequestCreated(
         bytes32 indexed requestId,
         address indexed user,
         address indexed kToken,
         uint256 amount,
         address recipient,
-        uint256 batchId
+        bytes32 batchId
     );
     event Redeemed(bytes32 indexed requestId);
     event Cancelled(bytes32 indexed requestId);

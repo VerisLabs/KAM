@@ -30,7 +30,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @custom:storage-location erc7201:kam.storage.kAssetRouter
     struct kAssetRouterStorage {
         mapping(address account => mapping(bytes32 batchId => Balances)) vaultBatchBalances;
-        mapping(address => mapping(bytes32 batchId =>  uint256)) vaultRequestedShares; 
+        mapping(address => mapping(bytes32 batchId => uint256)) vaultRequestedShares;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kAssetRouter")) - 1)) & ~bytes32(uint256(0xff))
@@ -87,7 +87,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     function kAssetPush(
         address _asset,
         uint256 amount,
-        uint256 batchId
+        bytes32 batchId
     )
         external
         payable
@@ -100,7 +100,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
-        $.vaultBatchBalances[kMinter][batchId][_asset].deposited += amount.toUint128();
+        $.vaultBatchBalances[kMinter][batchId].deposited += amount.toUint128();
 
         emit AssetsPushed(kMinter, amount);
     }
@@ -113,7 +113,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         address _asset,
         address _vault,
         uint256 amount,
-        uint256 batchId
+        bytes32 batchId
     )
         external
         payable
@@ -127,7 +127,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         if (_balance(vault) < amount) revert InsufficientVirtualBalance();
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-        $.vaultBatchBalances[kMinter][batchId][_asset].requested += amount.toUint128();
+        $.vaultBatchBalances[kMinter][batchId].requested += amount.toUint128();
 
         // Set batch receiver for the vault
         address batchReceiver = IkStakingVault(_vault).createBatchReceiver(batchId);
@@ -151,7 +151,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         address targetVault,
         address _asset,
         uint256 amount,
-        uint256 batchId
+        bytes32 batchId
     )
         external
         payable
@@ -165,9 +165,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         if (_balance(sourceVault) < amount) revert InsufficientVirtualBalance();
         // Update batch tracking for settlement
-        $.vaultBatchBalances[sourceVault][batchId][_asset].requested += amount.toUint128();
-        $.vaultBatchBalances[sourceVault][batchId][_asset].deposited -= amount.toUint128();
-        $.vaultBatchBalances[targetVault][batchId][_asset].deposited += amount.toUint128();
+        $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
+        $.vaultBatchBalances[sourceVault][batchId].deposited -= amount.toUint128();
+        $.vaultBatchBalances[targetVault][batchId].deposited += amount.toUint128();
 
         emit AssetsTransfered(sourceVault, targetVault, _asset, amount);
     }
@@ -179,7 +179,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     function kSharesRequestPush(
         address sourceVault,
         uint256 amount,
-        uint256 batchId
+        bytes32 batchId
     )
         external
         payable
@@ -203,7 +203,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     function kSharesRequestPull(
         address sourceVault,
         uint256 amount,
-        uint256 batchId
+        bytes32 batchId
     )
         external
         payable
@@ -234,7 +234,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     function settleBatch(
         address asset,
         address vault,
-        uint256 batchId,
+        bytes32 batchId,
         uint256 totalAssets_,
         uint256 netted,
         uint256 yield,
@@ -249,11 +249,11 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         address kToken = _getKTokenForAsset(asset);
         bool isKMinter; // for event Deposited
-        uint256 requested = $.vaultBatchBalances[vault][batchId][asset].requested;
+        uint256 requested = $.vaultBatchBalances[vault][batchId].requested;
 
         // Clear batch balances
-        delete $.vaultBatchBalances[vault][batchId][asset];
-        delete $.vaultRequestedShares[vault][batchId][asset];
+        delete $.vaultBatchBalances[vault][batchId];
+        delete $.vaultRequestedShares[vault][batchId];
 
         // kMinter settlement
         if (vault == _getKMinter()) {
@@ -354,7 +354,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @return requested Amount requested in this batch
     function getBatchIdBalances(
         address vault,
-        uint256 batchId
+        bytes32 batchId
     )
         external
         view
@@ -369,7 +369,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @param vault Vault address
     /// @param batchId Batch ID
     /// @return Requested shares amount
-    function getRequestedShares(address vault, uint256 batchId) external view returns (uint256) {
+    function getRequestedShares(address vault, bytes32 batchId) external view returns (uint256) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         return $.vaultRequestedShares[vault][batchId];
     }

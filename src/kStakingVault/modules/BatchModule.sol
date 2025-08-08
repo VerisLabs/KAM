@@ -18,12 +18,12 @@ contract BatchModule is BaseModule {
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event BatchCreated(uint256 indexed batchId);
-    event BatchReceiverDeployed(uint256 indexed batchId, address indexed receiver);
-    event BatchSettled(uint256 indexed batchId);
-    event BatchClosed(uint256 indexed batchId);
-    event BatchReceiverSet(address indexed batchReceiver, uint256 indexed batchId);
-    event BatchReceiverCreated(address indexed receiver, uint256 indexed batchId);
+    event BatchCreated(bytes32 indexed batchId);
+    event BatchReceiverDeployed(bytes32 indexed batchId, address indexed receiver);
+    event BatchSettled(bytes32 indexed batchId);
+    event BatchClosed(bytes32 indexed batchId);
+    event BatchReceiverSet(address indexed batchReceiver, bytes32 indexed batchId);
+    event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
 
     /*//////////////////////////////////////////////////////////////
                             CORE OPERATIONS
@@ -32,14 +32,14 @@ contract BatchModule is BaseModule {
     /// @notice Creates a new batch for processing requests
     /// @return The new batch ID
     /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
-    function createNewBatch() external onlyRelayer returns (uint256) {
+    function createNewBatch() external onlyRelayer returns (bytes32) {
         return _newBatch();
     }
 
     // @notice Closes a batch to prevent new requests
     /// @param _batchId The batch ID to close
     /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
-    function closeBatch(uint256 _batchId, bool _create) external onlyRelayer {
+    function closeBatch(bytes32 _batchId, bool _create) external onlyRelayer {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         if ($.batches[_batchId].isClosed) revert Closed();
         $.batches[_batchId].isClosed = true;
@@ -53,7 +53,7 @@ contract BatchModule is BaseModule {
     /// @notice Marks a batch as settled
     /// @param _batchId The batch ID to settle
     /// @dev Only callable by kMinter, indicates assets have been distributed
-    function settleBatch(uint256 _batchId) external onlyKAssetRouter {
+    function settleBatch(bytes32 _batchId) external onlyKAssetRouter {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         if ($.batches[_batchId].isSettled) revert Settled();
         $.batches[_batchId].isSettled = true;
@@ -64,7 +64,7 @@ contract BatchModule is BaseModule {
     /// @notice Deploys BatchReceiver for specific batch
     /// @param _batchId Batch ID to deploy receiver for
     /// @dev Only callable by kAssetRouter
-    function createBatchReceiver(uint256 _batchId) external onlyKAssetRouter returns (address) {
+    function createBatchReceiver(bytes32 _batchId) external onlyKAssetRouter returns (address) {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         address receiver = $.batches[_batchId].batchReceiver;
         if (receiver != address(0)) return receiver;
@@ -83,10 +83,10 @@ contract BatchModule is BaseModule {
                           INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _newBatch() internal returns (uint256) {
+    function _newBatch() internal returns (bytes32) {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         $.currentBatch++;
-        uint256 newBatch = $.currentBatch;
+        bytes32 newBatch = $.currentBatchId;
 
         BaseModuleTypes.BatchInfo storage batch = $.batches[newBatch];
         batch.batchId = newBatch;

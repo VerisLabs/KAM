@@ -34,8 +34,8 @@ contract ClaimModule is BaseModule {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice ERC20 Transfer event for stkToken operations
-    event StakingSharesClaimed(uint256 indexed batchId, bytes32 requestId, address indexed user, uint256 shares);
-    event UnstakingAssetsClaimed(uint256 indexed batchId, bytes32 requestId, address indexed user, uint256 assets);
+    event StakingSharesClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 shares);
+    event UnstakingAssetsClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 assets);
     event StkTokensIssued(address indexed user, uint256 stkTokenAmount);
     event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
 
@@ -46,7 +46,7 @@ contract ClaimModule is BaseModule {
     /// @notice Claims stkTokens from a settled staking batch
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
-    function claimStakedShares(uint256 batchId, bytes32 requestId) external payable nonReentrant whenNotPaused {
+    function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable nonReentrant whenNotPaused {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         if (!$.batches[batchId].isSettled) revert BatchNotSettled();
 
@@ -71,7 +71,7 @@ contract ClaimModule is BaseModule {
     /// @notice Claims kTokens from a settled unstaking batch (simplified implementation)
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
-    function claimUnstakedAssets(uint256 batchId, bytes32 requestId) external payable nonReentrant whenNotPaused {
+    function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable nonReentrant whenNotPaused {
         BaseModuleStorage storage $ = _getBaseModuleStorage();
         if (!$.batches[batchId].isSettled) revert BatchNotSettled();
 

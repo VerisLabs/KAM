@@ -14,15 +14,15 @@ import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
 /// @notice Comprehensive unit tests for BatchModule contract
 contract BatchModuleTest is DeploymentBaseTest {
     // Test constants
-    uint32 internal constant TEST_BATCH_ID = 1;
+    bytes32 internal constant TEST_BATCH_ID = bytes32(uint256(1));
     address internal constant ZERO_ADDRESS = address(0);
 
     // Events to test
-    event BatchCreated(uint32 indexed batchId);
-    event BatchReceiverDeployed(uint32 indexed batchId, address indexed receiver);
-    event BatchSettled(uint32 indexed batchId);
-    event BatchClosed(uint32 indexed batchId);
-    event BatchReceiverSet(address indexed batchReceiver, uint32 indexed batchId);
+    event BatchCreated(bytes32 indexed batchId);
+    event BatchReceiverDeployed(bytes32 indexed batchId, address indexed receiver);
+    event BatchSettled(bytes32 indexed batchId);
+    event BatchClosed(bytes32 indexed batchId);
+    event BatchReceiverSet(address indexed batchReceiver, bytes32 indexed batchId);
 
     function setUp() public override {
         super.setUp();
@@ -110,11 +110,11 @@ contract BatchModuleTest is DeploymentBaseTest {
 
     /// @dev Test closeBatch with different batch IDs
     function test_CloseBatch_DifferentBatchIds() public {
-        uint256[] memory batchIds = new uint256[](4);
-        batchIds[0] = 0;
-        batchIds[1] = 1;
-        batchIds[2] = 100;
-        batchIds[3] = type(uint32).max;
+        bytes32[] memory batchIds = new bytes32[](4);
+        batchIds[0] = bytes32(0);
+        batchIds[1] = bytes32(uint256(1));
+        batchIds[2] = bytes32(uint256(100));
+        batchIds[3] = bytes32(type(uint256).max);
 
         for (uint256 i = 0; i < batchIds.length; i++) {
             vm.prank(users.alice);
@@ -168,11 +168,11 @@ contract BatchModuleTest is DeploymentBaseTest {
 
     /// @dev Test settleBatch with different batch IDs
     function test_SettleBatch_DifferentBatchIds() public {
-        uint256[] memory batchIds = new uint256[](4);
-        batchIds[0] = 0;
-        batchIds[1] = 1;
-        batchIds[2] = 100;
-        batchIds[3] = type(uint32).max;
+        bytes32[] memory batchIds = new bytes32[](4);
+        batchIds[0] = bytes32(0);
+        batchIds[1] = bytes32(uint256(1));
+        batchIds[2] = bytes32(uint256(100));
+        batchIds[3] = bytes32(type(uint256).max);
 
         for (uint256 i = 0; i < batchIds.length; i++) {
             vm.prank(users.alice);
@@ -226,11 +226,11 @@ contract BatchModuleTest is DeploymentBaseTest {
 
     /// @dev Test createBatchReceiver with different batch IDs
     function test_createBatchReceiver_DifferentBatchIds() public {
-        uint256[] memory batchIds = new uint256[](4);
-        batchIds[0] = 0;
-        batchIds[1] = 1;
-        batchIds[2] = 100;
-        batchIds[3] = type(uint32).max;
+        bytes32[] memory batchIds = new bytes32[](4);
+        batchIds[0] = bytes32(0);
+        batchIds[1] = bytes32(uint256(1));
+        batchIds[2] = bytes32(uint256(100));
+        batchIds[3] = bytes32(type(uint256).max);
 
         for (uint256 i = 0; i < batchIds.length; i++) {
             vm.prank(users.alice);
@@ -270,9 +270,9 @@ contract BatchModuleTest is DeploymentBaseTest {
 
         // Test function selectors are correct
         assertEq(moduleSelectors[0], bytes4(keccak256("createNewBatch()")), "createNewBatch selector");
-        assertEq(moduleSelectors[1], bytes4(keccak256("closeBatch(uint256,bool)")), "closeBatch selector");
-        assertEq(moduleSelectors[2], bytes4(keccak256("settleBatch(uint256)")), "settleBatch selector");
-        assertEq(moduleSelectors[3], bytes4(keccak256("createBatchReceiver(uint256)")), "createBatchReceiver selector");
+        assertEq(moduleSelectors[1], bytes4(keccak256("closeBatch(bytes32,bool)")), "closeBatch selector");
+        assertEq(moduleSelectors[2], bytes4(keccak256("settleBatch(bytes32)")), "settleBatch selector");
+        assertEq(moduleSelectors[3], bytes4(keccak256("createBatchReceiver(bytes32)")), "createBatchReceiver selector");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -314,20 +314,20 @@ contract BatchModuleTest is DeploymentBaseTest {
     function test_BatchFunctions_ZeroBatchId() public {
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.closeBatch(0, false);
+        batchModule.closeBatch(bytes32(0), false);
 
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.settleBatch(0);
+        batchModule.settleBatch(bytes32(0));
 
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.createBatchReceiver(0);
+        batchModule.createBatchReceiver(bytes32(0));
     }
 
     /// @dev Test batch functions with maximum batch ID
     function test_BatchFunctions_MaxBatchId() public {
-        uint256 maxBatchId = type(uint32).max;
+        bytes32 maxBatchId = bytes32(type(uint256).max);
 
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
@@ -348,7 +348,7 @@ contract BatchModuleTest is DeploymentBaseTest {
 
     /// @dev Test createNewBatch function signature
     function test_CreateNewBatch_Signature() public {
-        // Function should return uint256 and take no parameters
+        // Function should return bytes32 and take no parameters
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
         batchModule.createNewBatch();
@@ -356,30 +356,30 @@ contract BatchModuleTest is DeploymentBaseTest {
 
     /// @dev Test closeBatch function signature
     function test_CloseBatch_Signature() public {
-        // Function should take uint256 and bool parameters
+        // Function should take bytes32 and bool parameters
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.closeBatch(1, true);
+        batchModule.closeBatch(bytes32(uint256(1)), true);
 
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.closeBatch(1, false);
+        batchModule.closeBatch(bytes32(uint256(1)), false);
     }
 
     /// @dev Test settleBatch function signature
     function test_SettleBatch_Signature() public {
-        // Function should take uint256 parameter
+        // Function should take bytes32 parameter
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.settleBatch(1);
+        batchModule.settleBatch(bytes32(uint256(1)));
     }
 
     /// @dev Test createBatchReceiver function signature
     function test_createBatchReceiver_Signature() public {
-        // Function should take uint256 parameter and return address
+        // Function should take bytes32 parameter and return address
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.createBatchReceiver(1);
+        batchModule.createBatchReceiver(bytes32(uint256(1)));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -388,11 +388,11 @@ contract BatchModuleTest is DeploymentBaseTest {
 
     /// @dev Test all functions with boundary values
     function test_BoundaryValues() public {
-        // Test with boundary values for uint256/uint32
-        uint256[] memory values = new uint256[](3);
-        values[0] = 0;
-        values[1] = 1;
-        values[2] = type(uint32).max;
+        // Test with boundary values for bytes32
+        bytes32[] memory values = new bytes32[](3);
+        values[0] = bytes32(0);
+        values[1] = bytes32(uint256(1));
+        values[2] = bytes32(type(uint256).max);
 
         for (uint256 i = 0; i < values.length; i++) {
             vm.prank(users.alice);
@@ -422,14 +422,14 @@ contract BatchModuleTest is DeploymentBaseTest {
 
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.closeBatch(1, false);
+        batchModule.closeBatch(bytes32(uint256(1)), false);
 
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.settleBatch(1);
+        batchModule.settleBatch(bytes32(uint256(1)));
 
         vm.prank(users.alice);
         vm.expectRevert(BaseModule.NotInitialized.selector);
-        batchModule.createBatchReceiver(1);
+        batchModule.createBatchReceiver(bytes32(uint256(1)));
     }
 }
