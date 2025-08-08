@@ -16,6 +16,7 @@ import {
     STRATEGY_ROLE,
     USDC_MAINNET,
     WBTC_MAINNET,
+    METAVAULT_USDC_MAINNET,
     _1000_USDC,
     _100_USDC,
     _10_USDC,
@@ -128,9 +129,6 @@ contract DeploymentBaseTest is BaseTest {
         // Deploy the complete protocol
         _deployProtocol();
 
-        // Configure the protocol
-        _configureProtocol();
-
         // Set up roles and permissions
         _setupRoles();
 
@@ -155,8 +153,19 @@ contract DeploymentBaseTest is BaseTest {
         // 4. Deploy kMinter (needs registry, assetRouter, tokens)
         _deployMinter();
 
+        vm.startPrank(users.admin);
+
+        // Register singleton contracts in registry
+        registry.setSingletonContract(registry.K_ASSET_ROUTER(), address(assetRouter));
+        registry.setSingletonContract(registry.K_MINTER(), address(minter));
+
+        vm.stopPrank();
+
         // 5. Deploy kStakingVaults + Modules (needs registry, assetRouter, tokens)
         _deployStakingVaults();
+
+        // Configure the protocol
+        _configureProtocol();
 
         // 6. Deploy adapters (needs registry, independent of other components)
         _deployAdapters();
@@ -373,6 +382,10 @@ contract DeploymentBaseTest is BaseTest {
         require(success2, "MetaVaultAdapter initialization failed");
         metaVaultAdapter = MetaVaultAdapter(metaVaultProxy);
 
+        vm.startPrank(users.admin);
+        metaVaultAdapter.setVaultDestination(address(dnVault), USDC_MAINNET, METAVAULT_USDC_MAINNET);
+        vm.stopPrank();
+
         // Label for debugging
         vm.label(address(custodialAdapter), "CustodialAdapter");
         vm.label(address(metaVaultAdapter), "MetaVaultAdapter");
@@ -387,10 +400,6 @@ contract DeploymentBaseTest is BaseTest {
     /// @dev Configure protocol contracts with registry integration
     function _configureProtocol() internal {
         vm.startPrank(users.admin);
-
-        // Register singleton contracts in registry
-        registry.setSingletonContract(registry.K_ASSET_ROUTER(), address(assetRouter));
-        registry.setSingletonContract(registry.K_MINTER(), address(minter));
 
         // Register assets and kTokens
         registry.registerAsset(USDC_MAINNET, address(kUSD), registry.USDC());

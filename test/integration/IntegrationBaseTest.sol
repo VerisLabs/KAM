@@ -41,6 +41,7 @@ contract IntegrationBaseTest is DeploymentBaseTest {
     //////////////////////////////////////////////////////////////*/
 
     function setUp() public virtual override {
+        useMainnetFork = true;
         super.setUp();
 
         // Additional setup for integration tests

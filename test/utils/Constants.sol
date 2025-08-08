@@ -25,6 +25,9 @@ address constant WBTC_MAINNET = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
 address constant WETH_MAINNET = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 address constant DAI_MAINNET = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 
+// Mainnet vault address 
+address constant METAVAULT_USDC_MAINNET = 0x7a63e8FC1d0A5E9BE52f05817E8C49D9e2d6efAe;
+
 // Role constants (matching Solady OwnableRoles pattern)
 uint256 constant ADMIN_ROLE = 1; // _ROLE_0
 uint256 constant EMERGENCY_ADMIN_ROLE = 2; // _ROLE_1

@@ -124,7 +124,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         if (amount == 0) revert ZeroAmount();
         address kMinter = msg.sender;
         address vault = _getDNVaultByAsset(_asset);
-        if (_balance(vault) < amount) revert InsufficientVirtualBalance();
+        if (_virtualBalance(vault) < amount) revert InsufficientVirtualBalance();
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         $.vaultBatchBalances[kMinter][batchId].requested += amount.toUint128();
@@ -163,7 +163,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
-        if (_balance(sourceVault) < amount) revert InsufficientVirtualBalance();
+        if (_virtualBalance(sourceVault) < amount) revert InsufficientVirtualBalance();
         // Update batch tracking for settlement
         $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
         $.vaultBatchBalances[sourceVault][batchId].deposited -= amount.toUint128();
@@ -317,7 +317,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @notice gets the virtual balance of a vault
     /// @param vault the vault address
     /// @return balance the balance of the vault in all adapters.
-    function _balance(address vault) internal view returns (uint256 balance) {
+    function _virtualBalance(address vault) internal view returns (uint256 balance) {
         address[] memory assets = _getVaultAssets(vault);
         address[] memory adapters = _registry().getAdapters(vault);
         uint256 length = adapters.length;
