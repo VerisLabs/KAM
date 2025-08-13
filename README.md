@@ -106,7 +106,7 @@ Minimal proxy contracts deployed per batch for redemption distribution.
 #### `src/kStakingVault/kStakingVault.sol`
 Main vault contract implementing ERC20 stkTokens with modular proxy pattern.
 - **Pattern**: MultiFacetProxy routing to function modules
-- **Inheritance**: ERC20 + BaseModule + MultiFacetProxy
+- **Inheritance**: ERC20 + BaseVaultModule + MultiFacetProxy
 - **Key Features**:
   - Issues stkTokens that appreciate with yield
   - Request/claim pattern for all operations
@@ -115,9 +115,9 @@ Main vault contract implementing ERC20 stkTokens with modular proxy pattern.
 
 #### Vault Modules (`src/kStakingVault/modules/`)
 
-##### `BaseModule.sol`
+##### `BaseVaultModule.sol`
 Shared base contract providing common functionality for all modules.
-- **Storage**: Defines BaseModuleStorage struct (ERC-7201 pattern)
+- **Storage**: Defines BaseVaultModuleStorage struct (ERC-7201 pattern)
 - **Common Features**:
   - Registry access helpers
   - Math utilities for share calculations
@@ -179,7 +179,7 @@ struct Balances {
 }
 ```
 
-#### `src/kStakingVault/types/BaseModuleTypes.sol`
+#### `src/kStakingVault/types/BaseVaultModuleTypes.sol`
 ```solidity
 struct StakeRequest {
     uint256 id;
@@ -268,7 +268,7 @@ kStakingVault uses a sophisticated module system:
 1. Main contract inherits MultiFacetProxy
 2. Function selectors mapped to module addresses
 3. Fallback function delegates to appropriate module
-4. Modules share storage via BaseModule inheritance
+4. Modules share storage via BaseVaultModule inheritance
 
 ### Batch Processing Flow
 

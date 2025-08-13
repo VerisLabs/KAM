@@ -7,8 +7,8 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 //import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 //import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-//import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
-//import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
+//import { BaseVaultModule } from "src/kStakingVault/modules/BaseVaultModule.sol";
+//import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 //
 ///// @title kStakingVaultDirectTest
 ///// @notice Tests for kStakingVault functions that are directly accessible (not through proxy modules)
@@ -27,7 +27,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //
 //        // Non-asset router should fail
 //        vm.prank(users.alice);
-//        vm.expectRevert(BaseModule.OnlyKAssetRouter.selector);
+//        vm.expectRevert(BaseVaultModule.OnlyKAssetRouter.selector);
 //        alphaVault.updateLastTotalAssets(newAssets);
 //
 //        // Asset router should succeed

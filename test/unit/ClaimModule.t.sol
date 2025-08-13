@@ -8,8 +8,8 @@ import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 import { ClaimModule } from "src/kStakingVault/modules/ClaimModule.sol";
-import { BaseModule } from "src/kStakingVault/modules/base/BaseModule.sol";
-import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
+import { BaseVaultModule } from "src/kStakingVault/modules/base/BaseVaultModule.sol";
+import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title ClaimModuleTest
 /// @notice Comprehensive unit tests for ClaimModule contract
@@ -224,8 +224,8 @@ contract ClaimModuleTest is DeploymentBaseTest {
                         INHERITANCE TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test ClaimModule inherits from BaseModule
-    function test_InheritsFromBaseModule() public {
+    /// @dev Test ClaimModule inherits from BaseVaultModule
+    function test_InheritsFromBaseVaultModule() public {
         assertTrue(address(claimModule).code.length > 0, "ClaimModule should have implementation code");
     }
 

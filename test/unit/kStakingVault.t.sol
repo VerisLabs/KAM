@@ -8,8 +8,8 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //import { LibClone } from "solady/utils/LibClone.sol";
 //import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 //import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-//import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
-//import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
+//import { BaseVaultModule } from "src/kStakingVault/modules/BaseVaultModule.sol";
+//import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 //
 ///// @title kStakingVaultTest
 ///// @notice Comprehensive unit tests for kStakingVault contract
@@ -48,7 +48,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //        assertEq(alphaVault.contractVersion(), "1.0.0", "Contract version incorrect");
 //
 //        // Check initialization parameters
-//        // Note: Owner and role functions are handled by MultiFacetProxy/BaseModule
+//        // Note: Owner and role functions are handled by MultiFacetProxy/BaseVaultModule
 //        // These are not exposed in the IkStakingVault interface for unit testing
 //
 //        // Check ERC20 properties
@@ -157,7 +157,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //    /// @dev Test staking request reverts with zero amount
 //    function test_RequestStake_RevertZeroAmount() public {
 //        vm.prank(users.alice);
-//        vm.expectRevert(BaseModule.ZeroAmount.selector);
+//        vm.expectRevert(BaseVaultModule.ZeroAmount.selector);
 //        alphaVault.requestStake(users.alice, 0, uint96(MIN_STK_TOKENS));
 //    }
 //
@@ -182,7 +182,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //    /// @dev Test staking request access control
 //    function test_RequestStake_AccessControl() public {
 //        // This test verifies the function exists and validates inputs
-//        // Pause functionality is internal to BaseModule
+//        // Pause functionality is internal to BaseVaultModule
 //        vm.prank(users.alice);
 //        vm.expectRevert(); // InsufficientBalance or similar
 //        alphaVault.requestStake(users.alice, uint96(TEST_AMOUNT), uint96(MIN_STK_TOKENS));
@@ -195,7 +195,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //    /// @dev Test unstaking request reverts with zero amount
 //    function test_RequestUnstake_RevertZeroAmount() public {
 //        vm.prank(users.alice);
-//        vm.expectRevert(BaseModule.ZeroAmount.selector);
+//        vm.expectRevert(BaseVaultModule.ZeroAmount.selector);
 //        alphaVault.requestUnstake(users.alice, 0, uint96(MIN_STK_TOKENS));
 //    }
 //
@@ -235,7 +235,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //
 //        // Non-asset router should fail
 //        vm.prank(users.alice);
-//        vm.expectRevert(BaseModule.OnlyKAssetRouter.selector);
+//        vm.expectRevert(BaseVaultModule.OnlyKAssetRouter.selector);
 //        alphaVault.updateLastTotalAssets(newAssets);
 //
 //        // Asset router should succeed
@@ -317,7 +317,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //    }
 //
 //    /// @dev Test totalAssets view function
-//    function test_TotalAssets() public view {
+//    function test_totalAssetsVirtual() public view {
 //        uint256 assets = alphaVault.totalAssets();
 //        assertEq(assets, 0, "Initial total assets should be zero");
 //    }
@@ -426,7 +426,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //
 //    /// @dev Test that vault uses modular architecture
 //    function test_ModularArchitecture() public view {
-//        // The vault should inherit from BaseModule and have implementation code
+//        // The vault should inherit from BaseVaultModule and have implementation code
 //        assertTrue(address(alphaVault).code.length > 0, "Vault should have code");
 //
 //        // Verify it implements the expected interface functions

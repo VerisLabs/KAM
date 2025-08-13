@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 /// @title ModuleBaseTypes
 /// @notice Library containing all data structures used in the ModuleBase
 /// @dev Defines standardized data types for cross-contract communication and storage
-library BaseModuleTypes {
+library BaseVaultModuleTypes {
     enum RequestStatus {
         PENDING,
         CLAIMED,

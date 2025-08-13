@@ -12,12 +12,14 @@ import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.
 import { Extsload } from "src/abstracts/Extsload.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
-import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
+import { FeesModule } from "src/kStakingVault/modules/FeesModule.sol";
+import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+import {IAdapter} from "src/interfaces/IAdapter.sol";
 
-/// @title BaseModule
+/// @title BaseVaultModule
 /// @notice Base contract for all modules
 /// @dev Provides shared storage, roles, and common functionality
-contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
+contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     using FixedPointMathLib for uint256;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
 
@@ -82,20 +84,22 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    /// @custom:storage-location erc7201.kam.storage.BaseModule
-    struct BaseModuleStorage {
+    /// @custom:storage-location erc7201.kam.storage.BaseVaultModule
+    struct BaseVaultModuleStorage {
         uint256 currentBatch;
         bytes32 currentBatchId;
         uint256 lastTotalAssets;
         uint256 sharePriceWatermark;
-        uint256 lastFeesCharged;
+        uint256 initTimestamp;
         address registry;
+        address adapter;
         address receiverImplementation;
         uint96 dustAmount;
         address underlyingAsset;
         uint256 requestCounter;
         address kToken;
         uint8 decimals;
+        uint16 hurdleRate;
         bool initialized;
         bool paused;
         string name;
@@ -103,19 +107,19 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
         uint16 performanceFee;
         uint16 managementFee;
         address feeReceiver;
-        mapping(bytes32 => BaseModuleTypes.BatchInfo) batches;
-        mapping(bytes32 => BaseModuleTypes.StakeRequest) stakeRequests;
-        mapping(bytes32 => BaseModuleTypes.UnstakeRequest) unstakeRequests;
+        mapping(bytes32 => BaseVaultModuleTypes.BatchInfo) batches;
+        mapping(bytes32 => BaseVaultModuleTypes.StakeRequest) stakeRequests;
+        mapping(bytes32 => BaseVaultModuleTypes.UnstakeRequest) unstakeRequests;
         mapping(address => EnumerableSetLib.Bytes32Set) userRequests;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("kam.storage.BaseModule")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("kam.storage.BaseVaultModule")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 internal constant MODULE_BASE_STORAGE_LOCATION =
         0x50bc60b877273d55cac3903fd4818902e5fd7aa256278ee2dc6b212f256c0b00;
 
     /// @notice Returns the base vault storage struct using ERC-7201 pattern
     /// @return $ Storage reference for base vault state variables
-    function _getBaseModuleStorage() internal pure returns (BaseModuleStorage storage $) {
+    function _getBaseVaultModuleStorage() internal pure returns (BaseVaultModuleStorage storage $) {
         assembly {
             $.slot := MODULE_BASE_STORAGE_LOCATION
         }
@@ -129,26 +133,29 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     /// @param registry_ Address of the kRegistry contract
     /// @param paused_ Initial pause state
     /// @dev Can only be called once during initialization
-    function __BaseModule_init(
+    function __BaseVaultModule_init(
         address registry_,
         address owner_,
         address admin_,
         address feeReceiver_,
+        address adapter_,
         bool paused_
     )
         internal
     {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
 
         if ($.initialized) revert AlreadyInitialized();
         if (registry_ == address(0)) revert InvalidRegistry();
 
         if (owner_ == address(0)) revert ZeroAddress();
         if (admin_ == address(0)) revert ZeroAddress();
+        if (adapter_ == address(0)) revert ZeroAddress();
 
         $.registry = registry_;
         $.paused = paused_;
         $.feeReceiver = feeReceiver_;
+        $.adapter = adapter_;
         $.initialized = true;
 
         _initializeOwner(owner_);
@@ -163,7 +170,7 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     /// @return The kRegistry contract address
     /// @dev Reverts if contract not initialized
     function registry() external view returns (address) {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (!$.initialized) revert NotInitialized();
         return $.registry;
     }
@@ -172,7 +179,7 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     /// @return IkRegistry interface for registry interaction
     /// @dev Internal helper for typed registry access
     function _registry() internal view returns (IkRegistry) {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (!$.initialized) revert NotInitialized();
         return IkRegistry($.registry);
     }
@@ -216,31 +223,31 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     /// @notice Returns the underlying asset address (for compatibility)
     /// @return Asset address
     function asset() external view returns (address) {
-        return _getBaseModuleStorage().kToken;
+        return _getBaseVaultModuleStorage().kToken;
     }
 
     /// @notice Returns the underlying asset address
     /// @return Asset address
     function underlyingAsset() external view returns (address) {
-        return _getBaseModuleStorage().underlyingAsset;
+        return _getBaseVaultModuleStorage().underlyingAsset;
     }
 
     /// @notice Returns the vault shares token name
     /// @return Token name
     function name() public view override returns (string memory) {
-        return _getBaseModuleStorage().name;
+        return _getBaseVaultModuleStorage().name;
     }
 
     /// @notice Returns the vault shares token symbol
     /// @return Token symbol
     function symbol() public view override returns (string memory) {
-        return _getBaseModuleStorage().symbol;
+        return _getBaseVaultModuleStorage().symbol;
     }
 
     /// @notice Returns the vault shares token decimals
     /// @return Token decimals
     function decimals() public view override returns (uint8) {
-        return uint8(_getBaseModuleStorage().decimals);
+        return uint8(_getBaseVaultModuleStorage().decimals);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -251,7 +258,7 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     /// @param paused_ New pause state
     /// @dev Only callable internally by inheriting contracts
     function _setPaused(bool paused_) internal {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (!$.initialized) revert NotInitialized();
         $.paused = paused_;
         emit Paused(paused_);
@@ -265,7 +272,7 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     /// @dev Standard price calculation used across settlement modules
     /// @return price Price per stkToken in underlying asset terms (18 decimals)
     function _calculateStkTokenPrice() internal view returns (uint256 price) {
-        return _convertToAssets(10 ** _getBaseModuleStorage().decimals);
+        return _convertToAssets(10 ** _getBaseVaultModuleStorage().decimals);
     }
 
     /// @notice Converts shares to assets
@@ -274,7 +281,7 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     function _convertToAssets(uint256 shares) internal view returns (uint256 assets) {
         uint256 totalSupply_ = totalSupply();
         if (totalSupply_ == 0) return shares;
-        return shares.fullMulDiv(totalSupply_, _totalAssets());
+        return shares.fullMulDiv(totalSupply_, _totalAssetsVirtual());
     }
 
     /// @notice Converts assets to shares
@@ -283,39 +290,35 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     function _convertToShares(uint256 assets) internal view returns (uint256 shares) {
         uint256 totalSupply_ = totalSupply();
         if (totalSupply_ == 0) return assets;
-        return assets.fullMulDiv(_totalAssets(), totalSupply_);
+        return assets.fullMulDiv(_totalAssetsVirtual(), totalSupply_);
     }
 
     /// @notice Calculates stkTokens to mint for given kToken amount
     /// @dev Used in staking settlement operations
     /// @param kTokenAmount Amount of kTokens being staked
-    /// @param stkTokenPrice Current stkToken price
     /// @return stkTokens Amount of stkTokens to mint
     function _calculateStkTokensToMint(
-        uint256 kTokenAmount,
-        uint256 stkTokenPrice
+        uint256 kTokenAmount
     )
         internal
         pure
         returns (uint256 stkTokens)
     {
-        return kTokenAmount.divWad(stkTokenPrice);
+        return _convertToShares(kTokenAmount);
     }
 
     /// @notice Calculates asset value for given stkToken amount
     /// @dev Used in unstaking settlement operations
     /// @param stkTokenAmount Amount of stkTokens being unstaked
-    /// @param stkTokenPrice Current stkToken price
     /// @return assetValue Equivalent asset value
     function _calculateAssetValue(
-        uint256 stkTokenAmount,
-        uint256 stkTokenPrice
+        uint256 stkTokenAmount
     )
         internal
         pure
         returns (uint256 assetValue)
     {
-        return stkTokenAmount.mulWad(stkTokenPrice);
+        return _convertToAssets(stkTokenAmount);
     }
 
     /// @notice Calculates share price for stkToken
@@ -326,8 +329,15 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
 
     /// @notice Returns the total assets in the vault
     /// @return totalAssets Total assets in the vault
-    function _totalAssets() internal view returns (uint256) {
-        return IkToken(_getBaseModuleStorage().underlyingAsset).balanceOf(address(this));
+    function _totalAssetsVirtual() internal view returns (uint256) {
+        return IAdapter(_getBaseVaultModuleStorage().adapter).totalAssets() - _accumulatedFees();
+    }
+
+    /// @notice Calculates accumulated fees
+    /// @return accumulatedFees Accumulated fees
+    function _accumulatedFees() internal view returns (uint256) {
+        (, , uint256 totalFees) = FeesModule(address(this)).computeLastBatchFees();
+        return totalFees;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -337,7 +347,7 @@ contract BaseModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     /// @notice Modifier to restrict function execution when contract is paused
     /// @dev Reverts with Paused() if isPaused is true
     modifier whenNotPaused() virtual {
-        if (_getBaseModuleStorage().paused) revert ContractPaused();
+        if (_getBaseVaultModuleStorage().paused) revert ContractPaused();
         _;
     }
 

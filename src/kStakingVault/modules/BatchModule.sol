@@ -5,13 +5,13 @@ import { LibClone } from "solady/utils/LibClone.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
-import { BaseModule } from "src/kStakingVault/modules/base/BaseModule.sol";
-import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
+import { BaseVaultModule } from "src/kStakingVault/modules/base/BaseVaultModule.sol";
+import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title BatchModule
 /// @notice Handles batch operations for staking and unstaking
 /// @dev Contains batch functions for staking and unstaking operations
-contract BatchModule is BaseModule {
+contract BatchModule is BaseVaultModule {
     using SafeCastLib for uint256;
     using SafeCastLib for uint64;
     /*//////////////////////////////////////////////////////////////
@@ -40,7 +40,7 @@ contract BatchModule is BaseModule {
     /// @param _batchId The batch ID to close
     /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
     function closeBatch(bytes32 _batchId, bool _create) external onlyRelayer {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if ($.batches[_batchId].isClosed) revert Closed();
         $.batches[_batchId].isClosed = true;
 
@@ -54,7 +54,7 @@ contract BatchModule is BaseModule {
     /// @param _batchId The batch ID to settle
     /// @dev Only callable by kMinter, indicates assets have been distributed
     function settleBatch(bytes32 _batchId) external onlyKAssetRouter {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if ($.batches[_batchId].isSettled) revert Settled();
         $.batches[_batchId].isSettled = true;
 
@@ -65,7 +65,7 @@ contract BatchModule is BaseModule {
     /// @param _batchId Batch ID to deploy receiver for
     /// @dev Only callable by kAssetRouter
     function createBatchReceiver(bytes32 _batchId) external onlyKAssetRouter returns (address) {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         address receiver = $.batches[_batchId].batchReceiver;
         if (receiver != address(0)) return receiver;
 
@@ -84,11 +84,11 @@ contract BatchModule is BaseModule {
     //////////////////////////////////////////////////////////////*/
 
     function _newBatch() internal returns (bytes32) {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         $.currentBatch++;
         bytes32 newBatch = $.currentBatchId;
 
-        BaseModuleTypes.BatchInfo storage batch = $.batches[newBatch];
+        BaseVaultModuleTypes.BatchInfo storage batch = $.batches[newBatch];
         batch.batchId = newBatch;
         batch.batchReceiver = address(0);
         batch.isClosed = false;

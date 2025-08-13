@@ -7,8 +7,8 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { BatchModule } from "src/kStakingVault/modules/BatchModule.sol";
-import { BaseModule } from "src/kStakingVault/modules/base/BaseModule.sol";
-import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
+import { BaseVaultModule } from "src/kStakingVault/modules/base/BaseVaultModule.sol";
+import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title BatchModuleTest
 /// @notice Comprehensive unit tests for BatchModule contract
@@ -36,7 +36,7 @@ contract BatchModuleTest is DeploymentBaseTest {
     /// @dev Test createNewBatch requires initialization first
     function test_CreateNewBatch_RequiresInit() public {
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createNewBatch();
     }
 
@@ -44,15 +44,15 @@ contract BatchModuleTest is DeploymentBaseTest {
     function test_CreateNewBatch_AccessControl() public {
         // All users should fail with NotInitialized since module is not initialized
         vm.prank(users.admin);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createNewBatch();
 
         vm.prank(users.owner);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createNewBatch();
 
         vm.prank(users.institution);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createNewBatch();
     }
 
@@ -67,7 +67,7 @@ contract BatchModuleTest is DeploymentBaseTest {
 
         for (uint256 i = 0; i < callers.length; i++) {
             vm.prank(callers[i]);
-            vm.expectRevert(BaseModule.NotInitialized.selector);
+            vm.expectRevert(BaseVaultModule.NotInitialized.selector);
             batchModule.createNewBatch();
         }
     }
@@ -79,7 +79,7 @@ contract BatchModuleTest is DeploymentBaseTest {
     /// @dev Test closeBatch requires relayer role
     function test_CloseBatch_OnlyRelayer() public {
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.closeBatch(TEST_BATCH_ID, false);
     }
 
@@ -87,11 +87,11 @@ contract BatchModuleTest is DeploymentBaseTest {
     function test_CloseBatch_AccessControl() public {
         // Non-relayer should fail
         vm.prank(users.admin);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.closeBatch(TEST_BATCH_ID, false);
 
         vm.prank(users.owner);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.closeBatch(TEST_BATCH_ID, true);
     }
 
@@ -99,12 +99,12 @@ contract BatchModuleTest is DeploymentBaseTest {
     function test_CloseBatch_CreateFlag() public {
         // Test with create = false
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.closeBatch(TEST_BATCH_ID, false);
 
         // Test with create = true
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.closeBatch(TEST_BATCH_ID, true);
     }
 
@@ -118,7 +118,7 @@ contract BatchModuleTest is DeploymentBaseTest {
 
         for (uint256 i = 0; i < batchIds.length; i++) {
             vm.prank(users.alice);
-            vm.expectRevert(BaseModule.NotInitialized.selector);
+            vm.expectRevert(BaseVaultModule.NotInitialized.selector);
             batchModule.closeBatch(batchIds[i], false);
         }
     }
@@ -130,7 +130,7 @@ contract BatchModuleTest is DeploymentBaseTest {
     /// @dev Test settleBatch requires kAssetRouter role
     function test_SettleBatch_OnlyKAssetRouter() public {
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.settleBatch(TEST_BATCH_ID);
     }
 
@@ -138,15 +138,15 @@ contract BatchModuleTest is DeploymentBaseTest {
     function test_SettleBatch_AccessControl() public {
         // Non-kAssetRouter should fail
         vm.prank(users.admin);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.settleBatch(TEST_BATCH_ID);
 
         vm.prank(users.owner);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.settleBatch(TEST_BATCH_ID);
 
         vm.prank(users.institution);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.settleBatch(TEST_BATCH_ID);
     }
 
@@ -161,7 +161,7 @@ contract BatchModuleTest is DeploymentBaseTest {
 
         for (uint256 i = 0; i < nonAssetRouters.length; i++) {
             vm.prank(nonAssetRouters[i]);
-            vm.expectRevert(BaseModule.NotInitialized.selector);
+            vm.expectRevert(BaseVaultModule.NotInitialized.selector);
             batchModule.settleBatch(TEST_BATCH_ID);
         }
     }
@@ -176,7 +176,7 @@ contract BatchModuleTest is DeploymentBaseTest {
 
         for (uint256 i = 0; i < batchIds.length; i++) {
             vm.prank(users.alice);
-            vm.expectRevert(BaseModule.NotInitialized.selector);
+            vm.expectRevert(BaseVaultModule.NotInitialized.selector);
             batchModule.settleBatch(batchIds[i]);
         }
     }
@@ -188,7 +188,7 @@ contract BatchModuleTest is DeploymentBaseTest {
     /// @dev Test createBatchReceiver requires kAssetRouter role
     function test_createBatchReceiver_OnlyKAssetRouter() public {
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createBatchReceiver(TEST_BATCH_ID);
     }
 
@@ -196,15 +196,15 @@ contract BatchModuleTest is DeploymentBaseTest {
     function test_createBatchReceiver_AccessControl() public {
         // Non-kAssetRouter should fail
         vm.prank(users.admin);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createBatchReceiver(TEST_BATCH_ID);
 
         vm.prank(users.owner);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createBatchReceiver(TEST_BATCH_ID);
 
         vm.prank(users.institution);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createBatchReceiver(TEST_BATCH_ID);
     }
 
@@ -219,7 +219,7 @@ contract BatchModuleTest is DeploymentBaseTest {
 
         for (uint256 i = 0; i < nonAssetRouters.length; i++) {
             vm.prank(nonAssetRouters[i]);
-            vm.expectRevert(BaseModule.NotInitialized.selector);
+            vm.expectRevert(BaseVaultModule.NotInitialized.selector);
             batchModule.createBatchReceiver(TEST_BATCH_ID);
         }
     }
@@ -234,7 +234,7 @@ contract BatchModuleTest is DeploymentBaseTest {
 
         for (uint256 i = 0; i < batchIds.length; i++) {
             vm.prank(users.alice);
-            vm.expectRevert(BaseModule.NotInitialized.selector);
+            vm.expectRevert(BaseVaultModule.NotInitialized.selector);
             batchModule.createBatchReceiver(batchIds[i]);
         }
     }
@@ -279,10 +279,10 @@ contract BatchModuleTest is DeploymentBaseTest {
                         INHERITANCE TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test BatchModule inherits from BaseModule
-    function test_InheritsFromBaseModule() public {
-        // BatchModule should inherit BaseModule functionality
-        // This is validated by the contract compiling and having BaseModule functions available
+    /// @dev Test BatchModule inherits from BaseVaultModule
+    function test_InheritsFromBaseVaultModule() public {
+        // BatchModule should inherit BaseVaultModule functionality
+        // This is validated by the contract compiling and having BaseVaultModule functions available
         assertTrue(address(batchModule).code.length > 0, "BatchModule should have implementation code");
     }
 
@@ -294,15 +294,15 @@ contract BatchModuleTest is DeploymentBaseTest {
     function test_ErrorDefinitions() public {
         // Test NotInitialized error is thrown before role checks
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createNewBatch();
 
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.settleBatch(TEST_BATCH_ID);
 
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createBatchReceiver(TEST_BATCH_ID);
     }
 
@@ -313,15 +313,15 @@ contract BatchModuleTest is DeploymentBaseTest {
     /// @dev Test batch functions with zero batch ID
     function test_BatchFunctions_ZeroBatchId() public {
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.closeBatch(bytes32(0), false);
 
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.settleBatch(bytes32(0));
 
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createBatchReceiver(bytes32(0));
     }
 
@@ -330,15 +330,15 @@ contract BatchModuleTest is DeploymentBaseTest {
         bytes32 maxBatchId = bytes32(type(uint256).max);
 
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.closeBatch(maxBatchId, false);
 
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.settleBatch(maxBatchId);
 
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createBatchReceiver(maxBatchId);
     }
 
@@ -350,7 +350,7 @@ contract BatchModuleTest is DeploymentBaseTest {
     function test_CreateNewBatch_Signature() public {
         // Function should return bytes32 and take no parameters
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createNewBatch();
     }
 
@@ -358,11 +358,11 @@ contract BatchModuleTest is DeploymentBaseTest {
     function test_CloseBatch_Signature() public {
         // Function should take bytes32 and bool parameters
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.closeBatch(bytes32(uint256(1)), true);
 
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.closeBatch(bytes32(uint256(1)), false);
     }
 
@@ -370,7 +370,7 @@ contract BatchModuleTest is DeploymentBaseTest {
     function test_SettleBatch_Signature() public {
         // Function should take bytes32 parameter
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.settleBatch(bytes32(uint256(1)));
     }
 
@@ -378,7 +378,7 @@ contract BatchModuleTest is DeploymentBaseTest {
     function test_createBatchReceiver_Signature() public {
         // Function should take bytes32 parameter and return address
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createBatchReceiver(bytes32(uint256(1)));
     }
 
@@ -396,15 +396,15 @@ contract BatchModuleTest is DeploymentBaseTest {
 
         for (uint256 i = 0; i < values.length; i++) {
             vm.prank(users.alice);
-            vm.expectRevert(BaseModule.NotInitialized.selector);
+            vm.expectRevert(BaseVaultModule.NotInitialized.selector);
             batchModule.closeBatch(values[i], false);
 
             vm.prank(users.alice);
-            vm.expectRevert(BaseModule.NotInitialized.selector);
+            vm.expectRevert(BaseVaultModule.NotInitialized.selector);
             batchModule.settleBatch(values[i]);
 
             vm.prank(users.alice);
-            vm.expectRevert(BaseModule.NotInitialized.selector);
+            vm.expectRevert(BaseVaultModule.NotInitialized.selector);
             batchModule.createBatchReceiver(values[i]);
         }
     }
@@ -417,19 +417,19 @@ contract BatchModuleTest is DeploymentBaseTest {
     function test_RoleEnforcement() public {
         // All functions require initialization before role checks
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createNewBatch();
 
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.closeBatch(bytes32(uint256(1)), false);
 
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.settleBatch(bytes32(uint256(1)));
 
         vm.prank(users.alice);
-        vm.expectRevert(BaseModule.NotInitialized.selector);
+        vm.expectRevert(BaseVaultModule.NotInitialized.selector);
         batchModule.createBatchReceiver(bytes32(uint256(1)));
     }
 }

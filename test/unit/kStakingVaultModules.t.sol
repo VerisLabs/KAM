@@ -7,7 +7,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 //import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 //import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-//import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
+//import { BaseVaultModule } from "src/kStakingVault/modules/BaseVaultModule.sol";
 //import { BatchModule } from "src/kStakingVault/modules/BatchModule.sol";
 //import { ClaimModule } from "src/kStakingVault/modules/ClaimModule.sol";
 //
@@ -101,7 +101,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //    function test_createBatchReceiver_Interface() public {
 //        // Non-asset router should fail with access control
 //        vm.prank(users.alice);
-//        vm.expectRevert(BaseModule.OnlyKAssetRouter.selector);
+//        vm.expectRevert(BaseVaultModule.OnlyKAssetRouter.selector);
 //        vaultInterface.createBatchReceiver(TEST_BATCH_ID);
 //    }
 //
@@ -128,7 +128,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //
 //        for (uint256 i = 0; i < nonRouters.length; i++) {
 //            vm.prank(nonRouters[i]);
-//            vm.expectRevert(BaseModule.OnlyKAssetRouter.selector);
+//            vm.expectRevert(BaseVaultModule.OnlyKAssetRouter.selector);
 //            vaultInterface.createBatchReceiver(1);
 //        }
 //    }
@@ -173,7 +173,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //        vm.expectRevert(ClaimModule.BatchNotSettled.selector);
 //        vaultInterface.claimStakedShares(999, 999);
 //
-//        vm.expectRevert(BaseModule.OnlyKAssetRouter.selector);
+//        vm.expectRevert(BaseVaultModule.OnlyKAssetRouter.selector);
 //        vaultInterface.createBatchReceiver(999);
 //    }
 //
@@ -297,7 +297,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 //
 //        // 4. Test that access-controlled functions fail for unauthorized users
 //        vm.prank(users.alice);
-//        vm.expectRevert(BaseModule.OnlyKAssetRouter.selector);
+//        vm.expectRevert(BaseVaultModule.OnlyKAssetRouter.selector);
 //        vaultInterface.createBatchReceiver(2);
 //
 //        // 5. Test that the integration doesn't break existing functionality

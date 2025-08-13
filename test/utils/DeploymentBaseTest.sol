@@ -10,13 +10,13 @@ import {
     BATCH_CUTOFF_TIME,
     EMERGENCY_ADMIN_ROLE,
     INSTITUTION_ROLE,
+    METAVAULT_USDC_MAINNET,
     MINTER_ROLE,
     SETTLEMENT_INTERVAL,
     SETTLER_ROLE,
     STRATEGY_ROLE,
     USDC_MAINNET,
     WBTC_MAINNET,
-    METAVAULT_USDC_MAINNET,
     _1000_USDC,
     _100_USDC,
     _10_USDC,
@@ -384,6 +384,9 @@ contract DeploymentBaseTest is BaseTest {
 
         vm.startPrank(users.admin);
         metaVaultAdapter.setVaultDestination(address(dnVault), USDC_MAINNET, METAVAULT_USDC_MAINNET);
+        metaVaultAdapter.setVaultDestination(address(alphaVault), USDC_MAINNET, METAVAULT_USDC_MAINNET);
+        metaVaultAdapter.setVaultDestination(address(betaVault), USDC_MAINNET, METAVAULT_USDC_MAINNET);
+
         vm.stopPrank();
 
         // Label for debugging

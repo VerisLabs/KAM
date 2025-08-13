@@ -106,7 +106,7 @@ contract BaseAdapterTest is BaseTest {
     }
 
     /// @dev Test totalAssets function
-    function test_TotalAssets() public {
+    function test_totalAssetsVirtual() public {
         address testVault = address(0x5678);
         uint256 testAmount = _100_USDC;
 

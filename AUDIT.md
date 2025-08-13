@@ -15,7 +15,7 @@
 
 Smart contracts within audit scope:
 
-- **Core**: `kRegistry.sol`, `kBase.sol`, `BaseModule.sol`
+- **Core**: `kRegistry.sol`, `kBase.sol`, `BaseVaultModule.sol`
 - **Tokens**: `kToken.sol`, `kMinter.sol`
 - **Vaults**: `kStakingVault.sol`, `BatchModule.sol`, `ClaimModule.sol`
 - **Routing**: `kAssetRouter.sol`, `kBatchReceiver.sol`
@@ -138,7 +138,7 @@ Institutional entry point with request-based redemption. Maintains redemption qu
 
 ### kStakingVault
 
-Diamond proxy vault supporting modular functionality through MultiFacetProxy. Tracks stake/unstake requests and coordinates with router for settlement. Implements BaseModule, BatchModule, and ClaimModule.
+Diamond proxy vault supporting modular functionality through MultiFacetProxy. Tracks stake/unstake requests and coordinates with router for settlement. Implements BaseVaultModule, BatchModule, and ClaimModule.
 
 ### kAssetRouter
 
