@@ -45,6 +45,9 @@ contract IntegrationBaseTest is DeploymentBaseTest {
 
         // Additional setup for integration tests
         _prepareIntegrationEnvironment();
+
+        vm.prank(users.admin);
+        registry.registerAdapter(address(dnVault), address(metaVaultAdapter));
     }
 
     /// @dev Prepare environment specifically for integration testing
@@ -346,7 +349,7 @@ contract IntegrationBaseTest is DeploymentBaseTest {
         // settlement
         // Only kMinter (type 0) uses assetRouter's virtual balance tracking
         if (vault == address(minter)) {
-            actualBalance = metaVaultAdapter.totalAssets(vault, asset);
+            actualBalance = metaVaultAdapter.totalAssets(address(dnVault), asset);
         } else {
             // DN vault (type 1), Alpha vault (type 2), Beta vault (type 3) all use adapter balance
             actualBalance = custodialAdapter.totalAssets(vault, asset);

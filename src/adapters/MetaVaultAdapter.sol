@@ -128,7 +128,8 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
 
         // Deposit to MetaVault and receive shares
         // Set Controller!?
-        uint256 shares = metaVault.deposit(amount, onBehalfOf, _getKAssetRouter());
+        metaVault.requestDeposit(amount, address(this), address(this));
+        uint256 shares = metaVault.deposit(amount, address(this));
         $.adapterTotalShares[onBehalfOf][asset] += shares;
 
         emit Deposited(asset, amount, onBehalfOf);
@@ -253,7 +254,7 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     function totalAssets(address vault, address asset) external view returns (uint256) {
         MetaVaultAdapterStorage storage $ = _getMetaVaultAdapterStorage();
         IMetaVault metaVault = $.vaultDestinations[vault];
-        uint256 balance = metaVault.balanceOf(vault);
+        uint256 balance = $.adapterTotalShares[vault][asset];
         uint256 totalAssets_ = metaVault.convertToAssets(balance); // + insuranceFund
         uint256 totalKTokens = IkToken(asset).totalSupply();
         if (totalAssets_ > totalKTokens) return totalKTokens;

@@ -10,7 +10,6 @@ import {
     BATCH_CUTOFF_TIME,
     EMERGENCY_ADMIN_ROLE,
     INSTITUTION_ROLE,
-    METAVAULT_USDC_MAINNET,
     MINTER_ROLE,
     SETTLEMENT_INTERVAL,
     SETTLER_ROLE,
@@ -47,6 +46,10 @@ import { MetaVaultAdapter } from "src/adapters/MetaVaultAdapter.sol";
 
 // Interfaces
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+
+// Mocks
+
+import {MockMetaVault} from "../mocks/MockMetaVault.sol";
 
 /// @title DeploymentBaseTest
 /// @notice Comprehensive base test contract that deploys the complete KAM protocol
@@ -95,6 +98,7 @@ contract DeploymentBaseTest is BaseTest {
     kToken public kTokenImpl;
     kMinter public minterImpl;
     kStakingVault public stakingVaultImpl;
+    MockMetaVault public mockMetaVault;
 
     /*//////////////////////////////////////////////////////////////
                         TEST CONFIGURATION
@@ -385,9 +389,12 @@ contract DeploymentBaseTest is BaseTest {
         metaVaultAdapter = MetaVaultAdapter(metaVaultProxy);
 
         vm.startPrank(users.admin);
-        metaVaultAdapter.setVaultDestination(address(dnVault), USDC_MAINNET, METAVAULT_USDC_MAINNET);
-        metaVaultAdapter.setVaultDestination(address(alphaVault), USDC_MAINNET, METAVAULT_USDC_MAINNET);
-        metaVaultAdapter.setVaultDestination(address(betaVault), USDC_MAINNET, METAVAULT_USDC_MAINNET);
+
+        mockMetaVault = new MockMetaVault(USDC_MAINNET, "Max APY USDC", "maxUSDC");
+
+        metaVaultAdapter.setVaultDestination(address(dnVault), USDC_MAINNET, address(mockMetaVault));
+        metaVaultAdapter.setVaultDestination(address(alphaVault), USDC_MAINNET, address(mockMetaVault));
+        metaVaultAdapter.setVaultDestination(address(betaVault), USDC_MAINNET, address(mockMetaVault));
 
         vm.stopPrank();
 
@@ -396,6 +403,7 @@ contract DeploymentBaseTest is BaseTest {
         vm.label(address(metaVaultAdapter), "MetaVaultAdapter");
         vm.label(address(custodialAdapterImpl), "CustodialAdapterImpl");
         vm.label(address(metaVaultAdapterImpl), "MetaVaultAdapterImpl");
+        vm.label(address(mockMetaVault), "MockMetaVault");
     }
 
     /*//////////////////////////////////////////////////////////////

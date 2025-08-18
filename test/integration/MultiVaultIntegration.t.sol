@@ -72,7 +72,7 @@ contract MultiVaultIntegrationTest is IntegrationBaseTest {
 
         // Validate initial state - DN vault receives assets from kMinter deposits
         assertVirtualBalance(
-            address(dnVault),
+            address(minter),
             USDC_MAINNET,
             institutionalMint,
             "DN vault should have virtual balance from settled deposits"

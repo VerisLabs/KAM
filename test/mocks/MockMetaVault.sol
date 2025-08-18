@@ -81,6 +81,30 @@ contract MockMetaVault is ERC7540, OwnableRoles {
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /*                       OVERRIDES                            */
+    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+    /// @notice Transfers assets from sender into the Vault and submits a Request for asynchronous deposit.
+    /// @param assets the amount of deposit assets to transfer from owner
+    /// @param controller the controller of the request who will be able to operate the request
+    /// @param owner the owner of the shares to be deposited
+    /// @return requestId
+    function requestDeposit(
+        uint256 assets,
+        address controller,
+        address owner
+    )
+        public
+        override
+        returns (uint256 requestId)
+    {
+        if (owner != msg.sender) revert InvalidOperator();
+        requestId = super.requestDeposit(assets, controller, owner);
+        // fulfill the request directly
+        _fulfillDepositRequest(controller, assets, convertToShares(assets));
+    }
+
+    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       HELPR FUNCTIONS                      */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
