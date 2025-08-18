@@ -416,6 +416,7 @@ contract DeploymentBaseTest is BaseTest {
         // Grant factory role to admin for vault registration
         vm.prank(users.owner);
         registry.grantRoles(users.admin, 2); // FACTORY_ROLE = _ROLE_1 = 2
+        vm.prank(users.owner);
         registry.grantRoles(users.guardian, 4); // GUARDIAN_ROLE = _ROLE_2 = 4
 
         vm.startPrank(users.admin);

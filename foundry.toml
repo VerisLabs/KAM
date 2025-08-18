@@ -12,7 +12,7 @@ via_ir = true
 optimization_runs = 200
 
 [profile.solx]
-solc_version = "/home/v3n/.local/bin/solx"
+solc_version = "/home/soltho/.local/bin/solx"
 optimization = 3
 gas_limit = 100_000_000
                     

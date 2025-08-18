@@ -41,6 +41,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     uint256 private constant DEFAULT_VAULT_SETTLEMENT_COOLDOWN = 1 hours;
 
+    uint256 private constant MAX_VAULT_SETTLEMENT_COOLDOWN = 1 days;
+
     function _getkAssetRouterStorage() private pure returns (kAssetRouterStorage storage $) {
         assembly {
             $.slot := KASSETROUTER_STORAGE_LOCATION
@@ -402,7 +404,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @notice Set the cooldown period for settlement proposals
     /// @param cooldown New cooldown period in seconds
     function setSettlementCooldown(uint256 cooldown) external onlyRoles(ADMIN_ROLE) {
-        if (cooldown == 0 || cooldown > 7 days) revert InvalidCooldown();
+        if (cooldown > MAX_VAULT_SETTLEMENT_COOLDOWN) revert InvalidCooldown();
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         uint256 oldCooldown = $.vaultSettlementCooldown;
