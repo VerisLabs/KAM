@@ -15,8 +15,7 @@ import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 
-import { FeesModule } from "src/kStakingVault/modules/FeesModule.sol";
-import { BaseVaultModule } from "src/kStakingVault/modules/base/BaseVaultModule.sol";
+import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title kStakingVault
@@ -106,7 +105,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         whenNotPaused
         returns (bytes32 requestId)
     {
-        _updateGlobalWatermark();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (amount == 0) revert ZeroAmount();
         if ($.kToken.balanceOf(msg.sender) < amount) revert InsufficientBalance();
@@ -155,7 +153,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         whenNotPaused
         returns (bytes32 requestId)
     {
-        _updateGlobalWatermark();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (stkTokenAmount == 0) revert ZeroAmount();
         if (balanceOf(msg.sender) < stkTokenAmount) revert InsufficientBalance();
@@ -191,7 +188,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
     /// @notice Cancels a staking request
     /// @param requestId Request ID to cancel
     function cancelStakeRequest(bytes32 requestId) external {
-        _updateGlobalWatermark();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         BaseVaultModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
 
@@ -218,7 +214,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
     /// @notice Cancels an unstaking request
     /// @param requestId Request ID to cancel
     function cancelUnstakeRequest(bytes32 requestId) external payable nonReentrant whenNotPaused {
-        _updateGlobalWatermark();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
 
@@ -243,13 +238,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
     /*//////////////////////////////////////////////////////////////
                           INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Charges management and performance fees
-    /// @return totalFees Total fees charged
-    /// @dev Delegatecall to the contract itself, which will forward the call to the FeesModule
-    function _updateGlobalWatermark() internal {
-        FeesModule(address(this)).updateGlobalWatermark();
-    }
 
     /// @notice Creates a unique request ID for a staking request
     /// @param user User address
@@ -294,7 +282,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
     /// @notice Returns the current total assets from adapter (real-time)
     /// @return Total assets currently deployed in strategies
     function totalAssets() external view returns (uint256) {
-        return _totalAssetsVirtual();
+        return _totalNetAssets();
     }
 
     /// @notice Returns the current batch

@@ -39,6 +39,7 @@ contract BaseTest is Test {
         address payable settler;
         address payable treasury;
         address payable owner;
+        address payable guardian;
     }
 
     Users internal users;
@@ -76,6 +77,7 @@ contract BaseTest is Test {
         users.bob = utils.createUser("Bob", tokens);
         users.charlie = utils.createUser("Charlie", tokens);
         users.admin = utils.createUser("Admin", tokens);
+        users.guardian = utils.createUser("Guardian", tokens);
         users.emergencyAdmin = utils.createUser("EmergencyAdmin", tokens);
         users.institution = utils.createUser("Institution", tokens);
         users.settler = utils.createUser("Settler", tokens);

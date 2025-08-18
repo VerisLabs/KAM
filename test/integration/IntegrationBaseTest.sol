@@ -243,8 +243,11 @@ contract IntegrationBaseTest is DeploymentBaseTest {
         vm.stopPrank();
 
         vm.prank(users.settler);
-        assetRouter.settleBatch(USDC_MAINNET, address(vault), batchId, totalAssets, totalAssets, 0, false);
+        bytes32 proposalId =
+            assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, totalAssets, totalAssets, 0, false);
 
+        // Wait for cooldown period(0 for testing)
+        assetRouter.executeSettleBatch(proposalId);
         emit IntegrationFlowCompleted("BatchSettlement", block.timestamp - startTime);
     }
 

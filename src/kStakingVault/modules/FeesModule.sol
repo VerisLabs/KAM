@@ -6,7 +6,7 @@ import { LibClone } from "solady/utils/LibClone.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
-import { BaseVaultModule } from "src/kStakingVault/modules/base/BaseVaultModule.sol";
+import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title FeesModule
@@ -15,27 +15,41 @@ import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTyp
 contract FeesModule is BaseVaultModule {
     using FixedPointMathLib for uint256;
 
-    uint256 constant MANAGEMENT_FEE_INTERVAL = 657436; // 1 month
-    uint256 constant PERFORMANCE_FEE_INTERVAL = 7889238; // 3 months
+    /// @notice Interval for management fee (1 month)
+    uint256 constant MANAGEMENT_FEE_INTERVAL = 657_436;
+    /// @notice Interval for performance fee (3 months)
+    uint256 constant PERFORMANCE_FEE_INTERVAL = 7_889_238;
 
     /// @notice Emitted when the management fee is updated
     /// @param oldFee Previous management fee in basis points
     /// @param newFee New management fee in basis points
     event ManagementFeeUpdated(uint16 oldFee, uint16 newFee);
-    
+
     /// @notice Emitted when the performance fee is updated
     /// @param oldFee Previous performance fee in basis points
     /// @param newFee New performance fee in basis points
     event PerformanceFeeUpdated(uint16 oldFee, uint16 newFee);
-    
+
     /// @notice Emitted when fees are charged to the vault
     /// @param managementFees Amount of management fees collected
     /// @param performanceFees Amount of performance fees collected
     event FeesAssesed(uint256 managementFees, uint256 performanceFees);
-    
+
     /// @notice Emitted when the hurdle rate is updated
     /// @param newRate New hurdle rate in basis points
     event HurdleRateUpdated(uint16 newRate);
+
+    /// @notice Emitted when the hard hurdle rate is updated
+    /// @param newRate New hard hurdle rate in basis points
+    event HardHurdleRateUpdated(bool newRate);
+
+    /// @notice Emitted when management fees are charged
+    /// @param timestamp Timestamp of the fee charge
+    event ManagementFeesCharged(uint256 timestamp);
+
+    /// @notice Emitted when performance fees are charged
+    /// @param timestamp Timestamp of the fee charge
+    event PerformanceFeesCharged(uint256 timestamp);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
@@ -54,6 +68,15 @@ contract FeesModule is BaseVaultModule {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         $.hurdleRate = _hurdleRate;
         emit HurdleRateUpdated(_hurdleRate);
+    }
+
+    /// @notice Sets the hard hurdle rate
+    /// @param _isHard Whether the hard hurdle rate is enabled
+    /// @dev If true, performance fees will only be charged to the excess return
+    function setHardHurdleRate(bool _isHard) external onlyRoles(ADMIN_ROLE) {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        $.isHardHurdleRate = _isHard;
+        emit HardHurdleRateUpdated(_isHard);
     }
 
     /// @notice Sets the management fee
@@ -78,30 +101,56 @@ contract FeesModule is BaseVaultModule {
         emit PerformanceFeeUpdated(oldFee, _performanceFee);
     }
 
+    /// @notice Notifies the module that management fees have been charged from backend
+    /// @param _timestamp The timestamp of the fee charge
+    /// @dev Should only be called by the vault
+    function notifyManagementFeesCharged(uint64 _timestamp) external onlyRoles(ADMIN_ROLE) {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (_timestamp < $.lastFeesChargedManagement || _timestamp > block.timestamp) revert("Invalid timestamp");
+        $.lastFeesChargedManagement = _timestamp;
+        _updateGlobalWatermark();
+        emit ManagementFeesCharged(_timestamp);
+    }
+
+    /// @notice Notifies the module that performance fees have been charged from backend
+    /// @param _timestamp The timestamp of the fee charge
+    /// @dev Should only be called by the vault
+    function notifyPerformanceFeesCharged(uint64 _timestamp) external onlyRoles(ADMIN_ROLE) {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (_timestamp < $.lastFeesChargedPerformance || _timestamp > block.timestamp) revert("Invalid timestamp");
+        $.lastFeesChargedPerformance = _timestamp;
+        _updateGlobalWatermark();
+        emit PerformanceFeesCharged(_timestamp);
+    }
+
     /// @notice Computes the last fee batch
     /// @return managementFees The management fees for the last batch
     /// @return performanceFees The performance fees for the last batch
     /// @return totalFees The total fees for the last batch
-    function computeLastBatchFees() public view returns (uint256 managementFees, uint256 performanceFees, uint256 totalFees) {
+    function computeLastBatchFees()
+        public
+        view
+        returns (uint256 managementFees, uint256 performanceFees, uint256 totalFees)
+    {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        uint256 currentSharePrice = _sharePrice();
         uint256 lastSharePrice = $.sharePriceWatermark;
-    
-        uint256 lastFeesChargedManagement = _lastFeesChargedManagement($);
-        uint256 lastFeesChargedPerformance = _lastFeesChargedPerformance($);
-        
+
+        uint256 lastFeesChargedManagement = $.lastFeesChargedManagement;
+        uint256 lastFeesChargedPerformance = $.lastFeesChargedPerformance;
+
         uint256 durationManagement = block.timestamp - lastFeesChargedManagement;
         uint256 durationPerformance = block.timestamp - lastFeesChargedPerformance;
         uint256 currentTotalAssets = _totalAssetsVirtual();
         uint256 lastTotalAssets = totalSupply().fullMulDiv(lastSharePrice, 10 ** $.decimals);
-        
+
         // Calculate time-based fees (management)
         // These are charged on total assets, prorated for the time period
         managementFees = (currentTotalAssets * durationManagement).fullMulDiv($.managementFee, SECS_PER_YEAR) / MAX_BPS;
+        currentTotalAssets -= managementFees;
         totalFees = managementFees;
 
         // Calculate the asset's value change since entry
-        // This gives us the raw profit/loss in asset terms
+        // This gives us the raw profit/loss in asset terms after management fees
         int256 assetsDelta = int256(currentTotalAssets) - int256(lastTotalAssets);
 
         // Only calculate fees if there's a profit
@@ -109,19 +158,26 @@ contract FeesModule is BaseVaultModule {
             uint256 excessReturn;
 
             // Calculate returns relative to hurdle rate
-            uint256 hurdleReturn = (lastTotalAssets * $.hurdleRate).fullMulDiv(durationPerformance, SECS_PER_YEAR) / MAX_BPS;
-            
+            uint256 hurdleReturn =
+                (lastTotalAssets * $.hurdleRate).fullMulDiv(durationPerformance, SECS_PER_YEAR) / MAX_BPS;
+
             // Calculate returns relative to hurdle rate
             uint256 totalReturn = uint256(assetsDelta);
 
             // Only charge performance fees if:
             // 1. Current share price is not below
             // 2. Returns exceed hurdle rate
-            if (currentSharePrice > lastSharePrice && totalReturn > hurdleReturn) {
+            if (totalReturn > hurdleReturn) {
                 // Only charge performance fees on returns above hurdle rate
                 excessReturn = totalReturn - hurdleReturn;
 
-                performanceFees = excessReturn * $.performanceFee / MAX_BPS;
+                // If its a hard hurdle rate, only charge fees above the hurdle performance
+                // Otherwise, charge fees to all return if its above hurdle return
+                if ($.isHardHurdleRate) {
+                    performanceFees = excessReturn * $.performanceFee / MAX_BPS;
+                } else {
+                    performanceFees = totalReturn * $.performanceFee / MAX_BPS;
+                }
             }
 
             // Calculate total fees
@@ -132,7 +188,7 @@ contract FeesModule is BaseVaultModule {
 
     /// @notice Updates the share price watermark
     /// @dev Updates the high water mark if the current share price exceeds the previous mark
-    function updateGlobalWatermark() public {
+    function _updateGlobalWatermark() private {
         uint256 sp = _sharePrice();
         if (sp > _getBaseVaultModuleStorage().sharePriceWatermark) {
             _getBaseVaultModuleStorage().sharePriceWatermark = sp;
@@ -142,31 +198,13 @@ contract FeesModule is BaseVaultModule {
     /// @notice Returns the last time management fees were charged
     /// @return lastFeesChargedManagement Timestamp of last management fee charge
     function lastFeesChargedManagement() public view returns (uint256) {
-        return _lastFeesChargedManagement(_getBaseVaultModuleStorage());
+        return _getBaseVaultModuleStorage().lastFeesChargedManagement;
     }
 
     /// @notice Returns the last time performance fees were charged
     /// @return lastFeesChargedPerformance Timestamp of last performance fee charge
     function lastFeesChargedPerformance() public view returns (uint256) {
-        return _lastFeesChargedPerformance(_getBaseVaultModuleStorage());
-    }
-
-    /// @dev Helper function to calculate the last time management fees were charged
-    /// @return lastFeesChargedManagement Timestamp of last management fee charge
-    function _lastFeesChargedManagement(BaseVaultModuleStorage storage $) private view returns(uint256) {
-       uint256 currentTimestamp = block.timestamp;
-        uint256 initTimestamp = $.initTimestamp;
-        uint256 numIntervals = (currentTimestamp - initTimestamp) / MANAGEMENT_FEE_INTERVAL;
-        return initTimestamp + numIntervals * MANAGEMENT_FEE_INTERVAL;
-    }
-    
-    /// @dev Helper function to calculate the last time performance fees were charged
-    /// @return lastFeesChargedPerformance Timestamp of last performance fee charge
-    function _lastFeesChargedPerformance(BaseVaultModuleStorage storage $) private view returns(uint256) {
-        uint256 currentTimestamp = block.timestamp;
-        uint256 initTimestamp = $.initTimestamp;
-        uint256 numIntervals = (currentTimestamp - initTimestamp) / PERFORMANCE_FEE_INTERVAL;
-        return initTimestamp + numIntervals * PERFORMANCE_FEE_INTERVAL;
+        return _getBaseVaultModuleStorage().lastFeesChargedPerformance;
     }
 
     /// @notice Returns the current hurdle rate used for performance fee calculations
@@ -179,6 +217,18 @@ contract FeesModule is BaseVaultModule {
     /// @return The performance fee in basis points (e.g., 2000 = 20%)
     function performanceFee() public view returns (uint16) {
         return _getBaseVaultModuleStorage().performanceFee;
+    }
+
+    /// @notice Returns the next performance fee timestamp so the backend can schedule the fee collection
+    /// @return The next performance fee timestamp
+    function nextPerformanceFeeTimestamp() public view returns (uint256) {
+        return lastFeesChargedPerformance() + PERFORMANCE_FEE_INTERVAL;
+    }
+
+    /// @notice Returns the next management fee timestamp so the backend can schedule the fee collection
+    /// @return The next management fee timestamp
+    function nextManagementFeeTimestamp() public view returns (uint256) {
+        return lastFeesChargedManagement() + MANAGEMENT_FEE_INTERVAL;
     }
 
     /// @notice Returns the current management fee percentage
@@ -202,7 +252,7 @@ contract FeesModule is BaseVaultModule {
     /// @notice Returns the selectors for functions in this module
     /// @return selectors Array of function selectors
     function selectors() external pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](13);
+        bytes4[] memory moduleSelectors = new bytes4[](15);
         moduleSelectors[0] = this.setHurdleRate.selector;
         moduleSelectors[1] = this.setManagementFee.selector;
         moduleSelectors[2] = this.setPerformanceFee.selector;
@@ -214,8 +264,10 @@ contract FeesModule is BaseVaultModule {
         moduleSelectors[8] = this.managementFee.selector;
         moduleSelectors[9] = this.feeReceiver.selector;
         moduleSelectors[10] = this.sharePriceWatermark.selector;
-        moduleSelectors[11] = this.selectors.selector;
-        moduleSelectors[12] = this.updateGlobalWatermark.selector;
+        moduleSelectors[11] = this.nextPerformanceFeeTimestamp.selector;
+        moduleSelectors[12] = this.nextManagementFeeTimestamp.selector;
+        moduleSelectors[13] = this.notifyManagementFeesCharged.selector;
+        moduleSelectors[14] = this.notifyPerformanceFeesCharged.selector;
         return moduleSelectors;
     }
 }

@@ -140,6 +140,12 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
         return _registry().isRelayer(msg.sender);
     }
 
+    /// @notice Checks if an address is a guardian
+    /// @return Whether the address is a guardian
+    function _getGuardian() internal view returns (bool) {
+        return _registry().isGuardian(msg.sender);
+    }
+
     /// @notice Gets the current batch ID for a given vault
     /// @param vault The vault address
     /// @return batchId The current batch ID
@@ -228,6 +234,13 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /// @dev Only callable internally by inheriting contracts
     modifier onlyRelayer() {
         if (!_getRelayer()) revert OnlyRelayer();
+        _;
+    }
+
+    /// @notice Restricts function access to the guardian
+    /// @dev Only callable internally by inheriting contracts
+    modifier onlyGuardian() {
+        if (!_getGuardian()) revert();
         _;
     }
 

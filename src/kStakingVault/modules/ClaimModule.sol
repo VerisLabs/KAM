@@ -8,7 +8,7 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
-import { BaseVaultModule } from "src/kStakingVault/modules/base/BaseVaultModule.sol";
+import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title ClaimModule

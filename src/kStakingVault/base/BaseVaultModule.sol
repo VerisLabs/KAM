@@ -10,16 +10,23 @@ import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 
 import { Extsload } from "src/abstracts/Extsload.sol";
+
+import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
-import { FeesModule } from "src/kStakingVault/modules/FeesModule.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
-import {IAdapter} from "src/interfaces/IAdapter.sol";
+
+interface IFeesModule {
+    function computeLastBatchFees()
+        external
+        view
+        returns (uint256 managementFees, uint256 performanceFees, uint256 totalFees);
+}
 
 /// @title BaseVaultModule
 /// @notice Base contract for all modules
 /// @dev Provides shared storage, roles, and common functionality
-contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
+abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
     using FixedPointMathLib for uint256;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
 
@@ -86,27 +93,29 @@ contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsl
 
     /// @custom:storage-location erc7201.kam.storage.BaseVaultModule
     struct BaseVaultModuleStorage {
+        // 32 bytes slots
         uint256 currentBatch;
         bytes32 currentBatchId;
-        uint256 lastTotalAssets;
         uint256 sharePriceWatermark;
-        uint256 initTimestamp;
-        address registry;
-        address adapter;
-        address receiverImplementation;
-        uint96 dustAmount;
-        address underlyingAsset;
         uint256 requestCounter;
+        address registry;
+        address receiverImplementation;
+        address underlyingAsset;
         address kToken;
+        address feeReceiver;
+        // Mixed slot (19 bytes used)
+        uint96 dustAmount;
         uint8 decimals;
         uint16 hurdleRate;
-        bool initialized;
-        bool paused;
-        string name;
-        string symbol;
         uint16 performanceFee;
         uint16 managementFee;
-        address feeReceiver;
+        bool initialized;
+        bool paused;
+        bool isHardHurdleRate;
+        uint64 lastFeesChargedManagement;
+        uint64 lastFeesChargedPerformance;
+        string name;
+        string symbol;
         mapping(bytes32 => BaseVaultModuleTypes.BatchInfo) batches;
         mapping(bytes32 => BaseVaultModuleTypes.StakeRequest) stakeRequests;
         mapping(bytes32 => BaseVaultModuleTypes.UnstakeRequest) unstakeRequests;
@@ -138,7 +147,6 @@ contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsl
         address owner_,
         address admin_,
         address feeReceiver_,
-        address adapter_,
         bool paused_
     )
         internal
@@ -150,13 +158,13 @@ contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsl
 
         if (owner_ == address(0)) revert ZeroAddress();
         if (admin_ == address(0)) revert ZeroAddress();
-        if (adapter_ == address(0)) revert ZeroAddress();
 
         $.registry = registry_;
         $.paused = paused_;
         $.feeReceiver = feeReceiver_;
-        $.adapter = adapter_;
         $.initialized = true;
+        $.lastFeesChargedManagement = uint64(block.timestamp);
+        $.lastFeesChargedPerformance = uint64(block.timestamp);
 
         _initializeOwner(owner_);
         _grantRoles(admin_, ADMIN_ROLE);
@@ -281,7 +289,7 @@ contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsl
     function _convertToAssets(uint256 shares) internal view returns (uint256 assets) {
         uint256 totalSupply_ = totalSupply();
         if (totalSupply_ == 0) return shares;
-        return shares.fullMulDiv(totalSupply_, _totalAssetsVirtual());
+        return shares.fullMulDiv(totalSupply_, _totalNetAssets());
     }
 
     /// @notice Converts assets to shares
@@ -290,20 +298,14 @@ contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsl
     function _convertToShares(uint256 assets) internal view returns (uint256 shares) {
         uint256 totalSupply_ = totalSupply();
         if (totalSupply_ == 0) return assets;
-        return assets.fullMulDiv(_totalAssetsVirtual(), totalSupply_);
+        return assets.fullMulDiv(_totalNetAssets(), totalSupply_);
     }
 
     /// @notice Calculates stkTokens to mint for given kToken amount
     /// @dev Used in staking settlement operations
     /// @param kTokenAmount Amount of kTokens being staked
     /// @return stkTokens Amount of stkTokens to mint
-    function _calculateStkTokensToMint(
-        uint256 kTokenAmount
-    )
-        internal
-        pure
-        returns (uint256 stkTokens)
-    {
+    function _calculateStkTokensToMint(uint256 kTokenAmount) internal view returns (uint256 stkTokens) {
         return _convertToShares(kTokenAmount);
     }
 
@@ -311,13 +313,7 @@ contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsl
     /// @dev Used in unstaking settlement operations
     /// @param stkTokenAmount Amount of stkTokens being unstaked
     /// @return assetValue Equivalent asset value
-    function _calculateAssetValue(
-        uint256 stkTokenAmount
-    )
-        internal
-        pure
-        returns (uint256 assetValue)
-    {
+    function _calculateAssetValue(uint256 stkTokenAmount) internal view returns (uint256 assetValue) {
         return _convertToAssets(stkTokenAmount);
     }
 
@@ -330,13 +326,19 @@ contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsl
     /// @notice Returns the total assets in the vault
     /// @return totalAssets Total assets in the vault
     function _totalAssetsVirtual() internal view returns (uint256) {
-        return IAdapter(_getBaseVaultModuleStorage().adapter).totalAssets() - _accumulatedFees();
+        return IkToken(_getBaseVaultModuleStorage().underlyingAsset).balanceOf(address(this));
+    }
+
+    /// @notice Returns the total net assets in the vault
+    /// @return totalNetAssets Total net assets in the vault
+    function _totalNetAssets() internal view returns (uint256) {
+        return _totalNetAssets() - _accumulatedFees();
     }
 
     /// @notice Calculates accumulated fees
     /// @return accumulatedFees Accumulated fees
     function _accumulatedFees() internal view returns (uint256) {
-        (, , uint256 totalFees) = FeesModule(address(this)).computeLastBatchFees();
+        (,, uint256 totalFees) = IFeesModule(address(this)).computeLastBatchFees();
         return totalFees;
     }
 

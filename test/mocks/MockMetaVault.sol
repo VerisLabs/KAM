@@ -2,16 +2,15 @@
 pragma solidity ^0.8.19;
 
 import { ERC7540 } from "../vendor/ERC7540.sol";
-import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 /// @title MockMetaVault Contract for MetaVault Modules
 /// @author Unlockd
 /// @notice Base storage contract containing all shared state variables and helper functions for MetaVault modules
 /// @dev Implements role-based access control and core vault functionality
 contract MockMetaVault is ERC7540, OwnableRoles {
-
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                           CONSTANTS                        */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -71,7 +70,6 @@ contract MockMetaVault is ERC7540, OwnableRoles {
     /// @notice ERC20 symbol
     string internal _symbol;
 
-
     constructor(address asset_, string memory name_, string memory symbol_) {
         _asset = asset_;
         _name = name_;
@@ -92,7 +90,6 @@ contract MockMetaVault is ERC7540, OwnableRoles {
             return a - b > a ? 0 : a - b;
         }
     }
-
 
     /// @dev Private helper to return `x + 1` without the overflow check.
     /// Used for computing the denominator input to `FixedPointMathLib.fullMulDiv(a, b, x + 1)`.

@@ -30,12 +30,16 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @custom:storage-location erc7201:kam.storage.kAssetRouter
     struct kAssetRouterStorage {
         mapping(address account => mapping(bytes32 batchId => Balances)) vaultBatchBalances;
-        mapping(address => mapping(bytes32 batchId => uint256)) vaultRequestedShares;
+        mapping(address vault => mapping(bytes32 batchId => uint256)) vaultRequestedShares;
+        mapping(bytes32 proposalId => VaultSettlementProposal) settlementProposals;
+        uint256 vaultSettlementCooldown;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kAssetRouter")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant KASSETROUTER_STORAGE_LOCATION =
         0x72fdaf6608fcd614cdab8afd23d0b707bfc44e685019cc3a5ace611655fe7f00;
+
+    uint256 private constant DEFAULT_VAULT_SETTLEMENT_COOLDOWN = 1 hours;
 
     function _getkAssetRouterStorage() private pure returns (kAssetRouterStorage storage $) {
         assembly {
@@ -72,6 +76,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @param paused_ Initial pause state
     function initialize(address registry_, address owner_, address admin_, bool paused_) external initializer {
         __kBase_init(registry_, owner_, admin_, paused_);
+
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        $.vaultSettlementCooldown = DEFAULT_VAULT_SETTLEMENT_COOLDOWN;
 
         emit Initialized(registry_, owner_, admin_, paused_);
     }
@@ -124,7 +131,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         if (amount == 0) revert ZeroAmount();
         address kMinter = msg.sender;
         address vault = _getDNVaultByAsset(_asset);
-        if (_virtualBalance(vault) < amount) revert InsufficientVirtualBalance();
+        if (_virtualBalance(vault, _asset) < amount) revert InsufficientVirtualBalance();
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         $.vaultBatchBalances[kMinter][batchId].requested += amount.toUint128();
@@ -163,7 +170,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
-        if (_virtualBalance(sourceVault) < amount) revert InsufficientVirtualBalance();
+        if (_virtualBalance(sourceVault, _asset) < amount) revert InsufficientVirtualBalance();
         // Update batch tracking for settlement
         $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
         $.vaultBatchBalances[sourceVault][batchId].deposited -= amount.toUint128();
@@ -224,14 +231,16 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                             SETTLEMENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Settle a single vault's batch
+    /// @notice Propose a settlement for a vault's batch
+    /// @param asset Asset address
     /// @param vault Vault address to settle
     /// @param batchId Batch ID to settle
-    /// @param totalAssets_ total assets in the vault with Deposited and Requested and Shares
-    /// @param netted netted amount in current batch
-    /// @param yield yield in current batch
-    /// @param profit whether the batch is profitable
-    function settleBatch(
+    /// @param totalAssets_ Total assets in the vault with Deposited and Requested and Shares
+    /// @param netted Netted amount in current batch
+    /// @param yield Yield in current batch
+    /// @param profit Whether the batch is profitable
+    /// @return proposalId The unique identifier for this proposal
+    function proposeSettleBatch(
         address asset,
         address vault,
         bytes32 batchId,
@@ -245,8 +254,88 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         nonReentrant
         whenNotPaused
         onlyRelayer
+        returns (bytes32 proposalId)
     {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+
+        // Generate unique proposal ID
+        proposalId = keccak256(abi.encodePacked(vault, batchId, block.timestamp));
+
+        // Check if proposal already exists
+        if ($.settlementProposals[proposalId].proposedAt != 0) {
+            revert("Proposal already exists");
+        }
+
+        // Store the proposal
+        $.settlementProposals[proposalId] = VaultSettlementProposal({
+            asset: asset,
+            vault: vault,
+            batchId: batchId,
+            totalAssets: totalAssets_,
+            netted: netted,
+            yield: yield,
+            profit: profit,
+            proposedAt: block.timestamp,
+            executed: false,
+            disputed: false
+        });
+
+        uint256 executeAfter = block.timestamp + $.vaultSettlementCooldown;
+
+        emit SettlementProposed(proposalId, vault, batchId, totalAssets_, netted, yield, profit, executeAfter);
+    }
+
+    /// @notice Dispute a settlement proposal
+    /// @param proposalId The proposal ID to dispute
+    function disputeSettleBatch(bytes32 proposalId) external onlyGuardian {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
+
+        if (proposal.proposedAt == 0) revert ProposalNotFound();
+        if (proposal.executed) revert ProposalAlreadyExecuted();
+        if (proposal.disputed) revert("Proposal already disputed");
+
+        proposal.disputed = true;
+
+        emit SettlementDisputed(proposalId, proposal.vault, proposal.batchId, msg.sender);
+    }
+
+    /// @notice Execute a settlement proposal after cooldown period
+    /// @param proposalId The proposal ID to execute
+    function executeSettleBatch(bytes32 proposalId) external nonReentrant whenNotPaused {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
+
+        // Validations
+        if (proposal.proposedAt == 0) revert ProposalNotFound();
+        if (proposal.executed) revert ProposalAlreadyExecuted();
+        if (proposal.disputed) revert ProposalDisputed();
+        if (block.timestamp < proposal.proposedAt + $.vaultSettlementCooldown) {
+            revert CooldownNotPassed();
+        }
+
+        // Mark as executed
+        proposal.executed = true;
+
+        // Execute the settlement logic
+        _executeSettlement(proposal);
+
+        emit SettlementExecuted(proposalId, proposal.vault, proposal.batchId, msg.sender);
+    }
+
+    /// @notice Internal function to execute settlement logic
+    /// @param proposal The settlement proposal to execute
+    function _executeSettlement(VaultSettlementProposal storage proposal) private {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+
+        address asset = proposal.asset;
+        address vault = proposal.vault;
+        bytes32 batchId = proposal.batchId;
+        uint256 totalAssets_ = proposal.totalAssets;
+        uint256 netted = proposal.netted;
+        uint256 yield = proposal.yield;
+        bool profit = proposal.profit;
+
         address kToken = _getKTokenForAsset(asset);
         bool isKMinter; // for event Deposited
         uint256 requested = $.vaultBatchBalances[vault][batchId].requested;
@@ -310,26 +399,72 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         emit Paused(paused);
     }
 
+    /// @notice Set the cooldown period for settlement proposals
+    /// @param cooldown New cooldown period in seconds
+    function setSettlementCooldown(uint256 cooldown) external onlyRoles(ADMIN_ROLE) {
+        if (cooldown == 0 || cooldown > 7 days) revert InvalidCooldown();
+
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        uint256 oldCooldown = $.vaultSettlementCooldown;
+        $.vaultSettlementCooldown = cooldown;
+
+        emit SettlementCooldownUpdated(oldCooldown, cooldown);
+    }
+
     /*//////////////////////////////////////////////////////////////
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Get details of a settlement proposal
+    /// @param proposalId The proposal ID
+    /// @return proposal The settlement proposal details
+    function getSettlementProposal(bytes32 proposalId)
+        external
+        view
+        returns (VaultSettlementProposal memory proposal)
+    {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        proposal = $.settlementProposals[proposalId];
+    }
+
+    /// @notice Check if a proposal can be executed
+    /// @param proposalId The proposal ID
+    /// @return canExecute Whether the proposal can be executed
+    /// @return reason Reason if cannot execute
+    function canExecuteProposal(bytes32 proposalId) external view returns (bool canExecute, string memory reason) {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
+
+        if (proposal.proposedAt == 0) {
+            return (false, "Proposal not found");
+        }
+        if (proposal.executed) {
+            return (false, "Already executed");
+        }
+        if (proposal.disputed) {
+            return (false, "Proposal disputed");
+        }
+        if (block.timestamp < proposal.proposedAt + $.vaultSettlementCooldown) {
+            return (false, "Cooldown not passed");
+        }
+
+        return (true, "");
+    }
+
+    /// @notice Get the current settlement cooldown period
+    /// @return cooldown The cooldown period in seconds
+    function getSettlementCooldown() external view returns (uint256) {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        return $.vaultSettlementCooldown;
+    }
+
     /// @notice gets the virtual balance of a vault
     /// @param vault the vault address
+    /// @param asset the asset address
     /// @return balance the balance of the vault in all adapters.
-    function _virtualBalance(address vault) internal view returns (uint256 balance) {
-        address[] memory assets = _getVaultAssets(vault);
-        address[] memory adapters = _registry().getAdapters(vault);
-        uint256 length = adapters.length;
-        for (uint256 i; i < length;) {
-            IAdapter adapter = IAdapter(adapters[i]);
-            // For now, assume single asset per vault (use first asset)
-            balance += adapter.totalAssets(vault, assets[0]);
-
-            unchecked {
-                ++i;
-            }
-        }
+    function _virtualBalance(address vault, address asset) internal view returns (uint256 balance) {
+        address kToken = _getKTokenForAsset(asset);
+        return IkToken(kToken).balanceOf(vault);
     }
 
     /// @notice Check if contract is paused

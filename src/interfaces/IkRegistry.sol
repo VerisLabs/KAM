@@ -305,6 +305,7 @@ interface IkRegistry {
     function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address);
     function getVaultType(address vault) external view returns (uint8);
     function isRelayer(address account) external view returns (bool);
+    function isGuardian(address account) external view returns (bool);
     function isRegisteredAsset(address asset) external view returns (bool);
     function isVault(address vault) external view returns (bool);
     function isSingletonContract(address contractAddress) external view returns (bool);

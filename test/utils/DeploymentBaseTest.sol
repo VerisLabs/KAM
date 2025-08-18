@@ -216,6 +216,8 @@ contract DeploymentBaseTest is BaseTest {
         (bool success,) = assetRouterProxy.call(initData);
         require(success, "AssetRouter initialization failed");
         assetRouter = kAssetRouter(payable(assetRouterProxy));
+        vm.prank(users.admin);
+        assetRouter.setSettlementCooldown(0);
 
         // Label for debugging
         vm.label(address(assetRouter), "kAssetRouter");
@@ -414,6 +416,7 @@ contract DeploymentBaseTest is BaseTest {
         // Grant factory role to admin for vault registration
         vm.prank(users.owner);
         registry.grantRoles(users.admin, 2); // FACTORY_ROLE = _ROLE_1 = 2
+        registry.grantRoles(users.guardian, 4); // GUARDIAN_ROLE = _ROLE_2 = 4
 
         vm.startPrank(users.admin);
 

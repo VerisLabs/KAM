@@ -5,7 +5,7 @@ import { LibClone } from "solady/utils/LibClone.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
-import { BaseVaultModule } from "src/kStakingVault/modules/base/BaseVaultModule.sol";
+import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title BatchModule

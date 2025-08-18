@@ -22,6 +22,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     uint256 internal constant ADMIN_ROLE = _ROLE_0;
     uint256 internal constant FACTORY_ROLE = _ROLE_1;
     uint256 internal constant RELAYER_ROLE = _ROLE_2;
+    uint256 internal constant GUARDIAN_ROLE = _ROLE_3;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
@@ -282,6 +283,10 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @return Whether the caller is the relayer
     function isRelayer(address account) external view returns (bool) {
         return hasAnyRole(account, RELAYER_ROLE);
+    }
+
+    function isGuardian(address account) external view returns (bool) {
+        return hasAnyRole(account, GUARDIAN_ROLE);
     }
 
     /// @notice Check if an asset is supported

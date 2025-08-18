@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { ERC4626 } from "solady/tokens/ERC4626.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
