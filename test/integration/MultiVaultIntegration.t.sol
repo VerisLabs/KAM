@@ -14,7 +14,6 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 contract MultiVaultIntegrationTest is IntegrationBaseTest {
     /// @dev Set up modules for all vaults to support batch operations
     function setUp() public override {
-        useMetaVault = true;
         super.setUp();
 
         // Register BatchModule and ClaimModule with all vaults
@@ -73,7 +72,7 @@ contract MultiVaultIntegrationTest is IntegrationBaseTest {
 
         // Validate initial state - DN vault receives assets from kMinter deposits
         assertVirtualBalance(
-            address(minter),
+            address(dnVault),
             USDC_MAINNET,
             institutionalMint,
             "DN vault should have virtual balance from settled deposits"
@@ -300,8 +299,8 @@ contract MultiVaultIntegrationTest is IntegrationBaseTest {
         // Validate protocol stability under extreme load
         // DN vault (type 1) uses adapter totalAssets, others use virtual balance
         uint256 finalTotalAssets = custodialAdapter.totalAssets(address(dnVault), USDC_MAINNET)
-            + metaVaultAdapter.totalAssets(address(alphaVault), USDC_MAINNET)
-            + metaVaultAdapter.totalAssets(address(betaVault), USDC_MAINNET);
+            + custodialAdapter.totalAssets(address(alphaVault), USDC_MAINNET)
+            + custodialAdapter.totalAssets(address(betaVault), USDC_MAINNET);
 
         // Only institutional assets (no retail staking in this test)
         uint256 expectedTotal = totalInstitutional;

@@ -42,14 +42,9 @@ import { ClaimModule } from "src/kStakingVault/modules/ClaimModule.sol";
 
 import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
 import { CustodialAdapter } from "src/adapters/CustodialAdapter.sol";
-import { MetaVaultAdapter } from "src/adapters/MetaVaultAdapter.sol";
 
 // Interfaces
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-
-// Mocks
-
-import {MockMetaVault} from "../mocks/MockMetaVault.sol";
 
 /// @title DeploymentBaseTest
 /// @notice Comprehensive base test contract that deploys the complete KAM protocol
@@ -88,9 +83,7 @@ contract DeploymentBaseTest is BaseTest {
 
     // Adapters
     CustodialAdapter public custodialAdapter;
-    MetaVaultAdapter public metaVaultAdapter;
     CustodialAdapter public custodialAdapterImpl;
-    MetaVaultAdapter public metaVaultAdapterImpl;
 
     // Implementation contracts (for upgrades)
     kRegistry public registryImpl;
@@ -98,7 +91,6 @@ contract DeploymentBaseTest is BaseTest {
     kToken public kTokenImpl;
     kMinter public minterImpl;
     kStakingVault public stakingVaultImpl;
-    MockMetaVault public mockMetaVault;
 
     /*//////////////////////////////////////////////////////////////
                         TEST CONFIGURATION
@@ -167,7 +159,6 @@ contract DeploymentBaseTest is BaseTest {
 
         // 5. Deploy kStakingVaults + Modules (needs registry, assetRouter, tokens)
         _deployStakingVaults();
-
 
         // 6. Deploy adapters (needs registry, independent of other components)
         _deployAdapters();
@@ -364,7 +355,6 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Deploy adapters for external strategy integrations
     function _deployAdapters() internal {
-
         // Deploy CustodialAdapter implementation
         custodialAdapterImpl = new CustodialAdapter();
 
@@ -378,28 +368,11 @@ contract DeploymentBaseTest is BaseTest {
         require(success1, "CustodialAdapter initialization failed");
         custodialAdapter = CustodialAdapter(custodialProxy);
 
-        // Deploy MetaVaultAdapter implementation and proxy
-        metaVaultAdapterImpl = new MetaVaultAdapter();
-
-        // Deploy proxy with initialization (same pattern as other contracts)
-        bytes memory metaVaultInitData =
-            abi.encodeWithSelector(MetaVaultAdapter.initialize.selector, address(registry), users.owner, users.admin);
-
-        address metaVaultProxy = address(metaVaultAdapterImpl).clone();
-        (bool success2,) = metaVaultProxy.call(metaVaultInitData);
-        require(success2, "MetaVaultAdapter initialization failed");
-        metaVaultAdapter = MetaVaultAdapter(metaVaultProxy);
-
         vm.startPrank(users.admin);
 
-        mockMetaVault = new MockMetaVault(USDC_MAINNET, "Max APY USDC", "maxUSDC");
-
-        console2.log("admin  DEPLOYMENT BASE _deployAdapters: ", users.admin);
-
-          // Register assets and kTokens
+        // Register assets and kTokens
         registry.registerAsset(USDC_MAINNET, address(kUSD), registry.USDC());
         registry.registerAsset(WBTC_MAINNET, address(kBTC), registry.WBTC());
-
 
         // Register kMinter as vault (MINTER type = 0 - for institutional operations)
         registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, USDC_MAINNET);
@@ -413,19 +386,11 @@ contract DeploymentBaseTest is BaseTest {
         // Register Beta vault (BETA type = 3 - advanced strategies)
         registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, USDC_MAINNET);
 
-        metaVaultAdapter.setVaultDestination(address(dnVault), USDC_MAINNET, address(mockMetaVault));
-        metaVaultAdapter.setVaultDestination(address(minter), USDC_MAINNET, address(mockMetaVault));
-        metaVaultAdapter.setVaultDestination(address(alphaVault), USDC_MAINNET, address(mockMetaVault));
-        metaVaultAdapter.setVaultDestination(address(betaVault), USDC_MAINNET, address(mockMetaVault));
-
         vm.stopPrank();
 
         // Label for debugging
         vm.label(address(custodialAdapter), "CustodialAdapter");
-        vm.label(address(metaVaultAdapter), "MetaVaultAdapter");
         vm.label(address(custodialAdapterImpl), "CustodialAdapterImpl");
-        vm.label(address(metaVaultAdapterImpl), "MetaVaultAdapterImpl");
-        vm.label(address(mockMetaVault), "MockMetaVault");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -435,8 +400,6 @@ contract DeploymentBaseTest is BaseTest {
     /// @dev Configure protocol contracts with registry integration
     function _configureProtocol() internal {
         vm.startPrank(users.admin);
-
-        console2.log("admin : ", users.admin);
 
         // Register assets and kTokens
         registry.registerAsset(USDC_MAINNET, address(kUSD), registry.USDC());
@@ -449,13 +412,12 @@ contract DeploymentBaseTest is BaseTest {
         vm.prank(users.owner);
         registry.grantRoles(users.admin, 2); // FACTORY_ROLE = _ROLE_1 = 2
         vm.prank(users.owner);
-        registry.grantRoles(users.guardian, 4); // GUARDIAN_ROLE = _ROLE_2 = 4
+        registry.grantRoles(users.guardian, 8); // GUARDIAN_ROLE = _ROLE_3 = 8
 
         vm.startPrank(users.admin);
 
         // Register adapters for vaults (if adapters were deployed)
         if (address(custodialAdapter) != address(0)) {
-            console2.log("custodial adapter registered ");
             registry.registerAdapter(address(dnVault), address(custodialAdapter));
             registry.registerAdapter(address(alphaVault), address(custodialAdapter));
             registry.registerAdapter(address(betaVault), address(custodialAdapter));
@@ -465,8 +427,6 @@ contract DeploymentBaseTest is BaseTest {
             custodialAdapter.setVaultDestination(address(dnVault), users.treasury);
             custodialAdapter.setVaultDestination(address(alphaVault), users.treasury);
             custodialAdapter.setVaultDestination(address(betaVault), users.treasury);
-        } else {
-            console2.log("custodial adapter not deployed");
         }
 
         vm.stopPrank();
