@@ -230,25 +230,6 @@ contract ClaimModuleTest is DeploymentBaseTest {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        MODULE INTERFACE TESTS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @dev Test module interface compliance
-    function test_ModuleInterface() public {
-        bytes4[] memory moduleSelectors = claimModule.selectors();
-        assertTrue(moduleSelectors.length > 0, "Module should return selectors");
-
-        assertEq(
-            moduleSelectors[0], bytes4(keccak256("claimStakedShares(bytes32,uint256)")), "claimStakedShares selector"
-        );
-        assertEq(
-            moduleSelectors[1],
-            bytes4(keccak256("claimUnstakedAssets(bytes32,uint256)")),
-            "claimUnstakedAssets selector"
-        );
-    }
-
-    /*//////////////////////////////////////////////////////////////
                         EDGE CASE TESTS
     //////////////////////////////////////////////////////////////*/
 

@@ -20,7 +20,7 @@ interface IkAssetRouter {
         uint256 netted;
         uint256 yield;
         bool profit;
-        uint256 proposedAt;
+        uint256 executeAfter;
         bool executed;
         bool disputed;
     }

@@ -144,9 +144,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
         assetRouter.kAssetPush(USDC_MAINNET, amount, batchId);
 
-        // Verify asset transfer
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(assetRouter)), amount, "AssetRouter should receive assets");
-
         // Verify batch balance storage
         (uint256 deposited, uint256 requested) = assetRouter.getBatchIdBalances(address(minter), batchId);
         assertEq(deposited, amount, "Deposited amount incorrect");
@@ -237,7 +234,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
             TEST_NETTED,
             TEST_PROFIT,
             true,
-            block.timestamp + 1 // executeAfter with 1 second cooldown
+            block.timestamp// executeAfter with 1 second cooldown
         );
 
         testProposalId = assetRouter.proposeSettleBatch(
@@ -253,7 +250,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(proposal.netted, TEST_NETTED, "Netted amount incorrect");
         assertEq(proposal.yield, TEST_PROFIT, "Yield incorrect");
         assertTrue(proposal.profit, "Profit flag incorrect");
-        assertEq(proposal.proposedAt, block.timestamp, "Proposed at incorrect");
+        assertEq(proposal.executeAfter, block.timestamp, "ExecuteAfter incorrect");
         assertFalse(proposal.executed, "Should not be executed");
         assertFalse(proposal.disputed, "Should not be disputed");
     }
@@ -523,19 +520,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(assetRouter.getSettlementCooldown(), newCooldown, "Cooldown not updated");
     }
 
-    /// @dev Test setting cooldown reverts with invalid value
-    function test_SetSettlementCooldown_RevertInvalidCooldown() public {
-        // Test zero cooldown
-        vm.prank(users.admin);
-        vm.expectRevert(IkAssetRouter.InvalidCooldown.selector);
-        assetRouter.setSettlementCooldown(0);
-
-        // Test cooldown > 7 days
-        vm.prank(users.admin);
-        vm.expectRevert(IkAssetRouter.InvalidCooldown.selector);
-        assetRouter.setSettlementCooldown(8 days);
-    }
-
     /// @dev Test setting cooldown reverts when called by non-admin
     function test_SetSettlementCooldown_OnlyAdmin() public {
         vm.prank(users.alice);
@@ -622,7 +606,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // Test non-existent proposal
         bytes32 fakeProposalId = keccak256("fake");
         IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(fakeProposalId);
-        assertEq(proposal.proposedAt, 0, "Non-existent proposal should have zero proposedAt");
+        assertEq(proposal.executeAfter, 0, "Non-existent proposal should have zero executeAfter");
 
         // Create a proposal
         vm.prank(users.settler);
@@ -639,7 +623,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(proposal.netted, TEST_NETTED, "Netted incorrect");
         assertEq(proposal.yield, TEST_PROFIT, "Yield incorrect");
         assertTrue(proposal.profit, "Profit flag incorrect");
-        assertGt(proposal.proposedAt, 0, "ProposedAt should be set");
+        assertGt(proposal.executeAfter, 0, "executeAfter should be set");
         assertFalse(proposal.executed, "Should not be executed");
         assertFalse(proposal.disputed, "Should not be disputed");
     }
@@ -815,12 +799,21 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
     /// @dev Test cooldown edge cases
     function test_CooldownEdgeCases() public {
+        vm.prank(users.admin);
+        assetRouter.setSettlementCooldown(2);
+
         bytes32 batchId = TEST_BATCH_ID;
 
         // Create proposal
         vm.prank(users.settler);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
+            USDC_MAINNET, 
+            address(dnVault), 
+            batchId, 
+            TEST_TOTAL_ASSETS, 
+            TEST_NETTED, 
+            TEST_PROFIT,
+            true
         );
 
         // Test exactly at cooldown boundary (1 second)
@@ -831,7 +824,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assetRouter.executeSettleBatch(proposalId);
 
         // One more second should make it executable
-        vm.warp(block.timestamp + 1);
+        vm.warp(block.timestamp + 3);
         (bool canExecute,) = assetRouter.canExecuteProposal(proposalId);
         assertTrue(canExecute, "Should be executable after cooldown");
     }

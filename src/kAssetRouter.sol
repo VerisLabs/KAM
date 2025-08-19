@@ -263,9 +263,11 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         proposalId = keccak256(abi.encodePacked(vault, batchId, block.timestamp));
 
         // Check if proposal already exists
-        if ($.settlementProposals[proposalId].proposedAt != 0) {
+        if ($.settlementProposals[proposalId].executeAfter != 0) {
             revert("Proposal already exists");
         }
+
+        uint256 executeAfter = block.timestamp + $.vaultSettlementCooldown;
 
         // Store the proposal
         $.settlementProposals[proposalId] = VaultSettlementProposal({
@@ -276,12 +278,11 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             netted: netted,
             yield: yield,
             profit: profit,
-            proposedAt: block.timestamp,
+            executeAfter: executeAfter,
             executed: false,
             disputed: false
         });
 
-        uint256 executeAfter = block.timestamp + $.vaultSettlementCooldown;
 
         emit SettlementProposed(proposalId, vault, batchId, totalAssets_, netted, yield, profit, executeAfter);
     }
@@ -292,7 +293,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
-        if (proposal.proposedAt == 0) revert ProposalNotFound();
+        if (proposal.executeAfter == 0) revert ProposalNotFound();
         if (proposal.executed) revert ProposalAlreadyExecuted();
         if (proposal.disputed) revert("Proposal already disputed");
 
@@ -308,10 +309,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
         // Validations
-        if (proposal.proposedAt == 0) revert ProposalNotFound();
+        if (proposal.executeAfter == 0) revert ProposalNotFound();
         if (proposal.executed) revert ProposalAlreadyExecuted();
         if (proposal.disputed) revert ProposalDisputed();
-        if (block.timestamp < proposal.proposedAt + $.vaultSettlementCooldown) {
+        if (block.timestamp < proposal.executeAfter) {
             revert CooldownNotPassed();
         }
 
@@ -436,7 +437,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
-        if (proposal.proposedAt == 0) {
+        if (proposal.executeAfter == 0) {
             return (false, "Proposal not found");
         }
         if (proposal.executed) {
@@ -445,7 +446,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         if (proposal.disputed) {
             return (false, "Proposal disputed");
         }
-        if (block.timestamp < proposal.proposedAt + $.vaultSettlementCooldown) {
+        if (block.timestamp < proposal.executeAfter) {
             return (false, "Cooldown not passed");
         }
 
