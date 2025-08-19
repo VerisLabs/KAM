@@ -16,13 +16,12 @@ interface IkMinter {
     }
 
     struct RedeemRequest {
-        bytes32 id;
         address user;
-        uint96 amount;
+        uint256 amount;
         address asset;
         uint64 requestTimestamp;
-        uint8 status;
-        uint24 batchId;
+        RequestStatus status;
+        bytes32 batchId;
         address recipient;
     }
 
@@ -31,14 +30,14 @@ interface IkMinter {
     //////////////////////////////////////////////////////////////*/
 
     event Initialized(address indexed registry, address indexed owner, address admin, address emergencyAdmin);
-    event Minted(address indexed to, uint256 amount, uint32 batchId);
+    event Minted(address indexed to, uint256 amount, bytes32 batchId);
     event RedeemRequestCreated(
         bytes32 indexed requestId,
         address indexed user,
         address indexed kToken,
         uint256 amount,
         address recipient,
-        uint24 batchId
+        bytes32 batchId
     );
     event Redeemed(bytes32 indexed requestId);
     event Cancelled(bytes32 indexed requestId);

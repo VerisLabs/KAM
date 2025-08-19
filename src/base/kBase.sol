@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 /// @title kBase
 /// @notice Base contract providing common functionality for all KAM protocol contracts
@@ -40,8 +41,7 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     error AssetNotSupported(address asset);
     error InvalidVault(address vault);
     error OnlyKMinter();
-    error OnlyKAssetRouter();
-    error OnlyKBatch();
+    error OnlyGuardian();
     error OnlyRelayer();
 
     /*//////////////////////////////////////////////////////////////
@@ -58,6 +58,12 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kBase")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant KBASE_STORAGE_LOCATION = 0xe91688684975c4d7d54a65dd96da5d4dcbb54b8971c046d5351d3c111e43a800;
 
+    /*//////////////////////////////////////////////////////////////
+                              STORAGE GETTER
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Returns the kBase storage
+    /// @return $ Storage struct containing registry, initialized, and paused states
     function _getBaseStorage() internal pure returns (kBaseStorage storage $) {
         assembly {
             $.slot := KBASE_STORAGE_LOCATION
@@ -96,10 +102,8 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /// @notice Returns the registry contract address
     /// @return The kRegistry contract address
     /// @dev Reverts if contract not initialized
-    function registry() public view returns (address) {
-        kBaseStorage storage $ = _getBaseStorage();
-        if (!$.initialized) revert NotInitialized();
-        return $.registry;
+    function registry() external view returns (address) {
+        return address(_registry());
     }
 
     /// @notice Returns the registry contract interface
@@ -137,6 +141,20 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
         return _registry().isRelayer(msg.sender);
     }
 
+    /// @notice Checks if an address is a guardian
+    /// @return Whether the address is a guardian
+    function _getGuardian() internal view returns (bool) {
+        return _registry().isGuardian(msg.sender);
+    }
+
+    /// @notice Gets the current batch ID for a given vault
+    /// @param vault The vault address
+    /// @return batchId The current batch ID
+    /// @dev Reverts if vault not registered
+    function _getBatchId(address vault) internal view returns (bytes32 batchId) {
+        return IkStakingVault(vault).getBatchId();
+    }
+
     /*//////////////////////////////////////////////////////////////
                           ASSET HELPERS
     //////////////////////////////////////////////////////////////*/
@@ -153,7 +171,7 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /// @notice Checks if an asset is supported by the protocol
     /// @param asset The asset address to check
     /// @return Whether the asset is supported
-    function _isAssetSupported(address asset) internal view returns (bool) {
+    function _isAssetRegistered(address asset) internal view returns (bool) {
         return _registry().isRegisteredAsset(asset);
     }
 
@@ -163,19 +181,11 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
 
     /// @notice Gets the asset managed by a vault
     /// @param vault The vault address
-    /// @return asset The asset address managed by the vault
+    /// @return assets The asset address managed by the vault
     /// @dev Reverts if vault not registered
-    function _getVaultAsset(address vault) internal view returns (address asset) {
-        asset = _registry().getVaultAsset(vault);
-        if (asset == address(0)) revert InvalidVault(vault);
-    }
-
-    /// @notice Gets the type of a vault
-    /// @param vault The vault address
-    /// @return vaultType The type of the vault
-    /// @dev Reverts if vault not registered
-    function _getVaultType(address vault) internal view returns (uint8 vaultType) {
-        vaultType = _registry().getVaultType(vault);
+    function _getVaultAssets(address vault) internal view returns (address[] memory assets) {
+        assets = _registry().getVaultAssets(vault);
+        if (assets.length == 0) revert InvalidVault(vault);
     }
 
     /// @notice Gets the DN vault address for a given asset
@@ -194,6 +204,9 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
         return _registry().isVault(vault);
     }
 
+    /// @notice Checks if an asset is registered
+    /// @param asset The asset address to check
+    /// @return Whether the asset is registered
     function _isRegisteredAsset(address asset) internal view returns (bool) {
         return _registry().isRegisteredAsset(asset);
     }
@@ -225,10 +238,17 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
         _;
     }
 
+    /// @notice Restricts function access to the guardian
+    /// @dev Only callable internally by inheriting contracts
+    modifier onlyGuardian() {
+        if (!_getGuardian()) revert OnlyGuardian();
+        _;
+    }
+
     /// @notice Ensures the asset is supported by the protocol
     /// @param asset The asset address to validate
     modifier onlyRegisteredAsset(address asset) {
-        if (!_isAssetSupported(asset)) revert AssetNotSupported(asset);
+        if (!_isAssetRegistered(asset)) revert AssetNotSupported(asset);
         _;
     }
 }

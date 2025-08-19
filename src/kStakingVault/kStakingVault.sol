@@ -2,28 +2,29 @@
 pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { ERC20 } from "solady/tokens/ERC20.sol";
+
+import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import { Extsload } from "src/abstracts/Extsload.sol";
-import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
-import { IkToken } from "src/interfaces/IkToken.sol";
 
-import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
-import { MultiFacetProxy } from "src/kStakingVault/modules/MultiFacetProxy.sol";
-import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
+import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
+import { kBatchReceiver } from "src/kBatchReceiver.sol";
 
-// Using imported IkAssetRouter interface
+import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title kStakingVault
 /// @notice Pure ERC20 vault with dual accounting for minter and user pools
 /// @dev Implements automatic yield distribution from minter to user pools with modular architecture
-contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, MultiFacetProxy {
+contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, MultiFacetProxy {
+    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using SafeTransferLib for address;
+    using FixedPointMathLib for uint256;
     using SafeCastLib for uint256;
     using SafeCastLib for uint128;
 
@@ -32,7 +33,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Disables initializers to prevent implementation contract initialization
-    constructor() MultiFacetProxy(ADMIN_ROLE) {
+    constructor() {
         _disableInitializers();
     }
 
@@ -57,7 +58,8 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
         uint8 decimals_,
         uint128 dustAmount_,
         address emergencyAdmin_,
-        address asset_
+        address asset_,
+        address feeCollector_
     )
         external
         initializer
@@ -68,16 +70,21 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
         if (emergencyAdmin_ == address(0)) revert ZeroAddress();
 
         // Initialize ownership and roles
-        __ModuleBase_init(registry_, owner_, admin_, paused_);
+        __BaseVaultModule_init(registry_, owner_, admin_, feeCollector_, paused_);
+        __MultiFacetProxy__init(ADMIN_ROLE);
         _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);
 
         // Initialize storage with optimized packing
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         $.name = name_;
         $.symbol = symbol_;
         $.decimals = decimals_;
         $.underlyingAsset = asset_;
         $.dustAmount = dustAmount_.toUint96();
+        $.kToken = _registry().assetToKToken(asset_);
+        $.receiverImplementation = address(new kBatchReceiver(_registry().getContractById(K_MINTER)));
+
+        emit Initialized(registry_, owner_, admin_);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -86,53 +93,48 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
 
     /// @notice Request to stake kTokens for stkTokens (rebase token)
     /// @param to Address to receive the stkTokens
-    /// @param kTokensAmount Amount of kTokens to stake
-    /// @param minStkTokens Minimum stkTokens to receive
+    /// @param amount Amount of kTokens to stake
     /// @return requestId Request ID for this staking request
     function requestStake(
         address to,
-        uint96 kTokensAmount,
-        uint96 minStkTokens
+        uint256 amount
     )
         external
         payable
         nonReentrant
         whenNotPaused
-        returns (uint256 requestId)
+        returns (bytes32 requestId)
     {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
-        if (kTokensAmount == 0) revert ZeroAmount();
-        address kToken = _getKTokenForAsset($.underlyingAsset);
-        if (IkToken(kToken).balanceOf(msg.sender) < kTokensAmount) revert InsufficientBalance();
-        if (kTokensAmount < $.dustAmount) revert AmountBelowDustThreshold();
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (amount == 0) revert ZeroAmount();
+        if ($.kToken.balanceOf(msg.sender) < amount) revert InsufficientBalance();
+        if (amount < $.dustAmount) revert AmountBelowDustThreshold();
 
-        uint256 batchId = $.currentBatchId;
+        bytes32 batchId = $.currentBatchId;
 
         // Generate request ID
-        requestId = _createStakeRequestId(msg.sender, kTokensAmount, block.timestamp);
+        requestId = _createStakeRequestId(msg.sender, amount, block.timestamp);
 
         // Create staking request
-        $.stakeRequests[requestId] = BaseModuleTypes.StakeRequest({
-            id: requestId,
+        $.stakeRequests[requestId] = BaseVaultModuleTypes.StakeRequest({
             user: msg.sender,
-            kTokenAmount: kTokensAmount,
+            kTokenAmount: amount.toUint128(),
             recipient: to,
-            requestTimestamp: SafeCastLib.toUint64(block.timestamp),
-            status: uint8(BaseModuleTypes.RequestStatus.PENDING),
-            minStkTokens: minStkTokens,
-            batchId: SafeCastLib.toUint32(batchId)
+            requestTimestamp: block.timestamp.toUint64(),
+            status: BaseVaultModuleTypes.RequestStatus.PENDING,
+            batchId: batchId
         });
 
         // Add to user requests tracking
-        $.userRequests[msg.sender].push(requestId);
+        $.userRequests[msg.sender].add(requestId);
+
+        $.kToken.safeTransferFrom(msg.sender, address(this), amount);
 
         IkAssetRouter(_getKAssetRouter()).kAssetTransfer(
-            _getKMinter(), address(this), $.underlyingAsset, kTokensAmount, batchId
+            _getKMinter(), address(this), $.underlyingAsset, amount, batchId
         );
 
-        kToken.safeTransferFrom(msg.sender, address(this), kTokensAmount);
-
-        emit StakeRequestCreated(bytes32(requestId), msg.sender, kToken, kTokensAmount, to, batchId.toUint32());
+        emit StakeRequestCreated(bytes32(requestId), msg.sender, $.kToken, amount, to, batchId);
 
         return requestId;
     }
@@ -143,181 +145,160 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
     /// @return requestId Request ID for this unstaking request
     function requestUnstake(
         address to,
-        uint96 stkTokenAmount,
-        uint96 minKTokens
+        uint256 stkTokenAmount
     )
         external
         payable
         nonReentrant
         whenNotPaused
-        returns (uint256 requestId)
+        returns (bytes32 requestId)
     {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (stkTokenAmount == 0) revert ZeroAmount();
         if (balanceOf(msg.sender) < stkTokenAmount) revert InsufficientBalance();
         if (stkTokenAmount < $.dustAmount) revert AmountBelowDustThreshold();
 
-        uint256 batchId = $.currentBatchId;
+        bytes32 batchId = $.currentBatchId;
 
         // Generate request ID
         requestId = _createStakeRequestId(msg.sender, stkTokenAmount, block.timestamp);
 
         // Create unstaking request
-        $.unstakeRequests[requestId] = BaseModuleTypes.UnstakeRequest({
-            id: requestId,
+        $.unstakeRequests[requestId] = BaseVaultModuleTypes.UnstakeRequest({
             user: msg.sender,
-            stkTokenAmount: stkTokenAmount,
+            stkTokenAmount: stkTokenAmount.toUint128(),
             recipient: to,
             requestTimestamp: SafeCastLib.toUint64(block.timestamp),
-            status: uint8(BaseModuleTypes.RequestStatus.PENDING),
-            minKTokens: minKTokens,
-            batchId: SafeCastLib.toUint32(batchId)
+            status: BaseVaultModuleTypes.RequestStatus.PENDING,
+            batchId: batchId
         });
 
         // Add to user requests tracking
-        $.userRequests[msg.sender].push(requestId);
-
-        IkAssetRouter(_getKAssetRouter()).kSharesRequestPull(address(this), stkTokenAmount, batchId);
+        $.userRequests[msg.sender].add(requestId);
 
         _transfer(msg.sender, address(this), stkTokenAmount);
 
-        emit UnstakeRequestCreated(bytes32(requestId), msg.sender, stkTokenAmount, to, batchId.toUint32());
+        IkAssetRouter(_getKAssetRouter()).kSharesRequestPush(address(this), stkTokenAmount, batchId);
+
+        emit UnstakeRequestCreated(bytes32(requestId), msg.sender, stkTokenAmount, to, batchId);
 
         return requestId;
     }
 
-    /*//////////////////////////////////////////////////////////////
-                            ASSET ROUTER FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
+    /// @notice Cancels a staking request
+    /// @param requestId Request ID to cancel
+    function cancelStakeRequest(bytes32 requestId) external {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
 
-    /// @notice Updates the last total assets for the vault
-    /// @param totalAssets_ Total assets in the vault
-    function updateLastTotalAssets(uint256 totalAssets_) external onlyKAssetRouter {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
-        uint256 oldTotalAssets = $.lastTotalAssets;
-        $.lastTotalAssets = totalAssets_;
-        emit TotalAssetsUpdated(oldTotalAssets, totalAssets_);
+        if (!$.userRequests[msg.sender].contains(requestId)) revert RequestNotFound();
+        if (msg.sender != request.user) revert Unauthorized();
+        if (request.status != BaseVaultModuleTypes.RequestStatus.PENDING) revert RequestNotEligible();
+
+        request.status = BaseVaultModuleTypes.RequestStatus.CANCELLED;
+        $.userRequests[msg.sender].remove(requestId);
+
+        address vault = _getDNVaultByAsset($.underlyingAsset);
+        if ($.batches[request.batchId].isClosed) revert Closed();
+        if ($.batches[request.batchId].isSettled) revert Settled();
+
+        IkAssetRouter(_getKAssetRouter()).kAssetTransfer(
+            address(this), _getKMinter(), $.underlyingAsset, request.kTokenAmount, request.batchId
+        );
+
+        $.kToken.safeTransfer(request.user, request.kTokenAmount);
+
+        emit StakeRequestCancelled(bytes32(requestId));
     }
 
-    function mintStkTokens(address to, uint256 amount) external {
-        if (msg.sender != address(this)) revert OnlyKAssetRouter();
-        _mint(to, amount);
-    }
+    /// @notice Cancels an unstaking request
+    /// @param requestId Request ID to cancel
+    function cancelUnstakeRequest(bytes32 requestId) external payable nonReentrant whenNotPaused {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
 
-    function burnStkTokens(address from, uint256 amount) external {
-        if (msg.sender != address(this)) revert OnlyKAssetRouter();
-        _burn(from, amount);
+        if (msg.sender != request.user) revert Unauthorized();
+        if (!$.userRequests[msg.sender].contains(requestId)) revert RequestNotFound();
+        if (request.status != BaseVaultModuleTypes.RequestStatus.PENDING) revert RequestNotEligible();
+
+        request.status = BaseVaultModuleTypes.RequestStatus.CANCELLED;
+        $.userRequests[msg.sender].remove(requestId);
+
+        address vault = _getDNVaultByAsset($.underlyingAsset);
+        if ($.batches[request.batchId].isClosed) revert Closed();
+        if ($.batches[request.batchId].isSettled) revert Settled();
+
+        IkAssetRouter(_getKAssetRouter()).kSharesRequestPull(address(this), request.stkTokenAmount, request.batchId);
+
+        _transfer(address(this), request.user, request.stkTokenAmount);
+
+        emit UnstakeRequestCancelled(requestId);
     }
 
     /*//////////////////////////////////////////////////////////////
                           INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _createStakeRequestId(address user, uint256 amount, uint256 timestamp) internal returns (uint256) {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
-        $.requestCounter = (uint256($.requestCounter) + 1).toUint64();
-        return uint256(keccak256(abi.encode(address(this), user, amount, timestamp, $.requestCounter)));
+    /// @notice Creates a unique request ID for a staking request
+    /// @param user User address
+    /// @param amount Amount of underlying assets
+    /// @param timestamp Timestamp
+    /// @return Request ID
+    function _createStakeRequestId(address user, uint256 amount, uint256 timestamp) internal returns (bytes32) {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        $.currentBatch++;
+        return keccak256(abi.encode(address(this), user, amount, timestamp, $.currentBatch));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            PAUSE FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Sets the pause state of the contract
+    /// @param paused_ New pause state
+    /// @dev Only callable internally by inheriting contracts
+    function setPaused(bool paused_) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
+        _setPaused(paused_);
     }
 
     /*//////////////////////////////////////////////////////////////
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the underlying asset address (for compatibility)
-    /// @return Asset address
-    function asset() external view returns (address) {
-        return _getBaseModuleStorage().underlyingAsset;
-    }
-
-    /// @notice Returns the vault shares token name
-    /// @return Token name
-    function name() public view override returns (string memory) {
-        return _getBaseModuleStorage().name;
-    }
-
-    /// @notice Returns the vault shares token symbol
-    /// @return Token symbol
-    function symbol() public view override returns (string memory) {
-        return _getBaseModuleStorage().symbol;
-    }
-
-    /// @notice Returns the vault shares token decimals
-    /// @return Token decimals
-    function decimals() public view override returns (uint8) {
-        return uint8(_getBaseModuleStorage().decimals);
-    }
-
     /// @notice Calculates stkToken price with safety checks
     /// @dev Standard price calculation used across settlement modules
-    /// @param totalAssets_ Total underlying assets backing stkTokens
-    /// @return price Price per stkToken in underlying asset terms (18 decimals)
-    function calculateStkTokenPrice(uint256 totalAssets_) external view returns (uint256) {
-        return _calculateStkTokenPrice(totalAssets_, totalSupply());
+    /// @return price Price per stkToken in underlying asset terms
+    function calculateStkTokenPrice() external view returns (uint256) {
+        return _calculateStkTokenPrice();
     }
 
     /// @notice Calculates the price of stkTokens in underlying asset terms
     /// @dev Uses the last total assets and total supply to calculate the price
-    /// @return price Price per stkToken in underlying asset terms (18 decimals)
+    /// @return price Price per stkToken in underlying asset terms
     function sharePrice() external view returns (uint256) {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
-        return _calculateStkTokenPrice($.lastTotalAssets, totalSupply());
-    }
-
-    /// @notice Returns the last total assets for the vault
-    /// @return Total assets
-    function lastTotalAssets() external view returns (uint256) {
-        return _getBaseModuleStorage().lastTotalAssets;
+        return _sharePrice();
     }
 
     /// @notice Returns the current total assets from adapter (real-time)
     /// @return Total assets currently deployed in strategies
     function totalAssets() external view returns (uint256) {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
-
-        // Get adapter from registry for this specific vault
-        address adapter = _registry().getAdapter(address(this));
-
-        if (adapter != address(0) && _registry().isAdapterRegistered(adapter)) {
-            return IAdapter(adapter).totalAssets($.underlyingAsset);
-        }
-
-        // Fallback to stored value if no adapter
-        return $.lastTotalAssets;
+        return _totalNetAssets();
     }
 
-    /// @notice Returns estimated total assets including pending yield
-    /// @return Estimated total assets with unrealized gains
-    function estimatedTotalAssets() external view returns (uint256) {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
-
-        // Get adapter from registry for this specific vault
-        address adapter = _registry().getAdapter(address(this));
-
-        if (adapter != address(0) && _registry().isAdapterRegistered(adapter)) {
-            return IAdapter(adapter).estimatedTotalAssets($.underlyingAsset);
-        }
-
-        // Fallback to stored value if no adapter
-        return $.lastTotalAssets;
+    /// @notice Returns the current batch
+    /// @return Batch
+    function getBatchId() public view returns (bytes32) {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        uint256 currentBatch = $.currentBatch;
+        return
+            keccak256(abi.encodePacked(address(this), currentBatch, block.chainid, block.timestamp, $.underlyingAsset));
     }
 
-    /// @notice Returns the kToken address for the vault
-    /// @return kToken address
-    function getKToken() external view returns (address) {
-        return _getKTokenForAsset(_getBaseModuleStorage().underlyingAsset);
-    }
-
-    /// @notice Returns the current batch ID
-    /// @return Batch ID
-    function getBatchId() external view returns (uint256) {
-        return _getBaseModuleStorage().currentBatchId;
-    }
-
-    /// @notice Returns the safe batch ID
-    /// @return Batch ID
-    function getSafeBatchId() external view returns (uint256) {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
-        uint32 batchId = $.currentBatchId;
+    /// @notice Returns the safe batch
+    /// @return Batch
+    function getSafeBatchId() external view returns (bytes32) {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        bytes32 batchId = getBatchId();
         if ($.batches[batchId].isClosed) revert Closed();
         if ($.batches[batchId].isSettled) revert Settled();
         return batchId;
@@ -326,13 +307,13 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
     /// @notice Returns whether the current batch is closed
     /// @return Whether the current batch is closed
     function isBatchClosed() external view returns (bool) {
-        return _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatchId].isClosed;
+        return _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isClosed;
     }
 
     /// @notice Returns whether the current batch is settled
     /// @return Whether the current batch is settled
     function isBatchSettled() external view returns (bool) {
-        return _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatchId].isSettled;
+        return _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isSettled;
     }
 
     /// @notice Returns the current batch ID, whether it is closed, and whether it is settled
@@ -340,30 +321,29 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
     /// @return batchReceiver Current batch receiver
     /// @return isClosed Whether the current batch is closed
     /// @return isSettled Whether the current batch is settled
-    function getBatchInfo()
+    function getBatchIdInfo()
         external
         view
-        returns (uint256 batchId, address batchReceiver, bool isClosed, bool isSettled)
+        returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled)
     {
         return (
-            _getBaseModuleStorage().currentBatchId,
-            _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatchId].batchReceiver,
-            _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatchId].isClosed,
-            _getBaseModuleStorage().batches[_getBaseModuleStorage().currentBatchId].isSettled
+            _getBaseVaultModuleStorage().currentBatchId,
+            _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].batchReceiver,
+            _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isClosed,
+            _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isSettled
         );
     }
 
     /// @notice Returns the batch receiver for the current batch
     /// @return Batch receiver
-    function getBatchReceiver(uint256 batchId) external view returns (address) {
-        return _getBaseModuleStorage().batches[batchId.toUint32()].batchReceiver;
+    function getBatchIdReceiver(bytes32 batchId) external view returns (address) {
+        return _getBaseVaultModuleStorage().batches[batchId].batchReceiver;
     }
 
-    function getSafeBatchReceiver(uint256 batchId) external view returns (address) {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
-        uint32 batchId32 = batchId.toUint32();
-        if ($.batches[batchId32].isSettled) revert Settled();
-        return $.batches[batchId32].batchReceiver;
+    function getSafeBatchReceiver(bytes32 batchId) external view returns (address) {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if ($.batches[batchId].isSettled) revert Settled();
+        return $.batches[batchId].batchReceiver;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -372,7 +352,9 @@ contract kStakingVault is Initializable, UUPSUpgradeable, ERC20, BaseModule, Mul
 
     /// @notice Authorize upgrade (only owner can upgrade)
     /// @dev This allows upgrading the main contract while keeping modules separate
-    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner { }
+    function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE) {
+        if (newImplementation == address(0)) revert ZeroAddress();
+    }
 
     /*//////////////////////////////////////////////////////////////
                             RECEIVE ETH

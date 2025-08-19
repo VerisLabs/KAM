@@ -1,29 +1,29 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import { LibClone } from "solady/utils/LibClone.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
-import { BaseModule } from "src/kStakingVault/modules/BaseModule.sol";
-import { BaseModuleTypes } from "src/kStakingVault/types/BaseModuleTypes.sol";
+import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
-/// @title ClaimModule
-/// @notice Handles claim operations for settled batches
-/// @dev Contains claim functions for staking and unstaking operations
-contract BatchModule is BaseModule {
+/// @title BatchModule
+/// @notice Handles batch operations for staking and unstaking
+/// @dev Contains batch functions for staking and unstaking operations
+contract BatchModule is BaseVaultModule {
     using SafeCastLib for uint256;
-
+    using SafeCastLib for uint64;
     /*//////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event BatchCreated(uint32 indexed batchId);
-    event BatchReceiverDeployed(uint32 indexed batchId, address indexed receiver);
-    event BatchSettled(uint32 indexed batchId);
-    event BatchClosed(uint32 indexed batchId);
-    event BatchReceiverSet(address indexed batchReceiver, uint32 indexed batchId);
+    event BatchCreated(bytes32 indexed batchId);
+    event BatchReceiverDeployed(bytes32 indexed batchId, address indexed receiver);
+    event BatchSettled(bytes32 indexed batchId);
+    event BatchClosed(bytes32 indexed batchId);
+    event BatchReceiverSet(address indexed batchReceiver, bytes32 indexed batchId);
+    event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
 
     /*//////////////////////////////////////////////////////////////
                             CORE OPERATIONS
@@ -32,54 +32,49 @@ contract BatchModule is BaseModule {
     /// @notice Creates a new batch for processing requests
     /// @return The new batch ID
     /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
-    function createNewBatch() external onlyRelayer returns (uint256) {
+    function createNewBatch() external onlyRelayer returns (bytes32) {
         return _newBatch();
     }
 
     // @notice Closes a batch to prevent new requests
     /// @param _batchId The batch ID to close
     /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
-    function closeBatch(uint256 _batchId, bool _create) external onlyRelayer {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
-        uint32 batchId32 = _batchId.toUint32();
-        if ($.batches[batchId32].isClosed) revert Closed();
-        $.batches[batchId32].isClosed = true;
+    function closeBatch(bytes32 _batchId, bool _create) external onlyRelayer {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if ($.batches[_batchId].isClosed) revert Closed();
+        $.batches[_batchId].isClosed = true;
 
         if (_create) {
-            _newBatch();
+            _batchId = _newBatch();
         }
-        emit BatchClosed(batchId32);
+        emit BatchClosed(_batchId);
     }
 
     /// @notice Marks a batch as settled
     /// @param _batchId The batch ID to settle
     /// @dev Only callable by kMinter, indicates assets have been distributed
-    function settleBatch(uint256 _batchId) external onlyKAssetRouter {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
-        uint32 batchId32 = _batchId.toUint32();
-        if ($.batches[batchId32].isSettled) revert Settled();
-        $.batches[batchId32].isSettled = true;
+    function settleBatch(bytes32 _batchId) external onlyKAssetRouter {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if ($.batches[_batchId].isSettled) revert Settled();
+        $.batches[_batchId].isSettled = true;
 
-        emit BatchSettled(batchId32);
+        emit BatchSettled(_batchId);
     }
 
     /// @notice Deploys BatchReceiver for specific batch
     /// @param _batchId Batch ID to deploy receiver for
     /// @dev Only callable by kAssetRouter
-    function deployBatchReceiver(uint256 _batchId) external onlyKAssetRouter returns (address) {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
-        uint32 batchId32 = _batchId.toUint32();
-
-        address receiver = $.batches[batchId32].batchReceiver;
+    function createBatchReceiver(bytes32 _batchId) external onlyKAssetRouter returns (address) {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        address receiver = $.batches[_batchId].batchReceiver;
         if (receiver != address(0)) return receiver;
 
-        receiver = address(
-            new kBatchReceiver(_registry().getContractById(K_MINTER), _batchId, $.underlyingAsset, $.underlyingAsset)
-        );
+        receiver = LibClone.clone($.receiverImplementation);
+        kBatchReceiver(receiver).initialize(_batchId, $.underlyingAsset);
 
-        $.batches[batchId32].batchReceiver = receiver;
+        $.batches[_batchId].batchReceiver = receiver;
 
-        emit BatchReceiverDeployed(batchId32, receiver);
+        emit BatchReceiverCreated(receiver, _batchId);
 
         return receiver;
     }
@@ -88,22 +83,20 @@ contract BatchModule is BaseModule {
                           INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Creates a new batch
-    /// @return The new batch ID
-    /// @dev Creates a new batch and returns its ID
-    function _newBatch() internal returns (uint256) {
-        BaseModuleStorage storage $ = _getBaseModuleStorage();
-        uint32 newBatchId = ++$.currentBatchId;
+    function _newBatch() internal returns (bytes32) {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        $.currentBatch++;
+        bytes32 newBatch = $.currentBatchId;
 
-        BaseModuleTypes.BatchInfo storage batch = $.batches[newBatchId];
-        batch.batchId = newBatchId;
+        BaseVaultModuleTypes.BatchInfo storage batch = $.batches[newBatch];
+        batch.batchId = newBatch;
         batch.batchReceiver = address(0);
         batch.isClosed = false;
         batch.isSettled = false;
 
-        emit BatchCreated(newBatchId);
+        emit BatchCreated(newBatch);
 
-        return uint256(newBatchId);
+        return newBatch;
     }
 
     /// @notice Returns the selectors for functions in this module
@@ -113,7 +106,7 @@ contract BatchModule is BaseModule {
         moduleSelectors[0] = this.createNewBatch.selector;
         moduleSelectors[1] = this.closeBatch.selector;
         moduleSelectors[2] = this.settleBatch.selector;
-        moduleSelectors[3] = this.deployBatchReceiver.selector;
+        moduleSelectors[3] = this.createBatchReceiver.selector;
         return moduleSelectors;
     }
 }
