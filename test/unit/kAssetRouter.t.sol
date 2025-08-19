@@ -234,7 +234,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
             TEST_NETTED,
             TEST_PROFIT,
             true,
-            block.timestamp// executeAfter with 1 second cooldown
+            block.timestamp + 1// executeAfter with 1 second cooldown
         );
 
         testProposalId = assetRouter.proposeSettleBatch(
@@ -250,7 +250,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(proposal.netted, TEST_NETTED, "Netted amount incorrect");
         assertEq(proposal.yield, TEST_PROFIT, "Yield incorrect");
         assertTrue(proposal.profit, "Profit flag incorrect");
-        assertEq(proposal.executeAfter, block.timestamp, "ExecuteAfter incorrect");
+        assertEq(proposal.executeAfter, block.timestamp + 1, "ExecuteAfter incorrect");
         assertFalse(proposal.executed, "Should not be executed");
         assertFalse(proposal.disputed, "Should not be disputed");
     }
