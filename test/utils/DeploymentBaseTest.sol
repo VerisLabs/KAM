@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 import { LibClone } from "solady/utils/LibClone.sol";
 
-import { BaseTest } from "./BaseTest.sol";
+import { BaseTest, console2 } from "./BaseTest.sol";
 import {
     ADMIN_ROLE,
     BATCH_CUTOFF_TIME,
@@ -168,11 +168,12 @@ contract DeploymentBaseTest is BaseTest {
         // 5. Deploy kStakingVaults + Modules (needs registry, assetRouter, tokens)
         _deployStakingVaults();
 
-        // Configure the protocol
-        _configureProtocol();
 
         // 6. Deploy adapters (needs registry, independent of other components)
         _deployAdapters();
+
+        // Configure the protocol
+        _configureProtocol();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -363,6 +364,7 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Deploy adapters for external strategy integrations
     function _deployAdapters() internal {
+
         // Deploy CustodialAdapter implementation
         custodialAdapterImpl = new CustodialAdapter();
 
@@ -392,7 +394,27 @@ contract DeploymentBaseTest is BaseTest {
 
         mockMetaVault = new MockMetaVault(USDC_MAINNET, "Max APY USDC", "maxUSDC");
 
+        console2.log("admin  DEPLOYMENT BASE _deployAdapters: ", users.admin);
+
+          // Register assets and kTokens
+        registry.registerAsset(USDC_MAINNET, address(kUSD), registry.USDC());
+        registry.registerAsset(WBTC_MAINNET, address(kBTC), registry.WBTC());
+
+
+        // Register kMinter as vault (MINTER type = 0 - for institutional operations)
+        registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, USDC_MAINNET);
+
+        // Register DN vault (DN type = 1 - works with kMinter)
+        registry.registerVault(address(dnVault), IkRegistry.VaultType.DN, USDC_MAINNET);
+
+        // Register Alpha vault (ALPHA type = 2 - retail staking)
+        registry.registerVault(address(alphaVault), IkRegistry.VaultType.ALPHA, USDC_MAINNET);
+
+        // Register Beta vault (BETA type = 3 - advanced strategies)
+        registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, USDC_MAINNET);
+
         metaVaultAdapter.setVaultDestination(address(dnVault), USDC_MAINNET, address(mockMetaVault));
+        metaVaultAdapter.setVaultDestination(address(minter), USDC_MAINNET, address(mockMetaVault));
         metaVaultAdapter.setVaultDestination(address(alphaVault), USDC_MAINNET, address(mockMetaVault));
         metaVaultAdapter.setVaultDestination(address(betaVault), USDC_MAINNET, address(mockMetaVault));
 
@@ -414,6 +436,8 @@ contract DeploymentBaseTest is BaseTest {
     function _configureProtocol() internal {
         vm.startPrank(users.admin);
 
+        console2.log("admin : ", users.admin);
+
         // Register assets and kTokens
         registry.registerAsset(USDC_MAINNET, address(kUSD), registry.USDC());
         registry.registerAsset(WBTC_MAINNET, address(kBTC), registry.WBTC());
@@ -429,20 +453,9 @@ contract DeploymentBaseTest is BaseTest {
 
         vm.startPrank(users.admin);
 
-        // Register kMinter as vault (MINTER type = 0 - for institutional operations)
-        registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, USDC_MAINNET);
-
-        // Register DN vault (DN type = 1 - works with kMinter)
-        registry.registerVault(address(dnVault), IkRegistry.VaultType.DN, USDC_MAINNET);
-
-        // Register Alpha vault (ALPHA type = 2 - retail staking)
-        registry.registerVault(address(alphaVault), IkRegistry.VaultType.ALPHA, USDC_MAINNET);
-
-        // Register Beta vault (BETA type = 3 - advanced strategies)
-        registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, USDC_MAINNET);
-
         // Register adapters for vaults (if adapters were deployed)
         if (address(custodialAdapter) != address(0)) {
+            console2.log("custodial adapter registered ");
             registry.registerAdapter(address(dnVault), address(custodialAdapter));
             registry.registerAdapter(address(alphaVault), address(custodialAdapter));
             registry.registerAdapter(address(betaVault), address(custodialAdapter));
@@ -452,6 +465,8 @@ contract DeploymentBaseTest is BaseTest {
             custodialAdapter.setVaultDestination(address(dnVault), users.treasury);
             custodialAdapter.setVaultDestination(address(alphaVault), users.treasury);
             custodialAdapter.setVaultDestination(address(betaVault), users.treasury);
+        } else {
+            console2.log("custodial adapter not deployed");
         }
 
         vm.stopPrank();

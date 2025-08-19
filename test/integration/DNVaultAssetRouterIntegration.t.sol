@@ -415,7 +415,7 @@ contract DNVaultAssetRouterIntegrationTest is IntegrationBaseTest {
         advanceToSettlementTime();
 
         // Execute settlement for minter to move assets to DN vault
-        executeBatchSettlement(address(minter), batchId, settleAmount);
+        executeBatchSettlement(address(dnVault), batchId, settleAmount);
 
         // Now DN vault has assets, we can transfer
         bytes32 newBatchId = bytes32(uint256(batchId) + 1);

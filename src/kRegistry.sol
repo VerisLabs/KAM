@@ -146,8 +146,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param vault Vault contract address
     /// @param type_ Type of vault (MINTER, DN, ALPHA, BETA)
     /// @param asset Underlying asset the vault manages
-    /// @dev Only callable by FACTORY_ROLE, sets as primary if first of its type
-    function registerVault(address vault, VaultType type_, address asset) external onlyRoles(FACTORY_ROLE) {
+    /// @dev Only callable by ADMIN_ROLE, sets as primary if first of its type
+    function registerVault(address vault, VaultType type_, address asset) external onlyRoles(ADMIN_ROLE) {
         if (vault == address(0)) revert ZeroAddress();
         kRegistryStorage storage $ = _getkRegistryStorage();
         if ($.isVault[vault]) revert AlreadyRegistered();

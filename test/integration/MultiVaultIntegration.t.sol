@@ -14,6 +14,7 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 contract MultiVaultIntegrationTest is IntegrationBaseTest {
     /// @dev Set up modules for all vaults to support batch operations
     function setUp() public override {
+        useMetaVault = true;
         super.setUp();
 
         // Register BatchModule and ClaimModule with all vaults

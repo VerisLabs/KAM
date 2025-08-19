@@ -18,6 +18,7 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
     /// @dev Set up modules for DN vault to support batch operations
     function setUp() public override {
+        useMetaVault = true;
         super.setUp();
 
         // Register BatchModule and ClaimModule with DN vault

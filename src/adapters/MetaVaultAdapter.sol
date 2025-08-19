@@ -127,7 +127,6 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         asset.safeApprove(address(metaVault), amount);
 
         // Deposit to MetaVault and receive shares
-        // Set Controller!?
         metaVault.requestDeposit(amount, address(this), address(this));
         uint256 shares = metaVault.deposit(amount, address(this));
         $.adapterTotalShares[onBehalfOf][asset] += shares;
@@ -162,7 +161,7 @@ contract MetaVaultAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         $.adapterTotalShares[onBehalfOf][asset] -= shares;
 
         // Request redemption from MetaVault
-        uint256 metaVaultRequestId = metaVault.requestRedeem(shares, _getKAssetRouter(), onBehalfOf);
+        uint256 metaVaultRequestId = metaVault.requestRedeem(shares, _getKAssetRouter(), address(this));
 
         // Store pending redemption with our internal request ID
         uint256 requestId = $.nextRequestId++;

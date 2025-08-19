@@ -19,6 +19,8 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 /// @notice Base contract for integration tests with specialized utilities
 /// @dev Extends DeploymentBaseTest with integration-specific helpers
 contract IntegrationBaseTest is DeploymentBaseTest {
+    bool useMetaVault = false;
+
     /*//////////////////////////////////////////////////////////////
                         INTEGRATION TEST CONSTANTS
     //////////////////////////////////////////////////////////////*/
@@ -46,8 +48,12 @@ contract IntegrationBaseTest is DeploymentBaseTest {
         // Additional setup for integration tests
         _prepareIntegrationEnvironment();
 
-        vm.prank(users.admin);
-        registry.registerAdapter(address(dnVault), address(metaVaultAdapter));
+        if(useMetaVault) {
+            vm.prank(users.admin);
+            registry.removeAdapter(address(dnVault), address(custodialAdapter));
+            vm.prank(users.admin);
+            registry.registerAdapter(address(dnVault), address(metaVaultAdapter));
+        }
     }
 
     /// @dev Prepare environment specifically for integration testing

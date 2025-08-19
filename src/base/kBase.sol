@@ -41,6 +41,7 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     error AssetNotSupported(address asset);
     error InvalidVault(address vault);
     error OnlyKMinter();
+    error OnlyGuardian();
     error OnlyRelayer();
 
     /*//////////////////////////////////////////////////////////////
@@ -240,7 +241,7 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /// @notice Restricts function access to the guardian
     /// @dev Only callable internally by inheriting contracts
     modifier onlyGuardian() {
-        if (!_getGuardian()) revert();
+        if (!_getGuardian()) revert OnlyGuardian();
         _;
     }
 

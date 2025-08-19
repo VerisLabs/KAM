@@ -175,7 +175,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         if (_virtualBalance(sourceVault, _asset) < amount) revert InsufficientVirtualBalance();
         // Update batch tracking for settlement
         $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
-        $.vaultBatchBalances[sourceVault][batchId].deposited -= amount.toUint128();
         $.vaultBatchBalances[targetVault][batchId].deposited += amount.toUint128();
 
         emit AssetsTransfered(sourceVault, targetVault, _asset, amount);
@@ -465,8 +464,18 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @param asset the asset address
     /// @return balance the balance of the vault in all adapters.
     function _virtualBalance(address vault, address asset) internal view returns (uint256 balance) {
-        address kToken = _getKTokenForAsset(asset);
-        return IkToken(kToken).balanceOf(vault);
+        address[] memory assets = _getVaultAssets(vault);
+        address[] memory adapters = _registry().getAdapters(vault);
+        uint256 length = adapters.length;
+        for (uint256 i; i < length;) {
+            IAdapter adapter = IAdapter(adapters[i]);
+            // For now, assume single asset per vault (use first asset)
+            balance += adapter.totalAssets(vault, assets[0]);
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /// @notice Check if contract is paused

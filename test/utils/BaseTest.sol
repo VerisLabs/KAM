@@ -94,6 +94,9 @@ contract BaseTest is Test {
 
             // Use USDC as main test asset
             asset = USDC_MAINNET;
+
+            // Label
+            vm.label(asset, "USDC");
         }
     }
 
