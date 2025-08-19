@@ -234,7 +234,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
             TEST_NETTED,
             TEST_PROFIT,
             true,
-            block.timestamp + 1// executeAfter with 1 second cooldown
+            block.timestamp + 1 // executeAfter with 1 second cooldown
         );
 
         testProposalId = assetRouter.proposeSettleBatch(
@@ -807,13 +807,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // Create proposal
         vm.prank(users.settler);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET, 
-            address(dnVault), 
-            batchId, 
-            TEST_TOTAL_ASSETS, 
-            TEST_NETTED, 
-            TEST_PROFIT,
-            true
+            USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
 
         // Test exactly at cooldown boundary (1 second)
