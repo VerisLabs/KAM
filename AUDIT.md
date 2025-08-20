@@ -44,6 +44,7 @@ The protocol uses a modular seven-layer architecture:
 ### Modular Design
 
 The protocol implements a diamond proxy pattern through `MultiFacetProxy.sol` that enables:
+
 - Function selector mapping to specific implementation contracts
 - Modular upgrades without full contract replacement
 - Role-based access control for proxy administration
@@ -52,6 +53,7 @@ The protocol implements a diamond proxy pattern through `MultiFacetProxy.sol` th
 ### External Storage Loading
 
 The `Extsload.sol` abstract contract provides external storage loading capabilities used by:
+
 - `kMinter.sol`: For accessing registry data and vault information
 - `kStakingVault.sol`: For cross-contract data access during batch processing
 
@@ -93,6 +95,7 @@ kAssetRouter maintains virtual balances for all vaults, tracking:
 ### Batch Processing Architecture
 
 Each batch has three states:
+
 - **Open**: Accepting new requests
 - **Closed**: No new requests, ready for settlement
 - **Settled**: Assets distributed, claims available

@@ -224,6 +224,9 @@ contract IntegrationBaseTest is DeploymentBaseTest {
 
     /// @dev Execute batch settlement for a vault
     function executeBatchSettlement(address vault, bytes32 batchId, uint256 totalAssets) internal {
+        // Advance time to ensure unique proposal IDs when settling multiple vaults
+        vm.warp(block.timestamp + 1);
+        
         emit IntegrationFlowStarted("BatchSettlement", block.timestamp);
         uint256 startTime = block.timestamp;
 
