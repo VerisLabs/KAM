@@ -180,7 +180,7 @@ contract MultiVaultIntegrationTest is IntegrationBaseTest {
         // Phase 2: Asset deployment to both Alpha and Beta
         uint256 toAlpha = totalInstitutional / 3;
         uint256 toBeta = totalInstitutional / 4;
-        
+
         // Store the batch ID used for transfers
         bytes32 transferBatchId = getCurrentDNBatchId();
 
@@ -223,7 +223,7 @@ contract MultiVaultIntegrationTest is IntegrationBaseTest {
 
         (uint256 betaDeposited,) = assetRouter.getBatchIdBalances(address(betaVault), transferBatchId);
         assertEq(betaDeposited, toBeta, "Beta should have received allocation in batch");
-        
+
         // Validate DN vault's requested transfers in batch balances
         (, uint256 dnRequestedTransfers) = assetRouter.getBatchIdBalances(address(dnVault), transferBatchId);
         assertEq(dnRequestedTransfers, toAlpha + toBeta, "DN vault should have requested transfers in batch");
