@@ -37,6 +37,7 @@ import { kToken } from "src/kToken.sol";
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { BatchModule } from "src/kStakingVault/modules/BatchModule.sol";
 import { ClaimModule } from "src/kStakingVault/modules/ClaimModule.sol";
+import { FeesModule } from "src/kStakingVault/modules/FeesModule.sol";
 
 // Adapters
 
@@ -80,6 +81,7 @@ contract DeploymentBaseTest is BaseTest {
     // Modules for kStakingVault
     ClaimModule public claimModule;
     BatchModule public batchModule;
+    FeesModule public feesModule;
 
     // Adapters
     CustodialAdapter public custodialAdapter;
@@ -298,6 +300,7 @@ contract DeploymentBaseTest is BaseTest {
         // Deploy modules first (shared across all vaults)
         claimModule = new ClaimModule();
         batchModule = new BatchModule();
+        feesModule = new FeesModule();
 
         // Deploy implementation (shared across all vaults)
         stakingVaultImpl = new kStakingVault();
@@ -315,6 +318,7 @@ contract DeploymentBaseTest is BaseTest {
         vm.label(address(stakingVaultImpl), "kStakingVaultImpl");
         vm.label(address(claimModule), "ClaimModule");
         vm.label(address(batchModule), "BatchModule");
+        vm.label(address(feesModule), "FeesModule");
     }
 
     /// @dev Helper function to deploy a specific vault type
@@ -464,6 +468,7 @@ contract DeploymentBaseTest is BaseTest {
         // Get module selectors from the modules themselves
         bytes4[] memory batchSelectors = batchModule.selectors();
         bytes4[] memory claimSelectors = claimModule.selectors();
+        bytes4[] memory feesSelectors = feesModule.selectors();
 
         // Register modules as vault admin
         vm.startPrank(users.admin);
@@ -472,6 +477,11 @@ contract DeploymentBaseTest is BaseTest {
         dnVault.addFunctions(batchSelectors, address(batchModule), true);
         alphaVault.addFunctions(batchSelectors, address(batchModule), true);
         betaVault.addFunctions(batchSelectors, address(batchModule), true);
+
+        // Add fees module functions to all vaults
+        dnVault.addFunctions(feesSelectors, address(feesModule), true);
+        alphaVault.addFunctions(feesSelectors, address(feesModule), true);
+        betaVault.addFunctions(feesSelectors, address(feesModule), true);
 
         // Add claim module functions to all vaults
         dnVault.addFunctions(claimSelectors, address(claimModule), true);

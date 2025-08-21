@@ -275,14 +275,6 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     /*//////////////////////////////////////////////////////////////
                                 MATH HELPERS
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Calculates stkToken price with safety checks
-    /// @dev Standard price calculation used across settlement modules
-    /// @return price Price per stkToken in underlying asset terms (18 decimals)
-    function _calculateStkTokenPrice() internal view returns (uint256 price) {
-        return _convertToAssets(10 ** _getBaseVaultModuleStorage().decimals);
-    }
-
     /// @notice Converts shares to assets
     /// @param shares Amount of shares to convert
     /// @return assets Amount of assets
@@ -301,38 +293,22 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
         return assets.fullMulDiv(_totalNetAssets(), totalSupply_);
     }
 
-    /// @notice Calculates stkTokens to mint for given kToken amount
-    /// @dev Used in staking settlement operations
-    /// @param kTokenAmount Amount of kTokens being staked
-    /// @return stkTokens Amount of stkTokens to mint
-    function _calculateStkTokensToMint(uint256 kTokenAmount) internal view returns (uint256 stkTokens) {
-        return _convertToShares(kTokenAmount);
-    }
-
-    /// @notice Calculates asset value for given stkToken amount
-    /// @dev Used in unstaking settlement operations
-    /// @param stkTokenAmount Amount of stkTokens being unstaked
-    /// @return assetValue Equivalent asset value
-    function _calculateAssetValue(uint256 stkTokenAmount) internal view returns (uint256 assetValue) {
-        return _convertToAssets(stkTokenAmount);
-    }
-
     /// @notice Calculates share price for stkToken
     /// @return sharePrice Price per stkToken in underlying asset terms (18 decimals)
     function _sharePrice() internal view returns (uint256) {
-        return _calculateStkTokenPrice();
+        return _convertToAssets(10 ** _getBaseVaultModuleStorage().decimals);
     }
 
     /// @notice Returns the total assets in the vault
     /// @return totalAssets Total assets in the vault
-    function _totalAssetsVirtual() internal view returns (uint256) {
+    function _totalAssets() internal view returns (uint256) {
         return IkToken(_getBaseVaultModuleStorage().underlyingAsset).balanceOf(address(this));
     }
 
     /// @notice Returns the total net assets in the vault
     /// @return totalNetAssets Total net assets in the vault
     function _totalNetAssets() internal view returns (uint256) {
-        return _totalNetAssets() - _accumulatedFees();
+        return _totalAssets() - _accumulatedFees();
     }
 
     /// @notice Calculates accumulated fees

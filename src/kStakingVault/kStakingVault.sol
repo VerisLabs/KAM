@@ -265,13 +265,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Calculates stkToken price with safety checks
-    /// @dev Standard price calculation used across settlement modules
-    /// @return price Price per stkToken in underlying asset terms
-    function calculateStkTokenPrice() external view returns (uint256) {
-        return _calculateStkTokenPrice();
-    }
-
     /// @notice Calculates the price of stkTokens in underlying asset terms
     /// @dev Uses the last total assets and total supply to calculate the price
     /// @return price Price per stkToken in underlying asset terms
@@ -279,9 +272,15 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         return _sharePrice();
     }
 
-    /// @notice Returns the current total assets from adapter (real-time)
+    /// @notice Returns the current total assets
     /// @return Total assets currently deployed in strategies
     function totalAssets() external view returns (uint256) {
+        return _totalAssets();
+    }
+
+    /// @notice Returns the current total assets after fees
+    /// @return Total net assets currently deployed in strategies
+    function totalNetAssets() external view returns (uint256) {
         return _totalNetAssets();
     }
 

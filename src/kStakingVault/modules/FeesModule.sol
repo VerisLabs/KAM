@@ -140,7 +140,7 @@ contract FeesModule is BaseVaultModule {
 
         uint256 durationManagement = block.timestamp - lastFeesChargedManagement;
         uint256 durationPerformance = block.timestamp - lastFeesChargedPerformance;
-        uint256 currentTotalAssets = _totalAssetsVirtual();
+        uint256 currentTotalAssets = _totalAssets();
         uint256 lastTotalAssets = totalSupply().fullMulDiv(lastSharePrice, 10 ** $.decimals);
 
         // Calculate time-based fees (management)
