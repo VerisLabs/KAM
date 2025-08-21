@@ -237,8 +237,6 @@ contract IntegrationBaseTest is DeploymentBaseTest {
             deal(USDC_MAINNET, address(assetRouter), totalAssets);
         }
 
-        // No longer needed - kAssetRouter now handles approval internally during settlement
-
         vm.prank(users.settler);
         bytes32 proposalId =
             assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, totalAssets, totalAssets, 0, false);

@@ -579,8 +579,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertTrue(canExecute, "Should be able to execute after cooldown");
         assertEq(reason, "", "No reason should be given when executable");
 
-        // Step 5: Execute would normally work here, but will fail due to adapter setup
-        // This is expected in unit tests without full integration setup
     }
 
     /// @dev Test proposal cancellation
@@ -642,17 +640,12 @@ contract kAssetRouterTest is DeploymentBaseTest {
     function test_UpdateProposal_RevertExecuted() public {
         bytes32 batchId = TEST_BATCH_ID;
 
-        // Create and execute proposal (will fail at execution but mark as executed)
         vm.prank(users.settler);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
 
-        // Try to update after cooldown
         vm.warp(block.timestamp + 2);
-
-        // Execute will fail but we need to test the revert on update
-        // so we'll test that we can't update non-existent proposal
         bytes32 fakeProposalId = keccak256("fake");
         vm.prank(users.settler);
         vm.expectRevert(IkAssetRouter.ProposalNotFound.selector);

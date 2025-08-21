@@ -416,12 +416,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         IAdapter adapter = IAdapter(adapters[0]);
 
         if (netted > 0) {
-            // Approve adapter to transfer assets
             asset.safeApprove(address(adapter), netted);
-
             adapter.deposit(asset, netted, vault);
-
-            // Reset approval to 0 for security
             asset.safeApprove(address(adapter), 0);
 
             emit Deposited(vault, asset, netted, isKMinter);
