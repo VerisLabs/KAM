@@ -340,6 +340,12 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         return _getBaseVaultModuleStorage().batches[batchId].batchReceiver;
     }
 
+    /// @notice Returns the batch receiver for a given batch (alias for getBatchIdReceiver)
+    /// @return Batch receiver
+    function getBatchReceiver(bytes32 batchId) external view returns (address) {
+        return _getBaseVaultModuleStorage().batches[batchId].batchReceiver;
+    }
+
     function getSafeBatchReceiver(bytes32 batchId) external view returns (address) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if ($.batches[batchId].isSettled) revert Settled();

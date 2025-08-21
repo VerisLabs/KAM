@@ -252,7 +252,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertTrue(proposal.profit, "Profit flag incorrect");
         assertEq(proposal.executeAfter, block.timestamp + 1, "ExecuteAfter incorrect");
         assertFalse(proposal.executed, "Should not be executed");
-        assertFalse(proposal.disputed, "Should not be disputed");
+        // Dispute mechanism removed - no disputed field to check
     }
 
     /// @dev Test settlement proposal reverts when called by non-relayer
@@ -277,93 +277,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         );
     }
 
-    /// @dev Test guardian can dispute a proposal
-    function test_DisputeSettleBatch_Success() public {
-        // First create a proposal
-        vm.prank(users.settler);
-        testProposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET, address(dnVault), TEST_BATCH_ID, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
-        );
-
-        // Dispute the proposal
-        vm.prank(users.guardian);
-        vm.expectEmit(true, true, true, true);
-        emit IkAssetRouter.SettlementDisputed(testProposalId, address(dnVault), TEST_BATCH_ID, users.guardian);
-
-        assetRouter.disputeSettleBatch(testProposalId);
-
-        // Verify proposal is disputed
-        IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(testProposalId);
-        assertTrue(proposal.disputed, "Proposal should be disputed");
-    }
-
-    /// @dev Test dispute reverts for non-existent proposal
-    function test_DisputeSettleBatch_RevertProposalNotFound() public {
-        bytes32 fakeProposalId = keccak256("fake");
-
-        vm.prank(users.guardian);
-        vm.expectRevert(IkAssetRouter.ProposalNotFound.selector);
-        assetRouter.disputeSettleBatch(fakeProposalId);
-    }
-
-    /// @dev Test dispute reverts if already executed
-    function test_DisputeSettleBatch_RevertAlreadyExecuted() public {
-        // Create and execute a proposal with 0 cooldown
-        vm.prank(users.settler);
-        testProposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET, address(dnVault), TEST_BATCH_ID, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
-        );
-
-        // Wait for cooldown
-        vm.warp(block.timestamp + 2);
-
-        // Execute the proposal (will fail due to no adapter setup, but that's ok for this test)
-        vm.prank(users.alice);
-        try assetRouter.executeSettleBatch(testProposalId) {
-            // If it succeeds (unlikely without full setup), proposal is executed
-        } catch {
-            // Expected to fail due to adapter/vault setup
-            // For the test, we need to check the dispute logic
-            // Since we can't easily execute, let's test the dispute before execution
-            vm.prank(users.guardian);
-            assetRouter.disputeSettleBatch(testProposalId);
-
-            IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(testProposalId);
-            assertTrue(proposal.disputed, "Should be disputed");
-        }
-    }
-
-    /// @dev Test dispute reverts if already disputed
-    function test_DisputeSettleBatch_RevertAlreadyDisputed() public {
-        // Create a proposal
-        vm.prank(users.settler);
-        testProposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET, address(dnVault), TEST_BATCH_ID, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
-        );
-
-        // First dispute
-        vm.prank(users.guardian);
-        assetRouter.disputeSettleBatch(testProposalId);
-
-        // Second dispute should revert
-        vm.prank(users.guardian);
-        vm.expectRevert("Proposal already disputed");
-        assetRouter.disputeSettleBatch(testProposalId);
-    }
-
-    /// @dev Test dispute reverts when called by non-guardian
-    function test_DisputeSettleBatch_OnlyGuardian() public {
-        // Create a proposal
-        vm.prank(users.settler);
-        testProposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET, address(dnVault), TEST_BATCH_ID, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
-        );
-
-        // Non-guardian should not be able to dispute
-        vm.prank(users.alice);
-        vm.expectRevert();
-        assetRouter.disputeSettleBatch(testProposalId);
-    }
+    // Dispute tests removed - dispute mechanism has been removed from the protocol
 
     /// @dev Test execute settlement after cooldown
     function test_ExecuteSettleBatch_AfterCooldown() public {
@@ -409,27 +323,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         vm.prank(users.alice);
         vm.expectRevert(IkAssetRouter.ProposalNotFound.selector);
         assetRouter.executeSettleBatch(fakeProposalId);
-    }
-
-    /// @dev Test execute reverts if disputed
-    function test_ExecuteSettleBatch_RevertIfDisputed() public {
-        // Create a proposal
-        vm.prank(users.settler);
-        testProposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET, address(dnVault), TEST_BATCH_ID, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
-        );
-
-        // Dispute it
-        vm.prank(users.guardian);
-        assetRouter.disputeSettleBatch(testProposalId);
-
-        // Wait for cooldown
-        vm.warp(block.timestamp + 2);
-
-        // Try to execute (should fail due to dispute)
-        vm.prank(users.alice);
-        vm.expectRevert(IkAssetRouter.ProposalDisputed.selector);
-        assetRouter.executeSettleBatch(testProposalId);
     }
 
     /// @dev Test execute reverts when paused
@@ -479,28 +372,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         (canExecute, reason) = assetRouter.canExecuteProposal(testProposalId);
         assertTrue(canExecute, "Should be able to execute after cooldown");
         assertEq(reason, "", "Reason should be empty");
-
-        // Create another proposal and dispute it
-        vm.prank(users.settler);
-        bytes32 disputedProposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET,
-            address(dnVault),
-            bytes32(uint256(TEST_BATCH_ID) + 1),
-            TEST_TOTAL_ASSETS,
-            TEST_NETTED,
-            TEST_PROFIT,
-            true
-        );
-
-        vm.prank(users.guardian);
-        assetRouter.disputeSettleBatch(disputedProposalId);
-
-        vm.warp(block.timestamp + 2);
-
-        // Test disputed proposal
-        (canExecute, reason) = assetRouter.canExecuteProposal(disputedProposalId);
-        assertFalse(canExecute, "Should not be able to execute disputed proposal");
-        assertEq(reason, "Proposal disputed", "Reason incorrect");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -625,7 +496,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertTrue(proposal.profit, "Profit flag incorrect");
         assertGt(proposal.executeAfter, 0, "executeAfter should be set");
         assertFalse(proposal.executed, "Should not be executed");
-        assertFalse(proposal.disputed, "Should not be disputed");
+        // Dispute mechanism removed - no disputed field to check
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -693,7 +564,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // Verify proposal state
         IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(proposalId);
         assertFalse(proposal.executed, "Should not be executed yet");
-        assertFalse(proposal.disputed, "Should not be disputed");
+        // Dispute mechanism removed - no disputed field to check
 
         // Step 2: Check cannot execute before cooldown
         (bool canExecute, string memory reason) = assetRouter.canExecuteProposal(proposalId);
@@ -708,39 +579,96 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertTrue(canExecute, "Should be able to execute after cooldown");
         assertEq(reason, "", "No reason should be given when executable");
 
-        // Step 5: Execute would normally work here, but will fail due to adapter setup
-        // This is expected in unit tests without full integration setup
     }
 
-    /// @dev Test settlement flow with dispute
-    function test_SettlementFlow_WithDispute() public {
+    /// @dev Test proposal cancellation
+    function test_CancelProposal_Success() public {
         bytes32 batchId = TEST_BATCH_ID;
 
-        // Step 1: Propose settlement
+        // Create proposal
         vm.prank(users.settler);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
 
-        // Step 2: Guardian disputes the proposal
-        vm.prank(users.guardian);
-        assetRouter.disputeSettleBatch(proposalId);
+        // Cancel proposal
+        vm.prank(users.settler);
+        vm.expectEmit(true, true, true, false);
+        emit IkAssetRouter.SettlementCancelled(proposalId, address(dnVault), batchId);
+        assetRouter.cancelProposal(proposalId);
 
-        // Step 3: Verify proposal is disputed
+        // Verify proposal is cancelled
         IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(proposalId);
-        assertTrue(proposal.disputed, "Proposal should be disputed");
+        assertTrue(proposal.cancelled, "Proposal should be cancelled");
 
-        // Step 4: Wait for cooldown
+        // Cannot execute cancelled proposal
         vm.warp(block.timestamp + 2);
-
-        // Step 5: Verify cannot execute disputed proposal
-        (bool canExecute, string memory reason) = assetRouter.canExecuteProposal(proposalId);
-        assertFalse(canExecute, "Should not be able to execute disputed proposal");
-        assertEq(reason, "Proposal disputed", "Should indicate proposal is disputed");
-
-        // Step 6: Try to execute (should fail)
-        vm.expectRevert(IkAssetRouter.ProposalDisputed.selector);
+        vm.expectRevert(IkAssetRouter.ProposalCancelled.selector);
         assetRouter.executeSettleBatch(proposalId);
+    }
+
+    /// @dev Test proposal update
+    function test_UpdateProposal_Success() public {
+        bytes32 batchId = TEST_BATCH_ID;
+
+        // Create proposal with initial values
+        vm.prank(users.settler);
+        bytes32 proposalId = assetRouter.proposeSettleBatch(
+            USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
+        );
+
+        // Update proposal with new values
+        uint256 newTotalAssets = TEST_TOTAL_ASSETS * 2;
+        uint256 newNetted = TEST_NETTED * 2;
+        uint256 newYield = TEST_LOSS;
+        bool newProfit = false;
+
+        vm.prank(users.settler);
+        vm.expectEmit(true, false, false, true);
+        emit IkAssetRouter.SettlementUpdated(proposalId, newTotalAssets, newNetted, newYield, newProfit);
+        assetRouter.updateProposal(proposalId, newTotalAssets, newNetted, newYield, newProfit);
+
+        // Verify proposal was updated
+        IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(proposalId);
+        assertEq(proposal.totalAssets, newTotalAssets, "Total assets should be updated");
+        assertEq(proposal.netted, newNetted, "Netted should be updated");
+        assertEq(proposal.yield, newYield, "Yield should be updated");
+        assertEq(proposal.profit, newProfit, "Profit flag should be updated");
+    }
+
+    /// @dev Test cannot update executed proposal
+    function test_UpdateProposal_RevertExecuted() public {
+        bytes32 batchId = TEST_BATCH_ID;
+
+        vm.prank(users.settler);
+        bytes32 proposalId = assetRouter.proposeSettleBatch(
+            USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
+        );
+
+        vm.warp(block.timestamp + 2);
+        bytes32 fakeProposalId = keccak256("fake");
+        vm.prank(users.settler);
+        vm.expectRevert(IkAssetRouter.ProposalNotFound.selector);
+        assetRouter.updateProposal(fakeProposalId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true);
+    }
+
+    /// @dev Test cannot cancel already cancelled proposal
+    function test_CancelProposal_RevertAlreadyCancelled() public {
+        bytes32 batchId = TEST_BATCH_ID;
+
+        // Create and cancel proposal
+        vm.prank(users.settler);
+        bytes32 proposalId = assetRouter.proposeSettleBatch(
+            USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
+        );
+
+        vm.prank(users.settler);
+        assetRouter.cancelProposal(proposalId);
+
+        // Try to cancel again
+        vm.prank(users.settler);
+        vm.expectRevert(IkAssetRouter.ProposalCancelled.selector);
+        assetRouter.cancelProposal(proposalId);
     }
 
     /// @dev Test multiple proposals for same batch

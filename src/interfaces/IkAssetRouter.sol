@@ -22,7 +22,7 @@ interface IkAssetRouter {
         bool profit;
         uint256 executeAfter;
         bool executed;
-        bool disputed;
+        bool cancelled;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -63,11 +63,12 @@ interface IkAssetRouter {
         bool profit,
         uint256 executeAfter
     );
-    event SettlementDisputed(
-        bytes32 indexed proposalId, address indexed vault, bytes32 indexed batchId, address guardian
-    );
     event SettlementExecuted(
         bytes32 indexed proposalId, address indexed vault, bytes32 indexed batchId, address executor
+    );
+    event SettlementCancelled(bytes32 indexed proposalId, address indexed vault, bytes32 indexed batchId);
+    event SettlementUpdated(
+        bytes32 indexed proposalId, uint256 totalAssets, uint256 netted, uint256 yield, bool profit
     );
     event SettlementCooldownUpdated(uint256 oldCooldown, uint256 newCooldown);
 
@@ -81,7 +82,7 @@ interface IkAssetRouter {
     error OnlyStakingVault();
     error ProposalNotFound();
     error ProposalAlreadyExecuted();
-    error ProposalDisputed();
+    error ProposalCancelled();
     error CooldownNotPassed();
     error InvalidCooldown();
 
@@ -160,13 +161,28 @@ interface IkAssetRouter {
         payable
         returns (bytes32 proposalId);
 
-    /// @notice Dispute a settlement proposal
-    /// @param proposalId The proposal ID to dispute
-    function disputeSettleBatch(bytes32 proposalId) external;
-
     /// @notice Execute a settlement proposal after cooldown period
     /// @param proposalId The proposal ID to execute
     function executeSettleBatch(bytes32 proposalId) external;
+
+    /// @notice Cancel a settlement proposal before execution
+    /// @param proposalId The proposal ID to cancel
+    function cancelProposal(bytes32 proposalId) external;
+
+    /// @notice Update a settlement proposal before execution
+    /// @param proposalId The proposal ID to update
+    /// @param totalAssets New total assets value
+    /// @param netted New netted amount
+    /// @param yield New yield amount
+    /// @param profit New profit status
+    function updateProposal(
+        bytes32 proposalId,
+        uint256 totalAssets,
+        uint256 netted,
+        uint256 yield,
+        bool profit
+    )
+        external;
 
     /*//////////////////////////////////////////////////////////////
                             ADMIN FUNCTIONS
