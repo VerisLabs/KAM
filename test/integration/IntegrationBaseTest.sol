@@ -202,7 +202,7 @@ contract IntegrationBaseTest is DeploymentBaseTest {
         uint256 minStkTokens
     )
         internal
-        returns (uint256 requestId)
+        returns (bytes32 requestId)
     {
         vm.startPrank(user);
 
@@ -237,13 +237,7 @@ contract IntegrationBaseTest is DeploymentBaseTest {
             deal(USDC_MAINNET, address(assetRouter), totalAssets);
         }
 
-        // kAssetRouter needs to approve adapter to spend USDC
-        vm.startPrank(address(assetRouter));
-        // When settling kMinter, get DN vault's adapter since that's where assets go
-        address actualVault = vault == address(minter) ? address(dnVault) : vault;
-        address[] memory adapters = registry.getAdapters(actualVault);
-        IERC20(USDC_MAINNET).approve(adapters[0], totalAssets);
-        vm.stopPrank();
+        // No longer needed - kAssetRouter now handles approval internally during settlement
 
         vm.prank(users.settler);
         bytes32 proposalId =
@@ -380,7 +374,7 @@ contract IntegrationBaseTest is DeploymentBaseTest {
     )
         internal
     {
-        (bytes32 batchId,, bool isClosed, bool isSettled) = IkStakingVault(vault).getBatchInfo();
+        (bytes32 batchId,, bool isClosed, bool isSettled) = IkStakingVault(vault).getBatchIdInfo();
 
         assertEq(batchId, expectedBatchId, string(abi.encodePacked(message, ": batch ID")));
         assertEq(isClosed, shouldBeClosed, string(abi.encodePacked(message, ": closed state")));
@@ -491,32 +485,5 @@ contract IntegrationBaseTest is DeploymentBaseTest {
         emit IntegrationFlowCompleted("CompleteInstitutionalFlow", 0);
 
         return redeemRequestId;
-    }
-
-    /// @dev Execute a complete retail flow: stake → settle → unstake
-    function executeCompleteRetailFlow(
-        address user,
-        address vault,
-        uint256 stakeAmount,
-        uint256 unstakeAmount
-    )
-        internal
-        returns (uint256 stakeRequestId, uint256 unstakeRequestId)
-    {
-        emit IntegrationFlowStarted("CompleteRetailFlow", block.timestamp);
-
-        // Step 1: Stake kTokens
-        stakeRequestId = executeRetailStaking(user, vault, stakeAmount, stakeAmount);
-
-        // Step 2: Advance time and settle
-        advanceToSettlementTime();
-        executeBatchSettlement(vault, IkStakingVault(vault).getBatchId(), stakeAmount);
-
-        // Step 3: Claim staked shares (would be done in actual test)
-        // Step 4: Request unstaking (simplified for base helper)
-
-        emit IntegrationFlowCompleted("CompleteRetailFlow", 0);
-
-        return (stakeRequestId, 0); // Simplified return
     }
 }

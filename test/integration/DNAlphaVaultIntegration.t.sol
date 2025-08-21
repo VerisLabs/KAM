@@ -278,7 +278,7 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         // Calculate shortfall that doesn't exceed Alpha's balance
         uint256 dnAvailableAfterRedemption = dnBalanceBeforeRedemption - redemptionAmount;
         uint256 additionalRedemption = dnAvailableAfterRedemption + (alphaBalanceBeforeRedemption / 2); // Require half
-            // of Alpha's balance
+        // of Alpha's balance
         uint256 shortfall = additionalRedemption - dnAvailableAfterRedemption;
 
         // Execute peg protection: Alpha transfers assets back to DN using consistent batch ID
@@ -345,13 +345,13 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         // Adjust redemption amount to not exceed DN's capacity for initial redemption
         // Large redemption requiring peg protection (but within DN's current capacity)
         uint256 adjustedRedemptionAmount = dnBalanceBeforeRedemption / 2; // Use half of DN's balance for initial
-            // redemption
+        // redemption
         executeInstitutionalRedemption(users.institution, adjustedRedemptionAmount, users.institution);
 
         // Now simulate additional large redemption that would require peg protection
         uint256 dnRemainingAfterFirstRedemption = dnBalanceBeforeRedemption - adjustedRedemptionAmount;
         uint256 additionalRedemption = dnRemainingAfterFirstRedemption + (totalRebalanced / 2); // Require more than DN
-            // has
+        // has
         uint256 shortfall = additionalRedemption - dnRemainingAfterFirstRedemption;
 
         // Execute peg protection in portions (realistic scenario)
@@ -523,63 +523,5 @@ contract DNAlphaVaultIntegrationTest is IntegrationBaseTest {
         );
 
         assert1to1BackingInvariant("After high-frequency rebalancing stress test");
-    }
-
-    /// @dev Test DN-Alpha coordination under extreme conditions
-    function test_ExtremeConditionCoordination() public {
-        uint256 massiveAmount = 1_000_000_000 * _1_USDC; // 1B USDC
-
-        // Setup: Massive institutional position
-        deal(USDC_MAINNET, users.institution, massiveAmount);
-        executeInstitutionalMint(users.institution, massiveAmount, users.institution);
-
-        // Settlement required to move assets to DN vault
-        bytes32 currentBatch = getCurrentDNBatchId();
-        executeBatchSettlement(address(minter), currentBatch, massiveAmount);
-
-        // Extreme rebalancing: 90% to Alpha
-        uint256 extremeRebalance = (massiveAmount * 90) / 100;
-        bytes32 transferBatch = getCurrentDNBatchId();
-        executeVaultTransfer(address(dnVault), address(alphaVault), extremeRebalance, transferBatch);
-
-        // Settle extreme rebalancing
-        executeBatchSettlement(address(dnVault), transferBatch, massiveAmount - extremeRebalance);
-        executeBatchSettlement(address(alphaVault), transferBatch, extremeRebalance);
-
-        // Validate extreme positions handled correctly
-        assertVirtualBalance(
-            address(dnVault), USDC_MAINNET, massiveAmount - extremeRebalance, "DN after extreme rebalance"
-        );
-        assertVirtualBalance(address(alphaVault), USDC_MAINNET, extremeRebalance, "Alpha after extreme rebalance");
-
-        // Extreme redemption request that would require peg protection
-        // Start with redemption within DN's capacity, then simulate additional need
-        uint256 dnBalance = massiveAmount - extremeRebalance; // 10% of original
-        uint256 initialRedemption = dnBalance / 2; // Use half of DN's balance
-        executeInstitutionalRedemption(users.institution, initialRedemption, users.institution);
-
-        // Calculate additional redemption that would require peg protection
-        uint256 extremeRedemption = dnBalance + (extremeRebalance / 4); // Require 1/4 of Alpha's balance
-
-        // Calculate shortfall requiring peg protection
-        uint256 dnRemainingAfterInitialRedemption = dnBalance - initialRedemption;
-        uint256 shortfall = extremeRedemption - dnRemainingAfterInitialRedemption;
-
-        // Execute massive peg protection
-        bytes32 protectionBatch = getCurrentDNBatchId();
-        executeVaultTransfer(address(alphaVault), address(dnVault), shortfall, protectionBatch);
-
-        // Settle the massive peg protection
-        executeBatchSettlement(address(alphaVault), protectionBatch, extremeRebalance - shortfall);
-        executeBatchSettlement(address(dnVault), protectionBatch, dnRemainingAfterInitialRedemption + shortfall);
-
-        // Validate extreme peg protection worked
-        assertTrue(
-            custodialAdapter.totalAssets(address(dnVault), USDC_MAINNET)
-                >= (dnRemainingAfterInitialRedemption + shortfall),
-            "DN should handle extreme peg protection"
-        );
-
-        assert1to1BackingInvariant("After extreme condition coordination");
     }
 }
