@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 /// @title ModuleBaseTypes
 /// @notice Library containing all data structures used in the ModuleBase
 /// @dev Defines standardized data types for cross-contract communication and storage
-library BaseModuleTypes {
+library BaseVaultModuleTypes {
     enum RequestStatus {
         PENDING,
         CLAIMED,
@@ -12,29 +12,25 @@ library BaseModuleTypes {
     }
 
     struct StakeRequest {
-        uint256 id;
         address user;
-        uint96 kTokenAmount;
+        uint128 kTokenAmount;
         address recipient;
+        bytes32 batchId;
         uint64 requestTimestamp;
-        uint8 status;
-        uint96 minStkTokens;
-        uint32 batchId;
+        RequestStatus status;
     }
 
     struct UnstakeRequest {
-        uint256 id;
         address user;
-        uint96 stkTokenAmount;
+        uint128 stkTokenAmount;
         address recipient;
+        bytes32 batchId;
         uint64 requestTimestamp;
-        uint8 status;
-        uint96 minKTokens;
-        uint32 batchId;
+        RequestStatus status;
     }
 
     struct BatchInfo {
-        uint32 batchId;
+        bytes32 batchId;
         address batchReceiver;
         bool isClosed;
         bool isSettled;
