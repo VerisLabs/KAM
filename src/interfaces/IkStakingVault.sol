@@ -29,6 +29,9 @@ interface IkStakingVault {
     function symbol() external view returns (string memory);
     function decimals() external view returns (uint8);
     function calculateStkTokenPrice(uint256 totalAssets) external view returns (uint256);
+    function totalAssets() external view returns (uint256);
+    function totalNetAssets() external view returns (uint256);
+    function balanceOf(address account) external view returns (uint256);
     function lastTotalAssets() external view returns (uint256);
     function kToken() external view returns (address);
     function getBatchId() external view returns (bytes32);

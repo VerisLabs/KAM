@@ -174,7 +174,14 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
-        if (_virtualBalance(sourceVault, _asset) < amount) {
+        uint256 virtualBalance;
+        if (sourceVault == _getKMinter()) {
+            virtualBalance = _virtualBalance(_getDNVaultByAsset(_asset), _asset);
+        } else {
+            virtualBalance = _virtualBalance(sourceVault, _asset);
+        }
+
+        if (virtualBalance < amount) {
             revert InsufficientVirtualBalance();
         }
         // Update batch tracking for settlement

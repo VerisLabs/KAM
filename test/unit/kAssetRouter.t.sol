@@ -578,7 +578,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         (canExecute, reason) = assetRouter.canExecuteProposal(proposalId);
         assertTrue(canExecute, "Should be able to execute after cooldown");
         assertEq(reason, "", "No reason should be given when executable");
-
     }
 
     /// @dev Test proposal cancellation

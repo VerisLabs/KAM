@@ -134,7 +134,7 @@ contract DeploymentBaseTest is BaseTest {
         _fundUsers();
 
         // Initialize batches for all vaults
-        // _initializeBatches(); // Disabled due to setup issues
+        _initializeBatches(); // Disabled due to setup issues
     }
 
     /// @dev Deploys all protocol contracts in correct dependency order
@@ -464,6 +464,13 @@ contract DeploymentBaseTest is BaseTest {
         require(success3, "Beta vault batch creation failed");
 
         vm.stopPrank();
+
+        vm.prank(users.owner);
+        dnVault.grantRoles(users.settler, 4); // RELAYER_ROLE = _ROLE_2 = 4
+        vm.prank(users.owner);
+        alphaVault.grantRoles(users.settler, 4);
+        vm.prank(users.owner);
+        betaVault.grantRoles(users.settler, 4);
     }
 
     /// @dev Register modules with vaults

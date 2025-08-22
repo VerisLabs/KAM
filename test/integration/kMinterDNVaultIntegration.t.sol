@@ -19,25 +19,6 @@ contract kMinterDNVaultIntegrationTest is IntegrationBaseTest {
     /// @dev Set up modules for DN vault to support batch operations
     function setUp() public override {
         super.setUp();
-
-        // Register BatchModule and ClaimModule with DN vault
-        bytes4[] memory batchSelectors = batchModule.selectors();
-        bytes4[] memory claimSelectors = claimModule.selectors();
-
-        vm.prank(users.admin);
-        dnVault.addFunctions(batchSelectors, address(batchModule), false);
-
-        vm.prank(users.admin);
-        dnVault.addFunctions(claimSelectors, address(claimModule), false);
-
-        // Grant RELAYER_ROLE to settler for batch management
-        vm.prank(users.owner);
-        dnVault.grantRoles(users.settler, 4); // RELAYER_ROLE = _ROLE_2 = 4
-
-        // Create initial batch for DN vault
-        vm.prank(users.settler);
-        (bool success,) = address(dnVault).call(abi.encodeWithSignature("createNewBatch()"));
-        require(success, "Failed to create initial batch");
     }
     /*//////////////////////////////////////////////////////////////
                         INTEGRATION TEST SCENARIOS

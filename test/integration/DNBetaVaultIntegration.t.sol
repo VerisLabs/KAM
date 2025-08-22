@@ -17,41 +17,6 @@ contract DNBetaVaultIntegrationTest is IntegrationBaseTest {
     /// @dev Set up modules for DN and Beta vaults to support batch operations
     function setUp() public override {
         super.setUp();
-
-        // Register BatchModule and ClaimModule with all vaults
-        bytes4[] memory batchSelectors = batchModule.selectors();
-        bytes4[] memory claimSelectors = claimModule.selectors();
-
-        // Register with DN vault
-        vm.prank(users.admin);
-        dnVault.addFunctions(batchSelectors, address(batchModule), false);
-        vm.prank(users.admin);
-        dnVault.addFunctions(claimSelectors, address(claimModule), false);
-
-        // Register with Alpha vault
-        vm.prank(users.admin);
-        alphaVault.addFunctions(batchSelectors, address(batchModule), false);
-        vm.prank(users.admin);
-        alphaVault.addFunctions(claimSelectors, address(claimModule), false);
-
-        // Register with Beta vault
-        vm.prank(users.admin);
-        betaVault.addFunctions(batchSelectors, address(batchModule), false);
-        vm.prank(users.admin);
-        betaVault.addFunctions(claimSelectors, address(claimModule), false);
-
-        // Grant RELAYER_ROLE to settler for batch management on all vaults
-        vm.prank(users.owner);
-        dnVault.grantRoles(users.settler, 4); // RELAYER_ROLE = _ROLE_2 = 4
-        vm.prank(users.owner);
-        alphaVault.grantRoles(users.settler, 4);
-        vm.prank(users.owner);
-        betaVault.grantRoles(users.settler, 4);
-
-        // Create initial batch for DN vault
-        vm.prank(users.settler);
-        (bool success,) = address(dnVault).call(abi.encodeWithSignature("createNewBatch()"));
-        require(success, "Failed to create initial batch");
     }
 
     /*//////////////////////////////////////////////////////////////
