@@ -11,33 +11,33 @@ KAM is an institutional-grade tokenization protocol that creates kTokens (kUSD, 
 ### System Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Institutions  │    │  Retail Users   │    │    Relayers     │
-│                 │    │                 │    │                 │
-│ • Direct mint   │    │ • Stake kTokens │    │ • Propose       │
-│ • 1:1 backing   │    │ • Earn yield    │    │ • Settle        │
-│ • Batch redeem  │    │ • Claim rewards │    │ • Coordinate    │
-└────────┬────────┘    └────────┬────────┘    └────────┬────────┘
-         │                      │                       │
-         ▼                      ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐      ┌─────────────────┐
+│   Institutions  │    │  Retail Users   │      │    Relayers     │
+│                 │    │                 │      │                 │
+│ • Direct mint   │    │ • Stake kTokens │      │ • Propose       │
+│ • 1:1 backing   │    │ • Earn yield    │      │ • Settle        │
+│ • Batch redeem  │    │ • Claim rewards │      │ • Coordinate    │
+└────────┬────────┘    └────────┬────────┘      └────────┬────────┘
+         │                      │                        │
+         ▼                      ▼                        ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Contract Layer                           │
-├─────────────────┬─────────────────┬─────────────────────────────┤
-│    kMinter      │  kStakingVault  │      kAssetRouter           │
-│                 │                 │                             │
-│ • Mint kTokens  │ • Issue stkTkns │ • Virtual accounting        │
-│ • Queue redeem  │ • Batch requests│ • Settlement coordination   │
-│ • Escrow tokens │ • Module system │ • Adapter management        │
-└─────────────────┴─────────────────┴─────────────────────────────┘
-                              │
-                    ┌─────────┴─────────┐
-                    │   Infrastructure  │
-                    ├───────────────────┤
-                    │    kRegistry      │ → Contract mappings
-                    │    kToken         │ → ERC20 implementation
-                    │    kBatchReceiver │ → Redemption distribution
-                    │    Adapters       │ → External strategies
-                    └───────────────────┘
+├─────────────────┬───────────────--──┬───────────────────────────┤
+│    kMinter      │  kStakingVault    │      kAssetRouter         │
+│                 │                   │                           │
+│ • Mint kTokens  │ • Issue stkTkns   │ • Virtual accounting      │
+│ • Queue redeem  │ • Batch requests  │ • Settlement coordination │
+│ • Escrow tokens │ • Module system   │ • Adapter management      │
+└─────────────────┴─────────────────--┴───────────────────────────┘
+                               │
+                     ┌─────────┴─────────┐
+                     │   Infrastructure  │
+                     ├───────────────────┤
+                     │    kRegistry      │ → Contract mappings
+                     │    kToken         │ → ERC20 implementation
+                     │    kBatchReceiver │ → Redemption distribution
+                     │    Adapters       │ → External strategies
+                     └───────────────────┘
 ```
 
 ### Virtual Balance Accounting
@@ -57,17 +57,17 @@ The virtual accounting works by tracking deposits, withdrawals, and transfers ac
 │                    Virtual Balance System                    │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
-│   kMinter Balance    Vault A Balance    Vault B Balance     │
-│   ┌────────────┐     ┌────────────┐     ┌────────────┐     │
-│   │ Virtual:   │     │ Virtual:   │     │ Virtual:   │     │
-│   │  +1000     │     │  +500      │     │  +300      │     │
-│   │  -200      │     │  -100      │     │  -50       │     │
-│   │ = 800      │     │ = 400      │     │ = 250      │     │
-│   └────────────┘     └────────────┘     └────────────┘     │
-│         │                   │                  │            │
-│         └───────────────────┴──────────────────┘            │
-│                             │                               │
-│                    ┌────────▼────────┐                      │
+│   kMinter Balance    Vault A Balance    Vault B Balance      │
+│   ┌────────────┐     ┌────────────┐     ┌────────────┐       │
+│   │ Virtual:   │     │ Virtual:   │     │ Virtual:   │       │
+│   │  +1000     │     │  +500      │     │  +300      │       │
+│   │  -200      │     │  -100      │     │  -50       │       │
+│   │ = 800      │     │ = 400      │     │ = 250      │       │
+│   └────────────┘     └────────────┘     └────────────┘       │
+│         │                   │                  │             │
+│         └───────────────────┴──────────────────┘             │
+│                             │                                │
+│                    ┌────────▼──────-──┐                      │
 │                    │  Net Settlement  │                      │
 │                    │                  │                      │
 │                    │ Total: +1450     │                      │
@@ -93,11 +93,11 @@ The protocol operates on a time-based batch settlement system where operations a
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │   ACTIVE              CLOSED              SETTLED           │
-│   ┌──────┐           ┌──────┐           ┌──────┐           │
-│   │      │           │      │           │      │           │
-│   │ Open │──4hrs────>│ Lock │──settle──>│ Done │           │
-│   │      │           │      │           │      │           │
-│   └──────┘           └──────┘           └──────┘           │
+│   ┌──────┐           ┌──────┐           ┌──────┐            │
+│   │      │           │      │           │      │            │
+│   │ Open │──4hrs────>│ Lock │──settle──>│ Done │            │
+│   │      │           │      │           │      │            │
+│   └──────┘           └──────┘           └──────┘            │
 │      ▲                   │                  │               │
 │      │                   │                  │               │
 │   Accepts            No new            Claims               │
@@ -118,6 +118,7 @@ KAM is split into the following main contracts:
 ### Core Token System
 
 #### kToken
+
 The fundamental ERC20 implementation representing tokenized real-world assets. Each kToken maintains a 1:1 peg with its underlying asset (e.g., kUSD:USDC, kBTC:WBTC).
 
 The kToken contract is the foundational building block of the KAM protocol, implementing a role-restricted ERC20 token with advanced security features. It uses the UUPS upgradeable pattern where the upgrade logic resides in the implementation contract rather than the proxy, reducing proxy size and gas costs while maintaining upgradeability.
@@ -127,6 +128,7 @@ The contract implements ERC-7201 "Namespaced Storage Layout" to prevent storage 
 All core functions respect a global pause state, allowing immediate shutdown if security issues are detected. Due to Solidity's stack depth limitations, initialization is split into two phases: basic setup without strings, then metadata configuration in a separate call.
 
 #### kMinter
+
 The institutional gateway contract serving as the primary interface for institutional actors to mint and redeem kTokens.
 
 The kMinter contract implements a "push-pull" model for institutional operations, where minting is immediate but redemptions are processed through a request queue system. When institutions mint kTokens, the process is synchronous - assets transfer to kAssetRouter, virtual balances update, and kTokens are minted 1:1 immediately, ensuring institutions receive tokens instantly without waiting for settlement.
@@ -138,6 +140,7 @@ The contract utilizes Solady's EnumerableSet for O(1) addition/removal of user r
 ### Settlement and Routing Infrastructure
 
 #### kAssetRouter
+
 The central settlement engine and virtual balance coordinator that manages all asset flows between protocol components.
 
 The kAssetRouter is the most complex contract in the KAM protocol, serving as both the virtual accounting system and the settlement coordination hub. It implements a sophisticated dual accounting model where virtual balances are tracked separately from physical asset movements.
@@ -151,26 +154,27 @@ The router handles four distinct types of asset movements: kMinter push operatio
 During settlement execution, the system handles kMinter versus regular vault settlement differently. For kMinter settlements, assets are transferred to batch receivers for institutional redemptions, with the vault variable being reassigned to the corresponding DN vault. For regular vault settlements, yield is minted or burned based on profit/loss calculations. Netted assets are then deployed to external strategies via adapters using explicit approval patterns for security.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Three-Phase Settlement                       │
-├───────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Phase 1: PROPOSAL           Phase 2: COOLDOWN      Phase 3: EXECUTE
-│  ┌──────────────┐           ┌──────────────┐      ┌──────────────┐
-│  │   Relayer    │           │   Timelock   │      │   Anyone     │
-│  │              │           │              │      │              │
-│  │ • Calculate  │           │ • 1hr wait   │      │ • Clear      │
-│  │   yields     │──────────>│ • Can cancel │─────>│   balances   │
-│  │ • Net flows  │           │ • Can update │      │ • Deploy     │
-│  │ • Submit     │           │              │      │   assets     │
-│  └──────────────┘           └──────────────┘      └──────────────┘
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────-----──┐
+│                     Three-Phase Settlement                           │
+├───────────────────────────────────────────────────────────────-------┤
+│                                                                      │
+│  Phase 1: PROPOSAL           Phase 2: COOLDOWN      Phase 3: EXECUTE |
+│  ┌──────────────┐           ┌──────────────┐      ┌──────────────┐   |
+│  │   Relayer    │           │   Timelock   │      │   Anyone     │   |
+│  │              │           │              │      │              │   |
+│  │ • Calculate  │           │ • 1hr wait   │      │ • Clear      │   |
+│  │   yields     │──────────>│ • Can cancel │─────>│   balances   │   |
+│  │ • Net flows  │           │ • Can update │      │ • Deploy     │   |
+│  │ • Submit     │           │              │      │   assets     │   |
+│  └──────────────┘           └──────────────┘      └──────────────┘   |
+│                                                                      │
+└─────────────────────────────────────────────────────────────────-----┘
 ```
 
 ### Vault System
 
 #### kStakingVault
+
 Modular vault implementation deployed per asset type, enabling retail users to stake kTokens for yield-bearing stkTokens.
 
 The kStakingVault implements a sophisticated modular architecture using the "diamond pattern" via MultiFacetProxy. This design allows the vault to compose functionality from multiple specialized modules while maintaining a single contract interface.
@@ -179,13 +183,14 @@ The kStakingVault implements a sophisticated modular architecture using the "dia
 
 **BatchModule**: Handles the complete batch lifecycle for efficient gas usage. It automatically creates new batches when current batches settle, marks batches ready for settlement processing, coordinates with kAssetRouter for atomic settlement, and creates deterministic addresses for redemption distribution.
 
-**FeesModule**: Manages comprehensive fee collection and distribution. Management fees accrue continuously based on time and total assets under management, while performance fees are charged only on positive yields from external strategies. Fee calculation uses precise math to avoid rounding errors, and collection occurs during settlement operations to minimize gas.
+**FeesModule**: Manages comprehensive fee collection and distribution. Management fees accrue continuously based on time and total assets under management, while performance fees are charged only on positive yields from external strategies. Fee calculation uses precise math to avoid rounding errors, and collection occurs during settlement operations to minimize gas or over an X period of time.
 
 **ClaimModule**: Processes user claims for completed requests. It converts completed stake requests into stkToken balances, processes unstaking requests and distributes underlying tokens plus yield, ensures claims are only processed for settled batches, and batches multiple claims for efficiency.
 
 The MultiFacetProxy pattern enables modular functionality through delegatecall routing, allowing new functionality to be added without contract redeployment, isolating complex logic in specialized modules, maintaining a clean main contract interface, and upgrading individual modules independently.
 
 #### kBatchReceiver
+
 Lightweight, immutable proxy contracts deployed per batch to handle redemption distributions.
 
 The kBatchReceiver serves as a secure escrow mechanism for institutional redemptions, providing a trustless way for institutions to claim their underlying assets after batch settlement. These contracts use CREATE2 for deterministic deployment with predictable addresses, preventing frontrunning attacks.
@@ -195,13 +200,16 @@ Once deployed, batch receivers cannot be modified, having no upgrade capability 
 ### External Integration Layer
 
 #### BaseAdapter
+
 Abstract foundation for all strategy adapters, providing common functionality and security checks:
+
 - Role-based access control for secure operations
 - Reentrancy protection across all external calls
 - Virtual balance tracking for protocol coordination
 - Emergency pause capability for crisis management
 
 #### CustodialAdapter
+
 Concrete implementation for custodial strategies (CEX, institutional custody).
 
 The CustodialAdapter maps vaults to custodial addresses where assets are actually held, tracks virtual balances while assets are externally deployed, reports total assets back to the protocol accurately, and handles deposit and redemption flows seamlessly. This enables the protocol to integrate with traditional financial infrastructure while maintaining on-chain transparency.
@@ -209,6 +217,7 @@ The CustodialAdapter maps vaults to custodial addresses where assets are actuall
 ### Registry and Configuration
 
 #### kRegistry
+
 System-wide configuration store maintaining all protocol mappings and permissions.
 
 The registry maintains contract ID to address mappings for all protocol components, asset to kToken associations for supported tokenization pairs, vault registration and type classification for proper routing, adapter registration per vault for strategy management, and role management across the entire protocol ecosystem.
@@ -240,7 +249,7 @@ Institution                kMinter              kAssetRouter            kToken
     │                         ├──kAssetPush────────->│                    │
     │                         │                      ├──updateVirtual()   │
     │                         │                      │                    │
-    │                         ├──mint(kUSD)─────────────────────────────>│
+    │                         ├──mint(kUSD)────────────────-─────────────>│
     │<────────────────────────┤                      │                    │
     │                         │                      │                    │
     │  kTokens received 1:1   │                      │                    │
@@ -262,7 +271,7 @@ Institution            kMinter            kAssetRouter         BatchReceiver
     │<──requestId─────────┤                    │                    │
     │                     │                    │                    │
     │        [Wait for Settlement]             │                    │
-    │                     │                    ├──settle()──────────>│
+    │                     │                    ├──settle()─────────>│
     │                     │                    │                    │
     ├──redeem(requestId)─>│                    │                    │
     │                     ├──burn(kTokens)     │                    │
@@ -284,7 +293,7 @@ Retail User          kStakingVault         kAssetRouter           Batch
     │                     │                      ├──updateVirtual() │
     │<──requestId─────────┤                      │                  │
     │                     │                      │                  │
-    │        [Batch Closes & Settles]           │                  │
+    │         [Batch Closes & Settles]           │                  │
     │                     │                      ├──settlement────->│
     │                     │                      │                  │
     ├──claimShares───────>│                      │                  │
@@ -315,30 +324,25 @@ The system calculates virtual balances by querying all adapters for a vault and 
 
 The protocol implements granular permissions via Solady's OwnableRoles with clearly defined responsibilities:
 
-| Role | Scope | Key Permissions |
-|------|-------|-----------------|
-| OWNER | Protocol | Upgrades, critical changes |
-| ADMIN_ROLE | Operational | Configuration, registry updates |
-| EMERGENCY_ADMIN_ROLE | Crisis | Pause, emergency withdrawals |
-| MINTER_ROLE | Tokens | Mint/burn kTokens |
-| INSTITUTION_ROLE | Access | Use kMinter functions |
-| RELAYER_ROLE | Settlement | Propose and execute settlements |
+| Role                 | Scope       | Key Permissions                 |
+| -------------------- | ----------- | ------------------------------- |
+| OWNER                | Protocol    | Upgrades, critical changes      |
+| ADMIN_ROLE           | Operational | Configuration, registry updates |
+| EMERGENCY_ADMIN_ROLE | Crisis      | Pause, emergency withdrawals    |
+| MINTER_ROLE          | Tokens      | Mint/burn kTokens               |
+| INSTITUTION_ROLE     | Access      | Use kMinter functions           |
+| RELAYER_ROLE         | Settlement  | Propose and execute settlements |
 
 ### Settlement Security
 
 The two-phase commit system provides multiple safeguards:
 
 **Timelock Protection**
+
 - Mandatory cooldown period (1hr default, max 1 day)
 - Proposal cancellation capability
 - Parameter update mechanism
 - On-chain validation
-
-**Explicit Approvals**
-- Per-transfer adapter approvals
-- Immediate revocation after use
-- No standing allowances
-- Reentrancy protection
 
 ### Emergency Controls
 
@@ -411,6 +415,7 @@ Some components remain immutable by design: kBatchReceiver contracts have no upg
 ## Integration Points
 
 ### For Institutions
+
 - Direct kMinter access
 - 1:1 guaranteed backing
 - No slippage or MEV
@@ -418,18 +423,21 @@ Some components remain immutable by design: kBatchReceiver contracts have no upg
 - Comprehensive request tracking
 
 ### For Retail Users
+
 - Standard ERC20 interface
 - Auto-compounding yields
 - Flexible redemption
 - stkToken appreciation
 
 ### For Strategies
+
 - IAdapter implementation
 - Virtual balance reporting
 - Automated distribution
 - Multi-strategy support
 
 ### For Monitoring
+
 - Extsload for storage access
 - Off-chain verification
 - Real-time tracking
