@@ -26,6 +26,16 @@ To clone the repo:
 git clone https://github.com/kam-protocol/kam.git && cd kam
 ```
 
+### Installing Dependencies
+
+The project uses Soldeer for dependency management. To install all dependencies:
+
+```sh
+forge soldeer install
+```
+
+This will install all dependencies specified in `soldeer.toml` and `soldeer.lock`.
+
 ## Testing
 
 ### in `default` mode
@@ -42,11 +52,30 @@ forge test
 forge coverage
 ```
 
+### Using solx compiler (optional)
+
+For faster compilation with the LLVM-based Solidity compiler, you can install and use solx:
+
+Install solx:
+```sh
+curl -L https://raw.githubusercontent.com/matter-labs/solx/main/install-solx | bash
+```
+
+Use with forge:
+```sh
+forge build --use $(which solx)
+forge test --use $(which solx)
+```
+
 ## Smart Contracts Documentation
+
+Generate and view the Foundry documentation:
 
 ```sh
 forge doc --serve --port 4000
 ```
+
+This will open the documentation at http://localhost:4000
 
 ## Protocol Documentation
 

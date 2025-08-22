@@ -1,5 +1,5 @@
 # IAdapter
-[Git Source](https://github.com/VerisLabs/KAM/blob/2cfac335d9060b60757c350b6581b2ed1a8a6b82/src/interfaces/IAdapter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/2198994c086118bce5be2d9d0775637d0ef500f3/src/interfaces/IAdapter.sol)
 
 Interface for protocol adapters that manage external strategy integrations
 
