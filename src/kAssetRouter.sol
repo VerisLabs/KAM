@@ -133,7 +133,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         if (amount == 0) revert ZeroAmount();
         address kMinter = msg.sender;
         address vault = _getDNVaultByAsset(_asset);
-        if (_virtualBalance(vault, _asset) < amount) revert InsufficientVirtualBalance();
+        if (_virtualBalance(vault, _asset) < amount) {
+            revert InsufficientVirtualBalance();
+        }
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         $.vaultBatchBalances[kMinter][batchId].requested += amount.toUint128();
@@ -172,7 +174,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
-        if (_virtualBalance(sourceVault, _asset) < amount) revert InsufficientVirtualBalance();
+        if (_virtualBalance(sourceVault, _asset) < amount) {
+            revert InsufficientVirtualBalance();
+        }
         // Update batch tracking for settlement
         $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
         $.vaultBatchBalances[targetVault][batchId].deposited += amount.toUint128();
@@ -280,25 +284,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             profit: profit,
             executeAfter: executeAfter,
             executed: false,
-            disputed: false
+            cancelled: false
         });
 
         emit SettlementProposed(proposalId, vault, batchId, totalAssets_, netted, yield, profit, executeAfter);
-    }
-
-    /// @notice Dispute a settlement proposal
-    /// @param proposalId The proposal ID to dispute
-    function disputeSettleBatch(bytes32 proposalId) external onlyGuardian {
-        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-        VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
-
-        if (proposal.executeAfter == 0) revert ProposalNotFound();
-        if (proposal.executed) revert ProposalAlreadyExecuted();
-        if (proposal.disputed) revert("Proposal already disputed");
-
-        proposal.disputed = true;
-
-        emit SettlementDisputed(proposalId, proposal.vault, proposal.batchId, msg.sender);
     }
 
     /// @notice Execute a settlement proposal after cooldown period
@@ -310,7 +299,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         // Validations
         if (proposal.executeAfter == 0) revert ProposalNotFound();
         if (proposal.executed) revert ProposalAlreadyExecuted();
-        if (proposal.disputed) revert ProposalDisputed();
+        if (proposal.cancelled) revert ProposalCancelled();
         if (block.timestamp < proposal.executeAfter) {
             revert CooldownNotPassed();
         }
@@ -322,6 +311,58 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _executeSettlement(proposal);
 
         emit SettlementExecuted(proposalId, proposal.vault, proposal.batchId, msg.sender);
+    }
+
+    /// @notice Cancel a settlement proposal before execution
+    /// @param proposalId The proposal ID to cancel
+    function cancelProposal(bytes32 proposalId) external nonReentrant whenNotPaused onlyRelayer {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
+
+        // Validations
+        if (proposal.executeAfter == 0) revert ProposalNotFound();
+        if (proposal.executed) revert ProposalAlreadyExecuted();
+        if (proposal.cancelled) revert ProposalCancelled();
+
+        // Mark as cancelled
+        proposal.cancelled = true;
+
+        emit SettlementCancelled(proposalId, proposal.vault, proposal.batchId);
+    }
+
+    /// @notice Update a settlement proposal before execution
+    /// @param proposalId The proposal ID to update
+    /// @param totalAssets_ New total assets value
+    /// @param netted New netted amount
+    /// @param yield New yield amount
+    /// @param profit New profit status
+    function updateProposal(
+        bytes32 proposalId,
+        uint256 totalAssets_,
+        uint256 netted,
+        uint256 yield,
+        bool profit
+    )
+        external
+        nonReentrant
+        whenNotPaused
+        onlyRelayer
+    {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
+
+        // Validations
+        if (proposal.executeAfter == 0) revert ProposalNotFound();
+        if (proposal.executed) revert ProposalAlreadyExecuted();
+        if (proposal.cancelled) revert ProposalCancelled();
+
+        // Update proposal parameters
+        proposal.totalAssets = totalAssets_;
+        proposal.netted = netted;
+        proposal.yield = yield;
+        proposal.profit = profit;
+
+        emit SettlementUpdated(proposalId, totalAssets_, netted, yield, profit);
     }
 
     /// @notice Internal function to execute settlement logic
@@ -359,8 +400,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             }
         } else {
             // kMinter yield is sent to insuranceFund, cannot be minted.
-            // peg will be positive till excess withdrawn and sent to insuranceFund.
-            // Insurance fund is managed by the backend
             if (profit) {
                 IkToken(kToken).mint(vault, yield);
                 emit YieldDistributed(vault, yield, true);
@@ -377,7 +416,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         IAdapter adapter = IAdapter(adapters[0]);
 
         if (netted > 0) {
+            asset.safeApprove(address(adapter), netted);
             adapter.deposit(asset, netted, vault);
+            asset.safeApprove(address(adapter), 0);
+
             emit Deposited(vault, asset, netted, isKMinter);
         }
 
@@ -385,6 +427,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         if (_registry().getVaultType(vault) > 0) {
             adapter.setTotalAssets(vault, asset, totalAssets_);
         }
+
+        // Mark batch as settled in the vault
+        IkStakingVault(vault).settleBatch(batchId);
 
         emit BatchSettled(vault, batchId, totalAssets_);
     }
@@ -442,8 +487,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         if (proposal.executed) {
             return (false, "Already executed");
         }
-        if (proposal.disputed) {
-            return (false, "Proposal disputed");
+        if (proposal.cancelled) {
+            return (false, "Proposal cancelled");
         }
         if (block.timestamp < proposal.executeAfter) {
             return (false, "Cooldown not passed");

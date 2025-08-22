@@ -9,13 +9,14 @@ interface IkStakingVault {
                         USER STAKING OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
-    function requestStake(address to, uint256 kTokensAmount) external payable returns (uint256 requestId);
-    function requestUnstake(address to, uint256 stkTokenAmount) external payable returns (uint256 requestId);
-    function claimStakedShares(bytes32 batchId, uint256 requestIndex) external payable;
-    function claimUnstakedAssets(bytes32 batchId, uint256 requestIndex) external payable;
+    function requestStake(address to, uint256 kTokensAmount) external payable returns (bytes32 requestId);
+    function requestUnstake(address to, uint256 stkTokenAmount) external payable returns (bytes32 requestId);
+    function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable;
+    function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable;
     function updateLastTotalAssets(uint256 totalAssets) external;
     function createBatchReceiver(bytes32 batchId) external returns (address);
     function closeBatch(bytes32 _batchId, bool _create) external;
+    function settleBatch(bytes32 _batchId) external;
     function totalSupply() external view returns (uint256);
 
     /*//////////////////////////////////////////////////////////////
@@ -35,11 +36,12 @@ interface IkStakingVault {
     function getSafeBatchReceiver(bytes32 batchId) external view returns (address);
     function isBatchClosed() external view returns (bool);
     function isBatchSettled() external view returns (bool);
-    function getBatchInfo()
+    function getBatchIdInfo()
         external
         view
         returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled);
     function getBatchReceiver(bytes32 batchId) external view returns (address);
+    function getBatchIdReceiver(bytes32 batchId) external view returns (address);
     function sharePrice() external view returns (uint256);
 
     /*//////////////////////////////////////////////////////////////
