@@ -24,24 +24,27 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     using SafeCastLib for uint128;
 
     /*//////////////////////////////////////////////////////////////
+                               CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+
+    uint256 private constant DEFAULT_VAULT_SETTLEMENT_COOLDOWN = 1 hours;
+    uint256 private constant MAX_VAULT_SETTLEMENT_COOLDOWN = 1 days;
+
+    /*//////////////////////////////////////////////////////////////
                             STORAGE LAYOUT
     //////////////////////////////////////////////////////////////*/
 
     /// @custom:storage-location erc7201:kam.storage.kAssetRouter
     struct kAssetRouterStorage {
+        uint256 vaultSettlementCooldown;
         mapping(address account => mapping(bytes32 batchId => Balances)) vaultBatchBalances;
         mapping(address vault => mapping(bytes32 batchId => uint256)) vaultRequestedShares;
         mapping(bytes32 proposalId => VaultSettlementProposal) settlementProposals;
-        uint256 vaultSettlementCooldown;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kAssetRouter")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant KASSETROUTER_STORAGE_LOCATION =
         0x72fdaf6608fcd614cdab8afd23d0b707bfc44e685019cc3a5ace611655fe7f00;
-
-    uint256 private constant DEFAULT_VAULT_SETTLEMENT_COOLDOWN = 1 hours;
-
-    uint256 private constant MAX_VAULT_SETTLEMENT_COOLDOWN = 1 days;
 
     function _getkAssetRouterStorage() private pure returns (kAssetRouterStorage storage $) {
         assembly {
@@ -315,7 +318,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @notice Cancel a settlement proposal before execution
     /// @param proposalId The proposal ID to cancel
-    function cancelProposal(bytes32 proposalId) external nonReentrant whenNotPaused onlyRelayer {
+    function cancelProposal(bytes32 proposalId) external nonReentrant whenNotPaused onlyGuardian {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
@@ -416,9 +419,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         IAdapter adapter = IAdapter(adapters[0]);
 
         if (netted > 0) {
-            asset.safeApprove(address(adapter), netted);
+            asset.safeTransfer(address(adapter), netted);
             adapter.deposit(asset, netted, vault);
-            asset.safeApprove(address(adapter), 0);
 
             emit Deposited(vault, asset, netted, isKMinter);
         }
