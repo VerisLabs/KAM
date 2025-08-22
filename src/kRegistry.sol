@@ -82,7 +82,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Initializes the kRegistry contract
     /// @param owner_ Contract owner address
     /// @param admin_ Admin role recipient
-    function initialize(address owner_, address admin_, address relayer_) external initializer {
+    function initialize(address owner_, address admin_, address relayer_, address guardian_) external initializer {
         if (owner_ == address(0)) revert ZeroAddress();
         if (admin_ == address(0)) revert ZeroAddress();
         if (relayer_ == address(0)) revert ZeroAddress();
@@ -90,6 +90,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         _initializeOwner(owner_);
         _grantRoles(admin_, ADMIN_ROLE);
         _grantRoles(relayer_, RELAYER_ROLE);
+        _grantRoles(guardian_, GUARDIAN_ROLE);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -174,7 +175,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param vault The vault address
     /// @param adapter The adapter address
     function registerAdapter(address vault, address adapter) external onlyRoles(ADMIN_ROLE) {
-        if (vault == address(0) || adapter == address(0)) revert InvalidAdapter();
+        if (vault == address(0) || adapter == address(0)) {
+            revert InvalidAdapter();
+        }
 
         kRegistryStorage storage $ = _getkRegistryStorage();
 
@@ -182,7 +185,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         if (!$.isVault[vault]) revert AssetNotSupported(); // Reuse error
 
         // Check if adapter is already set for this vault
-        if ($.vaultAdapters[vault].contains(address(0))) revert AdapterAlreadySet();
+        if ($.vaultAdapters[vault].contains(address(0))) {
+            revert AdapterAlreadySet();
+        }
 
         // Validate adapter implements IAdapter interface
         if (!IAdapter(adapter).registered()) revert AdapterNotRegistered();

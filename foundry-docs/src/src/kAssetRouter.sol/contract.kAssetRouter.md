@@ -1,19 +1,11 @@
 # kAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/2198994c086118bce5be2d9d0775637d0ef500f3/src/kAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/dd71a4088db684fce979bc8cf7c38882ee6bb8a4/src/kAssetRouter.sol)
 
 **Inherits:**
 [IkAssetRouter](/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), Multicallable
 
 
 ## State Variables
-### KASSETROUTER_STORAGE_LOCATION
-
-```solidity
-bytes32 private constant KASSETROUTER_STORAGE_LOCATION =
-    0x72fdaf6608fcd614cdab8afd23d0b707bfc44e685019cc3a5ace611655fe7f00;
-```
-
-
 ### DEFAULT_VAULT_SETTLEMENT_COOLDOWN
 
 ```solidity
@@ -25,6 +17,14 @@ uint256 private constant DEFAULT_VAULT_SETTLEMENT_COOLDOWN = 1 hours;
 
 ```solidity
 uint256 private constant MAX_VAULT_SETTLEMENT_COOLDOWN = 1 days;
+```
+
+
+### KASSETROUTER_STORAGE_LOCATION
+
+```solidity
+bytes32 private constant KASSETROUTER_STORAGE_LOCATION =
+    0x72fdaf6608fcd614cdab8afd23d0b707bfc44e685019cc3a5ace611655fe7f00;
 ```
 
 
@@ -273,7 +273,7 @@ Cancel a settlement proposal before execution
 
 
 ```solidity
-function cancelProposal(bytes32 proposalId) external nonReentrant whenNotPaused onlyRelayer;
+function cancelProposal(bytes32 proposalId) external nonReentrant whenNotPaused onlyGuardian;
 ```
 **Parameters**
 
@@ -587,10 +587,10 @@ storage-location: erc7201:kam.storage.kAssetRouter
 
 ```solidity
 struct kAssetRouterStorage {
+    uint256 vaultSettlementCooldown;
     mapping(address account => mapping(bytes32 batchId => Balances)) vaultBatchBalances;
     mapping(address vault => mapping(bytes32 batchId => uint256)) vaultRequestedShares;
     mapping(bytes32 proposalId => VaultSettlementProposal) settlementProposals;
-    uint256 vaultSettlementCooldown;
 }
 ```
 

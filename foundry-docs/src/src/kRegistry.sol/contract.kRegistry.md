@@ -1,5 +1,5 @@
 # kRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/2198994c086118bce5be2d9d0775637d0ef500f3/src/kRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/dd71a4088db684fce979bc8cf7c38882ee6bb8a4/src/kRegistry.sol)
 
 **Inherits:**
 [IkRegistry](/src/interfaces/IkRegistry.sol/interface.IkRegistry.md), Initializable, UUPSUpgradeable, OwnableRoles
@@ -96,7 +96,7 @@ Initializes the kRegistry contract
 
 
 ```solidity
-function initialize(address owner_, address admin_, address relayer_) external initializer;
+function initialize(address owner_, address admin_, address relayer_, address guardian_) external initializer;
 ```
 **Parameters**
 
@@ -105,6 +105,7 @@ function initialize(address owner_, address admin_, address relayer_) external i
 |`owner_`|`address`|Contract owner address|
 |`admin_`|`address`|Admin role recipient|
 |`relayer_`|`address`||
+|`guardian_`|`address`||
 
 
 ### setSingletonContract
