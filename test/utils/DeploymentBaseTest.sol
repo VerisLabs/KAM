@@ -297,6 +297,12 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Deploy all three types of kStakingVaults with modules
     function _deployStakingVaults() internal {
+        vm.startPrank(users.admin);
+
+        // Register assets and kTokens
+        registry.registerAsset(USDC_MAINNET, address(kUSD), registry.USDC());
+        registry.registerAsset(WBTC_MAINNET, address(kBTC), registry.WBTC());
+
         // Deploy modules first (shared across all vaults)
         claimModule = new ClaimModule();
         batchModule = new BatchModule();
@@ -374,10 +380,6 @@ contract DeploymentBaseTest is BaseTest {
 
         vm.startPrank(users.admin);
 
-        // Register assets and kTokens
-        registry.registerAsset(USDC_MAINNET, address(kUSD), registry.USDC());
-        registry.registerAsset(WBTC_MAINNET, address(kBTC), registry.WBTC());
-
         // Register kMinter as vault (MINTER type = 0 - for institutional operations)
         registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, USDC_MAINNET);
 
@@ -422,6 +424,7 @@ contract DeploymentBaseTest is BaseTest {
 
         // Register adapters for vaults (if adapters were deployed)
         if (address(custodialAdapter) != address(0)) {
+            registry.registerAdapter(address(minter), address(custodialAdapter));
             registry.registerAdapter(address(dnVault), address(custodialAdapter));
             registry.registerAdapter(address(alphaVault), address(custodialAdapter));
             registry.registerAdapter(address(betaVault), address(custodialAdapter));

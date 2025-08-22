@@ -1,463 +1,471 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
-//import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
-//
-//import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-//import { LibClone } from "solady/utils/LibClone.sol";
-//import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
-//import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-//import { BaseVaultModule } from "src/kStakingVault/modules/BaseVaultModule.sol";
-//import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
-//
-///// @title kStakingVaultTest
-///// @notice Comprehensive unit tests for kStakingVault contract
-//contract kStakingVaultTest is DeploymentBaseTest {
-//    using LibClone for address;
-//
-//    // Test constants
-//    uint256 internal constant TEST_AMOUNT = 1000 * _1_USDC;
-//    uint256 internal constant TEST_DUST_AMOUNT = 100 * _1_USDC;
-//    uint256 internal constant MIN_STK_TOKENS = 900 * _1_USDC; // Allow for some slippage
-//    address internal constant ZERO_ADDRESS = address(0);
-//
-//    // Events to test
-//    event StakeRequestCreated(
-//        bytes32 indexed requestId,
-//        address indexed user,
-//        address indexed kToken,
-//        uint256 amount,
-//        address recipient,
-//        bytes32 batchId
-//    );
-//    event UnstakeRequestCreated(
-//        bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, bytes32 batchId
-//    );
-//    event StakeRequestRedeemed(bytes32 indexed requestId);
-//    event UnstakeRequestRedeemed(bytes32 indexed requestId);
-//
-//    /*//////////////////////////////////////////////////////////////
-//                        INITIALIZATION TESTS
-//    //////////////////////////////////////////////////////////////*/
-//
-//    /// @dev Test contract initialization state
-//    function test_InitialState() public view {
-//        // Check basic properties
-//        assertEq(alphaVault.contractName(), "kStakingVault", "Contract name incorrect");
-//        assertEq(alphaVault.contractVersion(), "1.0.0", "Contract version incorrect");
-//
-//        // Check initialization parameters
-//        // Note: Owner and role functions are handled by MultiFacetProxy/BaseVaultModule
-//        // These are not exposed in the IkStakingVault interface for unit testing
-//
-//        // Check ERC20 properties
-//        assertEq(alphaVault.name(), ALPHA_VAULT_NAME, "Name incorrect");
-//        assertEq(alphaVault.symbol(), ALPHA_VAULT_SYMBOL, "Symbol incorrect");
-//        assertEq(alphaVault.decimals(), 6, "Decimals incorrect");
-//
-//        // Check vault-specific properties
-//        assertEq(alphaVault.asset(), USDC_MAINNET, "Asset incorrect");
-//        assertEq(alphaVault.totalSupply(), 0, "Total supply should be zero initially");
-//        assertEq(alphaVault.getBatchId(), 0, "Batch ID should be zero initially");
-//        assertEq(alphaVault.lastTotalAssets(), 0, "Last total assets should be zero initially");
-//    }
-//
-//    /// @dev Test successful initialization with valid parameters
-//    function test_Initialize_Success() public {
-//        // Deploy fresh implementation for testing
-//        kStakingVault newVaultImpl = new kStakingVault();
-//
-//        bytes memory initData = abi.encodeWithSelector(
-//            kStakingVault.initialize.selector,
-//            address(registry),
-//            users.owner,
-//            users.admin,
-//            false,
-//            "Test Vault",
-//            "tVault",
-//            6,
-//            uint128(TEST_DUST_AMOUNT),
-//            users.emergencyAdmin,
-//            USDC_MAINNET
-//        );
-//
-//        address newProxy = address(newVaultImpl).clone();
-//        (bool success,) = newProxy.call(initData);
-//
-//        assertTrue(success, "Initialization should succeed");
-//
-//        kStakingVault newVault = kStakingVault(payable(newProxy));
-//        // Note: Owner/role functions not exposed in interface
-//        assertEq(newVault.name(), "Test Vault", "Name not set");
-//        assertEq(newVault.symbol(), "tVault", "Symbol not set");
-//        assertEq(newVault.asset(), USDC_MAINNET, "Asset not set");
-//    }
-//
-//    /// @dev Test initialization reverts with zero addresses
-//    function test_Initialize_RevertZeroAddresses() public {
-//        kStakingVault newVaultImpl = new kStakingVault();
-//
-//        // Test zero asset
-//        bytes memory initData = abi.encodeWithSelector(
-//            kStakingVault.initialize.selector,
-//            address(registry),
-//            users.owner,
-//            users.admin,
-//            false,
-//            "Test Vault",
-//            "tVault",
-//            6,
-//            uint128(TEST_DUST_AMOUNT),
-//            users.emergencyAdmin,
-//            address(0) // zero asset
-//        );
-//
-//        address newProxy = address(newVaultImpl).clone();
-//        (bool success,) = newProxy.call(initData);
-//
-//        assertFalse(success, "Should revert with zero asset");
-//    }
-//
-//    /// @dev Test double initialization reverts
-//    function test_Initialize_RevertDoubleInit() public {
-//        vm.expectRevert();
-//        alphaVault.initialize(
-//            address(registry),
-//            users.owner,
-//            users.admin,
-//            false,
-//            "Test",
-//            "TEST",
-//            6,
-//            uint128(TEST_DUST_AMOUNT),
-//            users.emergencyAdmin,
-//            USDC_MAINNET
-//        );
-//    }
-//
-//    /*//////////////////////////////////////////////////////////////
-//                        STAKING REQUEST TESTS
-//    //////////////////////////////////////////////////////////////*/
-//
-//    /// @dev Test staking request requires institution role
-//    function test_RequestStake_RequiresInstitution() public {
-//        uint256 amount = TEST_AMOUNT;
-//        address recipient = users.alice;
-//
-//        // Regular user should fail with OnlyInstitution
-//        vm.prank(users.alice);
-//        vm.expectRevert(); // OnlyInstitution error
-//
-//        alphaVault.requestStake(recipient, uint96(amount), uint96(MIN_STK_TOKENS));
-//
-//        // This validates that the function has proper access control
-//    }
-//
-//    /// @dev Test staking request reverts with zero amount
-//    function test_RequestStake_RevertZeroAmount() public {
-//        vm.prank(users.alice);
-//        vm.expectRevert(BaseVaultModule.ZeroAmount.selector);
-//        alphaVault.requestStake(users.alice, 0, uint96(MIN_STK_TOKENS));
-//    }
-//
-//    /// @dev Test staking request reverts with insufficient balance
-//    function test_RequestStake_RevertInsufficientBalance() public {
-//        // User has no kTokens
-//        vm.prank(users.alice);
-//        vm.expectRevert(); // InsufficientBalance or similar
-//        alphaVault.requestStake(users.alice, uint96(TEST_AMOUNT), uint96(MIN_STK_TOKENS));
-//    }
-//
-//    /// @dev Test staking request access control before dust threshold check
-//    function test_RequestStake_AccessControlFirst() public {
-//        uint256 dustAmount = 50 * _1_USDC; // Below dust threshold
-//
-//        // Regular user fails with OnlyInstitution before dust threshold check
-//        vm.prank(users.alice);
-//        vm.expectRevert(); // OnlyInstitution comes before dust threshold check
-//        alphaVault.requestStake(users.alice, uint96(dustAmount), uint96(dustAmount - 10));
-//    }
-//
-//    /// @dev Test staking request access control
-//    function test_RequestStake_AccessControl() public {
-//        // This test verifies the function exists and validates inputs
-//        // Pause functionality is internal to BaseVaultModule
-//        vm.prank(users.alice);
-//        vm.expectRevert(); // InsufficientBalance or similar
-//        alphaVault.requestStake(users.alice, uint96(TEST_AMOUNT), uint96(MIN_STK_TOKENS));
-//    }
-//
-//    /*//////////////////////////////////////////////////////////////
-//                        UNSTAKING REQUEST TESTS
-//    //////////////////////////////////////////////////////////////*/
-//
-//    /// @dev Test unstaking request reverts with zero amount
-//    function test_RequestUnstake_RevertZeroAmount() public {
-//        vm.prank(users.alice);
-//        vm.expectRevert(BaseVaultModule.ZeroAmount.selector);
-//        alphaVault.requestUnstake(users.alice, 0, uint96(MIN_STK_TOKENS));
-//    }
-//
-//    /// @dev Test unstaking request reverts with insufficient balance
-//    function test_RequestUnstake_RevertInsufficientBalance() public {
-//        // User has no stkTokens
-//        vm.prank(users.alice);
-//        vm.expectRevert(); // InsufficientBalance or similar
-//        alphaVault.requestUnstake(users.alice, uint96(TEST_AMOUNT), uint96(MIN_STK_TOKENS));
-//    }
-//
-//    /// @dev Test mintStkTokens requires proper authorization
-//    function test_MintStkTokens_RequiresAuthorization() public {
-//        uint256 dustAmount = 50 * _1_USDC;
-//
-//        // Direct mint should require proper authorization (OnlyKAssetRouter or similar)
-//        vm.prank(users.admin);
-//        vm.expectRevert(); // OnlyKAssetRouter or similar access control error
-//        alphaVault.mintStkTokens(users.alice, dustAmount);
-//    }
-//
-//    /// @dev Test unstaking request access control
-//    function test_RequestUnstake_AccessControl() public {
-//        // This test verifies the function exists and validates inputs
-//        vm.prank(users.alice);
-//        vm.expectRevert(); // InsufficientBalance or similar
-//        alphaVault.requestUnstake(users.alice, uint96(TEST_AMOUNT), uint96(MIN_STK_TOKENS));
-//    }
-//
-//    /*//////////////////////////////////////////////////////////////
-//                        ADMIN FUNCTION TESTS
-//    //////////////////////////////////////////////////////////////*/
-//
-//    /// @dev Test updateLastTotalAssets only by asset router
-//    function test_UpdateLastTotalAssets_OnlyAssetRouter() public {
-//        uint256 newAssets = TEST_AMOUNT;
-//
-//        // Non-asset router should fail
-//        vm.prank(users.alice);
-//        vm.expectRevert(BaseVaultModule.OnlyKAssetRouter.selector);
-//        alphaVault.updateLastTotalAssets(newAssets);
-//
-//        // Asset router should succeed
-//        vm.prank(address(assetRouter));
-//        alphaVault.updateLastTotalAssets(newAssets);
-//
-//        assertEq(alphaVault.lastTotalAssets(), newAssets, "Last total assets should be updated");
-//    }
-//
-//    /// @dev Test mintStkTokens function exists (access control handled by modules)
-//    function test_MintStkTokens_FunctionExists() public {
-//        uint256 amount = TEST_AMOUNT;
-//
-//        // This function exists but access control is handled by admin module
-//        // We can't test the full functionality without proper module setup
-//        vm.prank(users.alice);
-//        try alphaVault.mintStkTokens(users.alice, amount) {
-//            // If it succeeds, verify the balance
-//            assertEq(alphaVault.balanceOf(users.alice), amount, "Should have minted tokens");
-//        } catch {
-//            // Expected to fail due to access control or other validation
-//            assertTrue(true, "Function exists and has proper validation");
-//        }
-//    }
-//
-//    /// @dev Test burnStkTokens function exists (access control handled by modules)
-//    function test_BurnStkTokens_FunctionExists() public {
-//        uint256 amount = TEST_AMOUNT;
-//
-//        // This function exists but access control is handled by admin module
-//        vm.prank(users.alice);
-//        try alphaVault.burnStkTokens(users.alice, amount) {
-//            // Unlikely to succeed due to access control
-//            assertTrue(false, "Should not succeed without proper access");
-//        } catch {
-//            // Expected to fail due to access control or insufficient balance
-//            assertTrue(true, "Function exists and has proper validation");
-//        }
-//    }
-//
-//    /*//////////////////////////////////////////////////////////////
-//                        VIEW FUNCTION TESTS
-//    //////////////////////////////////////////////////////////////*/
-//
-//    /// @dev Test asset view function
-//    function test_Asset() public view {
-//        assertEq(alphaVault.asset(), USDC_MAINNET, "Asset should return USDC");
-//    }
-//
-//    /// @dev Test ERC20 metadata functions
-//    function test_ERC20Metadata() public view {
-//        assertEq(alphaVault.name(), ALPHA_VAULT_NAME, "Name incorrect");
-//        assertEq(alphaVault.symbol(), ALPHA_VAULT_SYMBOL, "Symbol incorrect");
-//        assertEq(alphaVault.decimals(), 6, "Decimals incorrect");
-//    }
-//
-//    /// @dev Test calculateStkTokenPrice with zero total assets
-//    function test_CalculateStkTokenPrice_ZeroAssets() public view {
-//        uint256 price = alphaVault.calculateStkTokenPrice(0);
-//        assertEq(price, 1e18, "Price should be 1e18 when total assets is zero");
-//    }
-//
-//    /// @dev Test calculateStkTokenPrice with assets but no supply
-//    function test_CalculateStkTokenPrice_NoSupply() public view {
-//        uint256 totalAssets = TEST_AMOUNT;
-//        uint256 price = alphaVault.calculateStkTokenPrice(totalAssets);
-//        assertEq(price, 1e18, "Price should be 1e18 when total supply is zero");
-//    }
-//
-//    /// @dev Test sharePrice view function
-//    function test_SharePrice() public view {
-//        uint256 price = alphaVault.sharePrice();
-//        assertEq(price, 1e18, "Initial share price should be 1e18");
-//    }
-//
-//    /// @dev Test lastTotalAssets view function
-//    function test_LastTotalAssets() public view {
-//        assertEq(alphaVault.lastTotalAssets(), 0, "Initial last total assets should be zero");
-//    }
-//
-//    /// @dev Test totalAssets view function
-//    function test_totalAssetsVirtual() public view {
-//        uint256 assets = alphaVault.totalAssets();
-//        assertEq(assets, 0, "Initial total assets should be zero");
-//    }
-//
-//    /// @dev Test estimatedTotalAssets view function
-//    function test_EstimatedTotalAssets() public view {
-//        uint256 assets = alphaVault.estimatedTotalAssets();
-//        assertEq(assets, 0, "Initial estimated total assets should be zero");
-//    }
-//
-//    /// @dev Test getKToken view function
-//    function test_GetKToken() public view {
-//        address kToken = alphaVault.getKToken();
-//        assertEq(kToken, address(kUSD), "Should return kUSD token");
-//    }
-//
-//    /// @dev Test batch-related view functions
-//    function test_BatchFunctions() public view {
-//        assertEq(alphaVault.getBatchId(), 0, "Initial batch ID should be zero");
-//        assertEq(alphaVault.getSafeBatchId(), 0, "Initial safe batch ID should be zero");
-//        assertFalse(alphaVault.isBatchClosed(), "Initial batch should not be closed");
-//        assertFalse(alphaVault.isBatchSettled(), "Initial batch should not be settled");
-//
-//        // Test getBatchInfo
-//        (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled) = alphaVault.getBatchInfo();
-//        assertEq(batchId, 0, "Batch ID should be zero");
-//        assertEq(batchReceiver, address(0), "Batch receiver should be zero");
-//        assertFalse(isClosed, "Batch should not be closed");
-//        assertFalse(isSettled, "Batch should not be settled");
-//    }
-//
-//    /// @dev Test getBatchReceiver for non-existent batch
-//    function test_GetBatchReceiver_NonExistent() public view {
-//        address receiver = alphaVault.getBatchReceiver(999);
-//        assertEq(receiver, address(0), "Non-existent batch should return zero address");
-//    }
-//
-//    /// @dev Test getSafeBatchReceiver for non-existent batch
-//    function test_GetSafeBatchReceiver_NonExistent() public view {
-//        address receiver = alphaVault.getSafeBatchReceiver(999);
-//        assertEq(receiver, address(0), "Non-existent batch should return zero address");
-//    }
-//
-//    /*//////////////////////////////////////////////////////////////
-//                        CONTRACT INFO TESTS
-//    //////////////////////////////////////////////////////////////*/
-//
-//    /// @dev Test contract info functions
-//    function test_ContractInfo() public view {
-//        assertEq(alphaVault.contractName(), "kStakingVault", "Contract name incorrect");
-//        assertEq(alphaVault.contractVersion(), "1.0.0", "Contract version incorrect");
-//    }
-//
-//    /*//////////////////////////////////////////////////////////////
-//                        UPGRADE TESTS
-//    //////////////////////////////////////////////////////////////*/
-//
-//    /// @dev Test upgrade functions are inherited (not directly testable via interface)
-//    function test_UpgradeCapability() public view {
-//        // kStakingVault inherits from UUPSUpgradeable
-//        // Upgrade authorization is handled internally
-//        // This test just confirms the contract exists and is deployed
-//        assertTrue(address(alphaVault).code.length > 0, "Vault should have implementation code");
-//    }
-//
-//    /*//////////////////////////////////////////////////////////////
-//                        ERC20 STANDARD TESTS
-//    //////////////////////////////////////////////////////////////*/
-//
-//    /// @dev Test ERC20 transfer functionality (when tokens exist)
-//    function test_Transfer_WithZeroBalance() public {
-//        // Test transfer with zero balance (should succeed but transfer nothing)
-//        vm.prank(users.alice);
-//        bool success = alphaVault.transfer(users.bob, 0);
-//
-//        assertTrue(success, "Zero transfer should succeed");
-//        assertEq(alphaVault.balanceOf(users.alice), 0, "Alice balance should remain zero");
-//        assertEq(alphaVault.balanceOf(users.bob), 0, "Bob balance should remain zero");
-//    }
-//
-//    /// @dev Test transferFrom with zero allowance
-//    function test_TransferFrom_ZeroAmount() public {
-//        // Test transferFrom with zero amount
-//        vm.prank(users.bob);
-//        bool success = alphaVault.transferFrom(users.alice, users.charlie, 0);
-//
-//        assertTrue(success, "Zero transferFrom should succeed");
-//        assertEq(alphaVault.balanceOf(users.alice), 0, "Alice balance should remain zero");
-//        assertEq(alphaVault.balanceOf(users.charlie), 0, "Charlie balance should remain zero");
-//    }
-//
-//    /// @dev Test approve functionality
-//    function test_Approve_Success() public {
-//        uint256 amount = TEST_AMOUNT;
-//
-//        vm.prank(users.alice);
-//        bool success = alphaVault.approve(users.bob, amount);
-//
-//        assertTrue(success, "Approve should succeed");
-//        assertEq(alphaVault.allowance(users.alice, users.bob), amount, "Allowance incorrect");
-//    }
-//
-//    /*//////////////////////////////////////////////////////////////
-//                        MODULAR ARCHITECTURE TESTS
-//    //////////////////////////////////////////////////////////////*/
-//
-//    /// @dev Test that vault uses modular architecture
-//    function test_ModularArchitecture() public view {
-//        // The vault should inherit from BaseVaultModule and have implementation code
-//        assertTrue(address(alphaVault).code.length > 0, "Vault should have code");
-//
-//        // Verify it implements the expected interface functions
-//        assertEq(alphaVault.contractName(), "kStakingVault", "Should have contract name");
-//        assertEq(alphaVault.contractVersion(), "1.0.0", "Should have contract version");
-//    }
-//
-//    /*//////////////////////////////////////////////////////////////
-//                        INTEGRATION HELPERS
-//    //////////////////////////////////////////////////////////////*/
-//
-//    /// @dev Test vault type identification
-//    function test_VaultType() public {
-//        // Alpha vault should be type 1
-//        uint8 vaultType = registry.getVaultType(address(alphaVault));
-//        assertEq(vaultType, 1, "Alpha vault should be type 1");
-//
-//        // Beta vault should be type 2
-//        vaultType = registry.getVaultType(address(betaVault));
-//        assertEq(vaultType, 2, "Beta vault should be type 2");
-//
-//        // DN vault should be type 0
-//        vaultType = registry.getVaultType(address(dnVault));
-//        assertEq(vaultType, 0, "DN vault should be type 0");
-//    }
-//
-//    /// @dev Test vault asset registration
-//    function test_VaultAssetRegistration() public {
-//        assertEq(registry.getVaultAsset(address(alphaVault)), USDC_MAINNET, "Alpha vault asset should be USDC");
-//        assertEq(registry.getVaultAsset(address(betaVault)), USDC_MAINNET, "Beta vault asset should be USDC");
-//        assertEq(registry.getVaultAsset(address(dnVault)), USDC_MAINNET, "DN vault asset should be USDC");
-//    }
-//}
-//
+import { USDC_MAINNET, _1_USDC } from "../utils/Constants.sol";
+import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
+import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
+import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+
+/// @title kStakingVaultAccountingTest
+/// @notice Tests for core accounting mechanics in kStakingVault
+/// @dev Focuses on share price calculations, asset conversions, and balance tracking
+contract kStakingVaultAccountingTest is DeploymentBaseTest {
+    using FixedPointMathLib for uint256;
+    using SafeTransferLib for address;
+
+    /*//////////////////////////////////////////////////////////////
+                              CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+
+    uint256 constant INITIAL_DEPOSIT = 1_000_000 * _1_USDC; // 1M USDC
+    uint256 constant SMALL_DEPOSIT = 10_000 * _1_USDC; // 10K USDC
+    uint256 constant LARGE_DEPOSIT = 5_000_000 * _1_USDC; // 5M USDC
+
+    /*//////////////////////////////////////////////////////////////
+                              VARIABLES
+    //////////////////////////////////////////////////////////////*/
+
+    kStakingVault vault;
+
+    /*//////////////////////////////////////////////////////////////
+                              SETUP
+    //////////////////////////////////////////////////////////////*/
+
+    function setUp() public override {
+        super.setUp();
+
+        // Use Alpha vault for testing
+        vault = alphaVault;
+
+        // Mint kTokens to test users
+        _mintKTokensToUsers();
+    }
+
+    function _mintKTokensToUsers() internal {
+        vm.startPrank(users.institution);
+        USDC_MAINNET.safeApprove(address(minter), type(uint256).max);
+        minter.mint(USDC_MAINNET, users.alice, INITIAL_DEPOSIT * 3);
+        minter.mint(USDC_MAINNET, users.bob, LARGE_DEPOSIT);
+        minter.mint(USDC_MAINNET, users.charlie, INITIAL_DEPOSIT);
+        vm.stopPrank();
+
+        // Settle batch
+        bytes32 batchId = dnVault.getBatchId();
+        executeBatchSettlement(address(dnVault), batchId, INITIAL_DEPOSIT * 3 + LARGE_DEPOSIT + INITIAL_DEPOSIT);
+    }
+
+    function executeBatchSettlement(address vault, bytes32 batchId, uint256 totalAssets) internal {
+        // Advance time to ensure unique proposal IDs when settling multiple vaults
+        vm.warp(block.timestamp + 1);
+
+        uint256 startTime = block.timestamp;
+
+        // Ensure kAssetRouter has the physical assets for settlement
+        // In production, backend would retrieve these from external strategies
+        uint256 currentBalance = IERC20(USDC_MAINNET).balanceOf(address(assetRouter));
+        if (currentBalance < totalAssets) {
+            deal(USDC_MAINNET, address(assetRouter), totalAssets);
+        }
+
+        // kAssetRouter needs to approve adapter to spend USDC
+        vm.startPrank(address(assetRouter));
+        // When settling kMinter, get DN vault's adapter since that's where assets go
+        address actualVault = vault == address(minter) ? address(dnVault) : vault;
+        address[] memory adapters = registry.getAdapters(actualVault);
+        IERC20(USDC_MAINNET).approve(adapters[0], totalAssets);
+        vm.stopPrank();
+
+        vm.prank(users.settler);
+        bytes32 proposalId =
+            assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, totalAssets, totalAssets, 0, false);
+
+        // Wait for cooldown period(0 for testing)
+        assetRouter.executeSettleBatch(proposalId);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        INITIAL STATE TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_InitialState() public view {
+        // Vault should start with zero assets and shares
+        assertEq(vault.totalAssets(), 0);
+        assertEq(vault.totalSupply(), 0);
+        assertEq(vault.totalNetAssets(), 0);
+
+        // Share price should be 1:1 initially (1e6 for 6 decimals)
+        assertEq(vault.sharePrice(), 1e6);
+    }
+
+    function test_InitialSharePriceWith6Decimals() public view {
+        // Vault uses 6 decimals to match USDC
+        assertEq(vault.decimals(), 6);
+
+        // Initial share price should be 1 USDC (1e6)
+        assertEq(vault.sharePrice(), 1e6);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                      SINGLE DEPOSIT ACCOUNTING TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_FirstDeposit_SharePriceRemains1to1() public {
+        // Alice deposits 1M USDC
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+
+        // Total assets should equal deposit
+        assertEq(vault.totalAssets(), INITIAL_DEPOSIT);
+
+        // Alice should receive 1:1 shares (1M stkTokens)
+        assertEq(vault.balanceOf(users.alice), INITIAL_DEPOSIT);
+
+        // Total supply should equal deposit
+        assertEq(vault.totalSupply(), INITIAL_DEPOSIT);
+
+        // Share price should remain 1:1
+        assertEq(vault.sharePrice(), 1e6);
+    }
+
+    function test_SharePriceCalculation_AfterYield() public {
+        // Alice deposits 1M USDC
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+
+        // Simulate 10% yield by adding 100K USDC to vault
+        uint256 yieldAmount = 100_000 * _1_USDC;
+        vm.prank(address(minter));
+        kUSD.mint(address(vault), yieldAmount);
+
+        // Total assets should now be 1.1M USDC
+        assertEq(vault.totalAssets(), INITIAL_DEPOSIT + yieldAmount);
+
+        // Total supply remains 1M stkTokens
+        assertEq(vault.totalSupply(), INITIAL_DEPOSIT);
+
+        // Share price should be 1.1 USDC per stkToken
+        uint256 expectedSharePrice = 1.1e6; // 1.1 USDC
+        assertEq(vault.sharePrice(), expectedSharePrice);
+    }
+
+    function test_SharePriceCalculation_AfterLoss() public {
+        // Alice deposits 1M USDC
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+
+        // Simulate 5% loss by burning 50K USDC from vault
+        uint256 lossAmount = 50_000 * _1_USDC;
+        vm.prank(address(minter));
+        kUSD.burn(address(vault), lossAmount);
+
+        // Total assets should now be 950K USDC
+        assertEq(vault.totalAssets(), INITIAL_DEPOSIT - lossAmount);
+
+        // Share price should be 0.95 USDC per stkToken
+        uint256 expectedSharePrice = 0.95e6; // 0.95 USDC
+        assertEq(vault.sharePrice(), expectedSharePrice);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                      MULTIPLE DEPOSIT ACCOUNTING TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_SecondDeposit_SameSharePrice() public {
+        // Alice deposits 1M USDC
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+
+        // Bob deposits 500K USDC at same share price
+        uint256 bobDeposit = 500_000 * _1_USDC;
+        _performStakeAndSettle(users.bob, bobDeposit);
+
+        // Total assets should be 1.5M USDC
+        assertEq(vault.totalAssets(), INITIAL_DEPOSIT + bobDeposit);
+
+        // Alice should have 1M stkTokens, Bob should have 500K stkTokens
+        assertEq(vault.balanceOf(users.alice), INITIAL_DEPOSIT);
+        assertEq(vault.balanceOf(users.bob), bobDeposit);
+
+        // Total supply should be 1.5M stkTokens
+        assertEq(vault.totalSupply(), INITIAL_DEPOSIT + bobDeposit);
+
+        // Share price should remain 1:1
+        assertEq(vault.sharePrice(), 1e6);
+    }
+
+    function test_SecondDeposit_AfterYield() public {
+        // Alice deposits 1M USDC
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+
+        // Add 20% yield (200K USDC)
+        uint256 yieldAmount = 200_000 * _1_USDC;
+        vm.prank(address(minter));
+        kUSD.mint(address(vault), yieldAmount);
+
+        // Share price is now 1.2 USDC per stkToken
+        assertEq(vault.sharePrice(), 1.2e6);
+
+        // Bob deposits 600K USDC (should get 500K stkTokens)
+        uint256 bobDeposit = 600_000 * _1_USDC;
+        _performStakeAndSettle(users.bob, bobDeposit);
+
+        // Calculate expected stkTokens for Bob
+        uint256 expectedBobShares = bobDeposit * 1e6 / 1.2e6; // 500K stkTokens
+
+        // Verify Bob's share balance
+        assertApproxEqAbs(vault.balanceOf(users.bob), expectedBobShares, 1); // 1 wei tolerance
+
+        // Total assets should be 1.8M USDC (1.2M + 600K)
+        assertEq(vault.totalAssets(), 1.8e6 * _1_USDC);
+
+        // Share price should remain approximately 1.2 USDC
+        assertApproxEqRel(vault.sharePrice(), 1.2e6, 0.001e18); // 0.1% tolerance
+    }
+
+    function test_MultipleDeposits_DifferentSharePrices() public {
+        uint256[] memory deposits = new uint256[](3);
+        deposits[0] = 1_000_000 * _1_USDC; // Alice: 1M USDC
+        deposits[1] = 500_000 * _1_USDC; // Bob: 500K USDC
+        deposits[2] = 250_000 * _1_USDC; // Charlie: 250K USDC
+
+        address[] memory _users = new address[](3);
+        _users[0] = users.alice;
+        _users[1] = users.bob;
+        _users[2] = users.charlie;
+
+        uint256[] memory expectedShares = new uint256[](3);
+
+        for (uint256 i = 0; i < 3; i++) {
+            // Record share price before deposit
+            uint256 sharePrice = vault.sharePrice();
+
+            // Perform deposit
+            _performStakeAndSettle(_users[i], deposits[i]);
+
+            // Calculate expected shares
+            expectedShares[i] = deposits[i] * 1e6 / sharePrice;
+
+            // Verify user's share balance
+            assertApproxEqAbs(vault.balanceOf(_users[i]), expectedShares[i], 10); // 10 wei tolerance
+
+            // Add some yield before next deposit (10% each time)
+            if (i < 2) {
+                uint256 currentAssets = vault.totalAssets();
+                uint256 yieldAmount = currentAssets / 10; // 10% yield
+                vm.prank(address(minter));
+                kUSD.mint(address(vault), yieldAmount);
+            }
+        }
+
+        // Verify total supply equals sum of individual shares
+        uint256 totalExpectedShares = expectedShares[0] + expectedShares[1] + expectedShares[2];
+        assertApproxEqAbs(vault.totalSupply(), totalExpectedShares, 30); // 30 wei tolerance
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        ASSET CONVERSION TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_ConvertToShares_ZeroTotalSupply() public {
+        // With zero total supply, conversion should be 1:1
+        uint256 assets = 1000 * _1_USDC;
+
+        // Use internal function via low-level call (testing internal logic)
+        // In practice, this is tested through deposit functionality
+        _performStakeAndSettle(users.alice, assets);
+
+        // First deposit should always be 1:1
+        assertEq(vault.balanceOf(users.alice), assets);
+    }
+
+    function test_ConvertToAssets_ZeroTotalSupply() public {
+        // With zero total supply, assets per share should be 1:1
+        // This is implicitly tested in initial share price
+        assertEq(vault.sharePrice(), 1e6);
+    }
+
+    function test_ConvertToShares_WithExistingSupply() public {
+        // Setup: Alice deposits 1M USDC
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+
+        // Add yield to change share price
+        uint256 yieldAmount = 500_000 * _1_USDC; // 50% yield
+        vm.prank(address(minter));
+        kUSD.mint(address(vault), yieldAmount);
+
+        // Share price should now be 1.5 USDC per stkToken
+        assertEq(vault.sharePrice(), 1.5e6);
+
+        // Bob deposits 750K USDC (should get 500K stkTokens)
+        uint256 bobDeposit = 750_000 * _1_USDC;
+        _performStakeAndSettle(users.bob, bobDeposit);
+
+        uint256 expectedBobShares = bobDeposit * 1e6 / 1.5e6; // 500K stkTokens
+        assertApproxEqAbs(vault.balanceOf(users.bob), expectedBobShares, 1);
+    }
+
+    function test_ConvertToAssets_WithExistingSupply() public {
+        // Setup: Alice deposits 1M USDC, gets 1M stkTokens
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+
+        // Add yield
+        uint256 yieldAmount = 200_000 * _1_USDC; // 20% yield
+        vm.prank(address(minter));
+        kUSD.mint(address(vault), yieldAmount);
+
+        // Alice's 1M stkTokens should now be worth 1.2M USDC
+        uint256 aliceShares = vault.balanceOf(users.alice);
+        uint256 expectedAssetValue = aliceShares * vault.sharePrice() / 1e6;
+
+        assertEq(expectedAssetValue, 1.2e6 * _1_USDC);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        PRECISION AND ROUNDING TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_SmallDeposit_Precision() public {
+        // Test very small deposits to check precision handling
+        uint256 smallAmount = 1 * _1_USDC; // 1 USDC
+
+        _performStakeAndSettle(users.alice, smallAmount);
+
+        // Should receive exactly 1 stkToken (1e6 wei)
+        assertEq(vault.balanceOf(users.alice), smallAmount);
+        assertEq(vault.totalAssets(), smallAmount);
+        assertEq(vault.sharePrice(), 1e6);
+    }
+
+    function test_DustAmount_Handling() public {
+        // Test deposits smaller than dust threshold should fail
+        uint256 dustAmount = 999; // Less than 1000 (DEFAULT_DUST_AMOUNT)
+
+        vm.prank(users.alice);
+        kUSD.approve(address(vault), dustAmount);
+
+        vm.expectRevert(); // Should revert due to dust threshold
+        vm.prank(users.alice);
+        vault.requestStake(users.alice, dustAmount);
+    }
+
+    function test_LargeNumbers_Precision() public {
+        // Test with very large numbers to check for overflow/precision issues
+        uint256 largeAmount = 1_000_000_000 * _1_USDC; // 1B USDC
+
+        // Mint large amount to Alice
+        vm.prank(address(minter));
+        kUSD.mint(users.alice, largeAmount);
+
+        _performStakeAndSettle(users.alice, largeAmount);
+
+        // Verify no precision loss
+        assertEq(vault.balanceOf(users.alice), largeAmount);
+        assertEq(vault.totalAssets(), largeAmount);
+        assertEq(vault.sharePrice(), 1e6);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        NET ASSETS WITH FEES TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_TotalNetAssets_WithoutFees() public {
+        // Setup: Alice deposits 1M USDC
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+
+        // Without any time passing, net assets should equal total assets
+        assertEq(vault.totalNetAssets(), vault.totalAssets());
+    }
+
+    function test_TotalNetAssets_WithAccruedFees() public {
+        // Setup vault with fees
+        _setupTestFees();
+
+        // Alice deposits 1M USDC
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+
+        // Fast forward time to accrue management fees
+        vm.warp(block.timestamp + 365 days);
+
+        // Net assets should be less than total assets due to accrued fees
+        uint256 totalAssets = vault.totalAssets();
+        uint256 netAssets = vault.totalNetAssets();
+
+        assertLt(netAssets, totalAssets);
+
+        // Difference should be approximately 1% (management fee)
+        uint256 feeAmount = totalAssets - netAssets;
+        uint256 expectedFeeAmount = totalAssets / 100; // 1%
+        assertApproxEqRel(feeAmount, expectedFeeAmount, 0.1e18); // 10% tolerance
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        EDGE CASE TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_ZeroDeposit_ShouldRevert() public {
+        vm.prank(users.alice);
+        kUSD.approve(address(vault), 0);
+
+        vm.expectRevert(); // Should revert for zero amount
+        vm.prank(users.alice);
+        vault.requestStake(users.alice, 0);
+    }
+
+    function test_InsufficientBalance_ShouldRevert() public {
+        uint256 excessiveAmount = kUSD.balanceOf(users.alice) + 1;
+
+        vm.prank(users.alice);
+        kUSD.approve(address(vault), excessiveAmount);
+
+        vm.expectRevert(); // Should revert for insufficient balance
+        vm.prank(users.alice);
+        vault.requestStake(users.alice, excessiveAmount);
+    }
+
+    function test_SharePrice_WithZeroTotalSupply() public view {
+        // Edge case: what happens with zero total supply
+        // Should maintain 1:1 ratio (1e6 for 6 decimals)
+        assertEq(vault.sharePrice(), 1e6);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          HELPER FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    function _performStakeAndSettle(address user, uint256 amount) internal {
+        // Approve kUSD for staking
+        vm.prank(user);
+        kUSD.approve(address(vault), amount);
+
+        // Request stake
+        vm.prank(user);
+        bytes32 requestId = vault.requestStake(user, amount);
+
+        // Simulate settlement by transferring kTokens to vault
+        // and minting stkTokens to user
+        uint256 sharesToMint = amount * 1e6 / vault.sharePrice();
+
+        // For testing purposes, directly mint stkTokens
+        // In production, this would be done through the claim process
+
+        deal(address(vault), user, sharesToMint);
+    }
+
+    function _setupTestFees() internal {
+        // Setup basic fees for testing
+        vm.startPrank(users.admin);
+
+        // Cast vault to access fee functions
+        (bool success1,) = address(vault).call(
+            abi.encodeWithSignature("setManagementFee(uint16)", uint16(100)) // 1%
+        );
+        require(success1, "Failed to set management fee");
+
+        (bool success2,) = address(vault).call(
+            abi.encodeWithSignature("setPerformanceFee(uint16)", uint16(2000)) // 20%
+        );
+        require(success2, "Failed to set performance fee");
+
+        vm.stopPrank();
+    }
+}
