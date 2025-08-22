@@ -287,10 +287,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
     /// @notice Returns the current batch
     /// @return Batch
     function getBatchId() public view returns (bytes32) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        uint256 currentBatch = $.currentBatch;
-        return
-            keccak256(abi.encodePacked(address(this), currentBatch, block.chainid, block.timestamp, $.underlyingAsset));
+        return _getBaseVaultModuleStorage().currentBatchId;
     }
 
     /// @notice Returns the safe batch
