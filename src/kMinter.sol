@@ -129,7 +129,8 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         if (!_isRegisteredAsset(asset_)) revert InvalidAsset();
 
         address kToken = _getKTokenForAsset(asset_);
-        bytes32 batchId = _getBatchId(_getDNVaultByAsset(asset_));
+        address dnVault = _getDNVaultByAsset(asset_);
+        bytes32 batchId = _getBatchId(dnVault);
 
         address router = _getKAssetRouter();
 

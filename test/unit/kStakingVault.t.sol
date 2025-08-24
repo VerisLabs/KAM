@@ -7,9 +7,10 @@ import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+
+import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
-import {IkStakingVault} from "src/interfaces/IkStakingVault.sol";
 
 /// @title kStakingVaultAccountingTest
 /// @notice Tests for core accounting mechanics in kStakingVault
@@ -56,10 +57,10 @@ contract kStakingVaultAccountingTest is DeploymentBaseTest {
 
         // Settle batch
         bytes32 batchId = dnVault.getBatchId();
-        executeBatchSettlement(address(minter), batchId, INITIAL_DEPOSIT * 3 + LARGE_DEPOSIT + INITIAL_DEPOSIT);
+        _executeBatchSettlement(address(minter), batchId, INITIAL_DEPOSIT * 3 + LARGE_DEPOSIT + INITIAL_DEPOSIT);
     }
 
-    function executeBatchSettlement(address vault, bytes32 batchId, uint256 totalAssets) internal {
+    function _executeBatchSettlement(address vault, bytes32 batchId, uint256 totalAssets) internal {
         // Advance time to ensure unique proposal IDs when settling multiple vaults
         vm.warp(block.timestamp + 1);
 
@@ -75,7 +76,6 @@ contract kStakingVaultAccountingTest is DeploymentBaseTest {
         vm.prank(users.settler);
         bytes32 proposalId =
             assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, totalAssets, totalAssets, 0, false);
-            
 
         // Wait for cooldown period(0 for testing)
         assetRouter.executeSettleBatch(proposalId);
@@ -112,16 +112,16 @@ contract kStakingVaultAccountingTest is DeploymentBaseTest {
         _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
 
         // Total assets should equal deposit
-      //  assertEq(vault.totalAssets(), INITIAL_DEPOSIT);
+        assertEq(vault.totalAssets(), INITIAL_DEPOSIT);
 
         // // Alice should receive 1:1 shares (1M stkTokens)
         assertEq(vault.balanceOf(users.alice), INITIAL_DEPOSIT);
 
         // // Total supply should equal deposit
-        // assertEq(vault.totalSupply(), INITIAL_DEPOSIT);
+        assertEq(vault.totalSupply(), INITIAL_DEPOSIT);
 
         // // Share price should remain 1:1
-        // assertEq(vault.sharePrice(), 1e6);
+        assertEq(vault.sharePrice(), 1e6);
     }
 
     function test_SharePriceCalculation_AfterYield() public {
@@ -129,12 +129,21 @@ contract kStakingVaultAccountingTest is DeploymentBaseTest {
         _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
 
         // Simulate 10% yield by adding 100K USDC to vault
-        uint256 yieldAmount = 100_000 * _1_USDC;
-        vm.prank(address(minter));
-        kUSD.mint(address(vault), yieldAmount);
+        bytes32 batchId = vault.getBatchId();
+        uint256 lastTotalAssets = vault.totalAssets();
+        uint256 yield = 100_000 * _1_USDC;
+        vm.prank(users.settler);
+        bytes32 proposalId =
+            assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, lastTotalAssets + yield, 0, yield, true);
+        vm.prank(users.settler);
+        assetRouter.executeSettleBatch(proposalId);
+
+        vm.prank(users.settler);
+        vault.closeBatch(batchId, true);
+
 
         // Total assets should now be 1.1M USDC
-        assertEq(vault.totalAssets(), INITIAL_DEPOSIT + yieldAmount);
+        assertEq(vault.totalAssets(), INITIAL_DEPOSIT + yield);
 
         // Total supply remains 1M stkTokens
         assertEq(vault.totalSupply(), INITIAL_DEPOSIT);
@@ -149,9 +158,17 @@ contract kStakingVaultAccountingTest is DeploymentBaseTest {
         _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
 
         // Simulate 5% loss by burning 50K USDC from vault
+        bytes32 batchId = vault.getBatchId();
+        uint256 lastTotalAssets = vault.totalAssets();
         uint256 lossAmount = 50_000 * _1_USDC;
-        vm.prank(address(minter));
-        kUSD.burn(address(vault), lossAmount);
+        vm.prank(users.settler);
+        bytes32 proposalId =
+            assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, lastTotalAssets - lossAmount, 0, lossAmount, false);
+        vm.prank(users.settler);
+        assetRouter.executeSettleBatch(proposalId);
+
+        vm.prank(users.settler);
+        vault.closeBatch(batchId, true);
 
         // Total assets should now be 950K USDC
         assertEq(vault.totalAssets(), INITIAL_DEPOSIT - lossAmount);
@@ -435,10 +452,10 @@ contract kStakingVaultAccountingTest is DeploymentBaseTest {
         // Request stake
         vm.prank(user);
         bytes32 requestId = vault.requestStake(user, amount);
-        
 
         vm.prank(users.settler);
-        bytes32 proposalId = assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, amount, 0, 0, false);
+        bytes32 proposalId =
+            assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, amount, amount, 0, false);
         vm.prank(users.settler);
         assetRouter.executeSettleBatch(proposalId);
 
@@ -447,7 +464,6 @@ contract kStakingVaultAccountingTest is DeploymentBaseTest {
 
         vm.prank(user);
         vault.claimStakedShares(batchId, requestId);
-
     }
 
     function _setupTestFees() internal {

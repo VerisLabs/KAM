@@ -384,10 +384,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         uint256 netted = proposal.netted;
         uint256 yield = proposal.yield;
         bool profit = proposal.profit;
+        uint256 requested = $.vaultBatchBalances[vault][batchId].requested;
 
         address kToken = _getKTokenForAsset(asset);
         bool isKMinter; // for event Deposited
-        uint256 requested = $.vaultBatchBalances[vault][batchId].requested;
 
         // Clear batch balances
         delete $.vaultBatchBalances[vault][batchId];
@@ -399,6 +399,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             isKMinter = true;
 
             vault = _getDNVaultByAsset(asset);
+
             if (requested > 0) {
                 // Transfer assets to batch receiver for redemptions
                 address receiver = IkStakingVault(vault).getSafeBatchReceiver(batchId);
@@ -407,25 +408,30 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             }
         } else {
             // kMinter yield is sent to insuranceFund, cannot be minted.
-            if (profit) {
-                IkToken(kToken).mint(vault, yield);
-                emit YieldDistributed(vault, yield, true);
-            } else {
-                IkToken(kToken).burn(vault, yield);
-                emit YieldDistributed(vault, yield, false);
+            if (yield > 0) {
+                if (profit) {
+                    IkToken(kToken).mint(vault, yield);
+                    emit YieldDistributed(vault, yield, true);
+                } else {
+                    IkToken(kToken).burn(vault, yield);
+                    emit YieldDistributed(vault, yield, false);
+                }
             }
         }
 
         address[] memory adapters = _registry().getAdapters(vault);
-        // at some point we will have multiple adapters for a vault
-        // for now we just use the first one
-        if (adapters[0] == address(0)) revert ZeroAddress();
         IAdapter adapter = IAdapter(adapters[0]);
 
         if (netted > 0) {
-            asset.safeApprove(address(adapter), netted);
-            adapter.deposit(asset, netted, vault);
-            asset.safeApprove(address(adapter), 0);
+            address dnVault = _getDNVaultByAsset(asset);
+            if (vault == dnVault) {
+                // at some point we will have multiple adapters for a vault
+                // for now we just use the first one
+                if (adapters[0] == address(0)) revert ZeroAddress();
+                asset.safeApprove(address(adapter), netted);
+                adapter.deposit(asset, netted, vault);
+                asset.safeApprove(address(adapter), 0);
+            }
 
             emit Deposited(vault, asset, netted, isKMinter);
         }

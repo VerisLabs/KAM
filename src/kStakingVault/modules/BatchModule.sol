@@ -86,8 +86,9 @@ contract BatchModule is BaseVaultModule {
     function _createNewBatch() internal returns (bytes32) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         $.currentBatch++;
-        bytes32 newBatchId =
-            keccak256(abi.encodePacked(address(this), $.currentBatch, block.chainid, block.timestamp, $.underlyingAsset));
+        bytes32 newBatchId = keccak256(
+            abi.encodePacked(address(this), $.currentBatch, block.chainid, block.timestamp, $.underlyingAsset)
+        );
 
         $.currentBatchId = newBatchId;
         BaseVaultModuleTypes.BatchInfo storage batch = $.batches[newBatchId];

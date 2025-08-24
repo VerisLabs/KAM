@@ -281,7 +281,7 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     function _convertToAssets(uint256 shares) internal view returns (uint256 assets) {
         uint256 totalSupply_ = totalSupply();
         if (totalSupply_ == 0) return shares;
-        return shares.fullMulDiv(totalSupply_, _totalNetAssets());
+        return shares.fullMulDiv(_totalNetAssets(), totalSupply_);
     }
 
     /// @notice Converts assets to shares
@@ -290,7 +290,7 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     function _convertToShares(uint256 assets) internal view returns (uint256 shares) {
         uint256 totalSupply_ = totalSupply();
         if (totalSupply_ == 0) return assets;
-        return assets.fullMulDiv(_totalNetAssets(), totalSupply_);
+        return assets.fullMulDiv(totalSupply_, _totalNetAssets());
     }
 
     /// @notice Calculates share price for stkToken
@@ -302,7 +302,7 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     /// @notice Returns the total assets in the vault
     /// @return totalAssets Total assets in the vault
     function _totalAssets() internal view returns (uint256) {
-        return IkToken(_getBaseVaultModuleStorage().underlyingAsset).balanceOf(address(this));
+        return IkToken(_getBaseVaultModuleStorage().kToken).balanceOf(address(this));
     }
 
     /// @notice Returns the total net assets in the vault
