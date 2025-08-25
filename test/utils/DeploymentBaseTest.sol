@@ -183,7 +183,8 @@ contract DeploymentBaseTest is BaseTest {
             kRegistry.initialize.selector,
             users.owner, // owner
             users.admin, // admin
-            users.settler // relayer (using settler for now)
+            users.settler, // relayer (using settler for now)
+            users.guardian
         );
 
         address registryProxy = address(registryImpl).clone();

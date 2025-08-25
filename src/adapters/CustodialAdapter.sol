@@ -32,6 +32,7 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
 
     error InvalidCustodialAddress();
     error VaultDestinationNotSet();
+    error AssetsNotTranfered();
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -106,8 +107,10 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         address custodialAddress = $.vaultDestinations[onBehalfOf];
         if (custodialAddress == address(0)) revert VaultDestinationNotSet();
 
-        // Transfer assets from kAssetRouter to custodial address
-        asset.safeTransferFrom(msg.sender, custodialAddress, amount);
+        // Validate if the assets are available
+        if (asset.balanceOf(address(this)) < amount) {
+            revert AssetsNotTranfered();
+        }
 
         // Update adapter balance tracking
         $.balanceOf[onBehalfOf][asset] += amount;

@@ -591,7 +591,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         );
 
         // Cancel proposal
-        vm.prank(users.settler);
+        vm.prank(users.guardian);
         vm.expectEmit(true, true, true, false);
         emit IkAssetRouter.SettlementCancelled(proposalId, address(dnVault), batchId);
         assetRouter.cancelProposal(proposalId);
@@ -601,6 +601,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertTrue(proposal.cancelled, "Proposal should be cancelled");
 
         // Cannot execute cancelled proposal
+        vm.prank(users.settler);
         vm.warp(block.timestamp + 2);
         vm.expectRevert(IkAssetRouter.ProposalCancelled.selector);
         assetRouter.executeSettleBatch(proposalId);
@@ -661,11 +662,11 @@ contract kAssetRouterTest is DeploymentBaseTest {
             USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
 
-        vm.prank(users.settler);
+        vm.prank(users.guardian);
         assetRouter.cancelProposal(proposalId);
 
         // Try to cancel again
-        vm.prank(users.settler);
+        vm.prank(users.guardian);
         vm.expectRevert(IkAssetRouter.ProposalCancelled.selector);
         assetRouter.cancelProposal(proposalId);
     }
