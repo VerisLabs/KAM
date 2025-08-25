@@ -300,7 +300,14 @@ interface IkRegistry {
     //////////////////////////////////////////////////////////////*/
 
     function setSingletonContract(bytes32 id, address contractAddress) external;
-    function registerAsset(string memory name, string memory symbol, address asset, bytes32 id) external returns (address);
+    function registerAsset(
+        string memory name,
+        string memory symbol,
+        address asset,
+        bytes32 id
+    )
+        external
+        returns (address);
     function registerVault(address vault, VaultType type_, address asset) external;
     function registerAdapter(address vault, address adapter) external;
     function removeAdapter(address vault, address adapter) external;
