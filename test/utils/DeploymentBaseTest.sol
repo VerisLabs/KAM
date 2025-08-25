@@ -88,7 +88,6 @@ contract DeploymentBaseTest is BaseTest {
     // Implementation contracts (for upgrades)
     kRegistry public registryImpl;
     kAssetRouter public assetRouterImpl;
-    kToken public kTokenImpl;
     kMinter public minterImpl;
     kStakingVault public stakingVaultImpl;
 
@@ -143,24 +142,28 @@ contract DeploymentBaseTest is BaseTest {
         // 2. Deploy kAssetRouter (needs registry)
         _deployAssetRouter();
 
-        // 3. Deploy kToken contracts (independent)
-        _deployTokens();
-
-        // 4. Deploy kMinter (needs registry, assetRouter, tokens)
+        // 3. Deploy kMinter (needs registry, assetRouter)
         _deployMinter();
 
+        // 4. Register singleton contracts in registry (required before deploying kTokens)
         vm.startPrank(users.admin);
-
-        // Register singleton contracts in registry
         registry.setSingletonContract(registry.K_ASSET_ROUTER(), address(assetRouter));
         registry.setSingletonContract(registry.K_MINTER(), address(minter));
-
         vm.stopPrank();
 
-        // 5. Deploy kStakingVaults + Modules (needs registry, assetRouter, tokens)
+        // 5. Deploy kToken contracts (needs minter to be registered in registry)
+        _deployTokens();
+
+        // 6. Register assets and kTokens before deploying vaults (vaults need this mapping)
+        vm.startPrank(users.admin);
+        registry.registerAsset(USDC_MAINNET, address(kUSD), registry.USDC());
+        registry.registerAsset(WBTC_MAINNET, address(kBTC), registry.WBTC());
+        vm.stopPrank();
+
+        // 7. Deploy kStakingVaults + Modules (needs registry, assetRouter, tokens, and asset registration)
         _deployStakingVaults();
 
-        // 6. Deploy adapters (needs registry, independent of other components)
+        // 8. Deploy adapters (needs registry, independent of other components)
         _deployAdapters();
 
         // Configure the protocol
@@ -223,42 +226,29 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Deploy kToken contracts (kUSD and kBTC)
     function _deployTokens() internal {
-        // Deploy kToken implementation (shared)
-        kTokenImpl = new kToken();
-
-        // Deploy kUSD
-        bytes memory kUSDInitData = abi.encodeWithSelector(
-            kToken.initialize.selector,
+        // Deploy kUSD through registry
+        vm.prank(users.admin);
+        address kUSDAddress = registry.deployKToken(
             users.owner, // owner
             users.admin, // admin
             users.emergencyAdmin, // emergency admin
-            users.admin, // temporary minter (will be updated later)
             6 // USDC decimals
         );
-
-        address kUSDProxy = address(kTokenImpl).clone();
-        (bool success1,) = kUSDProxy.call(kUSDInitData);
-        require(success1, "kUSD initialization failed");
-        kUSD = kToken(payable(kUSDProxy));
+        kUSD = kToken(payable(kUSDAddress));
 
         // Set metadata for kUSD
         vm.prank(users.admin);
         kUSD.setupMetadata(KUSD_NAME, KUSD_SYMBOL);
 
-        // Deploy kBTC
-        bytes memory kBTCInitData = abi.encodeWithSelector(
-            kToken.initialize.selector,
+        // Deploy kBTC through registry
+        vm.prank(users.admin);
+        address kBTCAddress = registry.deployKToken(
             users.owner, // owner
             users.admin, // admin
             users.emergencyAdmin, // emergency admin
-            users.admin, // temporary minter (will be updated later)
             8 // WBTC decimals
         );
-
-        address kBTCProxy = address(kTokenImpl).clone();
-        (bool success2,) = kBTCProxy.call(kBTCInitData);
-        require(success2, "kBTC initialization failed");
-        kBTC = kToken(payable(kBTCProxy));
+        kBTC = kToken(payable(kBTCAddress));
 
         // Set metadata for kBTC
         vm.prank(users.admin);
@@ -267,7 +257,6 @@ contract DeploymentBaseTest is BaseTest {
         // Label for debugging
         vm.label(address(kUSD), "kUSD");
         vm.label(address(kBTC), "kBTC");
-        vm.label(address(kTokenImpl), "kTokenImpl");
     }
 
     /// @dev Deploy kMinter with proxy
@@ -371,10 +360,6 @@ contract DeploymentBaseTest is BaseTest {
 
         vm.startPrank(users.admin);
 
-        // Register assets and kTokens
-        registry.registerAsset(USDC_MAINNET, address(kUSD), registry.USDC());
-        registry.registerAsset(WBTC_MAINNET, address(kBTC), registry.WBTC());
-
         // Register kMinter as vault (MINTER type = 0 - for institutional operations)
         registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, USDC_MAINNET);
 
@@ -401,10 +386,6 @@ contract DeploymentBaseTest is BaseTest {
     /// @dev Configure protocol contracts with registry integration
     function _configureProtocol() internal {
         vm.startPrank(users.admin);
-
-        // Register assets and kTokens
-        registry.registerAsset(USDC_MAINNET, address(kUSD), registry.USDC());
-        registry.registerAsset(WBTC_MAINNET, address(kBTC), registry.WBTC());
 
         // Register vaults (would normally be done by factory, but we'll do it manually for tests)
         vm.stopPrank();

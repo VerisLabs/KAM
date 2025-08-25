@@ -27,7 +27,6 @@ contract DeploymentTest is DeploymentBaseTest {
         // Check implementation contracts
         assertTrue(address(registryImpl) != address(0), "Registry impl not deployed");
         assertTrue(address(assetRouterImpl) != address(0), "AssetRouter impl not deployed");
-        assertTrue(address(kTokenImpl) != address(0), "kToken impl not deployed");
         assertTrue(address(minterImpl) != address(0), "Minter impl not deployed");
         assertTrue(address(stakingVaultImpl) != address(0), "StakingVault impl not deployed");
 
