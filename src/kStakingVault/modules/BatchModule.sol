@@ -33,7 +33,7 @@ contract BatchModule is BaseVaultModule {
     /// @return The new batch ID
     /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
     function createNewBatch() external onlyRelayer returns (bytes32) {
-        return _newBatch();
+        return _createNewBatch();
     }
 
     // @notice Closes a batch to prevent new requests
@@ -45,7 +45,7 @@ contract BatchModule is BaseVaultModule {
         $.batches[_batchId].isClosed = true;
 
         if (_create) {
-            _batchId = _newBatch();
+            _batchId = _createNewBatch();
         }
         emit BatchClosed(_batchId);
     }
@@ -83,20 +83,23 @@ contract BatchModule is BaseVaultModule {
                           INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _newBatch() internal returns (bytes32) {
+    function _createNewBatch() internal returns (bytes32) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         $.currentBatch++;
-        bytes32 newBatch = $.currentBatchId;
+        bytes32 newBatchId = keccak256(
+            abi.encodePacked(address(this), $.currentBatch, block.chainid, block.timestamp, $.underlyingAsset)
+        );
 
-        BaseVaultModuleTypes.BatchInfo storage batch = $.batches[newBatch];
-        batch.batchId = newBatch;
+        $.currentBatchId = newBatchId;
+        BaseVaultModuleTypes.BatchInfo storage batch = $.batches[newBatchId];
+        batch.batchId = newBatchId;
         batch.batchReceiver = address(0);
         batch.isClosed = false;
         batch.isSettled = false;
 
-        emit BatchCreated(newBatch);
+        emit BatchCreated(newBatchId);
 
-        return newBatch;
+        return newBatchId;
     }
 
     /// @notice Returns the selectors for functions in this module

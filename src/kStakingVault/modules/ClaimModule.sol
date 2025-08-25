@@ -2,6 +2,8 @@
 pragma solidity 0.8.30;
 
 import { ERC20 } from "solady/tokens/ERC20.sol";
+
+import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
@@ -18,6 +20,7 @@ contract ClaimModule is BaseVaultModule {
     using SafeCastLib for uint256;
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
+    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -58,10 +61,12 @@ contract ClaimModule is BaseVaultModule {
         request.status = BaseVaultModuleTypes.RequestStatus.CLAIMED;
 
         // Calculate stkToken amount based on settlement-time share price
-        uint256 stkTokensToMint = _calculateStkTokensToMint(uint256(request.kTokenAmount));
+        uint256 stkTokensToMint = _convertToShares(uint256(request.kTokenAmount));
 
         emit StakingSharesClaimed(batchId, requestId, request.user, stkTokensToMint);
 
+        $.userRequests[msg.sender].remove(requestId);
+        $.totalPendingStake -= request.kTokenAmount;
         // Mint stkTokens to user
         _mint(request.user, stkTokensToMint);
         emit StkTokensIssued(request.user, stkTokensToMint);
@@ -82,7 +87,7 @@ contract ClaimModule is BaseVaultModule {
         request.status = BaseVaultModuleTypes.RequestStatus.CLAIMED;
 
         // Calculate total kTokens to return based on settlement-time share price
-        uint256 totalKTokensToReturn = _calculateAssetValue(uint256(request.stkTokenAmount));
+        uint256 totalKTokensToReturn = _convertToAssets(uint256(request.stkTokenAmount));
 
         // Burn stkTokens from vault (already transferred to vault during request)
         _burn(address(this), request.stkTokenAmount);
