@@ -1,8 +1,15 @@
 # IkRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/dd71a4088db684fce979bc8cf7c38882ee6bb8a4/src/interfaces/IkRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/066df01f2df627ed53b6b3edc701dad6646b8be7/src/interfaces/IkRegistry.sol)
 
 
 ## Functions
+### setKTokenImplementation
+
+
+```solidity
+function setKTokenImplementation(address implementation) external;
+```
+
 ### setSingletonContract
 
 
@@ -157,6 +164,20 @@ function getVaultAssets(address vault) external view returns (address[] memory);
 function assetToKToken(address asset) external view returns (address);
 ```
 
+### deployKToken
+
+
+```solidity
+function deployKToken(
+    address owner_,
+    address admin_,
+    address emergencyAdmin_,
+    uint8 decimals_
+)
+    external
+    returns (address);
+```
+
 ## Events
 ### SingletonContractSet
 
@@ -192,6 +213,18 @@ event AdapterRegistered(address indexed vault, address indexed adapter);
 
 ```solidity
 event AdapterRemoved(address indexed vault, address indexed adapter);
+```
+
+### KTokenDeployed
+
+```solidity
+event KTokenDeployed(address indexed kTokenProxy, address indexed owner, address indexed admin);
+```
+
+### KTokenImplementationSet
+
+```solidity
+event KTokenImplementationSet(address indexed implementation);
 ```
 
 ## Errors
@@ -235,6 +268,42 @@ error InvalidAdapter();
 
 ```solidity
 error AdapterAlreadySet();
+```
+
+### SaltAlreadyUsed
+
+```solidity
+error SaltAlreadyUsed();
+```
+
+### TokenInitializationFailed
+
+```solidity
+error TokenInitializationFailed();
+```
+
+### KTokenNotRegistered
+
+```solidity
+error KTokenNotRegistered();
+```
+
+### InvalidParameter
+
+```solidity
+error InvalidParameter();
+```
+
+### KTokenImplementationNotSet
+
+```solidity
+error KTokenImplementationNotSet();
+```
+
+### MinterNotSet
+
+```solidity
+error MinterNotSet();
 ```
 
 ## Enums

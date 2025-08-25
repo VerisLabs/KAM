@@ -270,11 +270,11 @@ interface IkRegistry {
 
     event SingletonContractSet(bytes32 indexed id, address indexed contractAddress);
     event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
-    event KTokenRegistered(address indexed asset, address indexed kToken);
+    event AssetRegistered(address indexed asset, address indexed kToken);
     event AssetSupported(address indexed asset);
     event AdapterRegistered(address indexed vault, address indexed adapter);
     event AdapterRemoved(address indexed vault, address indexed adapter);
-    event KTokenDeployed(address indexed kTokenProxy, address indexed owner, address indexed admin);
+    event KTokenDeployed(address indexed kTokenContract);
     event KTokenImplementationSet(address indexed implementation);
 
     /*//////////////////////////////////////////////////////////////
@@ -299,9 +299,8 @@ interface IkRegistry {
                               FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function setKTokenImplementation(address implementation) external;
     function setSingletonContract(bytes32 id, address contractAddress) external;
-    function registerAsset(address asset, address kToken, bytes32 id) external;
+    function registerAsset(address asset, bytes32 id) external returns (address);
     function registerVault(address vault, VaultType type_, address asset) external;
     function registerAdapter(address vault, address adapter) external;
     function removeAdapter(address vault, address adapter) external;
@@ -323,12 +322,4 @@ interface IkRegistry {
     function isAdapterRegistered(address adapter) external view returns (bool);
     function getVaultAssets(address vault) external view returns (address[] memory);
     function assetToKToken(address asset) external view returns (address);
-    function deployKToken(
-        address owner_,
-        address admin_,
-        address emergencyAdmin_,
-        uint8 decimals_
-    )
-        external
-        returns (address);
 }

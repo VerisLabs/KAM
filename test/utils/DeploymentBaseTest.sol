@@ -154,16 +154,10 @@ contract DeploymentBaseTest is BaseTest {
         // 5. Deploy kToken contracts (needs minter to be registered in registry)
         _deployTokens();
 
-        // 6. Register assets and kTokens before deploying vaults (vaults need this mapping)
-        vm.startPrank(users.admin);
-        registry.registerAsset(USDC_MAINNET, address(kUSD), registry.USDC());
-        registry.registerAsset(WBTC_MAINNET, address(kBTC), registry.WBTC());
-        vm.stopPrank();
-
-        // 7. Deploy kStakingVaults + Modules (needs registry, assetRouter, tokens, and asset registration)
+        // 6. Deploy kStakingVaults + Modules (needs registry, assetRouter, tokens, and asset registration)
         _deployStakingVaults();
 
-        // 8. Deploy adapters (needs registry, independent of other components)
+        // 7. Deploy adapters (needs registry, independent of other components)
         _deployAdapters();
 
         // Configure the protocol
@@ -228,12 +222,7 @@ contract DeploymentBaseTest is BaseTest {
     function _deployTokens() internal {
         // Deploy kUSD through registry
         vm.prank(users.admin);
-        address kUSDAddress = registry.deployKToken(
-            users.owner, // owner
-            users.admin, // admin
-            users.emergencyAdmin, // emergency admin
-            6 // USDC decimals
-        );
+        address kUSDAddress = registry.registerAsset(USDC_MAINNET, registry.USDC());
         kUSD = kToken(payable(kUSDAddress));
 
         // Set metadata for kUSD
@@ -242,12 +231,7 @@ contract DeploymentBaseTest is BaseTest {
 
         // Deploy kBTC through registry
         vm.prank(users.admin);
-        address kBTCAddress = registry.deployKToken(
-            users.owner, // owner
-            users.admin, // admin
-            users.emergencyAdmin, // emergency admin
-            8 // WBTC decimals
-        );
+        address kBTCAddress = registry.registerAsset(WBTC_MAINNET, registry.WBTC());
         kBTC = kToken(payable(kBTCAddress));
 
         // Set metadata for kBTC
