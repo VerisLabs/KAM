@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
-
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { BaseTest, console2 } from "./BaseTest.sol";
 import {
     ADMIN_ROLE,
@@ -11,8 +11,6 @@ import {
     INSTITUTION_ROLE,
     MINTER_ROLE,
     SETTLEMENT_INTERVAL,
-    SETTLER_ROLE,
-    STRATEGY_ROLE,
     USDC_MAINNET,
     WBTC_MAINNET,
     _1000_USDC,
@@ -23,7 +21,6 @@ import {
 } from "./Constants.sol";
 
 // Protocol contracts
-
 import { kAssetRouter } from "src/kAssetRouter.sol";
 import { kMinter } from "src/kMinter.sol";
 import { kRegistry } from "src/kRegistry.sol";
@@ -42,6 +39,7 @@ import { CustodialAdapter } from "src/adapters/CustodialAdapter.sol";
 
 // Interfaces
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 /// @title DeploymentBaseTest
 /// @notice Comprehensive base test contract that deploys the complete KAM protocol
@@ -179,7 +177,7 @@ contract DeploymentBaseTest is BaseTest {
             kRegistry.initialize.selector,
             users.owner, // owner
             users.admin, // admin
-            users.settler, // relayer (using settler for now)
+            users.relayer, // relayer (using relayer for now)
             users.guardian
         );
 
@@ -339,22 +337,6 @@ contract DeploymentBaseTest is BaseTest {
         address custodialProxy = factory.deployAndCall(address(custodialAdapterImpl), users.admin, custodialInitData);
         custodialAdapter = CustodialAdapter(custodialProxy);
 
-        vm.startPrank(users.admin);
-
-        // Register kMinter as vault (MINTER type = 0 - for institutional operations)
-        registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, USDC_MAINNET);
-
-        // Register DN vault (DN type = 1 - works with kMinter)
-        registry.registerVault(address(dnVault), IkRegistry.VaultType.DN, USDC_MAINNET);
-
-        // Register Alpha vault (ALPHA type = 2 - retail staking)
-        registry.registerVault(address(alphaVault), IkRegistry.VaultType.ALPHA, USDC_MAINNET);
-
-        // Register Beta vault (BETA type = 3 - advanced strategies)
-        registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, USDC_MAINNET);
-
-        vm.stopPrank();
-
         // Label for debugging
         vm.label(address(custodialAdapter), "CustodialAdapter");
         vm.label(address(custodialAdapterImpl), "CustodialAdapterImpl");
@@ -366,17 +348,18 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Configure protocol contracts with registry integration
     function _configureProtocol() internal {
-        vm.startPrank(users.admin);
 
-        // Register vaults (would normally be done by factory, but we'll do it manually for tests)
+        // Register Vaults 
+        vm.startPrank(users.admin);
+        registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, USDC_MAINNET);
+        registry.registerVault(address(dnVault), IkRegistry.VaultType.DN, USDC_MAINNET);
+        registry.registerVault(address(alphaVault), IkRegistry.VaultType.ALPHA, USDC_MAINNET);
+        registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, USDC_MAINNET);
         vm.stopPrank();
 
         // Grant factory role to admin for vault registration
         vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE = _ROLE_1 = 2
-        vm.prank(users.owner);
-        registry.grantRoles(users.guardian, 8); // GUARDIAN_ROLE = _ROLE_3 = 8
-
+        registry.grantRoles(users.guardian, 4);
         vm.startPrank(users.admin);
 
         // Register adapters for vaults (if adapters were deployed)
@@ -402,8 +385,8 @@ contract DeploymentBaseTest is BaseTest {
         _registerModules();
 
         // Create initial batches for all vaults using relayer role
-        // Note: settler has RELAYER_ROLE as set up in _setupRoles()
-        vm.startPrank(users.settler);
+        // Note: relayer has RELAYER_ROLE as set up in _setupRoles()
+        vm.startPrank(users.relayer);
 
         // Use low-level call to create initial batches since modules are dynamically registered
         bytes4 createBatchSelector = bytes4(keccak256("createNewBatch()"));
@@ -423,11 +406,11 @@ contract DeploymentBaseTest is BaseTest {
         vm.stopPrank();
 
         vm.prank(users.owner);
-        dnVault.grantRoles(users.settler, 4); // RELAYER_ROLE = _ROLE_2 = 4
+        dnVault.grantRoles(users.relayer, 4); // RELAYER_ROLE = _ROLE_2 = 4
         vm.prank(users.owner);
-        alphaVault.grantRoles(users.settler, 4);
+        alphaVault.grantRoles(users.relayer, 4);
         vm.prank(users.owner);
-        betaVault.grantRoles(users.settler, 4);
+        betaVault.grantRoles(users.relayer, 4);
     }
 
     /// @dev Register modules with vaults
@@ -480,15 +463,9 @@ contract DeploymentBaseTest is BaseTest {
         vm.prank(users.owner);
         minter.grantRoles(users.institution, 8); // INSTITUTION_ROLE = _ROLE_3 = 8
 
-        // Grant SETTLER_ROLE to test settler (requires owner for kAssetRouter)
-        vm.prank(users.owner);
-        assetRouter.grantRoles(users.settler, SETTLER_ROLE);
-
         // Grant EMERGENCY_ADMIN_ROLE to emergency admin for kAssetRouter (requires owner)
         vm.prank(users.owner);
         assetRouter.grantRoles(users.emergencyAdmin, EMERGENCY_ADMIN_ROLE);
-
-        // Note: settler is already registered as relayer during registry initialization
     }
 
     /// @dev Fund test users with mainnet assets
@@ -548,22 +525,6 @@ contract DeploymentBaseTest is BaseTest {
         return kToken(token).balanceOf(user);
     }
 
-    /// @dev Helper to time travel for batch testing
-    /// @param timeIncrease Seconds to advance
-    function advanceTime(uint256 timeIncrease) internal {
-        vm.warp(block.timestamp + timeIncrease);
-    }
-
-    /// @dev Helper to advance to next batch cutoff
-    function advanceToBatchCutoff() internal {
-        advanceTime(BATCH_CUTOFF_TIME);
-    }
-
-    /// @dev Helper to advance to settlement time
-    function advanceToSettlement() internal {
-        advanceTime(SETTLEMENT_INTERVAL);
-    }
-
     /// @dev Expect specific event emission
     function expectEvent(address emitter, bytes32 eventSig) internal {
         vm.expectEmit(true, true, true, true, emitter);
@@ -612,10 +573,7 @@ contract DeploymentBaseTest is BaseTest {
         assertTrue(registry.isVault(address(betaVault)));
 
         // Check adapters are deployed and initialized (disabled for debugging)
-        // assertTrue(address(custodialAdapter) != address(0));
-        // assertTrue(address(metaVaultAdapter) != address(0));
-        // assertTrue(custodialAdapter.registered());
-        // assertTrue(metaVaultAdapter.registered());
+        assertTrue(address(custodialAdapter) != address(0));
     }
 
     /// @dev Get current protocol state for debugging
@@ -653,7 +611,3 @@ contract DeploymentBaseTest is BaseTest {
         revert("Unknown vault type");
     }
 }
-
-// Import IERC20 for balance checks
-import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";

@@ -5,12 +5,9 @@ import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
-
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-
 import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-
 import { kToken } from "src/kToken.sol";
 
 /// @title kRegistry
@@ -24,9 +21,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     //////////////////////////////////////////////////////////////*/
 
     uint256 internal constant ADMIN_ROLE = _ROLE_0;
-    uint256 internal constant FACTORY_ROLE = _ROLE_1;
-    uint256 internal constant RELAYER_ROLE = _ROLE_2;
-    uint256 internal constant GUARDIAN_ROLE = _ROLE_3;
+    uint256 internal constant RELAYER_ROLE = _ROLE_1;
+    uint256 internal constant GUARDIAN_ROLE = _ROLE_2;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
@@ -311,12 +307,14 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
 
     /// @notice Check if the caller is the relayer
     /// @return Whether the caller is the relayer
-    function isRelayer(address account) external view returns (bool) {
-        return hasAnyRole(account, RELAYER_ROLE);
+    function isRelayer(address user) external view returns (bool) {
+        return hasAnyRole(user, RELAYER_ROLE);
     }
 
-    function isGuardian(address account) external view returns (bool) {
-        return hasAnyRole(account, GUARDIAN_ROLE);
+    /// @notice Check if caller is the Guardian
+    /// @return Whether the caller is a Guardian
+    function isGuardian(address user) external view returns (bool) {
+        return hasAnyRole(user, GUARDIAN_ROLE);
     }
 
     /// @notice Check if an asset is supported

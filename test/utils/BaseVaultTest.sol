@@ -62,14 +62,14 @@ contract BaseVaultTest is DeploymentBaseTest {
         vm.prank(user);
         bytes32 requestId = vault.requestStake(user, amount);
 
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(vault), batchId, lastTotalAssets + amount, amount, 0, false
         );
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         assetRouter.executeSettleBatch(proposalId);
 
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         vault.closeBatch(batchId, true);
 
         vm.prank(user);
@@ -99,7 +99,7 @@ contract BaseVaultTest is DeploymentBaseTest {
         uint256 totalAssets = INITIAL_DEPOSIT * 3 + LARGE_DEPOSIT + INITIAL_DEPOSIT;
         _executeBatchSettlement(address(minter), batchId, totalAssets, totalAssets, 0, false);
 
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         IkStakingVault(address(dnVault)).closeBatch(batchId, true);
     }
 
@@ -115,7 +115,7 @@ contract BaseVaultTest is DeploymentBaseTest {
             uint256 lastTotalAsets = minter.getTotalLockedAssets(USDC_MAINNET);
             _executeBatchSettlement(address(minter), batchId, lastTotalAsets + amount, amount, 0, false);
 
-            vm.prank(users.settler);
+            vm.prank(users.relayer);
             IkStakingVault(address(dnVault)).closeBatch(batchId, true);
         }
     }
@@ -139,7 +139,7 @@ contract BaseVaultTest is DeploymentBaseTest {
             deal(USDC_MAINNET, address(assetRouter), totalAssets);
         }
 
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         bytes32 proposalId =
             assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, totalAssets, netted, yield, profit);
 
@@ -147,7 +147,7 @@ contract BaseVaultTest is DeploymentBaseTest {
         assetRouter.executeSettleBatch(proposalId);
 
         if (vault != address(minter)) {
-            vm.prank(users.settler);
+            vm.prank(users.relayer);
             IkStakingVault(vault).closeBatch(batchId, true);
         }
     }

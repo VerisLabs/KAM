@@ -5,7 +5,6 @@ import {
     ADMIN_ROLE,
     EMERGENCY_ADMIN_ROLE,
     MINTER_ROLE,
-    SETTLER_ROLE,
     USDC_MAINNET,
     WBTC_MAINNET,
     _1000_USDC,
@@ -224,7 +223,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         bytes32 batchId = TEST_BATCH_ID;
 
         // Propose settlement
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         vm.expectEmit(false, true, true, false);
         emit IkAssetRouter.SettlementProposed(
             bytes32(0), // We don't know the exact proposalId yet
@@ -270,7 +269,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         vm.prank(users.emergencyAdmin);
         assetRouter.setPaused(true);
 
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         vm.expectRevert(IkAssetRouter.ContractPaused.selector);
         assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), TEST_BATCH_ID, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
@@ -282,7 +281,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     /// @dev Test execute settlement after cooldown
     function test_ExecuteSettleBatch_AfterCooldown() public {
         // Create a proposal
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         testProposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), TEST_BATCH_ID, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
@@ -304,7 +303,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     /// @dev Test execute reverts before cooldown
     function test_ExecuteSettleBatch_RevertBeforeCooldown() public {
         // Create a proposal
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         testProposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), TEST_BATCH_ID, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
@@ -328,7 +327,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     /// @dev Test execute reverts when paused
     function test_ExecuteSettleBatch_RevertWhenPaused() public {
         // Create a proposal
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         testProposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), TEST_BATCH_ID, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
@@ -355,7 +354,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(reason, "Proposal not found", "Reason incorrect");
 
         // Create a proposal
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         testProposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), TEST_BATCH_ID, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
@@ -480,7 +479,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(proposal.executeAfter, 0, "Non-existent proposal should have zero executeAfter");
 
         // Create a proposal
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         testProposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), TEST_BATCH_ID, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
@@ -556,7 +555,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         bytes32 batchId = TEST_BATCH_ID;
 
         // Step 1: Propose settlement
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
@@ -585,7 +584,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         bytes32 batchId = TEST_BATCH_ID;
 
         // Create proposal
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
@@ -601,7 +600,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertTrue(proposal.cancelled, "Proposal should be cancelled");
 
         // Cannot execute cancelled proposal
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         vm.warp(block.timestamp + 2);
         vm.expectRevert(IkAssetRouter.ProposalCancelled.selector);
         assetRouter.executeSettleBatch(proposalId);
@@ -612,7 +611,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         bytes32 batchId = TEST_BATCH_ID;
 
         // Create proposal with initial values
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
@@ -623,7 +622,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         uint256 newYield = TEST_LOSS;
         bool newProfit = false;
 
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         vm.expectEmit(true, false, false, true);
         emit IkAssetRouter.SettlementUpdated(proposalId, newTotalAssets, newNetted, newYield, newProfit);
         assetRouter.updateProposal(proposalId, newTotalAssets, newNetted, newYield, newProfit);
@@ -640,14 +639,14 @@ contract kAssetRouterTest is DeploymentBaseTest {
     function test_UpdateProposal_RevertExecuted() public {
         bytes32 batchId = TEST_BATCH_ID;
 
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
 
         vm.warp(block.timestamp + 2);
         bytes32 fakeProposalId = keccak256("fake");
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         vm.expectRevert(IkAssetRouter.ProposalNotFound.selector);
         assetRouter.updateProposal(fakeProposalId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true);
     }
@@ -657,7 +656,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         bytes32 batchId = TEST_BATCH_ID;
 
         // Create and cancel proposal
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
@@ -676,14 +675,14 @@ contract kAssetRouterTest is DeploymentBaseTest {
         bytes32 batchId = TEST_BATCH_ID;
 
         // Create first proposal
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         bytes32 proposalId1 = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
 
         // Create second proposal for same batch (different timestamp makes different ID)
         vm.warp(block.timestamp + 1);
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         bytes32 proposalId2 = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS + 1000, TEST_NETTED + 100, TEST_PROFIT + 10, true
         );
@@ -703,7 +702,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         bytes32 batchId = bytes32(uint256(TEST_BATCH_ID) + 100);
 
         // Propose settlement with loss
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET,
             address(dnVault),
@@ -733,7 +732,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         bytes32 batchId = TEST_BATCH_ID;
 
         // Create proposal
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
@@ -756,7 +755,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         bytes32 batchId = TEST_BATCH_ID;
 
         // Create proposal with 1 second cooldown
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
@@ -771,7 +770,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertTrue(canExecute, "Should use original cooldown for existing proposal");
 
         // New proposal should use new cooldown
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         bytes32 newProposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET,
             address(dnVault),

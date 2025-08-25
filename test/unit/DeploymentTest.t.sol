@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import {
-    ADMIN_ROLE, MINTER_ROLE, SETTLER_ROLE, USDC_MAINNET, WBTC_MAINNET, _1_USDC, _1_WBTC
+    ADMIN_ROLE, MINTER_ROLE, USDC_MAINNET, WBTC_MAINNET, _1_USDC, _1_WBTC
 } from "../utils/Constants.sol";
 
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
@@ -96,9 +96,6 @@ contract DeploymentTest is DeploymentBaseTest {
 
         // Check institution role
         assertHasRole(address(minter), users.institution, 8); // INSTITUTION_ROLE
-
-        // Check settler role
-        assertHasRole(address(assetRouter), users.settler, SETTLER_ROLE);
     }
 
     /// @dev Test asset registration

@@ -28,7 +28,7 @@ contract kRegistryTest is DeploymentBaseTest {
         // Check initialization parameters
         assertEq(registry.owner(), users.owner, "Owner not set correctly");
         assertTrue(registry.hasAnyRole(users.admin, ADMIN_ROLE), "Admin role not granted");
-        assertTrue(registry.hasAnyRole(users.settler, 4), "Relayer role not granted"); // RELAYER_ROLE = _ROLE_2 = 4
+        assertTrue(registry.hasAnyRole(users.relayer, 4), "Relayer role not granted"); // RELAYER_ROLE = _ROLE_2 = 4
     }
 
     /// @dev Test contract info functions
@@ -179,10 +179,6 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.prank(users.admin);
         registry.registerAsset(TEST_ASSET, TEST_ASSET_ID);
 
-        // Grant factory role to admin for testing
-        vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE
-
         vm.prank(users.admin);
 
         // Expect event
@@ -213,7 +209,6 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.prank(users.admin);
         registry.registerAsset(TEST_ASSET, TEST_ASSET_ID);
 
-        // Note: Admin already has FACTORY_ROLE from deployment setup
         // Test with a user who has no roles at all
         vm.prank(users.alice);
         vm.expectRevert(); // Should revert with Unauthorized()
@@ -231,10 +226,6 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.prank(users.admin);
         registry.registerAsset(TEST_ASSET, TEST_ASSET_ID);
 
-        // Grant factory role
-        vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE
-
         vm.prank(users.admin);
         vm.expectRevert(IkRegistry.ZeroAddress.selector);
         registry.registerVault(address(0), IkRegistry.VaultType.ALPHA, TEST_ASSET);
@@ -245,10 +236,6 @@ contract kRegistryTest is DeploymentBaseTest {
         // Register asset first
         vm.prank(users.admin);
         registry.registerAsset(TEST_ASSET, TEST_ASSET_ID);
-
-        // Grant factory role
-        vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE
 
         vm.startPrank(users.admin);
 
@@ -264,9 +251,6 @@ contract kRegistryTest is DeploymentBaseTest {
 
     /// @dev Test vault registration reverts with unsupported asset
     function test_RegisterVault_RevertAssetNotSupported() public {
-        // Grant factory role
-        vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE
 
         vm.prank(users.admin);
         vm.expectRevert(IkRegistry.AssetNotSupported.selector);
@@ -278,10 +262,6 @@ contract kRegistryTest is DeploymentBaseTest {
         // Register asset first
         vm.prank(users.admin);
         registry.registerAsset(TEST_ASSET, TEST_ASSET_ID);
-
-        // Grant factory role
-        vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE
 
         address kMinter = address(0x6666666666666666666666666666666666666666);
         address dnVault = address(0x7777777777777777777777777777777777777777);
@@ -318,9 +298,6 @@ contract kRegistryTest is DeploymentBaseTest {
         // Register vault first
         vm.prank(users.admin);
         registry.registerAsset(TEST_ASSET, TEST_ASSET_ID);
-
-        vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE
 
         vm.prank(users.admin);
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
@@ -370,7 +347,7 @@ contract kRegistryTest is DeploymentBaseTest {
 
     /// @dev Test isRelayer function
     function test_IsRelayer() public {
-        assertTrue(registry.isRelayer(users.settler), "Settler should be relayer");
+        assertTrue(registry.isRelayer(users.relayer), "relayer should be relayer");
         assertFalse(registry.isRelayer(users.alice), "Alice should not be relayer");
     }
 
@@ -461,14 +438,10 @@ contract kRegistryTest is DeploymentBaseTest {
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Test complete asset-vault registration workflow
-    function test_CompleteAssetVaultWorkflow() public {
+    function test_CompleteAssetVaultWorkflow_banana() public {
         // Step 1: Register new asset
         vm.prank(users.admin);
         registry.registerAsset(TEST_ASSET, TEST_ASSET_ID);
-
-        // Step 2: Grant factory role and register vault
-        vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE
 
         vm.prank(users.admin);
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
