@@ -83,6 +83,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         $.dustAmount = dustAmount_.toUint96();
         $.kToken = _registry().assetToKToken(asset_);
         $.receiverImplementation = address(new kBatchReceiver(_registry().getContractById(K_MINTER)));
+        $.sharePriceWatermark = 10 ** decimals_;
 
         emit Initialized(registry_, owner_, admin_);
     }
@@ -129,6 +130,8 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         $.userRequests[msg.sender].add(requestId);
 
         $.kToken.safeTransferFrom(msg.sender, address(this), amount);
+
+        $.totalPendingStake += amount.toUint128();
 
         IkAssetRouter(_getKAssetRouter()).kAssetTransfer(
             _getKMinter(), address(this), $.underlyingAsset, amount, batchId
@@ -208,6 +211,8 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
 
         $.kToken.safeTransfer(request.user, request.kTokenAmount);
 
+        $.totalPendingStake -= request.kTokenAmount;
+
         emit StakeRequestCancelled(bytes32(requestId));
     }
 
@@ -265,13 +270,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Calculates stkToken price with safety checks
-    /// @dev Standard price calculation used across settlement modules
-    /// @return price Price per stkToken in underlying asset terms
-    function calculateStkTokenPrice() external view returns (uint256) {
-        return _calculateStkTokenPrice();
-    }
-
     /// @notice Calculates the price of stkTokens in underlying asset terms
     /// @dev Uses the last total assets and total supply to calculate the price
     /// @return price Price per stkToken in underlying asset terms
@@ -279,19 +277,22 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         return _sharePrice();
     }
 
-    /// @notice Returns the current total assets from adapter (real-time)
+    /// @notice Returns the current total assets
     /// @return Total assets currently deployed in strategies
     function totalAssets() external view returns (uint256) {
+        return _totalAssets();
+    }
+
+    /// @notice Returns the current total assets after fees
+    /// @return Total net assets currently deployed in strategies
+    function totalNetAssets() external view returns (uint256) {
         return _totalNetAssets();
     }
 
     /// @notice Returns the current batch
     /// @return Batch
     function getBatchId() public view returns (bytes32) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        uint256 currentBatch = $.currentBatch;
-        return
-            keccak256(abi.encodePacked(address(this), currentBatch, block.chainid, block.timestamp, $.underlyingAsset));
+        return _getBaseVaultModuleStorage().currentBatchId;
     }
 
     /// @notice Returns the safe batch

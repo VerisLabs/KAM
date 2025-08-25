@@ -1,0 +1,607 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>kRegistry - KAM Contracts Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../book.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">KAM Contracts Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/VerisLabs/KAM" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="kregistry"><a class="header" href="#kregistry">kRegistry</a></h1>
+<p><a href="https://github.com/VerisLabs/KAM/blob/962a4adbf4eedc0a2cd6fb12eded69e348454133/src/kRegistry.sol">Git Source</a></p>
+<p><strong>Inherits:</strong>
+<a href="/src/interfaces/IkRegistry.sol/interface.IkRegistry.html">IkRegistry</a>, Initializable, UUPSUpgradeable, OwnableRoles</p>
+<p>Central registry for KAM protocol contracts</p>
+<p><em>Manages singleton contracts, vault registration, asset support, and kToken mapping</em></p>
+<h2 id="state-variables"><a class="header" href="#state-variables">State Variables</a></h2>
+<h3 id="admin_role"><a class="header" href="#admin_role">ADMIN_ROLE</a></h3>
+<pre><code class="language-solidity">uint256 internal constant ADMIN_ROLE = _ROLE_0;
+</code></pre>
+<h3 id="factory_role"><a class="header" href="#factory_role">FACTORY_ROLE</a></h3>
+<pre><code class="language-solidity">uint256 internal constant FACTORY_ROLE = _ROLE_1;
+</code></pre>
+<h3 id="relayer_role"><a class="header" href="#relayer_role">RELAYER_ROLE</a></h3>
+<pre><code class="language-solidity">uint256 internal constant RELAYER_ROLE = _ROLE_2;
+</code></pre>
+<h3 id="guardian_role"><a class="header" href="#guardian_role">GUARDIAN_ROLE</a></h3>
+<pre><code class="language-solidity">uint256 internal constant GUARDIAN_ROLE = _ROLE_3;
+</code></pre>
+<h3 id="k_minter"><a class="header" href="#k_minter">K_MINTER</a></h3>
+<pre><code class="language-solidity">bytes32 public constant K_MINTER = keccak256("K_MINTER");
+</code></pre>
+<h3 id="k_asset_router"><a class="header" href="#k_asset_router">K_ASSET_ROUTER</a></h3>
+<pre><code class="language-solidity">bytes32 public constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
+</code></pre>
+<h3 id="usdc"><a class="header" href="#usdc">USDC</a></h3>
+<pre><code class="language-solidity">bytes32 public constant USDC = keccak256("USDC");
+</code></pre>
+<h3 id="wbtc"><a class="header" href="#wbtc">WBTC</a></h3>
+<pre><code class="language-solidity">bytes32 public constant WBTC = keccak256("WBTC");
+</code></pre>
+<h3 id="kregistry_storage_location"><a class="header" href="#kregistry_storage_location">KREGISTRY_STORAGE_LOCATION</a></h3>
+<pre><code class="language-solidity">bytes32 private constant KREGISTRY_STORAGE_LOCATION = 0x164f5345d77b48816cdb20100c950b74361454722dab40c51ecf007b721fa800;
+</code></pre>
+<h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
+<h3 id="_getkregistrystorage"><a class="header" href="#_getkregistrystorage">_getkRegistryStorage</a></h3>
+<pre><code class="language-solidity">function _getkRegistryStorage() private pure returns (kRegistryStorage storage $);
+</code></pre>
+<h3 id="constructor"><a class="header" href="#constructor">constructor</a></h3>
+<p>Disables initializers to prevent implementation contract initialization</p>
+<pre><code class="language-solidity">constructor();
+</code></pre>
+<h3 id="initialize"><a class="header" href="#initialize">initialize</a></h3>
+<p>Initializes the kRegistry contract</p>
+<pre><code class="language-solidity">function initialize(address owner_, address admin_, address relayer_) external initializer;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>owner_</code></td><td><code>address</code></td><td>Contract owner address</td></tr>
+<tr><td><code>admin_</code></td><td><code>address</code></td><td>Admin role recipient</td></tr>
+<tr><td><code>relayer_</code></td><td><code>address</code></td><td></td></tr>
+</tbody></table>
+</div>
+<h3 id="setsingletoncontract"><a class="header" href="#setsingletoncontract">setSingletonContract</a></h3>
+<p>Set a singleton contract address</p>
+<p><em>Only callable by ADMIN_ROLE</em></p>
+<pre><code class="language-solidity">function setSingletonContract(bytes32 id, address contractAddress) external onlyRoles(ADMIN_ROLE);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>id</code></td><td><code>bytes32</code></td><td>Contract identifier (e.g., K_MINTER, K_BATCH)</td></tr>
+<tr><td><code>contractAddress</code></td><td><code>address</code></td><td>Address of the singleton contract</td></tr>
+</tbody></table>
+</div>
+<h3 id="registerasset"><a class="header" href="#registerasset">registerAsset</a></h3>
+<p>Register support for a new asset and its corresponding kToken</p>
+<p><em>Only callable by ADMIN_ROLE, establishes bidirectional mapping</em></p>
+<pre><code class="language-solidity">function registerAsset(address asset, address kToken, bytes32 id) external onlyRoles(ADMIN_ROLE);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>Underlying asset address (e.g., USDC, WBTC)</td></tr>
+<tr><td><code>kToken</code></td><td><code>address</code></td><td>Corresponding kToken address (e.g., kUSD, kBTC)</td></tr>
+<tr><td><code>id</code></td><td><code>bytes32</code></td><td></td></tr>
+</tbody></table>
+</div>
+<h3 id="registervault"><a class="header" href="#registervault">registerVault</a></h3>
+<p>Register a new vault in the protocol</p>
+<p><em>Only callable by ADMIN_ROLE, sets as primary if first of its type</em></p>
+<pre><code class="language-solidity">function registerVault(address vault, VaultType type_, address asset) external onlyRoles(ADMIN_ROLE);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>Vault contract address</td></tr>
+<tr><td><code>type_</code></td><td><code>VaultType</code></td><td>Type of vault (MINTER, DN, ALPHA, BETA)</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>Underlying asset the vault manages</td></tr>
+</tbody></table>
+</div>
+<h3 id="registeradapter"><a class="header" href="#registeradapter">registerAdapter</a></h3>
+<p>Registers an adapter for a specific vault</p>
+<pre><code class="language-solidity">function registerAdapter(address vault, address adapter) external onlyRoles(ADMIN_ROLE);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address</td></tr>
+<tr><td><code>adapter</code></td><td><code>address</code></td><td>The adapter address</td></tr>
+</tbody></table>
+</div>
+<h3 id="removeadapter"><a class="header" href="#removeadapter">removeAdapter</a></h3>
+<p>Removes an adapter for a specific vault</p>
+<pre><code class="language-solidity">function removeAdapter(address vault, address adapter) external onlyRoles(ADMIN_ROLE);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address</td></tr>
+<tr><td><code>adapter</code></td><td><code>address</code></td><td></td></tr>
+</tbody></table>
+</div>
+<h3 id="getcontractbyid"><a class="header" href="#getcontractbyid">getContractById</a></h3>
+<p>Get a singleton contract address by its identifier</p>
+<p><em>Reverts if contract not set</em></p>
+<pre><code class="language-solidity">function getContractById(bytes32 id) external view returns (address);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>id</code></td><td><code>bytes32</code></td><td>Contract identifier (e.g., K_MINTER, K_BATCH)</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>Contract address</td></tr>
+</tbody></table>
+</div>
+<h3 id="getassetbyid"><a class="header" href="#getassetbyid">getAssetById</a></h3>
+<p>Get a singleton asset address by its identifier</p>
+<p><em>Reverts if asset not set</em></p>
+<pre><code class="language-solidity">function getAssetById(bytes32 id) external view returns (address);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>id</code></td><td><code>bytes32</code></td><td>Asset identifier (e.g., USDC, WBTC)</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>Asset address</td></tr>
+</tbody></table>
+</div>
+<h3 id="getallassets"><a class="header" href="#getallassets">getAllAssets</a></h3>
+<p>Get all supported assets</p>
+<pre><code class="language-solidity">function getAllAssets() external view returns (address[] memory);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Array of supported asset addresses</td></tr>
+</tbody></table>
+</div>
+<h3 id="getcorecontracts"><a class="header" href="#getcorecontracts">getCoreContracts</a></h3>
+<p>Get all core singleton contracts at once</p>
+<pre><code class="language-solidity">function getCoreContracts() external view returns (address kMinter, address kAssetRouter);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>kMinter</code></td><td><code>address</code></td><td>The kMinter contract address</td></tr>
+<tr><td><code>kAssetRouter</code></td><td><code>address</code></td><td>The kAssetRouter contract address</td></tr>
+</tbody></table>
+</div>
+<h3 id="getvaultsbyasset"><a class="header" href="#getvaultsbyasset">getVaultsByAsset</a></h3>
+<p>Get all vaults registered for a specific asset</p>
+<pre><code class="language-solidity">function getVaultsByAsset(address asset) external view returns (address[] memory);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>Asset address to query</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Array of vault addresses</td></tr>
+</tbody></table>
+</div>
+<h3 id="getvaultbyassetandtype"><a class="header" href="#getvaultbyassetandtype">getVaultByAssetAndType</a></h3>
+<p>Get a vault address by asset and vault type</p>
+<p><em>Reverts if vault not found</em></p>
+<pre><code class="language-solidity">function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>Asset address</td></tr>
+<tr><td><code>vaultType</code></td><td><code>uint8</code></td><td>Vault type</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>Vault address</td></tr>
+</tbody></table>
+</div>
+<h3 id="getvaulttype"><a class="header" href="#getvaulttype">getVaultType</a></h3>
+<p>Get the type of a vault</p>
+<pre><code class="language-solidity">function getVaultType(address vault) external view returns (uint8);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>Vault address</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint8</code></td><td>Vault type</td></tr>
+</tbody></table>
+</div>
+<h3 id="isrelayer"><a class="header" href="#isrelayer">isRelayer</a></h3>
+<p>Check if the caller is the relayer</p>
+<pre><code class="language-solidity">function isRelayer(address account) external view returns (bool);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the caller is the relayer</td></tr>
+</tbody></table>
+</div>
+<h3 id="isguardian"><a class="header" href="#isguardian">isGuardian</a></h3>
+<pre><code class="language-solidity">function isGuardian(address account) external view returns (bool);
+</code></pre>
+<h3 id="isregisteredasset"><a class="header" href="#isregisteredasset">isRegisteredAsset</a></h3>
+<p>Check if an asset is supported</p>
+<pre><code class="language-solidity">function isRegisteredAsset(address asset) external view returns (bool);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>Asset address</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the asset is supported</td></tr>
+</tbody></table>
+</div>
+<h3 id="isvault"><a class="header" href="#isvault">isVault</a></h3>
+<p>Check if a vault is registered</p>
+<pre><code class="language-solidity">function isVault(address vault) external view returns (bool);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>Vault address</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the vault is registered</td></tr>
+</tbody></table>
+</div>
+<h3 id="issingletoncontract"><a class="header" href="#issingletoncontract">isSingletonContract</a></h3>
+<p>Check if a contract is a singleton contract</p>
+<pre><code class="language-solidity">function isSingletonContract(address contractAddress) external view returns (bool);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>contractAddress</code></td><td><code>address</code></td><td>Contract address</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the contract is a singleton contract</td></tr>
+</tbody></table>
+</div>
+<h3 id="isktoken"><a class="header" href="#isktoken">isKToken</a></h3>
+<p>Check if a kToken is registered</p>
+<pre><code class="language-solidity">function isKToken(address kToken) external view returns (bool);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>kToken</code></td><td><code>address</code></td><td>KToken address</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the kToken is registered</td></tr>
+</tbody></table>
+</div>
+<h3 id="getadapters"><a class="header" href="#getadapters">getAdapters</a></h3>
+<p>Get the adapter for a specific vault</p>
+<pre><code class="language-solidity">function getAdapters(address vault) external view returns (address[] memory);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>Vault address</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Adapter address (address(0) if none set)</td></tr>
+</tbody></table>
+</div>
+<h3 id="isadapterregistered"><a class="header" href="#isadapterregistered">isAdapterRegistered</a></h3>
+<p>Check if an adapter is registered</p>
+<pre><code class="language-solidity">function isAdapterRegistered(address adapter) external view returns (bool);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>adapter</code></td><td><code>address</code></td><td>Adapter address</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if adapter is registered</td></tr>
+</tbody></table>
+</div>
+<h3 id="getvaultassets"><a class="header" href="#getvaultassets">getVaultAssets</a></h3>
+<p>Get the asset for a specific vault</p>
+<pre><code class="language-solidity">function getVaultAssets(address vault) external view returns (address[] memory);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>Vault address</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Asset address that the vault manages</td></tr>
+</tbody></table>
+</div>
+<h3 id="assettoktoken"><a class="header" href="#assettoktoken">assetToKToken</a></h3>
+<p>Get the kToken for a specific asset</p>
+<pre><code class="language-solidity">function assetToKToken(address asset) external view returns (address);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>Asset address</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>KToken address</td></tr>
+</tbody></table>
+</div>
+<h3 id="_authorizeupgrade"><a class="header" href="#_authorizeupgrade">_authorizeUpgrade</a></h3>
+<p>Authorizes contract upgrades</p>
+<p><em>Only callable by contract owner</em></p>
+<pre><code class="language-solidity">function _authorizeUpgrade(address newImplementation) internal view override onlyOwner;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>newImplementation</code></td><td><code>address</code></td><td>New implementation address</td></tr>
+</tbody></table>
+</div>
+<h3 id="receive"><a class="header" href="#receive">receive</a></h3>
+<p>Receive ETH (for gas refunds, etc.)</p>
+<pre><code class="language-solidity">receive() external payable;
+</code></pre>
+<h3 id="contractname"><a class="header" href="#contractname">contractName</a></h3>
+<p>Returns the contract name</p>
+<pre><code class="language-solidity">function contractName() external pure returns (string memory);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>string</code></td><td>Contract name</td></tr>
+</tbody></table>
+</div>
+<h3 id="contractversion"><a class="header" href="#contractversion">contractVersion</a></h3>
+<p>Returns the contract version</p>
+<pre><code class="language-solidity">function contractVersion() external pure returns (string memory);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>string</code></td><td>Contract version</td></tr>
+</tbody></table>
+</div>
+<h2 id="structs"><a class="header" href="#structs">Structs</a></h2>
+<h3 id="kregistrystorage"><a class="header" href="#kregistrystorage">kRegistryStorage</a></h3>
+<p><strong>Note:</strong>
+storage-location: erc7201:kam.storage.kRegistry</p>
+<pre><code class="language-solidity">struct kRegistryStorage {
+    mapping(bytes32 =&gt; address) singletonContracts;
+    mapping(address =&gt; bool) isSingletonContract;
+    mapping(address =&gt; bool) isVault;
+    mapping(address =&gt; uint8 vaultType) vaultType;
+    mapping(address =&gt; mapping(uint8 vaultType =&gt; address)) assetToVault;
+    mapping(address =&gt; EnumerableSetLib.AddressSet) vaultAsset;
+    EnumerableSetLib.AddressSet allVaults;
+    mapping(address =&gt; EnumerableSetLib.AddressSet) vaultsByAsset;
+    mapping(bytes32 =&gt; address) singletonAssets;
+    mapping(address =&gt; address) assetToKToken;
+    mapping(address =&gt; bool) isKToken;
+    mapping(address =&gt; address) kTokenToAsset;
+    mapping(address =&gt; bool) isRegisteredAsset;
+    EnumerableSetLib.AddressSet supportedAssets;
+    mapping(address =&gt; EnumerableSetLib.AddressSet) vaultAdapters;
+    mapping(address =&gt; bool) registeredAdapters;
+}
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../src/kMinter.sol/contract.kMinter.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../src/kToken.sol/contract.kToken.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../src/kMinter.sol/contract.kMinter.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../src/kToken.sol/contract.kToken.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../solidity.min.js"></script>
+
+
+    </div>
+    </body>
+</html>

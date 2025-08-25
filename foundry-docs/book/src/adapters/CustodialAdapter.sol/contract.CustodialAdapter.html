@@ -1,0 +1,440 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>CustodialAdapter - KAM Contracts Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon.svg">
+        <link rel="shortcut icon" href="../../../favicon.png">
+        <link rel="stylesheet" href="../../../css/variables.css">
+        <link rel="stylesheet" href="../../../css/general.css">
+        <link rel="stylesheet" href="../../../css/chrome.css">
+        <link rel="stylesheet" href="../../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../../highlight.css">
+        <link rel="stylesheet" href="../../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../../book.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">KAM Contracts Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/VerisLabs/KAM" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="custodialadapter"><a class="header" href="#custodialadapter">CustodialAdapter</a></h1>
+<p><a href="https://github.com/VerisLabs/KAM/blob/962a4adbf4eedc0a2cd6fb12eded69e348454133/src/adapters/CustodialAdapter.sol">Git Source</a></p>
+<p><strong>Inherits:</strong>
+<a href="/src/adapters/BaseAdapter.sol/contract.BaseAdapter.html">BaseAdapter</a>, Initializable, UUPSUpgradeable</p>
+<p>Adapter for custodial address integrations (CEX, CEFFU, etc.)</p>
+<p><em>Simple adapter that transfers assets to custodial addresses and tracks virtual balances</em></p>
+<h2 id="state-variables"><a class="header" href="#state-variables">State Variables</a></h2>
+<h3 id="custodial_adapter_storage_location"><a class="header" href="#custodial_adapter_storage_location">CUSTODIAL_ADAPTER_STORAGE_LOCATION</a></h3>
+<pre><code class="language-solidity">bytes32 private constant CUSTODIAL_ADAPTER_STORAGE_LOCATION =
+    0x6096605776f37a069e5fb3b2282c592b4e41a8f7c82e8665fde33e5acbdbaf00;
+</code></pre>
+<h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
+<h3 id="_getcustodialadapterstorage"><a class="header" href="#_getcustodialadapterstorage">_getCustodialAdapterStorage</a></h3>
+<pre><code class="language-solidity">function _getCustodialAdapterStorage() internal pure returns (CustodialAdapterStorage storage $);
+</code></pre>
+<h3 id="constructor"><a class="header" href="#constructor">constructor</a></h3>
+<p>Empty constructor to ensure clean initialization state</p>
+<pre><code class="language-solidity">constructor();
+</code></pre>
+<h3 id="initialize"><a class="header" href="#initialize">initialize</a></h3>
+<p>Initializes the MetaVault adapter</p>
+<pre><code class="language-solidity">function initialize(address registry_, address owner_, address admin_) external initializer;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>registry_</code></td><td><code>address</code></td><td>Address of the kRegistry contract</td></tr>
+<tr><td><code>owner_</code></td><td><code>address</code></td><td>Address of the owner</td></tr>
+<tr><td><code>admin_</code></td><td><code>address</code></td><td>Address of the admin</td></tr>
+</tbody></table>
+</div>
+<h3 id="deposit"><a class="header" href="#deposit">deposit</a></h3>
+<p>Deposits assets to external strategy</p>
+<pre><code class="language-solidity">function deposit(
+    address asset,
+    uint256 amount,
+    address onBehalfOf
+)
+    external
+    nonReentrant
+    onlyKAssetRouter
+    whenRegistered;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The asset to deposit</td></tr>
+<tr><td><code>amount</code></td><td><code>uint256</code></td><td>The amount to deposit</td></tr>
+<tr><td><code>onBehalfOf</code></td><td><code>address</code></td><td>The vault address this deposit is for</td></tr>
+</tbody></table>
+</div>
+<h3 id="redeem"><a class="header" href="#redeem">redeem</a></h3>
+<p>Redeems assets from external strategy</p>
+<pre><code class="language-solidity">function redeem(
+    address asset,
+    uint256 amount,
+    address onBehalfOf
+)
+    external
+    virtual
+    nonReentrant
+    onlyKAssetRouter
+    whenRegistered;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The asset to redeem</td></tr>
+<tr><td><code>amount</code></td><td><code>uint256</code></td><td>The amount to redeem</td></tr>
+<tr><td><code>onBehalfOf</code></td><td><code>address</code></td><td>The vault address this redemption is for</td></tr>
+</tbody></table>
+</div>
+<h3 id="totalestimatedassets"><a class="header" href="#totalestimatedassets">totalEstimatedAssets</a></h3>
+<p>Returns the current total assets across all custodial addresses for this asset</p>
+<pre><code class="language-solidity">function totalEstimatedAssets(address vault, address asset) external view returns (uint256);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault to query</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td></td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>Total assets currently held across all custodial addresses managed by this adapter</td></tr>
+</tbody></table>
+</div>
+<h3 id="totalvirtualassets"><a class="header" href="#totalvirtualassets">totalVirtualAssets</a></h3>
+<p>Returns the total assets in storage for a given vault</p>
+<pre><code class="language-solidity">function totalVirtualAssets(address vault, address asset) external view returns (uint256);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td></td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>Total assets currently held in storage for this vault</td></tr>
+</tbody></table>
+</div>
+<h3 id="totalassets"><a class="header" href="#totalassets">totalAssets</a></h3>
+<p>Returns the total assets for a given vault and asset</p>
+<pre><code class="language-solidity">function totalAssets(address vault, address asset) external view returns (uint256);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td></td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>Total assets currently held for this vault and asset</td></tr>
+</tbody></table>
+</div>
+<h3 id="getlasttotalassets"><a class="header" href="#getlasttotalassets">getLastTotalAssets</a></h3>
+<p>Returns the last total assets for a given vault and asset</p>
+<pre><code class="language-solidity">function getLastTotalAssets(address vault, address asset) external view returns (uint256);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The asset address</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>The last total assets for the vault and asset</td></tr>
+</tbody></table>
+</div>
+<h3 id="getvaultdestination"><a class="header" href="#getvaultdestination">getVaultDestination</a></h3>
+<p>Returns the custodial address for a given vault</p>
+<pre><code class="language-solidity">function getVaultDestination(address vault) external view returns (address);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The custodial address for the vault</td></tr>
+</tbody></table>
+</div>
+<h3 id="setvaultdestination"><a class="header" href="#setvaultdestination">setVaultDestination</a></h3>
+<p>Sets the custodial address for a vault</p>
+<pre><code class="language-solidity">function setVaultDestination(address vault, address custodialAddress) external onlyRoles(ADMIN_ROLE);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address</td></tr>
+<tr><td><code>custodialAddress</code></td><td><code>address</code></td><td>The custodial address for this vault</td></tr>
+</tbody></table>
+</div>
+<h3 id="settotalassets"><a class="header" href="#settotalassets">setTotalAssets</a></h3>
+<p>Sets the total assets for a given vault</p>
+<pre><code class="language-solidity">function setTotalAssets(address vault, address asset, uint256 totalAssets_) external onlyKAssetRouter;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td></td></tr>
+<tr><td><code>totalAssets_</code></td><td><code>uint256</code></td><td>The total assets to set</td></tr>
+</tbody></table>
+</div>
+<h3 id="_authorizeupgrade"><a class="header" href="#_authorizeupgrade">_authorizeUpgrade</a></h3>
+<p>Authorize contract upgrade</p>
+<pre><code class="language-solidity">function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>newImplementation</code></td><td><code>address</code></td><td>New implementation address</td></tr>
+</tbody></table>
+</div>
+<h2 id="events"><a class="header" href="#events">Events</a></h2>
+<h3 id="vaultdestinationupdated"><a class="header" href="#vaultdestinationupdated">VaultDestinationUpdated</a></h3>
+<pre><code class="language-solidity">event VaultDestinationUpdated(address indexed vault, address indexed oldAddress, address indexed newAddress);
+</code></pre>
+<h3 id="totalassetsupdated"><a class="header" href="#totalassetsupdated">TotalAssetsUpdated</a></h3>
+<pre><code class="language-solidity">event TotalAssetsUpdated(address indexed vault, uint256 totalAssets);
+</code></pre>
+<h3 id="deposited"><a class="header" href="#deposited">Deposited</a></h3>
+<pre><code class="language-solidity">event Deposited(address indexed asset, uint256 amount, address indexed onBehalfOf);
+</code></pre>
+<h3 id="redemptionrequested"><a class="header" href="#redemptionrequested">RedemptionRequested</a></h3>
+<pre><code class="language-solidity">event RedemptionRequested(address indexed asset, uint256 amount, address indexed onBehalfOf);
+</code></pre>
+<h3 id="redemptionprocessed"><a class="header" href="#redemptionprocessed">RedemptionProcessed</a></h3>
+<pre><code class="language-solidity">event RedemptionProcessed(uint256 indexed requestId, uint256 assets);
+</code></pre>
+<h3 id="adapterbalanceupdated"><a class="header" href="#adapterbalanceupdated">AdapterBalanceUpdated</a></h3>
+<pre><code class="language-solidity">event AdapterBalanceUpdated(address indexed vault, address indexed asset, uint256 newBalance);
+</code></pre>
+<h2 id="errors"><a class="header" href="#errors">Errors</a></h2>
+<h3 id="invalidcustodialaddress"><a class="header" href="#invalidcustodialaddress">InvalidCustodialAddress</a></h3>
+<pre><code class="language-solidity">error InvalidCustodialAddress();
+</code></pre>
+<h3 id="vaultdestinationnotset"><a class="header" href="#vaultdestinationnotset">VaultDestinationNotSet</a></h3>
+<pre><code class="language-solidity">error VaultDestinationNotSet();
+</code></pre>
+<h3 id="assetsnottranfered"><a class="header" href="#assetsnottranfered">AssetsNotTranfered</a></h3>
+<pre><code class="language-solidity">error AssetsNotTranfered();
+</code></pre>
+<h2 id="structs"><a class="header" href="#structs">Structs</a></h2>
+<h3 id="custodialadapterstorage"><a class="header" href="#custodialadapterstorage">CustodialAdapterStorage</a></h3>
+<p><strong>Note:</strong>
+storage-location: erc7201:kam.storage.CustodialAdapter</p>
+<pre><code class="language-solidity">struct CustodialAdapterStorage {
+    uint256 nextRequestId;
+    mapping(address vault =&gt; mapping(address asset =&gt; uint256 balance)) balanceOf;
+    mapping(address vault =&gt; mapping(address asset =&gt; uint256 totalAssets)) totalAssets;
+    mapping(address vault =&gt; address custodialAddress) vaultDestinations;
+}
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../src/adapters/BaseAdapter.sol/contract.BaseAdapter.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../src/base/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../src/adapters/BaseAdapter.sol/contract.BaseAdapter.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../src/base/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr.min.js"></script>
+        <script src="../../../mark.min.js"></script>
+        <script src="../../../searcher.js"></script>
+
+        <script src="../../../clipboard.min.js"></script>
+        <script src="../../../highlight.js"></script>
+        <script src="../../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../../solidity.min.js"></script>
+
+
+    </div>
+    </body>
+</html>

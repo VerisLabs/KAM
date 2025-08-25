@@ -1,34 +1,36 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import { IVaultBatch } from "./modules/IVaultBatch.sol";
+import { IVaultClaim } from "./modules/IVaultClaim.sol";
+import { IVaultFees } from "./modules/IVaultFees.sol";
+
 /// @title IkStakingVault
 /// @notice Interface for kStakingVault that manages minter operations and user staking
 /// @dev Matches kStakingVault implementation
-interface IkStakingVault {
+interface IkStakingVault is IVaultBatch, IVaultClaim, IVaultFees {
     /*//////////////////////////////////////////////////////////////
                         USER STAKING OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
     function requestStake(address to, uint256 kTokensAmount) external payable returns (bytes32 requestId);
     function requestUnstake(address to, uint256 stkTokenAmount) external payable returns (bytes32 requestId);
-    function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable;
-    function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable;
     function updateLastTotalAssets(uint256 totalAssets) external;
-    function createBatchReceiver(bytes32 batchId) external returns (address);
-    function closeBatch(bytes32 _batchId, bool _create) external;
-    function settleBatch(bytes32 _batchId) external;
-    function totalSupply() external view returns (uint256);
 
     /*//////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     function asset() external view returns (address);
+    function totalSupply() external view returns (uint256);
     function underlyingAsset() external view returns (address);
     function name() external view returns (string memory);
     function symbol() external view returns (string memory);
     function decimals() external view returns (uint8);
     function calculateStkTokenPrice(uint256 totalAssets) external view returns (uint256);
+    function totalAssets() external view returns (uint256);
+    function totalNetAssets() external view returns (uint256);
+    function balanceOf(address account) external view returns (uint256);
     function lastTotalAssets() external view returns (uint256);
     function kToken() external view returns (address);
     function getBatchId() external view returns (bytes32);

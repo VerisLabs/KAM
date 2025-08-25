@@ -37,6 +37,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
     /// @custom:storage-location erc7201:kam.storage.kMinter
     struct kMinterStorage {
+        mapping(address => uint256) totalLockedAssets;
         uint64 requestCounter;
         mapping(bytes32 => RedeemRequest) redeemRequests;
         mapping(address => EnumerableSetLib.Bytes32Set) userRequests;
@@ -129,7 +130,8 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         if (!_isRegisteredAsset(asset_)) revert InvalidAsset();
 
         address kToken = _getKTokenForAsset(asset_);
-        bytes32 batchId = _getBatchId(_getDNVaultByAsset(asset_));
+        address dnVault = _getDNVaultByAsset(asset_);
+        bytes32 batchId = _getBatchId(dnVault);
 
         address router = _getKAssetRouter();
 
@@ -138,6 +140,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         // Push assets to kAssetRouter
         IkAssetRouter(router).kAssetPush(asset_, amount_, batchId);
+        _getkMinterStorage().totalLockedAssets[asset_] += amount_;
 
         // Mint kTokens 1:1 with deposited amount (no batch ID in push model)
         IkToken(kToken).mint(to_, amount_);
@@ -227,6 +230,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         // Delete request
         $.userRequests[redeemRequest.user].remove(requestId);
+        $.totalLockedAssets[redeemRequest.asset] -= redeemRequest.amount;
 
         // Optimistically ithdraw from BatchReceiver to recipient (1:1 with kTokens burned)
         // If batch is not settled, this will fail
@@ -317,6 +321,14 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     function getRequestCounter() external view returns (uint256) {
         kMinterStorage storage $ = _getkMinterStorage();
         return $.requestCounter;
+    }
+
+    /// @notice Get total locked assets for a specific asset
+    /// @param asset Asset address
+    /// @return Total locked assets
+    function getTotalLockedAssets(address asset) external view returns (uint256) {
+        kMinterStorage storage $ = _getkMinterStorage();
+        return $.totalLockedAssets[asset];
     }
 
     /*//////////////////////////////////////////////////////////////

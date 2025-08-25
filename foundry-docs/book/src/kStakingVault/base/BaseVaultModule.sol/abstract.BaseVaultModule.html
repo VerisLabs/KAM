@@ -1,0 +1,635 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>BaseVaultModule - KAM Contracts Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../../favicon.svg">
+        <link rel="shortcut icon" href="../../../../favicon.png">
+        <link rel="stylesheet" href="../../../../css/variables.css">
+        <link rel="stylesheet" href="../../../../css/general.css">
+        <link rel="stylesheet" href="../../../../css/chrome.css">
+        <link rel="stylesheet" href="../../../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../../../highlight.css">
+        <link rel="stylesheet" href="../../../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../../../book.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">KAM Contracts Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/VerisLabs/KAM" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="basevaultmodule"><a class="header" href="#basevaultmodule">BaseVaultModule</a></h1>
+<p><a href="https://github.com/VerisLabs/KAM/blob/962a4adbf4eedc0a2cd6fb12eded69e348454133/src/kStakingVault/base/BaseVaultModule.sol">Git Source</a></p>
+<p><strong>Inherits:</strong>
+OwnableRoles, ERC20, ReentrancyGuardTransient, <a href="/src/abstracts/Extsload.sol/abstract.Extsload.html">Extsload</a></p>
+<p>Base contract for all modules</p>
+<p><em>Provides shared storage, roles, and common functionality</em></p>
+<h2 id="state-variables"><a class="header" href="#state-variables">State Variables</a></h2>
+<h3 id="admin_role"><a class="header" href="#admin_role">ADMIN_ROLE</a></h3>
+<pre><code class="language-solidity">uint256 public constant ADMIN_ROLE = _ROLE_0;
+</code></pre>
+<h3 id="emergency_admin_role"><a class="header" href="#emergency_admin_role">EMERGENCY_ADMIN_ROLE</a></h3>
+<pre><code class="language-solidity">uint256 public constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
+</code></pre>
+<h3 id="one_hundred_percent"><a class="header" href="#one_hundred_percent">ONE_HUNDRED_PERCENT</a></h3>
+<pre><code class="language-solidity">uint256 public constant ONE_HUNDRED_PERCENT = 10_000;
+</code></pre>
+<h3 id="k_asset_router"><a class="header" href="#k_asset_router">K_ASSET_ROUTER</a></h3>
+<pre><code class="language-solidity">bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
+</code></pre>
+<h3 id="k_minter"><a class="header" href="#k_minter">K_MINTER</a></h3>
+<pre><code class="language-solidity">bytes32 internal constant K_MINTER = keccak256("K_MINTER");
+</code></pre>
+<h3 id="module_base_storage_location"><a class="header" href="#module_base_storage_location">MODULE_BASE_STORAGE_LOCATION</a></h3>
+<pre><code class="language-solidity">bytes32 internal constant MODULE_BASE_STORAGE_LOCATION =
+    0x50bc60b877273d55cac3903fd4818902e5fd7aa256278ee2dc6b212f256c0b00;
+</code></pre>
+<h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
+<h3 id="_getbasevaultmodulestorage"><a class="header" href="#_getbasevaultmodulestorage">_getBaseVaultModuleStorage</a></h3>
+<p>Returns the base vault storage struct using ERC-7201 pattern</p>
+<pre><code class="language-solidity">function _getBaseVaultModuleStorage() internal pure returns (BaseVaultModuleStorage storage $);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>$</code></td><td><code>BaseVaultModuleStorage</code></td><td>Storage reference for base vault state variables</td></tr>
+</tbody></table>
+</div>
+<h3 id="__basevaultmodule_init"><a class="header" href="#__basevaultmodule_init">__BaseVaultModule_init</a></h3>
+<p>Initializes the base contract with registry and pause state</p>
+<p><em>Can only be called once during initialization</em></p>
+<pre><code class="language-solidity">function __BaseVaultModule_init(
+    address registry_,
+    address owner_,
+    address admin_,
+    address feeReceiver_,
+    bool paused_
+)
+    internal;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>registry_</code></td><td><code>address</code></td><td>Address of the kRegistry contract</td></tr>
+<tr><td><code>owner_</code></td><td><code>address</code></td><td></td></tr>
+<tr><td><code>admin_</code></td><td><code>address</code></td><td></td></tr>
+<tr><td><code>feeReceiver_</code></td><td><code>address</code></td><td></td></tr>
+<tr><td><code>paused_</code></td><td><code>bool</code></td><td>Initial pause state</td></tr>
+</tbody></table>
+</div>
+<h3 id="registry"><a class="header" href="#registry">registry</a></h3>
+<p>Returns the registry contract address</p>
+<p><em>Reverts if contract not initialized</em></p>
+<pre><code class="language-solidity">function registry() external view returns (address);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The kRegistry contract address</td></tr>
+</tbody></table>
+</div>
+<h3 id="_registry"><a class="header" href="#_registry">_registry</a></h3>
+<p>Returns the registry contract interface</p>
+<p><em>Internal helper for typed registry access</em></p>
+<pre><code class="language-solidity">function _registry() internal view returns (IkRegistry);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>IkRegistry</code></td><td>IkRegistry interface for registry interaction</td></tr>
+</tbody></table>
+</div>
+<h3 id="_getkminter"><a class="header" href="#_getkminter">_getKMinter</a></h3>
+<p>Gets the kMinter singleton contract address</p>
+<p><em>Reverts if kMinter not set in registry</em></p>
+<pre><code class="language-solidity">function _getKMinter() internal view returns (address minter);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>minter</code></td><td><code>address</code></td><td>The kMinter contract address</td></tr>
+</tbody></table>
+</div>
+<h3 id="_getkassetrouter"><a class="header" href="#_getkassetrouter">_getKAssetRouter</a></h3>
+<p>Gets the kAssetRouter singleton contract address</p>
+<p><em>Reverts if kAssetRouter not set in registry</em></p>
+<pre><code class="language-solidity">function _getKAssetRouter() internal view returns (address router);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>router</code></td><td><code>address</code></td><td>The kAssetRouter contract address</td></tr>
+</tbody></table>
+</div>
+<h3 id="_getdnvaultbyasset"><a class="header" href="#_getdnvaultbyasset">_getDNVaultByAsset</a></h3>
+<p>Gets the DN vault address for a given asset</p>
+<p><em>Reverts if asset not supported</em></p>
+<pre><code class="language-solidity">function _getDNVaultByAsset(address asset_) internal view returns (address vault);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset_</code></td><td><code>address</code></td><td>The asset address</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The corresponding DN vault address</td></tr>
+</tbody></table>
+</div>
+<h3 id="_getrelayer"><a class="header" href="#_getrelayer">_getRelayer</a></h3>
+<p>Checks if an account has relayer role</p>
+<pre><code class="language-solidity">function _getRelayer(address account) internal view returns (bool);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>account</code></td><td><code>address</code></td><td>The account to check</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the account has relayer role</td></tr>
+</tbody></table>
+</div>
+<h3 id="asset"><a class="header" href="#asset">asset</a></h3>
+<p>Returns the underlying asset address (for compatibility)</p>
+<pre><code class="language-solidity">function asset() external view returns (address);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>Asset address</td></tr>
+</tbody></table>
+</div>
+<h3 id="underlyingasset"><a class="header" href="#underlyingasset">underlyingAsset</a></h3>
+<p>Returns the underlying asset address</p>
+<pre><code class="language-solidity">function underlyingAsset() external view returns (address);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>Asset address</td></tr>
+</tbody></table>
+</div>
+<h3 id="name"><a class="header" href="#name">name</a></h3>
+<p>Returns the vault shares token name</p>
+<pre><code class="language-solidity">function name() public view override returns (string memory);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>string</code></td><td>Token name</td></tr>
+</tbody></table>
+</div>
+<h3 id="symbol"><a class="header" href="#symbol">symbol</a></h3>
+<p>Returns the vault shares token symbol</p>
+<pre><code class="language-solidity">function symbol() public view override returns (string memory);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>string</code></td><td>Token symbol</td></tr>
+</tbody></table>
+</div>
+<h3 id="decimals"><a class="header" href="#decimals">decimals</a></h3>
+<p>Returns the vault shares token decimals</p>
+<pre><code class="language-solidity">function decimals() public view override returns (uint8);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint8</code></td><td>Token decimals</td></tr>
+</tbody></table>
+</div>
+<h3 id="_setpaused"><a class="header" href="#_setpaused">_setPaused</a></h3>
+<p>Sets the pause state of the contract</p>
+<p><em>Only callable internally by inheriting contracts</em></p>
+<pre><code class="language-solidity">function _setPaused(bool paused_) internal;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>paused_</code></td><td><code>bool</code></td><td>New pause state</td></tr>
+</tbody></table>
+</div>
+<h3 id="_calculatestktokenprice"><a class="header" href="#_calculatestktokenprice">_calculateStkTokenPrice</a></h3>
+<p>Calculates stkToken price with safety checks</p>
+<p><em>Standard price calculation used across settlement modules</em></p>
+<pre><code class="language-solidity">function _calculateStkTokenPrice() internal view returns (uint256 price);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>price</code></td><td><code>uint256</code></td><td>Price per stkToken in underlying asset terms (18 decimals)</td></tr>
+</tbody></table>
+</div>
+<h3 id="_converttoassets"><a class="header" href="#_converttoassets">_convertToAssets</a></h3>
+<p>Converts shares to assets</p>
+<pre><code class="language-solidity">function _convertToAssets(uint256 shares) internal view returns (uint256 assets);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>shares</code></td><td><code>uint256</code></td><td>Amount of shares to convert</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>assets</code></td><td><code>uint256</code></td><td>Amount of assets</td></tr>
+</tbody></table>
+</div>
+<h3 id="_converttoshares"><a class="header" href="#_converttoshares">_convertToShares</a></h3>
+<p>Converts assets to shares</p>
+<pre><code class="language-solidity">function _convertToShares(uint256 assets) internal view returns (uint256 shares);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>assets</code></td><td><code>uint256</code></td><td>Amount of assets to convert</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>shares</code></td><td><code>uint256</code></td><td>Amount of shares</td></tr>
+</tbody></table>
+</div>
+<h3 id="_calculatestktokenstomint"><a class="header" href="#_calculatestktokenstomint">_calculateStkTokensToMint</a></h3>
+<p>Calculates stkTokens to mint for given kToken amount</p>
+<p><em>Used in staking settlement operations</em></p>
+<pre><code class="language-solidity">function _calculateStkTokensToMint(uint256 kTokenAmount) internal view returns (uint256 stkTokens);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>kTokenAmount</code></td><td><code>uint256</code></td><td>Amount of kTokens being staked</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>stkTokens</code></td><td><code>uint256</code></td><td>Amount of stkTokens to mint</td></tr>
+</tbody></table>
+</div>
+<h3 id="_calculateassetvalue"><a class="header" href="#_calculateassetvalue">_calculateAssetValue</a></h3>
+<p>Calculates asset value for given stkToken amount</p>
+<p><em>Used in unstaking settlement operations</em></p>
+<pre><code class="language-solidity">function _calculateAssetValue(uint256 stkTokenAmount) internal view returns (uint256 assetValue);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>stkTokenAmount</code></td><td><code>uint256</code></td><td>Amount of stkTokens being unstaked</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>assetValue</code></td><td><code>uint256</code></td><td>Equivalent asset value</td></tr>
+</tbody></table>
+</div>
+<h3 id="_shareprice"><a class="header" href="#_shareprice">_sharePrice</a></h3>
+<p>Calculates share price for stkToken</p>
+<pre><code class="language-solidity">function _sharePrice() internal view returns (uint256);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>sharePrice Price per stkToken in underlying asset terms (18 decimals)</td></tr>
+</tbody></table>
+</div>
+<h3 id="_totalassetsvirtual"><a class="header" href="#_totalassetsvirtual">_totalAssetsVirtual</a></h3>
+<p>Returns the total assets in the vault</p>
+<pre><code class="language-solidity">function _totalAssetsVirtual() internal view returns (uint256);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>totalAssets Total assets in the vault</td></tr>
+</tbody></table>
+</div>
+<h3 id="_totalnetassets"><a class="header" href="#_totalnetassets">_totalNetAssets</a></h3>
+<p>Returns the total net assets in the vault</p>
+<pre><code class="language-solidity">function _totalNetAssets() internal view returns (uint256);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>totalNetAssets Total net assets in the vault</td></tr>
+</tbody></table>
+</div>
+<h3 id="_accumulatedfees"><a class="header" href="#_accumulatedfees">_accumulatedFees</a></h3>
+<p>Calculates accumulated fees</p>
+<pre><code class="language-solidity">function _accumulatedFees() internal view returns (uint256);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>accumulatedFees Accumulated fees</td></tr>
+</tbody></table>
+</div>
+<h3 id="whennotpaused"><a class="header" href="#whennotpaused">whenNotPaused</a></h3>
+<p>Modifier to restrict function execution when contract is paused</p>
+<p><em>Reverts with Paused() if isPaused is true</em></p>
+<pre><code class="language-solidity">modifier whenNotPaused() virtual;
+</code></pre>
+<h3 id="onlykassetrouter"><a class="header" href="#onlykassetrouter">onlyKAssetRouter</a></h3>
+<p>Restricts function access to the kAssetRouter contract</p>
+<pre><code class="language-solidity">modifier onlyKAssetRouter();
+</code></pre>
+<h3 id="onlyrelayer"><a class="header" href="#onlyrelayer">onlyRelayer</a></h3>
+<p>Restricts function access to the relayer</p>
+<p><em>Only callable internally by inheriting contracts</em></p>
+<pre><code class="language-solidity">modifier onlyRelayer();
+</code></pre>
+<h2 id="events"><a class="header" href="#events">Events</a></h2>
+<h3 id="stakerequestcreated"><a class="header" href="#stakerequestcreated">StakeRequestCreated</a></h3>
+<pre><code class="language-solidity">event StakeRequestCreated(
+    bytes32 indexed requestId,
+    address indexed user,
+    address indexed kToken,
+    uint256 amount,
+    address recipient,
+    bytes32 batchId
+);
+</code></pre>
+<h3 id="stakerequestredeemed"><a class="header" href="#stakerequestredeemed">StakeRequestRedeemed</a></h3>
+<pre><code class="language-solidity">event StakeRequestRedeemed(bytes32 indexed requestId);
+</code></pre>
+<h3 id="stakerequestcancelled"><a class="header" href="#stakerequestcancelled">StakeRequestCancelled</a></h3>
+<pre><code class="language-solidity">event StakeRequestCancelled(bytes32 indexed requestId);
+</code></pre>
+<h3 id="unstakerequestcreated"><a class="header" href="#unstakerequestcreated">UnstakeRequestCreated</a></h3>
+<pre><code class="language-solidity">event UnstakeRequestCreated(
+    bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, bytes32 batchId
+);
+</code></pre>
+<h3 id="unstakerequestcancelled"><a class="header" href="#unstakerequestcancelled">UnstakeRequestCancelled</a></h3>
+<pre><code class="language-solidity">event UnstakeRequestCancelled(bytes32 indexed requestId);
+</code></pre>
+<h3 id="paused"><a class="header" href="#paused">Paused</a></h3>
+<pre><code class="language-solidity">event Paused(bool paused);
+</code></pre>
+<h3 id="initialized"><a class="header" href="#initialized">Initialized</a></h3>
+<pre><code class="language-solidity">event Initialized(address registry, address owner, address admin);
+</code></pre>
+<h3 id="totalassetsupdated"><a class="header" href="#totalassetsupdated">TotalAssetsUpdated</a></h3>
+<pre><code class="language-solidity">event TotalAssetsUpdated(uint256 oldTotalAssets, uint256 newTotalAssets);
+</code></pre>
+<h2 id="errors"><a class="header" href="#errors">Errors</a></h2>
+<h3 id="zeroaddress"><a class="header" href="#zeroaddress">ZeroAddress</a></h3>
+<pre><code class="language-solidity">error ZeroAddress();
+</code></pre>
+<h3 id="invalidregistry"><a class="header" href="#invalidregistry">InvalidRegistry</a></h3>
+<pre><code class="language-solidity">error InvalidRegistry();
+</code></pre>
+<h3 id="notinitialized"><a class="header" href="#notinitialized">NotInitialized</a></h3>
+<pre><code class="language-solidity">error NotInitialized();
+</code></pre>
+<h3 id="contractnotfound"><a class="header" href="#contractnotfound">ContractNotFound</a></h3>
+<pre><code class="language-solidity">error ContractNotFound(bytes32 identifier);
+</code></pre>
+<h3 id="onlykassetrouter-1"><a class="header" href="#onlykassetrouter-1">OnlyKAssetRouter</a></h3>
+<pre><code class="language-solidity">error OnlyKAssetRouter();
+</code></pre>
+<h3 id="onlyrelayer-1"><a class="header" href="#onlyrelayer-1">OnlyRelayer</a></h3>
+<pre><code class="language-solidity">error OnlyRelayer();
+</code></pre>
+<h3 id="zeroamount"><a class="header" href="#zeroamount">ZeroAmount</a></h3>
+<pre><code class="language-solidity">error ZeroAmount();
+</code></pre>
+<h3 id="amountbelowdustthreshold"><a class="header" href="#amountbelowdustthreshold">AmountBelowDustThreshold</a></h3>
+<pre><code class="language-solidity">error AmountBelowDustThreshold();
+</code></pre>
+<h3 id="contractpaused"><a class="header" href="#contractpaused">ContractPaused</a></h3>
+<pre><code class="language-solidity">error ContractPaused();
+</code></pre>
+<h3 id="closed"><a class="header" href="#closed">Closed</a></h3>
+<pre><code class="language-solidity">error Closed();
+</code></pre>
+<h3 id="settled"><a class="header" href="#settled">Settled</a></h3>
+<pre><code class="language-solidity">error Settled();
+</code></pre>
+<h3 id="requestnotfound"><a class="header" href="#requestnotfound">RequestNotFound</a></h3>
+<pre><code class="language-solidity">error RequestNotFound();
+</code></pre>
+<h3 id="requestnoteligible"><a class="header" href="#requestnoteligible">RequestNotEligible</a></h3>
+<pre><code class="language-solidity">error RequestNotEligible();
+</code></pre>
+<h3 id="invalidvault"><a class="header" href="#invalidvault">InvalidVault</a></h3>
+<pre><code class="language-solidity">error InvalidVault();
+</code></pre>
+<h2 id="structs"><a class="header" href="#structs">Structs</a></h2>
+<h3 id="basevaultmodulestorage"><a class="header" href="#basevaultmodulestorage">BaseVaultModuleStorage</a></h3>
+<p><strong>Note:</strong>
+storage-location: erc7201.kam.storage.BaseVaultModule</p>
+<pre><code class="language-solidity">struct BaseVaultModuleStorage {
+    uint256 currentBatch;
+    bytes32 currentBatchId;
+    uint256 sharePriceWatermark;
+    uint256 requestCounter;
+    address registry;
+    address receiverImplementation;
+    address underlyingAsset;
+    address kToken;
+    address feeReceiver;
+    uint96 dustAmount;
+    uint8 decimals;
+    uint16 hurdleRate;
+    uint16 performanceFee;
+    uint16 managementFee;
+    bool initialized;
+    bool paused;
+    bool isHardHurdleRate;
+    uint64 lastFeesChargedManagement;
+    uint64 lastFeesChargedPerformance;
+    string name;
+    string symbol;
+    mapping(bytes32 =&gt; BaseVaultModuleTypes.BatchInfo) batches;
+    mapping(bytes32 =&gt; BaseVaultModuleTypes.StakeRequest) stakeRequests;
+    mapping(bytes32 =&gt; BaseVaultModuleTypes.UnstakeRequest) unstakeRequests;
+    mapping(address =&gt; EnumerableSetLib.Bytes32Set) userRequests;
+}
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../../src/kStakingVault/base/BaseVaultModule.sol/interface.IFeesModule.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../../src/kStakingVault/modules/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../../src/kStakingVault/base/BaseVaultModule.sol/interface.IFeesModule.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../../src/kStakingVault/modules/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../../elasticlunr.min.js"></script>
+        <script src="../../../../mark.min.js"></script>
+        <script src="../../../../searcher.js"></script>
+
+        <script src="../../../../clipboard.min.js"></script>
+        <script src="../../../../highlight.js"></script>
+        <script src="../../../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../../../solidity.min.js"></script>
+
+
+    </div>
+    </body>
+</html>
