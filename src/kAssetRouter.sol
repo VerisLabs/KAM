@@ -431,7 +431,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                 // at some point we will have multiple adapters for a vault
                 // for now we just use the first one
                 if (adapters[0] == address(0)) revert ZeroAddress();
-                asset.safeTransfer(adapters[0], netted);
+                asset.safeTransfer(address(adapter), netted);
                 adapter.deposit(asset, netted, vault);
             }
 

@@ -12,6 +12,7 @@ out/
 
 # IDE
 .vscode
+.vscode/
 
 # AI Extensions
 .cursorrules

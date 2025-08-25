@@ -1,0 +1,30 @@
+{
+    // Disable auto formatting on save
+    "editor.formatOnSave": false,
+    "editor.formatOnPaste": false,
+    "editor.formatOnType": false,
+    
+    // Solidity specific settings
+    "[solidity]": {
+        "editor.formatOnSave": false,
+        "editor.defaultFormatter": null
+    },
+    
+    // Disable Prettier for Solidity files
+    "prettier.disableLanguages": ["solidity"],
+    
+    // Disable any Solidity extensions auto-formatting
+    "solidity.formatter": "forge",
+    "solidity.enabledAsYouTypeCompilationErrorCheck": false,
+    "solidity.linter": "",
+    
+    // Files to exclude from auto-formatting
+    "files.associations": {
+        "*.sol": "solidity"
+    },
+    
+    // Disable file watching for Solidity files to prevent auto-changes
+    "files.watcherExclude": {
+        "**/*.sol": false
+    }
+}
