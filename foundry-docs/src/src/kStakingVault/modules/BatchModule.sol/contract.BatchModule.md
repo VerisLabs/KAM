@@ -1,5 +1,5 @@
 # BatchModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/066df01f2df627ed53b6b3edc701dad6646b8be7/src/kStakingVault/modules/BatchModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kStakingVault/modules/BatchModule.sol)
 
 **Inherits:**
 [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md)
@@ -77,11 +77,11 @@ function createBatchReceiver(bytes32 _batchId) external onlyKAssetRouter returns
 |`_batchId`|`bytes32`|Batch ID to deploy receiver for|
 
 
-### _newBatch
+### _createNewBatch
 
 
 ```solidity
-function _newBatch() internal returns (bytes32);
+function _createNewBatch() internal returns (bytes32);
 ```
 
 ### selectors

@@ -1,8 +1,8 @@
 # kToken
-[Git Source](https://github.com/VerisLabs/KAM/blob/066df01f2df627ed53b6b3edc701dad6646b8be7/src/kToken.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kToken.sol)
 
 **Inherits:**
-Initializable, UUPSUpgradeable, ERC20, OwnableRoles, ReentrancyGuard, Multicallable
+ERC20, OwnableRoles, ReentrancyGuard, Multicallable
 
 ERC20 token with role-based minting and burning capabilities
 
@@ -31,29 +31,35 @@ uint256 public constant MINTER_ROLE = _ROLE_2;
 ```
 
 
-### KTOKEN_STORAGE_LOCATION
+### _isPaused
 
 ```solidity
-bytes32 private constant KTOKEN_STORAGE_LOCATION = 0x2fb0aec331268355746e3684d9eaaf2249f450cf0e491ca0657288d2091eea00;
+bool _isPaused;
+```
+
+
+### _name
+
+```solidity
+string _name;
+```
+
+
+### _symbol
+
+```solidity
+string _symbol;
+```
+
+
+### _decimals
+
+```solidity
+uint8 _decimals;
 ```
 
 
 ## Functions
-### _getkTokenStorage
-
-Returns the storage pointer for the kToken contract
-
-
-```solidity
-function _getkTokenStorage() private pure returns (kTokenStorage storage $);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`$`|`kTokenStorage`|The storage pointer for the kToken contract|
-
-
 ### whenNotPaused
 
 Prevents function execution when contract is in paused state
@@ -73,37 +79,8 @@ Disables initializers to prevent implementation contract from being initialized
 
 
 ```solidity
-constructor();
+constructor(address owner_, address admin_, address emergencyAdmin_, address minter_, uint8 decimals_);
 ```
-
-### initialize
-
-Initializes the kToken contract (stack optimized - no strings)
-
-*Sets up roles and basic config. Call setupMetadata separately for name/symbol*
-
-
-```solidity
-function initialize(
-    address owner_,
-    address admin_,
-    address emergencyAdmin_,
-    address minter_,
-    uint8 decimals_
-)
-    external
-    initializer;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`owner_`|`address`|Owner address|
-|`admin_`|`address`|Admin address|
-|`emergencyAdmin_`|`address`|Emergency admin address|
-|`minter_`|`address`|Minter address|
-|`decimals_`|`uint8`|Token decimals|
-
 
 ### setupMetadata
 
@@ -347,13 +324,13 @@ Sets the pause state of the contract
 
 
 ```solidity
-function setPaused(bool _isPaused) external onlyRoles(EMERGENCY_ADMIN_ROLE);
+function setPaused(bool isPaused_) external onlyRoles(EMERGENCY_ADMIN_ROLE);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_isPaused`|`bool`|Boolean indicating whether to pause (true) or unpause (false) the contract|
+|`isPaused_`|`bool`|Boolean indicating whether to pause (true) or unpause (false) the contract|
 
 
 ### emergencyWithdraw
@@ -394,57 +371,6 @@ function _beforeTokenTransfer(address from, address to, uint256 amount) internal
 |`amount`|`uint256`|The quantity of tokens being transferred|
 
 
-### _authorizeUpgrade
-
-Internal function that validates upgrade authorization for UUPS pattern
-
-*Validates new implementation is not zero address and emits authorization event*
-
-
-```solidity
-function _authorizeUpgrade(address newImplementation) internal override onlyRoles(ADMIN_ROLE);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`newImplementation`|`address`|The address of the new contract implementation|
-
-
-### contractName
-
-Provides the human-readable name identifier for this contract
-
-*Returns a constant string value for contract identification purposes*
-
-
-```solidity
-function contractName() external pure returns (string memory);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`string`|The contract name as a string literal|
-
-
-### contractVersion
-
-Provides the version number of this contract implementation
-
-*Returns a constant string value for version tracking purposes*
-
-
-```solidity
-function contractVersion() external pure returns (string memory);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`string`|The contract version as a semantic version string|
-
-
 ## Events
 ### Minted
 
@@ -458,10 +384,10 @@ event Minted(address indexed to, uint256 amount);
 event Burned(address indexed from, uint256 amount);
 ```
 
-### UpgradeAuthorized
+### TokenCreated
 
 ```solidity
-event UpgradeAuthorized(address indexed newImplementation, address indexed sender);
+event TokenCreated(address indexed token, address owner);
 ```
 
 ### TokenInitialized
@@ -511,20 +437,5 @@ error ZeroAmount();
 
 ```solidity
 error ContractNotPaused();
-```
-
-## Structs
-### kTokenStorage
-**Note:**
-storage-location: erc7201:kToken.storage.kToken
-
-
-```solidity
-struct kTokenStorage {
-    bool isPaused;
-    string _name;
-    string _symbol;
-    uint8 _decimals;
-}
 ```
 

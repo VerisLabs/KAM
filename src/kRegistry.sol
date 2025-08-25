@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { kToken } from "src/kToken.sol";
@@ -128,13 +128,16 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         address kToken_ = $.assetToKToken[asset];
         if (kToken_ != address(0)) revert AlreadyRegistered();
 
+        uint8 decimals_ = IERC20Metadata(asset).decimals();
+        if (decimals_ == 0) decimals_ = 18;
+
         kToken_ = address(
             new kToken(
                 owner(),
                 msg.sender,
                 msg.sender, // adjust emergencyAdmin and metadata
                 minter_,
-                IERC20Metadata(asset).decimals()
+                decimals_
             )
         );
         emit KTokenDeployed(kToken_);

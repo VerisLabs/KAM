@@ -1,6 +1,7 @@
 
 
 # Contents
+- [modules](/src/interfaces/modules)
 - [IAdapter](IAdapter.sol/interface.IAdapter.md)
 - [IExtsload](IExtsload.sol/interface.IExtsload.md)
 - [IkAssetRouter](IkAssetRouter.sol/interface.IkAssetRouter.md)

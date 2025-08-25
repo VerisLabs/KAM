@@ -1,15 +1,8 @@
 # IkRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/066df01f2df627ed53b6b3edc701dad6646b8be7/src/interfaces/IkRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/interfaces/IkRegistry.sol)
 
 
 ## Functions
-### setKTokenImplementation
-
-
-```solidity
-function setKTokenImplementation(address implementation) external;
-```
-
 ### setSingletonContract
 
 
@@ -21,7 +14,7 @@ function setSingletonContract(bytes32 id, address contractAddress) external;
 
 
 ```solidity
-function registerAsset(address asset, address kToken, bytes32 id) external;
+function registerAsset(address asset, bytes32 id) external returns (address);
 ```
 
 ### registerVault
@@ -129,13 +122,6 @@ function isVault(address vault) external view returns (bool);
 function isSingletonContract(address contractAddress) external view returns (bool);
 ```
 
-### isKToken
-
-
-```solidity
-function isKToken(address kToken) external view returns (bool);
-```
-
 ### getAdapters
 
 
@@ -164,20 +150,6 @@ function getVaultAssets(address vault) external view returns (address[] memory);
 function assetToKToken(address asset) external view returns (address);
 ```
 
-### deployKToken
-
-
-```solidity
-function deployKToken(
-    address owner_,
-    address admin_,
-    address emergencyAdmin_,
-    uint8 decimals_
-)
-    external
-    returns (address);
-```
-
 ## Events
 ### SingletonContractSet
 
@@ -191,10 +163,10 @@ event SingletonContractSet(bytes32 indexed id, address indexed contractAddress);
 event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
 ```
 
-### KTokenRegistered
+### AssetRegistered
 
 ```solidity
-event KTokenRegistered(address indexed asset, address indexed kToken);
+event AssetRegistered(address indexed asset, address indexed kToken);
 ```
 
 ### AssetSupported
@@ -218,7 +190,7 @@ event AdapterRemoved(address indexed vault, address indexed adapter);
 ### KTokenDeployed
 
 ```solidity
-event KTokenDeployed(address indexed kTokenProxy, address indexed owner, address indexed admin);
+event KTokenDeployed(address indexed kTokenContract);
 ```
 
 ### KTokenImplementationSet

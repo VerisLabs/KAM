@@ -24,18 +24,21 @@
         <link rel="stylesheet" href="../../../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="../../../highlight.css">
-        <link rel="stylesheet" href="../../../tomorrow-night.css">
-        <link rel="stylesheet" href="../../../ayu-highlight.css">
+        <link rel="stylesheet" id="highlight-css" href="../../../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../../../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../../../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         <link rel="stylesheet" href="../../../book.css">
 
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
-        <!-- Provide site root to javascript -->
+        <!-- Provide site root and default themes to javascript -->
         <script>
-            var path_to_root = "../../../";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc.js"></script>
@@ -45,8 +48,8 @@
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                var theme = localStorage.getItem('mdbook-theme');
-                var sidebar = localStorage.getItem('mdbook-sidebar');
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -60,7 +63,8 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            var theme;
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
@@ -73,8 +77,8 @@
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var sidebar = null;
-            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -110,6 +114,7 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
@@ -157,13 +162,13 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="ikregistry"><a class="header" href="#ikregistry">IkRegistry</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/962a4adbf4eedc0a2cd6fb12eded69e348454133/src/interfaces/IkRegistry.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/interfaces/IkRegistry.sol">Git Source</a></p>
 <h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
 <h3 id="setsingletoncontract"><a class="header" href="#setsingletoncontract">setSingletonContract</a></h3>
 <pre><code class="language-solidity">function setSingletonContract(bytes32 id, address contractAddress) external;
 </code></pre>
 <h3 id="registerasset"><a class="header" href="#registerasset">registerAsset</a></h3>
-<pre><code class="language-solidity">function registerAsset(address asset, address kToken, bytes32 id) external;
+<pre><code class="language-solidity">function registerAsset(address asset, bytes32 id) external returns (address);
 </code></pre>
 <h3 id="registervault"><a class="header" href="#registervault">registerVault</a></h3>
 <pre><code class="language-solidity">function registerVault(address vault, VaultType type_, address asset) external;
@@ -210,9 +215,6 @@
 <h3 id="issingletoncontract"><a class="header" href="#issingletoncontract">isSingletonContract</a></h3>
 <pre><code class="language-solidity">function isSingletonContract(address contractAddress) external view returns (bool);
 </code></pre>
-<h3 id="isktoken"><a class="header" href="#isktoken">isKToken</a></h3>
-<pre><code class="language-solidity">function isKToken(address kToken) external view returns (bool);
-</code></pre>
 <h3 id="getadapters"><a class="header" href="#getadapters">getAdapters</a></h3>
 <pre><code class="language-solidity">function getAdapters(address vault) external view returns (address[] memory);
 </code></pre>
@@ -232,8 +234,8 @@
 <h3 id="vaultregistered"><a class="header" href="#vaultregistered">VaultRegistered</a></h3>
 <pre><code class="language-solidity">event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
 </code></pre>
-<h3 id="ktokenregistered"><a class="header" href="#ktokenregistered">KTokenRegistered</a></h3>
-<pre><code class="language-solidity">event KTokenRegistered(address indexed asset, address indexed kToken);
+<h3 id="assetregistered"><a class="header" href="#assetregistered">AssetRegistered</a></h3>
+<pre><code class="language-solidity">event AssetRegistered(address indexed asset, address indexed kToken);
 </code></pre>
 <h3 id="assetsupported"><a class="header" href="#assetsupported">AssetSupported</a></h3>
 <pre><code class="language-solidity">event AssetSupported(address indexed asset);
@@ -243,6 +245,12 @@
 </code></pre>
 <h3 id="adapterremoved"><a class="header" href="#adapterremoved">AdapterRemoved</a></h3>
 <pre><code class="language-solidity">event AdapterRemoved(address indexed vault, address indexed adapter);
+</code></pre>
+<h3 id="ktokendeployed"><a class="header" href="#ktokendeployed">KTokenDeployed</a></h3>
+<pre><code class="language-solidity">event KTokenDeployed(address indexed kTokenContract);
+</code></pre>
+<h3 id="ktokenimplementationset"><a class="header" href="#ktokenimplementationset">KTokenImplementationSet</a></h3>
+<pre><code class="language-solidity">event KTokenImplementationSet(address indexed implementation);
 </code></pre>
 <h2 id="errors"><a class="header" href="#errors">Errors</a></h2>
 <h3 id="zeroaddress"><a class="header" href="#zeroaddress">ZeroAddress</a></h3>
@@ -265,6 +273,24 @@
 </code></pre>
 <h3 id="adapteralreadyset"><a class="header" href="#adapteralreadyset">AdapterAlreadySet</a></h3>
 <pre><code class="language-solidity">error AdapterAlreadySet();
+</code></pre>
+<h3 id="saltalreadyused"><a class="header" href="#saltalreadyused">SaltAlreadyUsed</a></h3>
+<pre><code class="language-solidity">error SaltAlreadyUsed();
+</code></pre>
+<h3 id="tokeninitializationfailed"><a class="header" href="#tokeninitializationfailed">TokenInitializationFailed</a></h3>
+<pre><code class="language-solidity">error TokenInitializationFailed();
+</code></pre>
+<h3 id="ktokennotregistered"><a class="header" href="#ktokennotregistered">KTokenNotRegistered</a></h3>
+<pre><code class="language-solidity">error KTokenNotRegistered();
+</code></pre>
+<h3 id="invalidparameter"><a class="header" href="#invalidparameter">InvalidParameter</a></h3>
+<pre><code class="language-solidity">error InvalidParameter();
+</code></pre>
+<h3 id="ktokenimplementationnotset"><a class="header" href="#ktokenimplementationnotset">KTokenImplementationNotSet</a></h3>
+<pre><code class="language-solidity">error KTokenImplementationNotSet();
+</code></pre>
+<h3 id="minternotset"><a class="header" href="#minternotset">MinterNotSet</a></h3>
+<pre><code class="language-solidity">error MinterNotSet();
 </code></pre>
 <h2 id="enums"><a class="header" href="#enums">Enums</a></h2>
 <h3 id="vaulttype"><a class="header" href="#vaulttype">VaultType</a></h3>

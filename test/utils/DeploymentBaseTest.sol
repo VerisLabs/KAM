@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { BaseTest, console2 } from "./BaseTest.sol";
 import {
     ADMIN_ROLE,
@@ -19,6 +17,8 @@ import {
     _1_USDC,
     _1_WBTC
 } from "./Constants.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 // Protocol contracts
 import { kAssetRouter } from "src/kAssetRouter.sol";
@@ -38,8 +38,9 @@ import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
 import { CustodialAdapter } from "src/adapters/CustodialAdapter.sol";
 
 // Interfaces
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 /// @title DeploymentBaseTest
 /// @notice Comprehensive base test contract that deploys the complete KAM protocol
@@ -222,8 +223,10 @@ contract DeploymentBaseTest is BaseTest {
         kUSD = kToken(payable(kUSDAddress));
 
         // Set metadata for kUSD
-        vm.prank(users.admin);
+        vm.startPrank(users.admin);
         kUSD.setupMetadata(KUSD_NAME, KUSD_SYMBOL);
+        kUSD.grantEmergencyRole(users.emergencyAdmin);
+        vm.stopPrank();
 
         // Deploy kBTC through registry
         vm.startPrank(users.admin);
@@ -232,8 +235,10 @@ contract DeploymentBaseTest is BaseTest {
         kBTC = kToken(payable(kBTCAddress));
 
         // Set metadata for kBTC
-        vm.prank(users.admin);
+        vm.startPrank(users.admin);
         kBTC.setupMetadata(KBTC_NAME, KBTC_SYMBOL);
+        kBTC.grantEmergencyRole(users.emergencyAdmin);
+        vm.stopPrank();
 
         // Label for debugging
         vm.label(address(kUSD), "kUSD");
@@ -348,8 +353,7 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Configure protocol contracts with registry integration
     function _configureProtocol() internal {
-
-        // Register Vaults 
+        // Register Vaults
         vm.startPrank(users.admin);
         registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, USDC_MAINNET);
         registry.registerVault(address(dnVault), IkRegistry.VaultType.DN, USDC_MAINNET);

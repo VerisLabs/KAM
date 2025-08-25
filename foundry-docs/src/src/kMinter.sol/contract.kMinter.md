@@ -1,5 +1,5 @@
 # kMinter
-[Git Source](https://github.com/VerisLabs/KAM/blob/066df01f2df627ed53b6b3edc701dad6646b8be7/src/kMinter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kMinter.sol)
 
 **Inherits:**
 [IkMinter](/src/interfaces/IkMinter.sol/interface.IkMinter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
@@ -282,6 +282,27 @@ function getRequestCounter() external view returns (uint256);
 |`<none>`|`uint256`|Request counter|
 
 
+### getTotalLockedAssets
+
+Get total locked assets for a specific asset
+
+
+```solidity
+function getTotalLockedAssets(address asset) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|Asset address|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Total locked assets|
+
+
 ### _authorizeUpgrade
 
 Authorizes contract upgrades
@@ -346,6 +367,7 @@ storage-location: erc7201:kam.storage.kMinter
 
 ```solidity
 struct kMinterStorage {
+    mapping(address => uint256) totalLockedAssets;
     uint64 requestCounter;
     mapping(bytes32 => RedeemRequest) redeemRequests;
     mapping(address => EnumerableSetLib.Bytes32Set) userRequests;
