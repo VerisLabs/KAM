@@ -98,6 +98,7 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
         bytes32 currentBatchId;
         uint256 sharePriceWatermark;
         uint256 requestCounter;
+        uint128 totalPendingStake;
         address registry;
         address receiverImplementation;
         address underlyingAsset;
@@ -302,7 +303,8 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     /// @notice Returns the total assets in the vault
     /// @return totalAssets Total assets in the vault
     function _totalAssets() internal view returns (uint256) {
-        return IkToken(_getBaseVaultModuleStorage().kToken).balanceOf(address(this));
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        return IkToken($.kToken).balanceOf(address(this)) - $.totalPendingStake;
     }
 
     /// @notice Returns the total net assets in the vault

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { BaseVaultTest, DeploymentBaseTest } from "../utils/BaseVaultTest.sol";
 import { USDC_MAINNET, _1_USDC } from "../utils/Constants.sol";
-import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
+
+import { console } from "forge-std/console.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
@@ -15,70 +16,21 @@ import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTyp
 /// @title kStakingVaultAccountingTest
 /// @notice Tests for core accounting mechanics in kStakingVault
 /// @dev Focuses on share price calculations, asset conversions, and balance tracking
-contract kStakingVaultAccountingTest is DeploymentBaseTest {
+contract kStakingVaultAccountingTest is BaseVaultTest {
     using FixedPointMathLib for uint256;
     using SafeTransferLib for address;
-
-    /*//////////////////////////////////////////////////////////////
-                              CONSTANTS
-    //////////////////////////////////////////////////////////////*/
-
-    uint256 constant INITIAL_DEPOSIT = 1_000_000 * _1_USDC; // 1M USDC
-    uint256 constant SMALL_DEPOSIT = 10_000 * _1_USDC; // 10K USDC
-    uint256 constant LARGE_DEPOSIT = 5_000_000 * _1_USDC; // 5M USDC
-
-    /*//////////////////////////////////////////////////////////////
-                              VARIABLES
-    //////////////////////////////////////////////////////////////*/
-
-    IkStakingVault vault;
 
     /*//////////////////////////////////////////////////////////////
                               SETUP
     //////////////////////////////////////////////////////////////*/
 
     function setUp() public override {
-        super.setUp();
+        DeploymentBaseTest.setUp();
 
         // Use Alpha vault for testing
         vault = IkStakingVault(address(alphaVault));
 
-        // Mint kTokens to test users
-        _mintKTokensToUsers();
-    }
-
-    function _mintKTokensToUsers() internal {
-        vm.startPrank(users.institution);
-        USDC_MAINNET.safeApprove(address(minter), type(uint256).max);
-        minter.mint(USDC_MAINNET, users.alice, INITIAL_DEPOSIT * 3);
-        minter.mint(USDC_MAINNET, users.bob, LARGE_DEPOSIT);
-        minter.mint(USDC_MAINNET, users.charlie, INITIAL_DEPOSIT);
-        vm.stopPrank();
-
-        // Settle batch
-        bytes32 batchId = dnVault.getBatchId();
-        _executeBatchSettlement(address(minter), batchId, INITIAL_DEPOSIT * 3 + LARGE_DEPOSIT + INITIAL_DEPOSIT);
-    }
-
-    function _executeBatchSettlement(address vault, bytes32 batchId, uint256 totalAssets) internal {
-        // Advance time to ensure unique proposal IDs when settling multiple vaults
-        vm.warp(block.timestamp + 1);
-
-        uint256 startTime = block.timestamp;
-
-        // Ensure kAssetRouter has the physical assets for settlement
-        // In production, backend would retrieve these from external strategies
-        uint256 currentBalance = IERC20(USDC_MAINNET).balanceOf(address(assetRouter));
-        if (currentBalance < totalAssets) {
-            deal(USDC_MAINNET, address(assetRouter), totalAssets);
-        }
-
-        vm.prank(users.settler);
-        bytes32 proposalId =
-            assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, totalAssets, totalAssets, 0, false);
-
-        // Wait for cooldown period(0 for testing)
-        assetRouter.executeSettleBatch(proposalId);
+        BaseVaultTest.setUp();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -132,15 +84,8 @@ contract kStakingVaultAccountingTest is DeploymentBaseTest {
         bytes32 batchId = vault.getBatchId();
         uint256 lastTotalAssets = vault.totalAssets();
         uint256 yield = 100_000 * _1_USDC;
-        vm.prank(users.settler);
-        bytes32 proposalId =
-            assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, lastTotalAssets + yield, 0, yield, true);
-        vm.prank(users.settler);
-        assetRouter.executeSettleBatch(proposalId);
 
-        vm.prank(users.settler);
-        vault.closeBatch(batchId, true);
-
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + yield, 0, yield, true);
 
         // Total assets should now be 1.1M USDC
         assertEq(vault.totalAssets(), INITIAL_DEPOSIT + yield);
@@ -161,14 +106,8 @@ contract kStakingVaultAccountingTest is DeploymentBaseTest {
         bytes32 batchId = vault.getBatchId();
         uint256 lastTotalAssets = vault.totalAssets();
         uint256 lossAmount = 50_000 * _1_USDC;
-        vm.prank(users.settler);
-        bytes32 proposalId =
-            assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, lastTotalAssets - lossAmount, 0, lossAmount, false);
-        vm.prank(users.settler);
-        assetRouter.executeSettleBatch(proposalId);
 
-        vm.prank(users.settler);
-        vault.closeBatch(batchId, true);
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets - lossAmount, 0, lossAmount, false);
 
         // Total assets should now be 950K USDC
         assertEq(vault.totalAssets(), INITIAL_DEPOSIT - lossAmount);
@@ -188,7 +127,28 @@ contract kStakingVaultAccountingTest is DeploymentBaseTest {
 
         // Bob deposits 500K USDC at same share price
         uint256 bobDeposit = 500_000 * _1_USDC;
-        _performStakeAndSettle(users.bob, bobDeposit);
+
+        // Approve kUSD for staking
+        vm.prank(users.bob);
+        kUSD.approve(address(vault), bobDeposit);
+
+        bytes32 batchId = vault.getBatchId();
+        // Request stake
+        vm.prank(users.bob);
+        bytes32 requestId = vault.requestStake(users.bob, bobDeposit);
+
+        vm.prank(users.settler);
+        bytes32 proposalId = assetRouter.proposeSettleBatch(
+            USDC_MAINNET, address(vault), batchId, INITIAL_DEPOSIT + bobDeposit, bobDeposit, 0, false
+        );
+        vm.prank(users.settler);
+        assetRouter.executeSettleBatch(proposalId);
+
+        vm.prank(users.settler);
+        vault.closeBatch(batchId, true);
+
+        vm.prank(users.bob);
+        vault.claimStakedShares(batchId, requestId);
 
         // Total assets should be 1.5M USDC
         assertEq(vault.totalAssets(), INITIAL_DEPOSIT + bobDeposit);
@@ -209,9 +169,11 @@ contract kStakingVaultAccountingTest is DeploymentBaseTest {
         _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
 
         // Add 20% yield (200K USDC)
-        uint256 yieldAmount = 200_000 * _1_USDC;
-        vm.prank(address(minter));
-        kUSD.mint(address(vault), yieldAmount);
+        bytes32 batchId = vault.getBatchId();
+        uint256 lastTotalAssets = vault.totalAssets();
+        uint256 yield = 200_000 * _1_USDC;
+
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + yield, 0, yield, true);
 
         // Share price is now 1.2 USDC per stkToken
         assertEq(vault.sharePrice(), 1.2e6);
@@ -364,8 +326,7 @@ contract kStakingVaultAccountingTest is DeploymentBaseTest {
         uint256 largeAmount = 1_000_000_000 * _1_USDC; // 1B USDC
 
         // Mint large amount to Alice
-        vm.prank(address(minter));
-        kUSD.mint(users.alice, largeAmount);
+        _mintKTokenToUser(users.alice, largeAmount, true);
 
         _performStakeAndSettle(users.alice, largeAmount);
 
@@ -387,7 +348,7 @@ contract kStakingVaultAccountingTest is DeploymentBaseTest {
         assertEq(vault.totalNetAssets(), vault.totalAssets());
     }
 
-    function test_TotalNetAssets_WithAccruedFees() public {
+    function test_TotalNetAssets_WithAccruedManagementFees() public {
         // Setup vault with fees
         _setupTestFees();
 
@@ -437,50 +398,5 @@ contract kStakingVaultAccountingTest is DeploymentBaseTest {
         // Edge case: what happens with zero total supply
         // Should maintain 1:1 ratio (1e6 for 6 decimals)
         assertEq(vault.sharePrice(), 1e6);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                          HELPER FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    function _performStakeAndSettle(address user, uint256 amount) internal returns (bytes32 requestId) {
-        // Approve kUSD for staking
-        vm.prank(user);
-        kUSD.approve(address(vault), amount);
-
-        bytes32 batchId = vault.getBatchId();
-        // Request stake
-        vm.prank(user);
-        bytes32 requestId = vault.requestStake(user, amount);
-
-        vm.prank(users.settler);
-        bytes32 proposalId =
-            assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, amount, amount, 0, false);
-        vm.prank(users.settler);
-        assetRouter.executeSettleBatch(proposalId);
-
-        vm.prank(users.settler);
-        vault.closeBatch(batchId, true);
-
-        vm.prank(user);
-        vault.claimStakedShares(batchId, requestId);
-    }
-
-    function _setupTestFees() internal {
-        // Setup basic fees for testing
-        vm.startPrank(users.admin);
-
-        // Cast vault to access fee functions
-        (bool success1,) = address(vault).call(
-            abi.encodeWithSignature("setManagementFee(uint16)", uint16(100)) // 1%
-        );
-        require(success1, "Failed to set management fee");
-
-        (bool success2,) = address(vault).call(
-            abi.encodeWithSignature("setPerformanceFee(uint16)", uint16(2000)) // 20%
-        );
-        require(success2, "Failed to set performance fee");
-
-        vm.stopPrank();
     }
 }

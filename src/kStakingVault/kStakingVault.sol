@@ -83,6 +83,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         $.dustAmount = dustAmount_.toUint96();
         $.kToken = _registry().assetToKToken(asset_);
         $.receiverImplementation = address(new kBatchReceiver(_registry().getContractById(K_MINTER)));
+        $.sharePriceWatermark = 10 ** decimals_;
 
         emit Initialized(registry_, owner_, admin_);
     }
@@ -129,6 +130,8 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         $.userRequests[msg.sender].add(requestId);
 
         $.kToken.safeTransferFrom(msg.sender, address(this), amount);
+
+        $.totalPendingStake += amount.toUint128();
 
         IkAssetRouter(_getKAssetRouter()).kAssetTransfer(
             _getKMinter(), address(this), $.underlyingAsset, amount, batchId
@@ -207,6 +210,8 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         );
 
         $.kToken.safeTransfer(request.user, request.kTokenAmount);
+
+        $.totalPendingStake -= request.kTokenAmount;
 
         emit StakeRequestCancelled(bytes32(requestId));
     }

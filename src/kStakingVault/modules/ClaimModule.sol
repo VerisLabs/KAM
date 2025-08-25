@@ -2,6 +2,8 @@
 pragma solidity 0.8.30;
 
 import { ERC20 } from "solady/tokens/ERC20.sol";
+
+import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
@@ -18,6 +20,7 @@ contract ClaimModule is BaseVaultModule {
     using SafeCastLib for uint256;
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
+    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -62,6 +65,8 @@ contract ClaimModule is BaseVaultModule {
 
         emit StakingSharesClaimed(batchId, requestId, request.user, stkTokensToMint);
 
+        $.userRequests[msg.sender].remove(requestId);
+        $.totalPendingStake -= request.kTokenAmount;
         // Mint stkTokens to user
         _mint(request.user, stkTokensToMint);
         emit StkTokensIssued(request.user, stkTokensToMint);
