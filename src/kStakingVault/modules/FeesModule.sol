@@ -183,6 +183,7 @@ contract FeesModule is BaseVaultModule {
             // Calculate total fees
             totalFees += performanceFees;
         }
+
         return (managementFees, performanceFees, totalFees);
     }
 
@@ -252,22 +253,23 @@ contract FeesModule is BaseVaultModule {
     /// @notice Returns the selectors for functions in this module
     /// @return selectors Array of function selectors
     function selectors() external pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](15);
+        bytes4[] memory moduleSelectors = new bytes4[](16);
         moduleSelectors[0] = this.setHurdleRate.selector;
-        moduleSelectors[1] = this.setManagementFee.selector;
-        moduleSelectors[2] = this.setPerformanceFee.selector;
-        moduleSelectors[3] = this.computeLastBatchFees.selector;
-        moduleSelectors[4] = this.lastFeesChargedManagement.selector;
-        moduleSelectors[5] = this.lastFeesChargedPerformance.selector;
-        moduleSelectors[6] = this.hurdleRate.selector;
-        moduleSelectors[7] = this.performanceFee.selector;
-        moduleSelectors[8] = this.managementFee.selector;
-        moduleSelectors[9] = this.feeReceiver.selector;
-        moduleSelectors[10] = this.sharePriceWatermark.selector;
-        moduleSelectors[11] = this.nextPerformanceFeeTimestamp.selector;
-        moduleSelectors[12] = this.nextManagementFeeTimestamp.selector;
-        moduleSelectors[13] = this.notifyManagementFeesCharged.selector;
-        moduleSelectors[14] = this.notifyPerformanceFeesCharged.selector;
+        moduleSelectors[1] = this.setHardHurdleRate.selector;
+        moduleSelectors[2] = this.setManagementFee.selector;
+        moduleSelectors[3] = this.setPerformanceFee.selector;
+        moduleSelectors[4] = this.computeLastBatchFees.selector;
+        moduleSelectors[5] = this.lastFeesChargedManagement.selector;
+        moduleSelectors[6] = this.lastFeesChargedPerformance.selector;
+        moduleSelectors[7] = this.hurdleRate.selector;
+        moduleSelectors[8] = this.performanceFee.selector;
+        moduleSelectors[9] = this.managementFee.selector;
+        moduleSelectors[10] = this.feeReceiver.selector;
+        moduleSelectors[11] = this.sharePriceWatermark.selector;
+        moduleSelectors[12] = this.nextPerformanceFeeTimestamp.selector;
+        moduleSelectors[13] = this.nextManagementFeeTimestamp.selector;
+        moduleSelectors[14] = this.notifyManagementFeesCharged.selector;
+        moduleSelectors[15] = this.notifyPerformanceFeesCharged.selector;
         return moduleSelectors;
     }
 }

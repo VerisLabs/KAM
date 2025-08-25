@@ -27,6 +27,11 @@ contract BaseVaultTest is DeploymentBaseTest {
     uint256 constant SMALL_DEPOSIT = 10_000 * _1_USDC; // 10K USDC
     uint256 constant LARGE_DEPOSIT = 5_000_000 * _1_USDC; // 5M USDC
 
+    // Test fee rates
+    uint16 constant TEST_MANAGEMENT_FEE = 100; // 1%
+    uint16 constant TEST_PERFORMANCE_FEE = 2000; // 20%
+    uint16 constant TEST_HURDLE_RATE = 500; // 5%
+
     /*//////////////////////////////////////////////////////////////
                               VARIABLES
     //////////////////////////////////////////////////////////////*/
@@ -71,13 +76,13 @@ contract BaseVaultTest is DeploymentBaseTest {
         vault.claimStakedShares(batchId, requestId);
     }
 
+    /// @dev Setup test fees for comprehensive testing
     function _setupTestFees() internal {
-        // Setup basic fees for testing
         vm.startPrank(users.admin);
-
-        vault.setManagementFee(uint16(100));
-        vault.setPerformanceFee(uint16(2000));
-
+        vault.setManagementFee(TEST_MANAGEMENT_FEE);
+        vault.setPerformanceFee(TEST_PERFORMANCE_FEE);
+        vault.setHurdleRate(TEST_HURDLE_RATE);
+        vault.setHardHurdleRate(false); // Soft hurdle by default
         vm.stopPrank();
     }
 
@@ -125,9 +130,6 @@ contract BaseVaultTest is DeploymentBaseTest {
     )
         internal
     {
-        // Advance time to ensure unique proposal IDs when settling multiple vaults
-        vm.warp(block.timestamp + 1);
-
         uint256 startTime = block.timestamp;
 
         // Ensure kAssetRouter has the physical assets for settlement
