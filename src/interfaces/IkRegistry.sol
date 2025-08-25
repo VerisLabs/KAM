@@ -274,7 +274,7 @@ interface IkRegistry {
     event AssetSupported(address indexed asset);
     event AdapterRegistered(address indexed vault, address indexed adapter);
     event AdapterRemoved(address indexed vault, address indexed adapter);
-    event KTokenDeployed(address indexed kTokenContract);
+    event KTokenDeployed(address indexed kTokenContract, string name_, string symbol_, uint8 decimals_);
     event KTokenImplementationSet(address indexed implementation);
 
     /*//////////////////////////////////////////////////////////////
@@ -300,7 +300,7 @@ interface IkRegistry {
     //////////////////////////////////////////////////////////////*/
 
     function setSingletonContract(bytes32 id, address contractAddress) external;
-    function registerAsset(address asset, bytes32 id) external returns (address);
+    function registerAsset(string memory name, string memory symbol, address asset, bytes32 id) external returns (address);
     function registerVault(address vault, VaultType type_, address asset) external;
     function registerAdapter(address vault, address adapter) external;
     function removeAdapter(address vault, address adapter) external;

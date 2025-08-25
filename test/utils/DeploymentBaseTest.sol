@@ -218,25 +218,23 @@ contract DeploymentBaseTest is BaseTest {
     function _deployTokens() internal {
         // Deploy kUSD through registry
         vm.startPrank(users.admin);
-        address kUSDAddress = registry.registerAsset(USDC_MAINNET, registry.USDC());
+        address kUSDAddress = registry.registerAsset(KUSD_NAME, KUSD_SYMBOL, USDC_MAINNET, registry.USDC());
         vm.stopPrank();
         kUSD = kToken(payable(kUSDAddress));
 
         // Set metadata for kUSD
         vm.startPrank(users.admin);
-        kUSD.setupMetadata(KUSD_NAME, KUSD_SYMBOL);
         kUSD.grantEmergencyRole(users.emergencyAdmin);
         vm.stopPrank();
 
         // Deploy kBTC through registry
         vm.startPrank(users.admin);
-        address kBTCAddress = registry.registerAsset(WBTC_MAINNET, registry.WBTC());
+        address kBTCAddress = registry.registerAsset(KBTC_NAME, KBTC_SYMBOL, WBTC_MAINNET, registry.WBTC());
         vm.stopPrank();
         kBTC = kToken(payable(kBTCAddress));
 
         // Set metadata for kBTC
         vm.startPrank(users.admin);
-        kBTC.setupMetadata(KBTC_NAME, KBTC_SYMBOL);
         kBTC.grantEmergencyRole(users.emergencyAdmin);
         vm.stopPrank();
 

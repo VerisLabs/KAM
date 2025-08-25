@@ -115,7 +115,16 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Register support for a new asset and its corresponding kToken
     /// @param asset Underlying asset address (e.g., USDC, WBTC)
     /// @dev Only callable by ADMIN_ROLE, establishes bidirectional mapping
-    function registerAsset(address asset, bytes32 id) external onlyRoles(ADMIN_ROLE) returns (address) {
+    function registerAsset(
+        string memory name_,
+        string memory symbol_,
+        address asset,
+        bytes32 id
+    )
+        external
+        onlyRoles(ADMIN_ROLE)
+        returns (address)
+    {
         if (asset == address(0)) revert ZeroAddress();
         if (id == bytes32(0)) revert ZeroAddress();
 
@@ -137,10 +146,12 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
                 msg.sender,
                 msg.sender, // adjust emergencyAdmin and metadata
                 minter_,
+                name_,
+                symbol_,
                 decimals_
             )
         );
-        emit KTokenDeployed(kToken_);
+        emit KTokenDeployed(kToken_, name_, symbol_, decimals_);
 
         $.isRegisteredAsset[asset] = true;
         $.supportedAssets.add(asset);

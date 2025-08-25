@@ -36,8 +36,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
 
     event Minted(address indexed to, uint256 amount);
     event Burned(address indexed from, uint256 amount);
-    event TokenCreated(address indexed token, address owner);
-    event TokenInitialized(string name, string symbol, uint8 decimals);
+    event TokenCreated(address indexed token, address owner, string name, string symbol, uint8 decimals);
     event PauseState(bool isPaused);
     event AuthorizedCallerUpdated(address indexed caller, bool authorized);
     event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
@@ -68,7 +67,15 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
 
     /// @notice Disables initializers to prevent implementation contract from being initialized
     /// @dev Calls _disableInitializers from Solady's Initializable to lock implementation
-    constructor(address owner_, address admin_, address emergencyAdmin_, address minter_, uint8 decimals_) {
+    constructor(
+        address owner_,
+        address admin_,
+        address emergencyAdmin_,
+        address minter_,
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_
+    ) {
         if (owner_ == address(0) || admin_ == address(0) || emergencyAdmin_ == address(0)) {
             revert ZeroAddress();
         }
@@ -80,19 +87,10 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
         _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);
         _grantRoles(minter_, MINTER_ROLE);
 
-        _decimals = decimals_;
-        emit TokenCreated(address(this), owner_);
-    }
-
-    /// @notice Sets token metadata (separate call to avoid stack too deep)
-    /// @dev Must be called after initialize, only by admin
-    /// @param name_ Token name
-    /// @param symbol_ Token symbol
-    function setupMetadata(string calldata name_, string calldata symbol_) external onlyRoles(ADMIN_ROLE) {
         _name = name_;
         _symbol = symbol_;
-
-        emit TokenInitialized(name_, symbol_, _decimals);
+        _decimals = decimals_;
+        emit TokenCreated(address(this), owner_, name_, symbol_, _decimals);
     }
 
     /*//////////////////////////////////////////////////////////////

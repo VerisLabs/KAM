@@ -56,28 +56,6 @@ contract kTokenTest is DeploymentBaseTest {
         assertEq(kUSD.totalSupply(), 0, "Total supply should be zero initially");
     }
 
-    /// @dev Test setupMetadata function
-    function test_SetupMetadata_Success() public {
-        kToken newToken = new kToken(users.owner, users.admin, users.admin, address(minter), 6);
-
-        // Setup metadata
-        vm.prank(users.admin);
-        vm.expectEmit(false, false, false, true);
-        emit TokenInitialized("Test Token", "TEST", 6);
-
-        newToken.setupMetadata("Test Token", "TEST");
-
-        assertEq(newToken.name(), "Test Token", "Name not set");
-        assertEq(newToken.symbol(), "TEST", "Symbol not set");
-    }
-
-    /// @dev Test setupMetadata requires admin role
-    function test_SetupMetadata_OnlyAdmin() public {
-        vm.prank(users.alice);
-        vm.expectRevert();
-        kUSD.setupMetadata("New Name", "NEW");
-    }
-
     /*//////////////////////////////////////////////////////////////
                         MINTING TESTS
     //////////////////////////////////////////////////////////////*/
