@@ -4,7 +4,6 @@ pragma solidity 0.8.30;
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
-import { LibClone } from "solady/utils/LibClone.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -19,7 +18,6 @@ import { kToken } from "src/kToken.sol";
 /// @dev Manages singleton contracts, vault registration, asset support, and kToken mapping
 contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     using EnumerableSetLib for EnumerableSetLib.AddressSet;
-    using LibClone for address;
 
     /*//////////////////////////////////////////////////////////////
                               ROLES
@@ -58,11 +56,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         mapping(address => EnumerableSetLib.AddressSet) vaultsByAsset;
         mapping(bytes32 => address) singletonAssets;
         mapping(address => address) assetToKToken;
-        mapping(address => bool) isKToken;
-        mapping(address => address) kTokenToAsset;
         mapping(address => bool) isRegisteredAsset;
         EnumerableSetLib.AddressSet supportedAssets;
-        EnumerableSetLib.AddressSet deployedKTokens;
         mapping(address => EnumerableSetLib.AddressSet) vaultAdapters; // vault => adapter
         mapping(address => bool) registeredAdapters; // adapter => registered
     }
@@ -155,9 +150,6 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
 
         // Register kToken
         $.assetToKToken[asset] = kToken_;
-        $.kTokenToAsset[kToken_] = asset;
-        $.isKToken[kToken_] = true;
-        $.deployedKTokens.add(kToken_);
         emit AssetRegistered(asset, kToken_);
 
         return kToken_;
@@ -349,14 +341,6 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     function isSingletonContract(address contractAddress) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.isSingletonContract[contractAddress];
-    }
-
-    /// @notice Check if a kToken is registered
-    /// @param kToken_ KToken address
-    /// @return Whether the kToken is registered
-    function isKToken(address kToken_) external view returns (bool) {
-        kRegistryStorage storage $ = _getkRegistryStorage();
-        return $.isKToken[kToken_];
     }
 
     /// @notice Get the adapter for a specific vault

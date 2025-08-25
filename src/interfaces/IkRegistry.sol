@@ -317,7 +317,6 @@ interface IkRegistry {
     function isRegisteredAsset(address asset) external view returns (bool);
     function isVault(address vault) external view returns (bool);
     function isSingletonContract(address contractAddress) external view returns (bool);
-    function isKToken(address kToken) external view returns (bool);
     function getAdapters(address vault) external view returns (address[] memory);
     function isAdapterRegistered(address adapter) external view returns (bool);
     function getVaultAssets(address vault) external view returns (address[] memory);

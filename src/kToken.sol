@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
-import {ERC20} from "solady/tokens/ERC20.sol";
-import {Initializable} from "solady/utils/Initializable.sol";
-import {Multicallable} from "solady/utils/Multicallable.sol";
-import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { ERC20 } from "solady/tokens/ERC20.sol";
+import { Multicallable } from "solady/utils/Multicallable.sol";
+import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 /// @title kToken
 /// @notice ERC20 token with role-based minting and burning capabilities
@@ -42,12 +40,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     event TokenInitialized(string name, string symbol, uint8 decimals);
     event PauseState(bool isPaused);
     event AuthorizedCallerUpdated(address indexed caller, bool authorized);
-    event EmergencyWithdrawal(
-        address indexed token,
-        address indexed to,
-        uint256 amount,
-        address indexed admin
-    );
+    event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
 
     /*//////////////////////////////////////////////////////////////
                                 ERRORS
@@ -75,18 +68,8 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
 
     /// @notice Disables initializers to prevent implementation contract from being initialized
     /// @dev Calls _disableInitializers from Solady's Initializable to lock implementation
-    constructor(
-        address owner_,
-        address admin_,
-        address emergencyAdmin_,
-        address minter_,
-        uint8 decimals_
-    ) {
-        if (
-            owner_ == address(0) ||
-            admin_ == address(0) ||
-            emergencyAdmin_ == address(0)
-        ) {
+    constructor(address owner_, address admin_, address emergencyAdmin_, address minter_, uint8 decimals_) {
+        if (owner_ == address(0) || admin_ == address(0) || emergencyAdmin_ == address(0)) {
             revert ZeroAddress();
         }
         if (minter_ == address(0)) revert ZeroAddress();
@@ -105,10 +88,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @dev Must be called after initialize, only by admin
     /// @param name_ Token name
     /// @param symbol_ Token symbol
-    function setupMetadata(
-        string calldata name_,
-        string calldata symbol_
-    ) external onlyRoles(ADMIN_ROLE) {
+    function setupMetadata(string calldata name_, string calldata symbol_) external onlyRoles(ADMIN_ROLE) {
         _name = name_;
         _symbol = symbol_;
 
@@ -123,10 +103,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @dev Calls internal _mint function and emits Minted event, restricted to MINTER_ROLE
     /// @param _to The address that will receive the newly minted tokens
     /// @param _amount The quantity of tokens to create and assign
-    function mint(
-        address _to,
-        uint256 _amount
-    ) external nonReentrant whenNotPaused onlyRoles(MINTER_ROLE) {
+    function mint(address _to, uint256 _amount) external nonReentrant whenNotPaused onlyRoles(MINTER_ROLE) {
         _mint(_to, _amount);
         emit Minted(_to, _amount);
     }
@@ -135,10 +112,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @dev Calls internal _burn function and emits Burned event, restricted to MINTER_ROLE
     /// @param _from The address from which tokens will be destroyed
     /// @param _amount The quantity of tokens to destroy
-    function burn(
-        address _from,
-        uint256 _amount
-    ) external nonReentrant whenNotPaused onlyRoles(MINTER_ROLE) {
+    function burn(address _from, uint256 _amount) external nonReentrant whenNotPaused onlyRoles(MINTER_ROLE) {
         _burn(_from, _amount);
         emit Burned(_from, _amount);
     }
@@ -147,10 +121,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @dev Consumes allowance before burning, calls _spendAllowance then _burn, restricted to MINTER_ROLE
     /// @param _from The address from which tokens will be destroyed
     /// @param _amount The quantity of tokens to destroy from the allowance
-    function burnFrom(
-        address _from,
-        uint256 _amount
-    ) external nonReentrant whenNotPaused onlyRoles(MINTER_ROLE) {
+    function burnFrom(address _from, uint256 _amount) external nonReentrant whenNotPaused onlyRoles(MINTER_ROLE) {
         _spendAllowance(_from, msg.sender, _amount);
         _burn(_from, _amount);
         emit Burned(_from, _amount);
@@ -206,17 +177,13 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
 
     /// @notice Grant emergency role
     /// @param emergency Address to grant emergency role to
-    function grantEmergencyRole(
-        address emergency
-    ) external onlyRoles(ADMIN_ROLE) {
+    function grantEmergencyRole(address emergency) external onlyRoles(ADMIN_ROLE) {
         _grantRoles(emergency, EMERGENCY_ADMIN_ROLE);
     }
 
     /// @notice Revoke emergency role
     /// @param emergency Address to revoke emergency role from
-    function revokeEmergencyRole(
-        address emergency
-    ) external onlyRoles(ADMIN_ROLE) {
+    function revokeEmergencyRole(address emergency) external onlyRoles(ADMIN_ROLE) {
         _removeRoles(emergency, EMERGENCY_ADMIN_ROLE);
     }
 
@@ -237,9 +204,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @notice Sets the pause state of the contract
     /// @dev Updates the isPaused flag in storage and emits PauseState event
     /// @param isPaused_ Boolean indicating whether to pause (true) or unpause (false) the contract
-    function setPaused(
-        bool isPaused_
-    ) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
+    function setPaused(bool isPaused_) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
         _isPaused = isPaused_;
         emit PauseState(_isPaused);
     }
@@ -249,11 +214,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @param token Token address to withdraw (use address(0) for ETH)
     /// @param to Recipient address
     /// @param amount Amount to withdraw
-    function emergencyWithdraw(
-        address token,
-        address to,
-        uint256 amount
-    ) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
+    function emergencyWithdraw(address token, address to, uint256 amount) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
         if (!_isPaused) revert ContractNotPaused();
         if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
@@ -278,11 +239,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @param from The address tokens are being transferred from
     /// @param to The address tokens are being transferred to
     /// @param amount The quantity of tokens being transferred
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual override whenNotPaused {
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override whenNotPaused {
         super._beforeTokenTransfer(from, to, amount);
     }
 }

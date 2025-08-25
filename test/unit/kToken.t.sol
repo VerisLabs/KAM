@@ -1,13 +1,21 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, MINTER_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, _1_USDC} from "../utils/Constants.sol";
-import {DeploymentBaseTest} from "../utils/DeploymentBaseTest.sol";
+import {
+    ADMIN_ROLE,
+    EMERGENCY_ADMIN_ROLE,
+    MINTER_ROLE,
+    USDC_MAINNET,
+    _1000_USDC,
+    _100_USDC,
+    _1_USDC
+} from "../utils/Constants.sol";
+import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
-import {IERC20} from "forge-std/interfaces/IERC20.sol";
-import {LibClone} from "solady/utils/LibClone.sol";
-import {IkToken} from "src/interfaces/IkToken.sol";
-import {kToken} from "src/kToken.sol";
+import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+import { LibClone } from "solady/utils/LibClone.sol";
+import { IkToken } from "src/interfaces/IkToken.sol";
+import { kToken } from "src/kToken.sol";
 
 /// @title kTokenTest
 /// @notice Comprehensive unit tests for kToken contract
@@ -21,18 +29,10 @@ contract kTokenTest is DeploymentBaseTest {
     // Events to test
     event Minted(address indexed to, uint256 amount);
     event Burned(address indexed from, uint256 amount);
-    event UpgradeAuthorized(
-        address indexed newImplementation,
-        address indexed sender
-    );
+    event UpgradeAuthorized(address indexed newImplementation, address indexed sender);
     event TokenInitialized(string name, string symbol, uint8 decimals);
     event PauseState(bool isPaused);
-    event EmergencyWithdrawal(
-        address indexed token,
-        address indexed to,
-        uint256 amount,
-        address indexed admin
-    );
+    event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
 
     /*//////////////////////////////////////////////////////////////
                         INITIALIZATION TESTS
@@ -47,37 +47,18 @@ contract kTokenTest is DeploymentBaseTest {
 
         // Check role assignments
         assertEq(kUSD.owner(), users.owner, "Owner not set correctly");
-        assertTrue(
-            kUSD.hasAnyRole(users.admin, ADMIN_ROLE),
-            "Admin role not granted"
-        );
-        assertTrue(
-            kUSD.hasAnyRole(users.emergencyAdmin, EMERGENCY_ADMIN_ROLE),
-            "Emergency admin role not granted"
-        );
-        assertTrue(
-            kUSD.hasAnyRole(address(minter), MINTER_ROLE),
-            "Minter role not granted"
-        );
+        assertTrue(kUSD.hasAnyRole(users.admin, ADMIN_ROLE), "Admin role not granted");
+        assertTrue(kUSD.hasAnyRole(users.emergencyAdmin, EMERGENCY_ADMIN_ROLE), "Emergency admin role not granted");
+        assertTrue(kUSD.hasAnyRole(address(minter), MINTER_ROLE), "Minter role not granted");
 
         // Check initial state
         assertFalse(kUSD.isPaused(), "Should be unpaused initially");
-        assertEq(
-            kUSD.totalSupply(),
-            0,
-            "Total supply should be zero initially"
-        );
+        assertEq(kUSD.totalSupply(), 0, "Total supply should be zero initially");
     }
 
     /// @dev Test setupMetadata function
     function test_SetupMetadata_Success() public {
-        kToken newToken = new kToken(
-            users.owner,
-            users.admin,
-            users.admin,
-            address(minter),
-            6
-        );
+        kToken newToken = new kToken(users.owner, users.admin, users.admin, address(minter), 6);
 
         // Setup metadata
         vm.prank(users.admin);
@@ -112,16 +93,8 @@ contract kTokenTest is DeploymentBaseTest {
 
         kUSD.mint(recipient, amount);
 
-        assertEq(
-            kUSD.balanceOf(recipient),
-            amount,
-            "Balance should equal minted amount"
-        );
-        assertEq(
-            kUSD.totalSupply(),
-            amount,
-            "Total supply should equal minted amount"
-        );
+        assertEq(kUSD.balanceOf(recipient), amount, "Balance should equal minted amount");
+        assertEq(kUSD.totalSupply(), amount, "Total supply should equal minted amount");
     }
 
     /// @dev Test mint requires minter role
@@ -152,16 +125,8 @@ contract kTokenTest is DeploymentBaseTest {
 
         kUSD.mint(ZERO_ADDRESS, amount);
 
-        assertEq(
-            kUSD.balanceOf(ZERO_ADDRESS),
-            amount,
-            "Zero address should have balance"
-        );
-        assertEq(
-            kUSD.totalSupply(),
-            amount,
-            "Total supply should include zero address mint"
-        );
+        assertEq(kUSD.balanceOf(ZERO_ADDRESS), amount, "Zero address should have balance");
+        assertEq(kUSD.totalSupply(), amount, "Total supply should include zero address mint");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -184,16 +149,8 @@ contract kTokenTest is DeploymentBaseTest {
 
         kUSD.burn(account, amount);
 
-        assertEq(
-            kUSD.balanceOf(account),
-            0,
-            "Balance should be zero after burn"
-        );
-        assertEq(
-            kUSD.totalSupply(),
-            0,
-            "Total supply should be zero after burn"
-        );
+        assertEq(kUSD.balanceOf(account), 0, "Balance should be zero after burn");
+        assertEq(kUSD.totalSupply(), 0, "Total supply should be zero after burn");
     }
 
     /// @dev Test burn requires minter role
@@ -245,21 +202,9 @@ contract kTokenTest is DeploymentBaseTest {
 
         kUSD.burnFrom(account, amount);
 
-        assertEq(
-            kUSD.balanceOf(account),
-            0,
-            "Balance should be zero after burn"
-        );
-        assertEq(
-            kUSD.allowance(account, address(minter)),
-            0,
-            "Allowance should be consumed"
-        );
-        assertEq(
-            kUSD.totalSupply(),
-            0,
-            "Total supply should be zero after burn"
-        );
+        assertEq(kUSD.balanceOf(account), 0, "Balance should be zero after burn");
+        assertEq(kUSD.allowance(account, address(minter)), 0, "Allowance should be consumed");
+        assertEq(kUSD.totalSupply(), 0, "Total supply should be zero after burn");
     }
 
     /// @dev Test burnFrom requires minter role
@@ -295,18 +240,12 @@ contract kTokenTest is DeploymentBaseTest {
         // Grant admin role (requires owner)
         vm.prank(users.owner);
         kUSD.grantAdminRole(newAdmin);
-        assertTrue(
-            kUSD.hasAnyRole(newAdmin, ADMIN_ROLE),
-            "Admin role should be granted"
-        );
+        assertTrue(kUSD.hasAnyRole(newAdmin, ADMIN_ROLE), "Admin role should be granted");
 
         // Revoke admin role (requires owner)
         vm.prank(users.owner);
         kUSD.revokeAdminRole(newAdmin);
-        assertFalse(
-            kUSD.hasAnyRole(newAdmin, ADMIN_ROLE),
-            "Admin role should be revoked"
-        );
+        assertFalse(kUSD.hasAnyRole(newAdmin, ADMIN_ROLE), "Admin role should be revoked");
     }
 
     /// @dev Test admin role functions require owner
@@ -327,18 +266,12 @@ contract kTokenTest is DeploymentBaseTest {
         // Grant emergency role (requires admin)
         vm.prank(users.admin);
         kUSD.grantEmergencyRole(newEmergency);
-        assertTrue(
-            kUSD.hasAnyRole(newEmergency, EMERGENCY_ADMIN_ROLE),
-            "Emergency role should be granted"
-        );
+        assertTrue(kUSD.hasAnyRole(newEmergency, EMERGENCY_ADMIN_ROLE), "Emergency role should be granted");
 
         // Revoke emergency role (requires admin)
         vm.prank(users.admin);
         kUSD.revokeEmergencyRole(newEmergency);
-        assertFalse(
-            kUSD.hasAnyRole(newEmergency, EMERGENCY_ADMIN_ROLE),
-            "Emergency role should be revoked"
-        );
+        assertFalse(kUSD.hasAnyRole(newEmergency, EMERGENCY_ADMIN_ROLE), "Emergency role should be revoked");
     }
 
     /// @dev Test emergency role functions require admin
@@ -359,18 +292,12 @@ contract kTokenTest is DeploymentBaseTest {
         // Grant minter role (requires admin)
         vm.prank(users.admin);
         kUSD.grantMinterRole(newMinter);
-        assertTrue(
-            kUSD.hasAnyRole(newMinter, MINTER_ROLE),
-            "Minter role should be granted"
-        );
+        assertTrue(kUSD.hasAnyRole(newMinter, MINTER_ROLE), "Minter role should be granted");
 
         // Revoke minter role (requires admin)
         vm.prank(users.admin);
         kUSD.revokeMinterRole(newMinter);
-        assertFalse(
-            kUSD.hasAnyRole(newMinter, MINTER_ROLE),
-            "Minter role should be revoked"
-        );
+        assertFalse(kUSD.hasAnyRole(newMinter, MINTER_ROLE), "Minter role should be revoked");
     }
 
     /// @dev Test minter role functions require admin
@@ -452,20 +379,11 @@ contract kTokenTest is DeploymentBaseTest {
 
         vm.prank(users.emergencyAdmin);
         vm.expectEmit(true, true, true, true);
-        emit EmergencyWithdrawal(
-            ZERO_ADDRESS,
-            users.treasury,
-            amount,
-            users.emergencyAdmin
-        );
+        emit EmergencyWithdrawal(ZERO_ADDRESS, users.treasury, amount, users.emergencyAdmin);
 
         kUSD.emergencyWithdraw(ZERO_ADDRESS, users.treasury, amount);
 
-        assertEq(
-            users.treasury.balance - recipientBalanceBefore,
-            amount,
-            "ETH not withdrawn correctly"
-        );
+        assertEq(users.treasury.balance - recipientBalanceBefore, amount, "ETH not withdrawn correctly");
         assertEq(address(kUSD).balance, 0, "Contract should have no ETH");
     }
 
@@ -481,32 +399,20 @@ contract kTokenTest is DeploymentBaseTest {
         kUSD.setPaused(true);
 
         // Emergency withdraw tokens
-        uint256 recipientBalanceBefore = IERC20(USDC_MAINNET).balanceOf(
-            users.treasury
-        );
+        uint256 recipientBalanceBefore = IERC20(USDC_MAINNET).balanceOf(users.treasury);
 
         vm.prank(users.emergencyAdmin);
         vm.expectEmit(true, true, true, true);
-        emit EmergencyWithdrawal(
-            USDC_MAINNET,
-            users.treasury,
-            amount,
-            users.emergencyAdmin
-        );
+        emit EmergencyWithdrawal(USDC_MAINNET, users.treasury, amount, users.emergencyAdmin);
 
         kUSD.emergencyWithdraw(USDC_MAINNET, users.treasury, amount);
 
         assertEq(
-            IERC20(USDC_MAINNET).balanceOf(users.treasury) -
-                recipientBalanceBefore,
+            IERC20(USDC_MAINNET).balanceOf(users.treasury) - recipientBalanceBefore,
             amount,
             "Tokens not withdrawn correctly"
         );
-        assertEq(
-            IERC20(USDC_MAINNET).balanceOf(address(kUSD)),
-            0,
-            "Contract should have no tokens"
-        );
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(kUSD)), 0, "Contract should have no tokens");
     }
 
     /// @dev Test emergency withdrawal requires emergency admin role
@@ -578,11 +484,7 @@ contract kTokenTest is DeploymentBaseTest {
 
         assertTrue(success, "Transfer should succeed");
         assertEq(kUSD.balanceOf(users.alice), 0, "Sender balance incorrect");
-        assertEq(
-            kUSD.balanceOf(users.bob),
-            amount,
-            "Recipient balance incorrect"
-        );
+        assertEq(kUSD.balanceOf(users.bob), amount, "Recipient balance incorrect");
     }
 
     /// @dev Test transferFrom with allowance
@@ -603,16 +505,8 @@ contract kTokenTest is DeploymentBaseTest {
 
         assertTrue(success, "TransferFrom should succeed");
         assertEq(kUSD.balanceOf(users.alice), 0, "Sender balance incorrect");
-        assertEq(
-            kUSD.balanceOf(users.charlie),
-            amount,
-            "Recipient balance incorrect"
-        );
-        assertEq(
-            kUSD.allowance(users.alice, users.bob),
-            0,
-            "Allowance should be consumed"
-        );
+        assertEq(kUSD.balanceOf(users.charlie), amount, "Recipient balance incorrect");
+        assertEq(kUSD.allowance(users.alice, users.bob), 0, "Allowance should be consumed");
     }
 
     /// @dev Test approve functionality
@@ -623,11 +517,7 @@ contract kTokenTest is DeploymentBaseTest {
         bool success = kUSD.approve(users.bob, amount);
 
         assertTrue(success, "Approve should succeed");
-        assertEq(
-            kUSD.allowance(users.alice, users.bob),
-            amount,
-            "Allowance incorrect"
-        );
+        assertEq(kUSD.allowance(users.alice, users.bob), amount, "Allowance incorrect");
     }
 
     /*//////////////////////////////////////////////////////////////

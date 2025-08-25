@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
-import { LibClone } from "solady/utils/LibClone.sol";
 
 import { BaseTest, console2 } from "./BaseTest.sol";
 import {
@@ -26,21 +25,18 @@ import {
 // Protocol contracts
 
 import { kAssetRouter } from "src/kAssetRouter.sol";
-
 import { kMinter } from "src/kMinter.sol";
 import { kRegistry } from "src/kRegistry.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { kToken } from "src/kToken.sol";
 
 // Modules
-
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { BatchModule } from "src/kStakingVault/modules/BatchModule.sol";
 import { ClaimModule } from "src/kStakingVault/modules/ClaimModule.sol";
 import { FeesModule } from "src/kStakingVault/modules/FeesModule.sol";
 
 // Adapters
-
 import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
 import { CustodialAdapter } from "src/adapters/CustodialAdapter.sol";
 
@@ -63,12 +59,12 @@ import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 /// - stkTokens: Minted by individual kStakingVaults (vault-specific ERC20 receipts)
 /// - kStakingVaults accept existing kTokens from users, they do NOT mint kTokens
 contract DeploymentBaseTest is BaseTest {
-    using LibClone for address;
     /*//////////////////////////////////////////////////////////////
                         PROTOCOL CONTRACTS
     //////////////////////////////////////////////////////////////*/
 
     // Core protocol contracts (proxied)
+    ERC1967Factory public factory;
     kRegistry public registry;
     kAssetRouter public assetRouter;
     kToken public kUSD;
@@ -122,6 +118,9 @@ contract DeploymentBaseTest is BaseTest {
 
         // Enable mainnet fork for realistic testing
         enableMainnetFork();
+
+        // Deploy factory for the proxies
+        factory = new ERC1967Factory();
 
         // Deploy the complete protocol
         _deployProtocol();
@@ -184,9 +183,7 @@ contract DeploymentBaseTest is BaseTest {
             users.guardian
         );
 
-        address registryProxy = address(registryImpl).clone();
-        (bool success,) = registryProxy.call(initData);
-        require(success, "Registry initialization failed");
+        address registryProxy = factory.deployAndCall(address(registryImpl), users.admin, initData);
         registry = kRegistry(payable(registryProxy));
 
         // Label for debugging
@@ -208,9 +205,7 @@ contract DeploymentBaseTest is BaseTest {
             false // not paused initially
         );
 
-        address assetRouterProxy = address(assetRouterImpl).clone();
-        (bool success,) = assetRouterProxy.call(initData);
-        require(success, "AssetRouter initialization failed");
+        address assetRouterProxy = factory.deployAndCall(address(assetRouterImpl), users.admin, initData);
         assetRouter = kAssetRouter(payable(assetRouterProxy));
         vm.prank(users.admin);
         assetRouter.setSettlementCooldown(0);
@@ -223,8 +218,9 @@ contract DeploymentBaseTest is BaseTest {
     /// @dev Deploy kToken contracts (kUSD and kBTC)
     function _deployTokens() internal {
         // Deploy kUSD through registry
-        vm.prank(users.admin);
+        vm.startPrank(users.admin);
         address kUSDAddress = registry.registerAsset(USDC_MAINNET, registry.USDC());
+        vm.stopPrank();
         kUSD = kToken(payable(kUSDAddress));
 
         // Set metadata for kUSD
@@ -232,8 +228,9 @@ contract DeploymentBaseTest is BaseTest {
         kUSD.setupMetadata(KUSD_NAME, KUSD_SYMBOL);
 
         // Deploy kBTC through registry
-        vm.prank(users.admin);
+        vm.startPrank(users.admin);
         address kBTCAddress = registry.registerAsset(WBTC_MAINNET, registry.WBTC());
+        vm.stopPrank();
         kBTC = kToken(payable(kBTCAddress));
 
         // Set metadata for kBTC
@@ -259,9 +256,7 @@ contract DeploymentBaseTest is BaseTest {
             users.emergencyAdmin // emergency admin
         );
 
-        address minterProxy = address(minterImpl).clone();
-        (bool success,) = minterProxy.call(initData);
-        require(success, "Minter initialization failed");
+        address minterProxy = factory.deployAndCall(address(minterImpl), users.admin, initData);
         minter = kMinter(payable(minterProxy));
 
         // Label for debugging
@@ -272,10 +267,6 @@ contract DeploymentBaseTest is BaseTest {
     /// @dev Deploy all three types of kStakingVaults with modules
     function _deployStakingVaults() internal {
         vm.startPrank(users.admin);
-
-        // Register assets and kTokens
-        registry.registerAsset(USDC_MAINNET, address(kUSD), registry.USDC());
-        registry.registerAsset(WBTC_MAINNET, address(kBTC), registry.WBTC());
 
         // Deploy modules first (shared across all vaults)
         claimModule = new ClaimModule();
@@ -326,9 +317,7 @@ contract DeploymentBaseTest is BaseTest {
             asset // underlying asset (USDC for now)
         );
 
-        address vaultProxy = address(stakingVaultImpl).clone();
-        (bool success,) = vaultProxy.call(initData);
-        require(success, string(abi.encodePacked(label, " vault initialization failed")));
+        address vaultProxy = factory.deployAndCall(address(stakingVaultImpl), users.admin, initData);
         vault = kStakingVault(payable(vaultProxy));
 
         // Label for debugging
@@ -346,10 +335,8 @@ contract DeploymentBaseTest is BaseTest {
         bytes memory custodialInitData =
             abi.encodeWithSelector(CustodialAdapter.initialize.selector, address(registry), users.owner, users.admin);
 
-        // Deploy proxy with initialization (same pattern as other contracts)
-        address custodialProxy = address(custodialAdapterImpl).clone();
-        (bool success1,) = custodialProxy.call(custodialInitData);
-        require(success1, "CustodialAdapter initialization failed");
+        // Deploy proxy with initialization using ERC1967Factory
+        address custodialProxy = factory.deployAndCall(address(custodialAdapterImpl), users.admin, custodialInitData);
         custodialAdapter = CustodialAdapter(custodialProxy);
 
         vm.startPrank(users.admin);

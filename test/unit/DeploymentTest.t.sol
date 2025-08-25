@@ -110,10 +110,6 @@ contract DeploymentTest is DeploymentBaseTest {
         // Check WBTC registration
         assertTrue(registry.isRegisteredAsset(WBTC_MAINNET), "WBTC not registered");
         assertEq(registry.assetToKToken(WBTC_MAINNET), address(kBTC), "WBTC->kBTC mapping incorrect");
-
-        // Check kToken registration
-        assertTrue(registry.isKToken(address(kUSD)), "kUSD not registered as kToken");
-        assertTrue(registry.isKToken(address(kBTC)), "kBTC not registered as kToken");
     }
 
     /// @dev Test vault registration
