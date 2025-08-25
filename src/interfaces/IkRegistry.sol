@@ -270,10 +270,12 @@ interface IkRegistry {
 
     event SingletonContractSet(bytes32 indexed id, address indexed contractAddress);
     event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
-    event KTokenRegistered(address indexed asset, address indexed kToken);
+    event AssetRegistered(address indexed asset, address indexed kToken);
     event AssetSupported(address indexed asset);
     event AdapterRegistered(address indexed vault, address indexed adapter);
     event AdapterRemoved(address indexed vault, address indexed adapter);
+    event KTokenDeployed(address indexed kTokenContract, string name_, string symbol_, uint8 decimals_);
+    event KTokenImplementationSet(address indexed implementation);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -286,13 +288,19 @@ interface IkRegistry {
     error AdapterNotRegistered();
     error InvalidAdapter();
     error AdapterAlreadySet();
+    error SaltAlreadyUsed();
+    error TokenInitializationFailed();
+    error KTokenNotRegistered();
+    error InvalidParameter();
+    error KTokenImplementationNotSet();
+    error MinterNotSet();
 
     /*//////////////////////////////////////////////////////////////
                               FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     function setSingletonContract(bytes32 id, address contractAddress) external;
-    function registerAsset(address asset, address kToken, bytes32 id) external;
+    function registerAsset(string memory name, string memory symbol, address asset, bytes32 id) external returns (address);
     function registerVault(address vault, VaultType type_, address asset) external;
     function registerAdapter(address vault, address adapter) external;
     function removeAdapter(address vault, address adapter) external;
@@ -309,7 +317,6 @@ interface IkRegistry {
     function isRegisteredAsset(address asset) external view returns (bool);
     function isVault(address vault) external view returns (bool);
     function isSingletonContract(address contractAddress) external view returns (bool);
-    function isKToken(address kToken) external view returns (bool);
     function getAdapters(address vault) external view returns (address[] memory);
     function isAdapterRegistered(address adapter) external view returns (bool);
     function getVaultAssets(address vault) external view returns (address[] memory);

@@ -56,102 +56,6 @@ contract kTokenTest is DeploymentBaseTest {
         assertEq(kUSD.totalSupply(), 0, "Total supply should be zero initially");
     }
 
-    /// @dev Test successful initialization with valid parameters
-    function test_Initialize_Success() public {
-        // Deploy fresh implementation for testing
-        kToken newTokenImpl = new kToken();
-
-        bytes memory initData = abi.encodeWithSelector(
-            kToken.initialize.selector,
-            users.owner,
-            users.admin,
-            users.emergencyAdmin,
-            users.admin, // temporary minter
-            6 // decimals
-        );
-
-        address newProxy = address(newTokenImpl).clone();
-        (bool success,) = newProxy.call(initData);
-
-        assertTrue(success, "Initialization should succeed");
-
-        kToken newToken = kToken(payable(newProxy));
-        assertEq(newToken.owner(), users.owner, "Owner not set");
-        assertTrue(newToken.hasAnyRole(users.admin, ADMIN_ROLE), "Admin role not granted");
-        assertEq(newToken.decimals(), 6, "Decimals not set");
-    }
-
-    /// @dev Test initialization reverts with zero addresses
-    function test_Initialize_RevertZeroAddresses() public {
-        kToken newTokenImpl = new kToken();
-
-        // Test zero owner
-        bytes memory initData = abi.encodeWithSelector(
-            kToken.initialize.selector,
-            ZERO_ADDRESS, // zero owner
-            users.admin,
-            users.emergencyAdmin,
-            users.admin,
-            6
-        );
-
-        address newProxy = address(newTokenImpl).clone();
-        (bool success,) = newProxy.call(initData);
-        assertFalse(success, "Should revert with zero owner");
-
-        // Test zero admin
-        initData = abi.encodeWithSelector(
-            kToken.initialize.selector,
-            users.owner,
-            ZERO_ADDRESS, // zero admin
-            users.emergencyAdmin,
-            users.admin,
-            6
-        );
-
-        newProxy = address(newTokenImpl).clone();
-        (success,) = newProxy.call(initData);
-        assertFalse(success, "Should revert with zero admin");
-    }
-
-    /// @dev Test double initialization reverts
-    function test_Initialize_RevertDoubleInit() public {
-        vm.expectRevert();
-        kUSD.initialize(users.owner, users.admin, users.emergencyAdmin, users.admin, 6);
-    }
-
-    /// @dev Test setupMetadata function
-    function test_SetupMetadata_Success() public {
-        // Deploy new token without metadata
-        kToken newTokenImpl = new kToken();
-        bytes memory initData = abi.encodeWithSelector(
-            kToken.initialize.selector, users.owner, users.admin, users.emergencyAdmin, users.admin, 6
-        );
-
-        address newProxy = address(newTokenImpl).clone();
-        (bool success,) = newProxy.call(initData);
-        require(success, "Init failed");
-
-        kToken newToken = kToken(payable(newProxy));
-
-        // Setup metadata
-        vm.prank(users.admin);
-        vm.expectEmit(false, false, false, true);
-        emit TokenInitialized("Test Token", "TEST", 6);
-
-        newToken.setupMetadata("Test Token", "TEST");
-
-        assertEq(newToken.name(), "Test Token", "Name not set");
-        assertEq(newToken.symbol(), "TEST", "Symbol not set");
-    }
-
-    /// @dev Test setupMetadata requires admin role
-    function test_SetupMetadata_OnlyAdmin() public {
-        vm.prank(users.alice);
-        vm.expectRevert();
-        kUSD.setupMetadata("New Name", "NEW");
-    }
-
     /*//////////////////////////////////////////////////////////////
                         MINTING TESTS
     //////////////////////////////////////////////////////////////*/
@@ -530,12 +434,6 @@ contract kTokenTest is DeploymentBaseTest {
                         VIEW FUNCTION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test contract info functions
-    function test_ContractInfo() public view {
-        assertEq(kUSD.contractName(), "kToken", "Contract name incorrect");
-        assertEq(kUSD.contractVersion(), "1.0.0", "Contract version incorrect");
-    }
-
     /// @dev Test isPaused view function
     function test_IsPaused() public {
         assertFalse(kUSD.isPaused(), "Should be unpaused initially");
@@ -544,34 +442,6 @@ contract kTokenTest is DeploymentBaseTest {
         kUSD.setPaused(true);
 
         assertTrue(kUSD.isPaused(), "Should return true when paused");
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        UPGRADE TESTS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @dev Test upgrade authorization
-    function test_AuthorizeUpgrade_OnlyAdmin() public {
-        address newImpl = address(new kToken());
-
-        // Non-admin should fail
-        vm.prank(users.alice);
-        vm.expectRevert();
-        kUSD.upgradeToAndCall(newImpl, "");
-
-        // Admin should succeed with upgrade authorization
-        vm.prank(users.admin);
-        vm.expectEmit(true, true, false, false);
-        emit UpgradeAuthorized(newImpl, users.admin);
-
-        kUSD.upgradeToAndCall(newImpl, "");
-    }
-
-    /// @dev Test upgrade authorization reverts with zero address
-    function test_AuthorizeUpgrade_RevertZeroAddress() public {
-        vm.prank(users.admin);
-        vm.expectRevert();
-        kUSD.upgradeToAndCall(ZERO_ADDRESS, "");
     }
 
     /*//////////////////////////////////////////////////////////////

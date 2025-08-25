@@ -8,8 +8,6 @@ import {
     INSTITUTION_ROLE,
     MINTER_ROLE,
     SETTLEMENT_INTERVAL,
-    SETTLER_ROLE,
-    STRATEGY_ROLE,
     USDC_MAINNET,
     _1000_USDC,
     _100_USDC,
@@ -36,7 +34,7 @@ contract BaseTest is Test {
         address payable admin;
         address payable emergencyAdmin;
         address payable institution;
-        address payable settler;
+        address payable relayer;
         address payable treasury;
         address payable owner;
         address payable guardian;
@@ -80,7 +78,7 @@ contract BaseTest is Test {
         users.guardian = utils.createUser("Guardian", tokens);
         users.emergencyAdmin = utils.createUser("EmergencyAdmin", tokens);
         users.institution = utils.createUser("Institution", tokens);
-        users.settler = utils.createUser("Settler", tokens);
+        users.relayer = utils.createUser("relayer", tokens);
         users.treasury = utils.createUser("Treasury", tokens);
         users.owner = utils.createUser("Owner", tokens);
     }
@@ -126,7 +124,7 @@ contract BaseTest is Test {
         vm.label(users.admin, "Admin");
         vm.label(users.emergencyAdmin, "EmergencyAdmin");
         vm.label(users.institution, "Institution");
-        vm.label(users.settler, "Settler");
+        vm.label(users.relayer, "relayer");
         vm.label(users.treasury, "Treasury");
 
         //vm.label(address(mockUSDC), "MockUSDC");

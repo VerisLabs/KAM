@@ -1,5 +1,5 @@
 # kRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/dd71a4088db684fce979bc8cf7c38882ee6bb8a4/src/kRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kRegistry.sol)
 
 **Inherits:**
 [IkRegistry](/src/interfaces/IkRegistry.sol/interface.IkRegistry.md), Initializable, UUPSUpgradeable, OwnableRoles
@@ -17,24 +17,17 @@ uint256 internal constant ADMIN_ROLE = _ROLE_0;
 ```
 
 
-### FACTORY_ROLE
-
-```solidity
-uint256 internal constant FACTORY_ROLE = _ROLE_1;
-```
-
-
 ### RELAYER_ROLE
 
 ```solidity
-uint256 internal constant RELAYER_ROLE = _ROLE_2;
+uint256 internal constant RELAYER_ROLE = _ROLE_1;
 ```
 
 
 ### GUARDIAN_ROLE
 
 ```solidity
-uint256 internal constant GUARDIAN_ROLE = _ROLE_3;
+uint256 internal constant GUARDIAN_ROLE = _ROLE_2;
 ```
 
 
@@ -134,14 +127,13 @@ Register support for a new asset and its corresponding kToken
 
 
 ```solidity
-function registerAsset(address asset, address kToken, bytes32 id) external onlyRoles(ADMIN_ROLE);
+function registerAsset(address asset, bytes32 id) external onlyRoles(ADMIN_ROLE) returns (address);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`asset`|`address`|Underlying asset address (e.g., USDC, WBTC)|
-|`kToken`|`address`|Corresponding kToken address (e.g., kUSD, kBTC)|
 |`id`|`bytes32`||
 
 
@@ -204,7 +196,7 @@ Get a singleton contract address by its identifier
 
 
 ```solidity
-function getContractById(bytes32 id) external view returns (address);
+function getContractById(bytes32 id) public view returns (address);
 ```
 **Parameters**
 
@@ -263,14 +255,14 @@ Get all core singleton contracts at once
 
 
 ```solidity
-function getCoreContracts() external view returns (address kMinter, address kAssetRouter);
+function getCoreContracts() external view returns (address, address);
 ```
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`kMinter`|`address`|The kMinter contract address|
-|`kAssetRouter`|`address`|The kAssetRouter contract address|
+|`<none>`|`address`|kMinter The kMinter contract address|
+|`<none>`|`address`|kAssetRouter The kAssetRouter contract address|
 
 
 ### getVaultsByAsset
@@ -345,7 +337,7 @@ Check if the caller is the relayer
 
 
 ```solidity
-function isRelayer(address account) external view returns (bool);
+function isRelayer(address user) external view returns (bool);
 ```
 **Returns**
 
@@ -356,10 +348,18 @@ function isRelayer(address account) external view returns (bool);
 
 ### isGuardian
 
+Check if caller is the Guardian
+
 
 ```solidity
-function isGuardian(address account) external view returns (bool);
+function isGuardian(address user) external view returns (bool);
 ```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the caller is a Guardian|
+
 
 ### isRegisteredAsset
 
@@ -422,27 +422,6 @@ function isSingletonContract(address contractAddress) external view returns (boo
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`bool`|Whether the contract is a singleton contract|
-
-
-### isKToken
-
-Check if a kToken is registered
-
-
-```solidity
-function isKToken(address kToken) external view returns (bool);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`kToken`|`address`|KToken address|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|Whether the kToken is registered|
 
 
 ### getAdapters
@@ -603,8 +582,6 @@ struct kRegistryStorage {
     mapping(address => EnumerableSetLib.AddressSet) vaultsByAsset;
     mapping(bytes32 => address) singletonAssets;
     mapping(address => address) assetToKToken;
-    mapping(address => bool) isKToken;
-    mapping(address => address) kTokenToAsset;
     mapping(address => bool) isRegisteredAsset;
     EnumerableSetLib.AddressSet supportedAssets;
     mapping(address => EnumerableSetLib.AddressSet) vaultAdapters;

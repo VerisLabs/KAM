@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
-import { LibClone } from "solady/utils/LibClone.sol";
-
 import { BaseTest, console2 } from "./BaseTest.sol";
 import {
     ADMIN_ROLE,
@@ -12,8 +9,6 @@ import {
     INSTITUTION_ROLE,
     MINTER_ROLE,
     SETTLEMENT_INTERVAL,
-    SETTLER_ROLE,
-    STRATEGY_ROLE,
     USDC_MAINNET,
     WBTC_MAINNET,
     _1000_USDC,
@@ -22,29 +17,29 @@ import {
     _1_USDC,
     _1_WBTC
 } from "./Constants.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 // Protocol contracts
-
 import { kAssetRouter } from "src/kAssetRouter.sol";
-
 import { kMinter } from "src/kMinter.sol";
 import { kRegistry } from "src/kRegistry.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { kToken } from "src/kToken.sol";
 
 // Modules
-
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { BatchModule } from "src/kStakingVault/modules/BatchModule.sol";
 import { ClaimModule } from "src/kStakingVault/modules/ClaimModule.sol";
 import { FeesModule } from "src/kStakingVault/modules/FeesModule.sol";
 
 // Adapters
-
 import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
 import { CustodialAdapter } from "src/adapters/CustodialAdapter.sol";
 
 // Interfaces
+
+import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 /// @title DeploymentBaseTest
@@ -63,12 +58,12 @@ import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 /// - stkTokens: Minted by individual kStakingVaults (vault-specific ERC20 receipts)
 /// - kStakingVaults accept existing kTokens from users, they do NOT mint kTokens
 contract DeploymentBaseTest is BaseTest {
-    using LibClone for address;
     /*//////////////////////////////////////////////////////////////
                         PROTOCOL CONTRACTS
     //////////////////////////////////////////////////////////////*/
 
     // Core protocol contracts (proxied)
+    ERC1967Factory public factory;
     kRegistry public registry;
     kAssetRouter public assetRouter;
     kToken public kUSD;
@@ -90,7 +85,6 @@ contract DeploymentBaseTest is BaseTest {
     // Implementation contracts (for upgrades)
     kRegistry public registryImpl;
     kAssetRouter public assetRouterImpl;
-    kToken public kTokenImpl;
     kMinter public minterImpl;
     kStakingVault public stakingVaultImpl;
 
@@ -124,6 +118,9 @@ contract DeploymentBaseTest is BaseTest {
         // Enable mainnet fork for realistic testing
         enableMainnetFork();
 
+        // Deploy factory for the proxies
+        factory = new ERC1967Factory();
+
         // Deploy the complete protocol
         _deployProtocol();
 
@@ -145,24 +142,22 @@ contract DeploymentBaseTest is BaseTest {
         // 2. Deploy kAssetRouter (needs registry)
         _deployAssetRouter();
 
-        // 3. Deploy kToken contracts (independent)
-        _deployTokens();
-
-        // 4. Deploy kMinter (needs registry, assetRouter, tokens)
+        // 3. Deploy kMinter (needs registry, assetRouter)
         _deployMinter();
 
+        // 4. Register singleton contracts in registry (required before deploying kTokens)
         vm.startPrank(users.admin);
-
-        // Register singleton contracts in registry
         registry.setSingletonContract(registry.K_ASSET_ROUTER(), address(assetRouter));
         registry.setSingletonContract(registry.K_MINTER(), address(minter));
-
         vm.stopPrank();
 
-        // 5. Deploy kStakingVaults + Modules (needs registry, assetRouter, tokens)
+        // 5. Deploy kToken contracts (needs minter to be registered in registry)
+        _deployTokens();
+
+        // 6. Deploy kStakingVaults + Modules (needs registry, assetRouter, tokens, and asset registration)
         _deployStakingVaults();
 
-        // 6. Deploy adapters (needs registry, independent of other components)
+        // 7. Deploy adapters (needs registry, independent of other components)
         _deployAdapters();
 
         // Configure the protocol
@@ -183,13 +178,11 @@ contract DeploymentBaseTest is BaseTest {
             kRegistry.initialize.selector,
             users.owner, // owner
             users.admin, // admin
-            users.settler, // relayer (using settler for now)
+            users.relayer, // relayer (using relayer for now)
             users.guardian
         );
 
-        address registryProxy = address(registryImpl).clone();
-        (bool success,) = registryProxy.call(initData);
-        require(success, "Registry initialization failed");
+        address registryProxy = factory.deployAndCall(address(registryImpl), users.admin, initData);
         registry = kRegistry(payable(registryProxy));
 
         // Label for debugging
@@ -211,9 +204,7 @@ contract DeploymentBaseTest is BaseTest {
             false // not paused initially
         );
 
-        address assetRouterProxy = address(assetRouterImpl).clone();
-        (bool success,) = assetRouterProxy.call(initData);
-        require(success, "AssetRouter initialization failed");
+        address assetRouterProxy = factory.deployAndCall(address(assetRouterImpl), users.admin, initData);
         assetRouter = kAssetRouter(payable(assetRouterProxy));
         vm.prank(users.admin);
         assetRouter.setSettlementCooldown(0);
@@ -225,51 +216,31 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Deploy kToken contracts (kUSD and kBTC)
     function _deployTokens() internal {
-        // Deploy kToken implementation (shared)
-        kTokenImpl = new kToken();
-
-        // Deploy kUSD
-        bytes memory kUSDInitData = abi.encodeWithSelector(
-            kToken.initialize.selector,
-            users.owner, // owner
-            users.admin, // admin
-            users.emergencyAdmin, // emergency admin
-            users.admin, // temporary minter (will be updated later)
-            6 // USDC decimals
-        );
-
-        address kUSDProxy = address(kTokenImpl).clone();
-        (bool success1,) = kUSDProxy.call(kUSDInitData);
-        require(success1, "kUSD initialization failed");
-        kUSD = kToken(payable(kUSDProxy));
+        // Deploy kUSD through registry
+        vm.startPrank(users.admin);
+        address kUSDAddress = registry.registerAsset(KUSD_NAME, KUSD_SYMBOL, USDC_MAINNET, registry.USDC());
+        vm.stopPrank();
+        kUSD = kToken(payable(kUSDAddress));
 
         // Set metadata for kUSD
-        vm.prank(users.admin);
-        kUSD.setupMetadata(KUSD_NAME, KUSD_SYMBOL);
+        vm.startPrank(users.admin);
+        kUSD.grantEmergencyRole(users.emergencyAdmin);
+        vm.stopPrank();
 
-        // Deploy kBTC
-        bytes memory kBTCInitData = abi.encodeWithSelector(
-            kToken.initialize.selector,
-            users.owner, // owner
-            users.admin, // admin
-            users.emergencyAdmin, // emergency admin
-            users.admin, // temporary minter (will be updated later)
-            8 // WBTC decimals
-        );
-
-        address kBTCProxy = address(kTokenImpl).clone();
-        (bool success2,) = kBTCProxy.call(kBTCInitData);
-        require(success2, "kBTC initialization failed");
-        kBTC = kToken(payable(kBTCProxy));
+        // Deploy kBTC through registry
+        vm.startPrank(users.admin);
+        address kBTCAddress = registry.registerAsset(KBTC_NAME, KBTC_SYMBOL, WBTC_MAINNET, registry.WBTC());
+        vm.stopPrank();
+        kBTC = kToken(payable(kBTCAddress));
 
         // Set metadata for kBTC
-        vm.prank(users.admin);
-        kBTC.setupMetadata(KBTC_NAME, KBTC_SYMBOL);
+        vm.startPrank(users.admin);
+        kBTC.grantEmergencyRole(users.emergencyAdmin);
+        vm.stopPrank();
 
         // Label for debugging
         vm.label(address(kUSD), "kUSD");
         vm.label(address(kBTC), "kBTC");
-        vm.label(address(kTokenImpl), "kTokenImpl");
     }
 
     /// @dev Deploy kMinter with proxy
@@ -286,9 +257,7 @@ contract DeploymentBaseTest is BaseTest {
             users.emergencyAdmin // emergency admin
         );
 
-        address minterProxy = address(minterImpl).clone();
-        (bool success,) = minterProxy.call(initData);
-        require(success, "Minter initialization failed");
+        address minterProxy = factory.deployAndCall(address(minterImpl), users.admin, initData);
         minter = kMinter(payable(minterProxy));
 
         // Label for debugging
@@ -299,10 +268,6 @@ contract DeploymentBaseTest is BaseTest {
     /// @dev Deploy all three types of kStakingVaults with modules
     function _deployStakingVaults() internal {
         vm.startPrank(users.admin);
-
-        // Register assets and kTokens
-        registry.registerAsset(USDC_MAINNET, address(kUSD), registry.USDC());
-        registry.registerAsset(WBTC_MAINNET, address(kBTC), registry.WBTC());
 
         // Deploy modules first (shared across all vaults)
         claimModule = new ClaimModule();
@@ -353,9 +318,7 @@ contract DeploymentBaseTest is BaseTest {
             asset // underlying asset (USDC for now)
         );
 
-        address vaultProxy = address(stakingVaultImpl).clone();
-        (bool success,) = vaultProxy.call(initData);
-        require(success, string(abi.encodePacked(label, " vault initialization failed")));
+        address vaultProxy = factory.deployAndCall(address(stakingVaultImpl), users.admin, initData);
         vault = kStakingVault(payable(vaultProxy));
 
         // Label for debugging
@@ -373,27 +336,9 @@ contract DeploymentBaseTest is BaseTest {
         bytes memory custodialInitData =
             abi.encodeWithSelector(CustodialAdapter.initialize.selector, address(registry), users.owner, users.admin);
 
-        // Deploy proxy with initialization (same pattern as other contracts)
-        address custodialProxy = address(custodialAdapterImpl).clone();
-        (bool success1,) = custodialProxy.call(custodialInitData);
-        require(success1, "CustodialAdapter initialization failed");
+        // Deploy proxy with initialization using ERC1967Factory
+        address custodialProxy = factory.deployAndCall(address(custodialAdapterImpl), users.admin, custodialInitData);
         custodialAdapter = CustodialAdapter(custodialProxy);
-
-        vm.startPrank(users.admin);
-
-        // Register kMinter as vault (MINTER type = 0 - for institutional operations)
-        registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, USDC_MAINNET);
-
-        // Register DN vault (DN type = 1 - works with kMinter)
-        registry.registerVault(address(dnVault), IkRegistry.VaultType.DN, USDC_MAINNET);
-
-        // Register Alpha vault (ALPHA type = 2 - retail staking)
-        registry.registerVault(address(alphaVault), IkRegistry.VaultType.ALPHA, USDC_MAINNET);
-
-        // Register Beta vault (BETA type = 3 - advanced strategies)
-        registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, USDC_MAINNET);
-
-        vm.stopPrank();
 
         // Label for debugging
         vm.label(address(custodialAdapter), "CustodialAdapter");
@@ -406,21 +351,17 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Configure protocol contracts with registry integration
     function _configureProtocol() internal {
+        // Register Vaults
         vm.startPrank(users.admin);
-
-        // Register assets and kTokens
-        registry.registerAsset(USDC_MAINNET, address(kUSD), registry.USDC());
-        registry.registerAsset(WBTC_MAINNET, address(kBTC), registry.WBTC());
-
-        // Register vaults (would normally be done by factory, but we'll do it manually for tests)
+        registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, USDC_MAINNET);
+        registry.registerVault(address(dnVault), IkRegistry.VaultType.DN, USDC_MAINNET);
+        registry.registerVault(address(alphaVault), IkRegistry.VaultType.ALPHA, USDC_MAINNET);
+        registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, USDC_MAINNET);
         vm.stopPrank();
 
         // Grant factory role to admin for vault registration
         vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE = _ROLE_1 = 2
-        vm.prank(users.owner);
-        registry.grantRoles(users.guardian, 8); // GUARDIAN_ROLE = _ROLE_3 = 8
-
+        registry.grantRoles(users.guardian, 4);
         vm.startPrank(users.admin);
 
         // Register adapters for vaults (if adapters were deployed)
@@ -446,8 +387,8 @@ contract DeploymentBaseTest is BaseTest {
         _registerModules();
 
         // Create initial batches for all vaults using relayer role
-        // Note: settler has RELAYER_ROLE as set up in _setupRoles()
-        vm.startPrank(users.settler);
+        // Note: relayer has RELAYER_ROLE as set up in _setupRoles()
+        vm.startPrank(users.relayer);
 
         // Use low-level call to create initial batches since modules are dynamically registered
         bytes4 createBatchSelector = bytes4(keccak256("createNewBatch()"));
@@ -467,11 +408,11 @@ contract DeploymentBaseTest is BaseTest {
         vm.stopPrank();
 
         vm.prank(users.owner);
-        dnVault.grantRoles(users.settler, 4); // RELAYER_ROLE = _ROLE_2 = 4
+        dnVault.grantRoles(users.relayer, 4); // RELAYER_ROLE = _ROLE_2 = 4
         vm.prank(users.owner);
-        alphaVault.grantRoles(users.settler, 4);
+        alphaVault.grantRoles(users.relayer, 4);
         vm.prank(users.owner);
-        betaVault.grantRoles(users.settler, 4);
+        betaVault.grantRoles(users.relayer, 4);
     }
 
     /// @dev Register modules with vaults
@@ -524,15 +465,9 @@ contract DeploymentBaseTest is BaseTest {
         vm.prank(users.owner);
         minter.grantRoles(users.institution, 8); // INSTITUTION_ROLE = _ROLE_3 = 8
 
-        // Grant SETTLER_ROLE to test settler (requires owner for kAssetRouter)
-        vm.prank(users.owner);
-        assetRouter.grantRoles(users.settler, SETTLER_ROLE);
-
         // Grant EMERGENCY_ADMIN_ROLE to emergency admin for kAssetRouter (requires owner)
         vm.prank(users.owner);
         assetRouter.grantRoles(users.emergencyAdmin, EMERGENCY_ADMIN_ROLE);
-
-        // Note: settler is already registered as relayer during registry initialization
     }
 
     /// @dev Fund test users with mainnet assets
@@ -592,22 +527,6 @@ contract DeploymentBaseTest is BaseTest {
         return kToken(token).balanceOf(user);
     }
 
-    /// @dev Helper to time travel for batch testing
-    /// @param timeIncrease Seconds to advance
-    function advanceTime(uint256 timeIncrease) internal {
-        vm.warp(block.timestamp + timeIncrease);
-    }
-
-    /// @dev Helper to advance to next batch cutoff
-    function advanceToBatchCutoff() internal {
-        advanceTime(BATCH_CUTOFF_TIME);
-    }
-
-    /// @dev Helper to advance to settlement time
-    function advanceToSettlement() internal {
-        advanceTime(SETTLEMENT_INTERVAL);
-    }
-
     /// @dev Expect specific event emission
     function expectEvent(address emitter, bytes32 eventSig) internal {
         vm.expectEmit(true, true, true, true, emitter);
@@ -656,10 +575,7 @@ contract DeploymentBaseTest is BaseTest {
         assertTrue(registry.isVault(address(betaVault)));
 
         // Check adapters are deployed and initialized (disabled for debugging)
-        // assertTrue(address(custodialAdapter) != address(0));
-        // assertTrue(address(metaVaultAdapter) != address(0));
-        // assertTrue(custodialAdapter.registered());
-        // assertTrue(metaVaultAdapter.registered());
+        assertTrue(address(custodialAdapter) != address(0));
     }
 
     /// @dev Get current protocol state for debugging
@@ -697,7 +613,3 @@ contract DeploymentBaseTest is BaseTest {
         revert("Unknown vault type");
     }
 }
-
-// Import IERC20 for balance checks
-import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";

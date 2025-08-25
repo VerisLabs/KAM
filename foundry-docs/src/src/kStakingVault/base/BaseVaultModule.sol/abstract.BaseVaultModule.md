@@ -1,5 +1,5 @@
 # BaseVaultModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/dd71a4088db684fce979bc8cf7c38882ee6bb8a4/src/kStakingVault/base/BaseVaultModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kStakingVault/base/BaseVaultModule.sol)
 
 **Inherits:**
 OwnableRoles, ERC20, ReentrancyGuardTransient, [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
@@ -301,23 +301,6 @@ function _setPaused(bool paused_) internal;
 |`paused_`|`bool`|New pause state|
 
 
-### _calculateStkTokenPrice
-
-Calculates stkToken price with safety checks
-
-*Standard price calculation used across settlement modules*
-
-
-```solidity
-function _calculateStkTokenPrice() internal view returns (uint256 price);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`price`|`uint256`|Price per stkToken in underlying asset terms (18 decimals)|
-
-
 ### _convertToAssets
 
 Converts shares to assets
@@ -360,52 +343,6 @@ function _convertToShares(uint256 assets) internal view returns (uint256 shares)
 |`shares`|`uint256`|Amount of shares|
 
 
-### _calculateStkTokensToMint
-
-Calculates stkTokens to mint for given kToken amount
-
-*Used in staking settlement operations*
-
-
-```solidity
-function _calculateStkTokensToMint(uint256 kTokenAmount) internal view returns (uint256 stkTokens);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`kTokenAmount`|`uint256`|Amount of kTokens being staked|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`stkTokens`|`uint256`|Amount of stkTokens to mint|
-
-
-### _calculateAssetValue
-
-Calculates asset value for given stkToken amount
-
-*Used in unstaking settlement operations*
-
-
-```solidity
-function _calculateAssetValue(uint256 stkTokenAmount) internal view returns (uint256 assetValue);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`stkTokenAmount`|`uint256`|Amount of stkTokens being unstaked|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`assetValue`|`uint256`|Equivalent asset value|
-
-
 ### _sharePrice
 
 Calculates share price for stkToken
@@ -421,13 +358,13 @@ function _sharePrice() internal view returns (uint256);
 |`<none>`|`uint256`|sharePrice Price per stkToken in underlying asset terms (18 decimals)|
 
 
-### _totalAssetsVirtual
+### _totalAssets
 
 Returns the total assets in the vault
 
 
 ```solidity
-function _totalAssetsVirtual() internal view returns (uint256);
+function _totalAssets() internal view returns (uint256);
 ```
 **Returns**
 
@@ -652,6 +589,7 @@ struct BaseVaultModuleStorage {
     bytes32 currentBatchId;
     uint256 sharePriceWatermark;
     uint256 requestCounter;
+    uint128 totalPendingStake;
     address registry;
     address receiverImplementation;
     address underlyingAsset;

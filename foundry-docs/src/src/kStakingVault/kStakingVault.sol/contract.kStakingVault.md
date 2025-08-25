@@ -1,5 +1,5 @@
 # kStakingVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/dd71a4088db684fce979bc8cf7c38882ee6bb8a4/src/kStakingVault/kStakingVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kStakingVault/kStakingVault.sol)
 
 **Inherits:**
 Initializable, UUPSUpgradeable, [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/contract.MultiFacetProxy.md)
@@ -192,23 +192,6 @@ function setPaused(bool paused_) external onlyRoles(EMERGENCY_ADMIN_ROLE);
 |`paused_`|`bool`|New pause state|
 
 
-### calculateStkTokenPrice
-
-Calculates stkToken price with safety checks
-
-*Standard price calculation used across settlement modules*
-
-
-```solidity
-function calculateStkTokenPrice() external view returns (uint256);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|price Price per stkToken in underlying asset terms|
-
-
 ### sharePrice
 
 Calculates the price of stkTokens in underlying asset terms
@@ -228,7 +211,7 @@ function sharePrice() external view returns (uint256);
 
 ### totalAssets
 
-Returns the current total assets from adapter (real-time)
+Returns the current total assets
 
 
 ```solidity
@@ -239,6 +222,21 @@ function totalAssets() external view returns (uint256);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`uint256`|Total assets currently deployed in strategies|
+
+
+### totalNetAssets
+
+Returns the current total assets after fees
+
+
+```solidity
+function totalNetAssets() external view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Total net assets currently deployed in strategies|
 
 
 ### getBatchId

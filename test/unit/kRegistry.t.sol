@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ADMIN_ROLE, USDC_MAINNET, WBTC_MAINNET, _1_USDC, _1_WBTC } from "../utils/Constants.sol";
+import { ADMIN_ROLE, RELAYER_ROLE, USDC_MAINNET, WBTC_MAINNET, _1_USDC, _1_WBTC } from "../utils/Constants.sol";
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { kRegistry } from "src/kRegistry.sol";
@@ -11,11 +11,13 @@ import { kRegistry } from "src/kRegistry.sol";
 contract kRegistryTest is DeploymentBaseTest {
     // Test addresses for non-deployed contracts
     address internal constant TEST_CONTRACT = 0x1111111111111111111111111111111111111111;
-    address internal constant TEST_ASSET = 0x2222222222222222222222222222222222222222;
+    address internal constant TEST_ASSET = 0xdAC17F958D2ee523a2206206994597C13D831ec7; // MAINNET USDT
     address internal constant TEST_KTOKEN = 0x3333333333333333333333333333333333333333;
     address internal constant TEST_VAULT = 0x4444444444444444444444444444444444444444;
     address internal constant TEST_ADAPTER = 0x5555555555555555555555555555555555555555;
 
+    string TEST_NAME = "TEST_TOKEN";
+    string TEST_SYMBOL = "TTK";
     bytes32 internal constant TEST_CONTRACT_ID = keccak256("TEST_CONTRACT");
     bytes32 internal constant TEST_ASSET_ID = keccak256("TEST_ASSET");
 
@@ -28,7 +30,8 @@ contract kRegistryTest is DeploymentBaseTest {
         // Check initialization parameters
         assertEq(registry.owner(), users.owner, "Owner not set correctly");
         assertTrue(registry.hasAnyRole(users.admin, ADMIN_ROLE), "Admin role not granted");
-        assertTrue(registry.hasAnyRole(users.settler, 4), "Relayer role not granted"); // RELAYER_ROLE = _ROLE_2 = 4
+        assertTrue(registry.hasAnyRole(users.relayer, RELAYER_ROLE), "Relayer role not granted"); // RELAYER_ROLE =
+            // _ROLE_2 = 4
     }
 
     /// @dev Test contract info functions
@@ -83,8 +86,8 @@ contract kRegistryTest is DeploymentBaseTest {
     }
 
     /// @dev Test getContractById reverts when contract not set
-    function test_GetContractById_RevertNotSet() public {
-        vm.expectRevert(IkRegistry.ContractNotSet.selector);
+    function test_GetContractById_RevertZeroAddress() public {
+        vm.expectRevert(IkRegistry.ZeroAddress.selector);
         registry.getContractById(keccak256("NONEXISTENT"));
     }
 
@@ -99,18 +102,14 @@ contract kRegistryTest is DeploymentBaseTest {
         // Expect events
         vm.expectEmit(true, false, false, false);
         emit IkRegistry.AssetSupported(TEST_ASSET);
-        vm.expectEmit(true, true, false, false);
-        emit IkRegistry.KTokenRegistered(TEST_ASSET, TEST_KTOKEN);
 
-        registry.registerAsset(TEST_ASSET, TEST_KTOKEN, TEST_ASSET_ID);
+        address testKToken = registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
 
         // Verify asset registration
         assertTrue(registry.isRegisteredAsset(TEST_ASSET), "Asset not registered");
         assertEq(registry.getAssetById(TEST_ASSET_ID), TEST_ASSET, "Asset ID mapping incorrect");
 
-        // Verify kToken registration
-        assertTrue(registry.isKToken(TEST_KTOKEN), "kToken not registered");
-        assertEq(registry.assetToKToken(TEST_ASSET), TEST_KTOKEN, "Asset->kToken mapping incorrect");
+        assertEq(registry.assetToKToken(TEST_ASSET), testKToken, "Asset->kToken mapping incorrect");
 
         // Verify asset appears in getAllAssets
         address[] memory allAssets = registry.getAllAssets();
@@ -125,30 +124,23 @@ contract kRegistryTest is DeploymentBaseTest {
     }
 
     /// @dev Test asset registration with existing asset (only updates kToken)
-    function test_RegisterAsset_ExistingAsset_Success() public {
-        address newKToken = address(0x6666666666666666666666666666666666666666);
-
+    function test_RegisterAsset_ExistingAsset_Revert() public {
         // First registration
         vm.prank(users.admin);
-        registry.registerAsset(TEST_ASSET, TEST_KTOKEN, TEST_ASSET_ID);
-
-        // Second registration with different kToken (should only emit KTokenRegistered)
-        vm.prank(users.admin);
-        vm.expectEmit(true, true, false, false);
-        emit IkRegistry.KTokenRegistered(TEST_ASSET, newKToken);
-
-        registry.registerAsset(TEST_ASSET, newKToken, TEST_ASSET_ID);
-
-        // Verify kToken mapping updated
+        address newKToken = registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
         assertEq(registry.assetToKToken(TEST_ASSET), newKToken, "kToken mapping not updated");
-        assertTrue(registry.isKToken(newKToken), "New kToken not registered");
+
+        // Second registration
+        vm.prank(users.admin);
+        vm.expectRevert(IkRegistry.AlreadyRegistered.selector);
+        newKToken = registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
     }
 
     /// @dev Test asset registration requires admin role
     function test_RegisterAsset_OnlyAdmin() public {
         vm.prank(users.bob);
         vm.expectRevert();
-        registry.registerAsset(TEST_ASSET, TEST_KTOKEN, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
     }
 
     /// @dev Test asset registration reverts with zero addresses
@@ -157,22 +149,18 @@ contract kRegistryTest is DeploymentBaseTest {
 
         // Zero asset address
         vm.expectRevert(IkRegistry.ZeroAddress.selector);
-        registry.registerAsset(address(0), TEST_KTOKEN, TEST_ASSET_ID);
-
-        // Zero kToken address
-        vm.expectRevert(IkRegistry.ZeroAddress.selector);
-        registry.registerAsset(TEST_ASSET, address(0), TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, address(0), TEST_ASSET_ID);
 
         // Zero ID
         vm.expectRevert(IkRegistry.ZeroAddress.selector);
-        registry.registerAsset(TEST_ASSET, TEST_KTOKEN, bytes32(0));
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, bytes32(0));
 
         vm.stopPrank();
     }
 
     /// @dev Test getAssetById reverts when asset not set
-    function test_GetAssetById_RevertNotSet() public {
-        vm.expectRevert(IkRegistry.ContractNotSet.selector);
+    function test_GetAssetById_RevertZeroAddress() public {
+        vm.expectRevert(IkRegistry.ZeroAddress.selector);
         registry.getAssetById(keccak256("NONEXISTENT"));
     }
 
@@ -184,11 +172,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RegisterVault_Success() public {
         // Register asset first
         vm.prank(users.admin);
-        registry.registerAsset(TEST_ASSET, TEST_KTOKEN, TEST_ASSET_ID);
-
-        // Grant factory role to admin for testing
-        vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
 
         vm.prank(users.admin);
 
@@ -218,9 +202,8 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RegisterVault_OnlyFactory() public {
         // Register asset first
         vm.prank(users.admin);
-        registry.registerAsset(TEST_ASSET, TEST_KTOKEN, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
 
-        // Note: Admin already has FACTORY_ROLE from deployment setup
         // Test with a user who has no roles at all
         vm.prank(users.alice);
         vm.expectRevert(); // Should revert with Unauthorized()
@@ -236,11 +219,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RegisterVault_RevertZeroAddress() public {
         // Register asset first
         vm.prank(users.admin);
-        registry.registerAsset(TEST_ASSET, TEST_KTOKEN, TEST_ASSET_ID);
-
-        // Grant factory role
-        vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
 
         vm.prank(users.admin);
         vm.expectRevert(IkRegistry.ZeroAddress.selector);
@@ -251,11 +230,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RegisterVault_RevertAlreadyRegistered() public {
         // Register asset first
         vm.prank(users.admin);
-        registry.registerAsset(TEST_ASSET, TEST_KTOKEN, TEST_ASSET_ID);
-
-        // Grant factory role
-        vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
 
         vm.startPrank(users.admin);
 
@@ -271,10 +246,6 @@ contract kRegistryTest is DeploymentBaseTest {
 
     /// @dev Test vault registration reverts with unsupported asset
     function test_RegisterVault_RevertAssetNotSupported() public {
-        // Grant factory role
-        vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE
-
         vm.prank(users.admin);
         vm.expectRevert(IkRegistry.AssetNotSupported.selector);
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
@@ -284,11 +255,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RegisterVault_MultipleTypes() public {
         // Register asset first
         vm.prank(users.admin);
-        registry.registerAsset(TEST_ASSET, TEST_KTOKEN, TEST_ASSET_ID);
-
-        // Grant factory role
-        vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
 
         address kMinter = address(0x6666666666666666666666666666666666666666);
         address dnVault = address(0x7777777777777777777777777777777777777777);
@@ -324,10 +291,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RegisterAdapter_OnlyAdmin() public {
         // Register vault first
         vm.prank(users.admin);
-        registry.registerAsset(TEST_ASSET, TEST_KTOKEN, TEST_ASSET_ID);
-
-        vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
 
         vm.prank(users.admin);
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
@@ -353,8 +317,10 @@ contract kRegistryTest is DeploymentBaseTest {
     }
 
     /// @dev Test getAdapter returns zero for non-existent adapter
-    function test_GetAdapter_NonExistent() public view {
-        assertTrue(registry.getAdapters(TEST_VAULT).length == 0, "Should return empty array for non-existent adapter");
+    function test_GetAdapter_RevertZeroAddress() public {
+        vm.prank(users.admin);
+        vm.expectRevert(IkRegistry.ZeroAddress.selector);
+        registry.getAdapters(TEST_VAULT);
     }
 
     /// @dev Test isAdapterRegistered returns false for non-existent adapter
@@ -377,7 +343,7 @@ contract kRegistryTest is DeploymentBaseTest {
 
     /// @dev Test isRelayer function
     function test_IsRelayer() public {
-        assertTrue(registry.isRelayer(users.settler), "Settler should be relayer");
+        assertTrue(registry.isRelayer(users.relayer), "relayer should be relayer");
         assertFalse(registry.isRelayer(users.alice), "Alice should not be relayer");
     }
 
@@ -426,9 +392,9 @@ contract kRegistryTest is DeploymentBaseTest {
     }
 
     /// @dev Test empty getVaultsByAsset
-    function test_GetVaultsByAsset_Empty() public {
+    function test_GetVaultsByAsset_ZeroAddress() public {
+        vm.expectRevert(IkRegistry.ZeroAddress.selector);
         address[] memory vaults = registry.getVaultsByAsset(TEST_ASSET);
-        assertEq(vaults.length, 0, "Unregistered asset should have no vaults");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -470,23 +436,17 @@ contract kRegistryTest is DeploymentBaseTest {
     /// @dev Test complete asset-vault registration workflow
     function test_CompleteAssetVaultWorkflow() public {
         // Step 1: Register new asset
-        vm.prank(users.admin);
-        registry.registerAsset(TEST_ASSET, TEST_KTOKEN, TEST_ASSET_ID);
-
-        // Step 2: Grant factory role and register vault
-        vm.prank(users.owner);
-        registry.grantRoles(users.admin, 2); // FACTORY_ROLE
-
-        vm.prank(users.admin);
+        vm.startPrank(users.admin);
+        address test_kToken = registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
+        vm.stopPrank();
 
         // Step 3: Verify complete registration
         assertTrue(registry.isRegisteredAsset(TEST_ASSET), "Asset should be registered");
-        assertTrue(registry.isKToken(TEST_KTOKEN), "kToken should be registered");
         assertTrue(registry.isVault(TEST_VAULT), "Vault should be registered");
 
         // Step 4: Verify relationships
-        assertEq(registry.assetToKToken(TEST_ASSET), TEST_KTOKEN, "Asset->kToken mapping");
+        assertEq(registry.assetToKToken(TEST_ASSET), test_kToken, "Asset->kToken mapping");
         assertEq(registry.getVaultAssets(TEST_VAULT)[0], TEST_ASSET, "Vault->Asset mapping");
         assertEq(registry.getVaultType(TEST_VAULT), uint8(IkRegistry.VaultType.ALPHA), "Vault type");
 

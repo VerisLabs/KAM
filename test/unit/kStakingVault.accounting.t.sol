@@ -137,14 +137,14 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         vm.prank(users.bob);
         bytes32 requestId = vault.requestStake(users.bob, bobDeposit);
 
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(vault), batchId, INITIAL_DEPOSIT + bobDeposit, bobDeposit, 0, false
         );
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         assetRouter.executeSettleBatch(proposalId);
 
-        vm.prank(users.settler);
+        vm.prank(users.relayer);
         vault.closeBatch(batchId, true);
 
         vm.prank(users.bob);

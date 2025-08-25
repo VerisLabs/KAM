@@ -1,5 +1,5 @@
 # IkRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/dd71a4088db684fce979bc8cf7c38882ee6bb8a4/src/interfaces/IkRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/interfaces/IkRegistry.sol)
 
 
 ## Functions
@@ -14,7 +14,7 @@ function setSingletonContract(bytes32 id, address contractAddress) external;
 
 
 ```solidity
-function registerAsset(address asset, address kToken, bytes32 id) external;
+function registerAsset(address asset, bytes32 id) external returns (address);
 ```
 
 ### registerVault
@@ -122,13 +122,6 @@ function isVault(address vault) external view returns (bool);
 function isSingletonContract(address contractAddress) external view returns (bool);
 ```
 
-### isKToken
-
-
-```solidity
-function isKToken(address kToken) external view returns (bool);
-```
-
 ### getAdapters
 
 
@@ -170,10 +163,10 @@ event SingletonContractSet(bytes32 indexed id, address indexed contractAddress);
 event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
 ```
 
-### KTokenRegistered
+### AssetRegistered
 
 ```solidity
-event KTokenRegistered(address indexed asset, address indexed kToken);
+event AssetRegistered(address indexed asset, address indexed kToken);
 ```
 
 ### AssetSupported
@@ -192,6 +185,18 @@ event AdapterRegistered(address indexed vault, address indexed adapter);
 
 ```solidity
 event AdapterRemoved(address indexed vault, address indexed adapter);
+```
+
+### KTokenDeployed
+
+```solidity
+event KTokenDeployed(address indexed kTokenContract);
+```
+
+### KTokenImplementationSet
+
+```solidity
+event KTokenImplementationSet(address indexed implementation);
 ```
 
 ## Errors
@@ -235,6 +240,42 @@ error InvalidAdapter();
 
 ```solidity
 error AdapterAlreadySet();
+```
+
+### SaltAlreadyUsed
+
+```solidity
+error SaltAlreadyUsed();
+```
+
+### TokenInitializationFailed
+
+```solidity
+error TokenInitializationFailed();
+```
+
+### KTokenNotRegistered
+
+```solidity
+error KTokenNotRegistered();
+```
+
+### InvalidParameter
+
+```solidity
+error InvalidParameter();
+```
+
+### KTokenImplementationNotSet
+
+```solidity
+error KTokenImplementationNotSet();
+```
+
+### MinterNotSet
+
+```solidity
+error MinterNotSet();
 ```
 
 ## Enums

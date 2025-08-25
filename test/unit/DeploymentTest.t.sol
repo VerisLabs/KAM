@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {
-    ADMIN_ROLE, MINTER_ROLE, SETTLER_ROLE, USDC_MAINNET, WBTC_MAINNET, _1_USDC, _1_WBTC
-} from "../utils/Constants.sol";
+import { ADMIN_ROLE, MINTER_ROLE, USDC_MAINNET, WBTC_MAINNET, _1_USDC, _1_WBTC } from "../utils/Constants.sol";
 
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
@@ -27,7 +25,6 @@ contract DeploymentTest is DeploymentBaseTest {
         // Check implementation contracts
         assertTrue(address(registryImpl) != address(0), "Registry impl not deployed");
         assertTrue(address(assetRouterImpl) != address(0), "AssetRouter impl not deployed");
-        assertTrue(address(kTokenImpl) != address(0), "kToken impl not deployed");
         assertTrue(address(minterImpl) != address(0), "Minter impl not deployed");
         assertTrue(address(stakingVaultImpl) != address(0), "StakingVault impl not deployed");
 
@@ -97,9 +94,6 @@ contract DeploymentTest is DeploymentBaseTest {
 
         // Check institution role
         assertHasRole(address(minter), users.institution, 8); // INSTITUTION_ROLE
-
-        // Check settler role
-        assertHasRole(address(assetRouter), users.settler, SETTLER_ROLE);
     }
 
     /// @dev Test asset registration
@@ -111,10 +105,6 @@ contract DeploymentTest is DeploymentBaseTest {
         // Check WBTC registration
         assertTrue(registry.isRegisteredAsset(WBTC_MAINNET), "WBTC not registered");
         assertEq(registry.assetToKToken(WBTC_MAINNET), address(kBTC), "WBTC->kBTC mapping incorrect");
-
-        // Check kToken registration
-        assertTrue(registry.isKToken(address(kUSD)), "kUSD not registered as kToken");
-        assertTrue(registry.isKToken(address(kBTC)), "kBTC not registered as kToken");
     }
 
     /// @dev Test vault registration

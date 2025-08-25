@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
-
 import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { kToken } from "src/kToken.sol";
 
 /// @title kRegistry
 /// @notice Central registry for KAM protocol contracts
@@ -20,9 +21,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     //////////////////////////////////////////////////////////////*/
 
     uint256 internal constant ADMIN_ROLE = _ROLE_0;
-    uint256 internal constant FACTORY_ROLE = _ROLE_1;
-    uint256 internal constant RELAYER_ROLE = _ROLE_2;
-    uint256 internal constant GUARDIAN_ROLE = _ROLE_3;
+    uint256 internal constant RELAYER_ROLE = _ROLE_1;
+    uint256 internal constant GUARDIAN_ROLE = _ROLE_2;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
@@ -52,8 +52,6 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         mapping(address => EnumerableSetLib.AddressSet) vaultsByAsset;
         mapping(bytes32 => address) singletonAssets;
         mapping(address => address) assetToKToken;
-        mapping(address => bool) isKToken;
-        mapping(address => address) kTokenToAsset;
         mapping(address => bool) isRegisteredAsset;
         EnumerableSetLib.AddressSet supportedAssets;
         mapping(address => EnumerableSetLib.AddressSet) vaultAdapters; // vault => adapter
@@ -116,27 +114,55 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
 
     /// @notice Register support for a new asset and its corresponding kToken
     /// @param asset Underlying asset address (e.g., USDC, WBTC)
-    /// @param kToken Corresponding kToken address (e.g., kUSD, kBTC)
     /// @dev Only callable by ADMIN_ROLE, establishes bidirectional mapping
-    function registerAsset(address asset, address kToken, bytes32 id) external onlyRoles(ADMIN_ROLE) {
-        if (asset == address(0) || kToken == address(0)) revert ZeroAddress();
-        kRegistryStorage storage $ = _getkRegistryStorage();
+    function registerAsset(
+        string memory name_,
+        string memory symbol_,
+        address asset,
+        bytes32 id
+    )
+        external
+        onlyRoles(ADMIN_ROLE)
+        returns (address)
+    {
+        if (asset == address(0)) revert ZeroAddress();
         if (id == bytes32(0)) revert ZeroAddress();
 
-        // Register asset
-        if (!$.isRegisteredAsset[asset]) {
-            $.isRegisteredAsset[asset] = true;
-            $.supportedAssets.add(asset);
-            $.singletonAssets[id] = asset;
-            emit AssetSupported(asset);
-        }
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        if ($.isRegisteredAsset[asset]) revert AlreadyRegistered();
+
+        address minter_ = getContractById(K_MINTER);
+        if (minter_ == address(0)) revert ZeroAddress();
+
+        address kToken_ = $.assetToKToken[asset];
+        if (kToken_ != address(0)) revert AlreadyRegistered();
+
+        uint8 decimals_ = IERC20Metadata(asset).decimals();
+        if (decimals_ == 0) decimals_ = 18;
+
+        kToken_ = address(
+            new kToken(
+                owner(),
+                msg.sender,
+                msg.sender, // adjust emergencyAdmin and metadata
+                minter_,
+                name_,
+                symbol_,
+                decimals_
+            )
+        );
+        emit KTokenDeployed(kToken_, name_, symbol_, decimals_);
+
+        $.isRegisteredAsset[asset] = true;
+        $.supportedAssets.add(asset);
+        $.singletonAssets[id] = asset;
+        emit AssetSupported(asset);
 
         // Register kToken
-        $.assetToKToken[asset] = kToken;
-        $.kTokenToAsset[kToken] = asset;
-        $.isKToken[kToken] = true;
+        $.assetToKToken[asset] = kToken_;
+        emit AssetRegistered(asset, kToken_);
 
-        emit KTokenRegistered(asset, kToken);
+        return kToken_;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -218,10 +244,10 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param id Contract identifier (e.g., K_MINTER, K_BATCH)
     /// @return Contract address
     /// @dev Reverts if contract not set
-    function getContractById(bytes32 id) external view returns (address) {
+    function getContractById(bytes32 id) public view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address addr = $.singletonContracts[id];
-        if (addr == address(0)) revert ContractNotSet();
+        if (addr == address(0)) revert ZeroAddress();
         return addr;
     }
 
@@ -232,7 +258,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     function getAssetById(bytes32 id) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address addr = $.singletonAssets[id];
-        if (addr == address(0)) revert ContractNotSet();
+        if (addr == address(0)) revert ZeroAddress();
         return addr;
     }
 
@@ -240,6 +266,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @return Array of supported asset addresses
     function getAllAssets() external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
+        if ($.supportedAssets.length() == 0) revert ZeroAddress();
         address[] memory assets = new address[]($.supportedAssets.length());
         for (uint256 i; i < $.supportedAssets.length();) {
             assets[i] = $.supportedAssets.at(i);
@@ -253,9 +280,14 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Get all core singleton contracts at once
     /// @return kMinter The kMinter contract address
     /// @return kAssetRouter The kAssetRouter contract address
-    function getCoreContracts() external view returns (address kMinter, address kAssetRouter) {
+    function getCoreContracts() external view returns (address, address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        return ($.singletonContracts[K_MINTER], $.singletonContracts[K_ASSET_ROUTER]);
+        address kMinter_ = $.singletonContracts[K_MINTER];
+        address kAssetRouter_ = $.singletonContracts[K_ASSET_ROUTER];
+        if (kMinter_ == address(0) || kAssetRouter_ == address(0)) {
+            revert ZeroAddress();
+        }
+        return (kMinter_, kAssetRouter_);
     }
 
     /// @notice Get all vaults registered for a specific asset
@@ -263,6 +295,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @return Array of vault addresses
     function getVaultsByAsset(address asset) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
+        if ($.vaultsByAsset[asset].values().length == 0) revert ZeroAddress();
         return $.vaultsByAsset[asset].values();
     }
 
@@ -273,7 +306,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @dev Reverts if vault not found
     function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        return $.assetToVault[asset][vaultType];
+        address assetToVault = $.assetToVault[asset][vaultType];
+        if (assetToVault == address(0)) revert ZeroAddress();
+        return assetToVault;
     }
 
     /// @notice Get the type of a vault
@@ -286,12 +321,14 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
 
     /// @notice Check if the caller is the relayer
     /// @return Whether the caller is the relayer
-    function isRelayer(address account) external view returns (bool) {
-        return hasAnyRole(account, RELAYER_ROLE);
+    function isRelayer(address user) external view returns (bool) {
+        return hasAnyRole(user, RELAYER_ROLE);
     }
 
-    function isGuardian(address account) external view returns (bool) {
-        return hasAnyRole(account, GUARDIAN_ROLE);
+    /// @notice Check if caller is the Guardian
+    /// @return Whether the caller is a Guardian
+    function isGuardian(address user) external view returns (bool) {
+        return hasAnyRole(user, GUARDIAN_ROLE);
     }
 
     /// @notice Check if an asset is supported
@@ -318,19 +355,12 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         return $.isSingletonContract[contractAddress];
     }
 
-    /// @notice Check if a kToken is registered
-    /// @param kToken KToken address
-    /// @return Whether the kToken is registered
-    function isKToken(address kToken) external view returns (bool) {
-        kRegistryStorage storage $ = _getkRegistryStorage();
-        return $.isKToken[kToken];
-    }
-
     /// @notice Get the adapter for a specific vault
     /// @param vault Vault address
     /// @return Adapter address (address(0) if none set)
     function getAdapters(address vault) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
+        if ($.vaultAdapters[vault].values().length == 0) revert ZeroAddress();
         return $.vaultAdapters[vault].values();
     }
 
@@ -347,6 +377,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @return Asset address that the vault manages
     function getVaultAssets(address vault) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
+        if ($.vaultAsset[vault].values().length == 0) revert ZeroAddress();
         return $.vaultAsset[vault].values();
     }
 
@@ -355,7 +386,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @return KToken address
     function assetToKToken(address asset) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        return $.assetToKToken[asset];
+        address assetToToken_ = $.assetToKToken[asset];
+        if (assetToToken_ == address(0)) revert ZeroAddress();
+        return assetToToken_;
     }
 
     /*//////////////////////////////////////////////////////////////

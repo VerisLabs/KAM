@@ -10,6 +10,9 @@ out/
 # Dotenv file
 .env
 
+# IDE
+.vscode
+
 # AI Extensions
 .cursorrules
 CLAUDE.md

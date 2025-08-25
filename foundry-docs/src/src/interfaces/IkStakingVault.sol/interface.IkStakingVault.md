@@ -1,5 +1,8 @@
 # IkStakingVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/dd71a4088db684fce979bc8cf7c38882ee6bb8a4/src/interfaces/IkStakingVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/interfaces/IkStakingVault.sol)
+
+**Inherits:**
+[IVaultBatch](/src/interfaces/modules/IVaultBatch.sol/interface.IVaultBatch.md), [IVaultClaim](/src/interfaces/modules/IVaultClaim.sol/interface.IVaultClaim.md), [IVaultFees](/src/interfaces/modules/IVaultFees.sol/interface.IVaultFees.md)
 
 Interface for kStakingVault that manages minter operations and user staking
 
@@ -21,20 +24,6 @@ function requestStake(address to, uint256 kTokensAmount) external payable return
 function requestUnstake(address to, uint256 stkTokenAmount) external payable returns (bytes32 requestId);
 ```
 
-### claimStakedShares
-
-
-```solidity
-function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable;
-```
-
-### claimUnstakedAssets
-
-
-```solidity
-function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable;
-```
-
 ### updateLastTotalAssets
 
 
@@ -42,25 +31,11 @@ function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payabl
 function updateLastTotalAssets(uint256 totalAssets) external;
 ```
 
-### createBatchReceiver
+### asset
 
 
 ```solidity
-function createBatchReceiver(bytes32 batchId) external returns (address);
-```
-
-### closeBatch
-
-
-```solidity
-function closeBatch(bytes32 _batchId, bool _create) external;
-```
-
-### settleBatch
-
-
-```solidity
-function settleBatch(bytes32 _batchId) external;
+function asset() external view returns (address);
 ```
 
 ### totalSupply
@@ -68,13 +43,6 @@ function settleBatch(bytes32 _batchId) external;
 
 ```solidity
 function totalSupply() external view returns (uint256);
-```
-
-### asset
-
-
-```solidity
-function asset() external view returns (address);
 ```
 
 ### underlyingAsset
@@ -110,6 +78,27 @@ function decimals() external view returns (uint8);
 
 ```solidity
 function calculateStkTokenPrice(uint256 totalAssets) external view returns (uint256);
+```
+
+### totalAssets
+
+
+```solidity
+function totalAssets() external view returns (uint256);
+```
+
+### totalNetAssets
+
+
+```solidity
+function totalNetAssets() external view returns (uint256);
+```
+
+### balanceOf
+
+
+```solidity
+function balanceOf(address account) external view returns (uint256);
 ```
 
 ### lastTotalAssets

@@ -24,18 +24,21 @@
         <link rel="stylesheet" href="../../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="../../highlight.css">
-        <link rel="stylesheet" href="../../tomorrow-night.css">
-        <link rel="stylesheet" href="../../ayu-highlight.css">
+        <link rel="stylesheet" id="highlight-css" href="../../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         <link rel="stylesheet" href="../../book.css">
 
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
-        <!-- Provide site root to javascript -->
+        <!-- Provide site root and default themes to javascript -->
         <script>
-            var path_to_root = "../../";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc.js"></script>
@@ -45,8 +48,8 @@
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                var theme = localStorage.getItem('mdbook-theme');
-                var sidebar = localStorage.getItem('mdbook-sidebar');
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -60,7 +63,8 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            var theme;
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
@@ -73,8 +77,8 @@
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var sidebar = null;
-            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -110,6 +114,7 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
@@ -157,7 +162,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="kminter"><a class="header" href="#kminter">kMinter</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/962a4adbf4eedc0a2cd6fb12eded69e348454133/src/kMinter.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kMinter.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="/src/interfaces/IkMinter.sol/interface.IkMinter.html">IkMinter</a>, Initializable, UUPSUpgradeable, <a href="/src/base/kBase.sol/contract.kBase.html">kBase</a>, <a href="/src/abstracts/Extsload.sol/abstract.Extsload.html">Extsload</a></p>
 <p>Institutional minting and redemption manager for kTokens</p>
@@ -336,6 +341,20 @@
 <tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>Request counter</td></tr>
 </tbody></table>
 </div>
+<h3 id="gettotallockedassets"><a class="header" href="#gettotallockedassets">getTotalLockedAssets</a></h3>
+<p>Get total locked assets for a specific asset</p>
+<pre><code class="language-solidity">function getTotalLockedAssets(address asset) external view returns (uint256);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>Asset address</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>Total locked assets</td></tr>
+</tbody></table>
+</div>
 <h3 id="_authorizeupgrade"><a class="header" href="#_authorizeupgrade">_authorizeUpgrade</a></h3>
 <p>Authorizes contract upgrades</p>
 <p><em>Only callable by ADMIN_ROLE</em></p>
@@ -373,6 +392,7 @@
 <p><strong>Note:</strong>
 storage-location: erc7201:kam.storage.kMinter</p>
 <pre><code class="language-solidity">struct kMinterStorage {
+    mapping(address =&gt; uint256) totalLockedAssets;
     uint64 requestCounter;
     mapping(bytes32 =&gt; RedeemRequest) redeemRequests;
     mapping(address =&gt; EnumerableSetLib.Bytes32Set) userRequests;
