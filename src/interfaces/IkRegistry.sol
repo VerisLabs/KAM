@@ -319,9 +319,12 @@ interface IkRegistry {
     function getVaultsByAsset(address asset) external view returns (address[] memory);
     function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address);
     function getVaultType(address vault) external view returns (uint8);
-    function isRelayer(address account) external view returns (bool);
-    function isGuardian(address account) external view returns (bool);
-    function isRegisteredAsset(address asset) external view returns (bool);
+    function isAdmin(address user) external view returns (bool);
+    function isEmergencyAdmin(address user) external view returns (bool);
+    function isGuardian(address user) external view returns (bool);
+    function isRelayer(address user) external view returns (bool);
+    function isInstitution(address user) external view returns (bool);
+    function isAsset(address asset) external view returns (bool);
     function isVault(address vault) external view returns (bool);
     function isSingletonContract(address contractAddress) external view returns (bool);
     function getAdapters(address vault) external view returns (address[] memory);

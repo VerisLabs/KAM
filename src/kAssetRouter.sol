@@ -53,20 +53,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     }
 
     /*//////////////////////////////////////////////////////////////
-                              MODIFIERS
-    //////////////////////////////////////////////////////////////*/
-
-    modifier whenNotPaused() {
-        if (_getBaseStorage().paused) revert ContractPaused();
-        _;
-    }
-
-    modifier onlyStakingVault() {
-        if (!_isVault(msg.sender)) revert OnlyStakingVault();
-        _;
-    }
-
-    /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -76,18 +62,13 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @notice Initialize the kAssetRouter with asset and admin configuration
     /// @param registry_ Address of the kRegistry contract
-    /// @param owner_ Address of the owner
-    /// @param admin_ Address of the admin
-    /// @param paused_ Initial pause state
-    function initialize(address registry_, address owner_, address admin_, address emergencyAdmin_, bool paused_) external initializer {
-        __kBase_init(registry_, owner_, admin_, paused_);
+    function initialize(address registry_) external initializer {
+        __kBase_init(registry_);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         $.vaultSettlementCooldown = DEFAULT_VAULT_SETTLEMENT_COOLDOWN;
 
-        _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);
-
-        emit Initialized(registry_, owner_, admin_, paused_);
+        emit ContractInitialized(registry_);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -106,16 +87,14 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         external
         payable
         nonReentrant
-        whenNotPaused
-        onlyKMinter
     {
-        if (amount == 0) revert ZeroAmount();
+        if(_isPaused()) revert IsPaused();
         address kMinter = msg.sender;
-
+        if(!_isKMinter(kMinter)) revert WrongRole();
+        if (amount == 0) revert ZeroAmount();
+        
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-
         $.vaultBatchBalances[kMinter][batchId].deposited += amount.toUint128();
-
         emit AssetsPushed(kMinter, amount);
     }
 
@@ -132,11 +111,11 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         external
         payable
         nonReentrant
-        whenNotPaused
-        onlyKMinter
     {
         if (amount == 0) revert ZeroAmount();
+        if(_isPaused()) revert IsPaused();
         address kMinter = msg.sender;
+        if(!_isKMinter(kMinter)) revert OnlyMinter();
         address vault = _getDNVaultByAsset(_asset);
         if (_virtualBalance(vault, _asset) < amount) {
             revert InsufficientVirtualBalance();
@@ -172,10 +151,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         external
         payable
         nonReentrant
-        whenNotPaused
-        onlyStakingVault
     {
         if (amount == 0) revert ZeroAmount();
+        if(_isPaused()) revert IsPaused();
+        if(!_isVault(msg.sender)) revert OnlyStakingVault();
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
@@ -208,10 +187,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         external
         payable
         nonReentrant
-        whenNotPaused
-        onlyStakingVault
     {
         if (amount == 0) revert ZeroAmount();
+        if(_isPaused()) revert IsPaused();
+        if(!_isVault(msg.sender)) revert OnlyStakingVault();
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
@@ -232,10 +211,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         external
         payable
         nonReentrant
-        whenNotPaused
-        onlyStakingVault
     {
         if (amount == 0) revert ZeroAmount();
+        if(_isPaused()) revert IsPaused();
+        if(!_isVault(msg.sender)) revert OnlyStakingVault();
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
@@ -269,19 +248,19 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         external
         payable
         nonReentrant
-        whenNotPaused
-        onlyRelayer
         returns (bytes32 proposalId)
     {
+        if(_isPaused()) revert IsPaused();
+        if(!_isRelayer(msg.sender)) revert WrongRole();
+
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
         // Generate unique proposal ID
         proposalId = keccak256(abi.encodePacked(vault, batchId, block.timestamp));
 
         // Check if proposal already exists
-        if ($.settlementProposals[proposalId].executeAfter != 0) {
-            revert("Proposal already exists");
-        }
+        if ($.settlementProposals[proposalId].executeAfter != 0) revert ProposalAlreadyExists();
+        
 
         uint256 executeAfter = block.timestamp + $.vaultSettlementCooldown;
 
@@ -304,7 +283,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @notice Execute a settlement proposal after cooldown period
     /// @param proposalId The proposal ID to execute
-    function executeSettleBatch(bytes32 proposalId) external nonReentrant whenNotPaused {
+    function executeSettleBatch(bytes32 proposalId) external nonReentrant {
+        if(_isPaused()) revert IsPaused();
+
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
@@ -327,7 +308,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @notice Cancel a settlement proposal before execution
     /// @param proposalId The proposal ID to cancel
-    function cancelProposal(bytes32 proposalId) external nonReentrant whenNotPaused onlyGuardian {
+    function cancelProposal(bytes32 proposalId) external nonReentrant {
+        if(_isPaused()) revert IsPaused();
+        if(!_isGuardian(msg.sender)) revert WrongRole();
+
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
@@ -357,9 +341,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     )
         external
         nonReentrant
-        whenNotPaused
-        onlyRelayer
     {
+        if(_isPaused()) revert IsPaused();
+        if(!_isRelayer(msg.sender)) revert WrongRole();
+
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
@@ -457,14 +442,17 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @notice Set contract pause state
     /// @param paused New pause state
-    function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
+    function setPaused(bool paused) external {
+        if(!_isEmergencyAdmin(msg.sender)) revert WrongRole();
+
         _setPaused(paused);
         emit Paused(paused);
     }
 
     /// @notice Set the cooldown period for settlement proposals
     /// @param cooldown New cooldown period in seconds
-    function setSettlementCooldown(uint256 cooldown) external onlyRoles(ADMIN_ROLE) {
+    function setSettlementCooldown(uint256 cooldown) external {
+        if(!_isAdmin(msg.sender)) revert WrongRole();
         if (cooldown > MAX_VAULT_SETTLEMENT_COOLDOWN) revert InvalidCooldown();
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
@@ -543,7 +531,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @notice Check if contract is paused
     /// @return True if paused
     function isPaused() external view returns (bool) {
-        return _getBaseStorage().paused;
+        return _isPaused();
     }
 
     /// @notice Gets the DN vault address for a given asset
@@ -588,7 +576,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @notice Authorize contract upgrade
     /// @param newImplementation New implementation address
-    function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE) {
+    function _authorizeUpgrade(address newImplementation) internal view override {
+        if(!_isAdmin(msg.sender)) revert WrongRole();
         if (newImplementation == address(0)) revert ZeroAddress();
     }
 

@@ -188,13 +188,13 @@ function _getDNVaultByAsset(address asset_) internal view returns (address vault
 |`vault`|`address`|The corresponding DN vault address|
 
 
-### _getRelayer
+### _isRelayer
 
 Checks if an account has relayer role
 
 
 ```solidity
-function _getRelayer(address account) internal view returns (bool);
+function _isRelayer(address account) internal view returns (bool);
 ```
 **Parameters**
 

@@ -361,13 +361,13 @@ function isGuardian(address user) external view returns (bool);
 |`<none>`|`bool`|Whether the caller is a Guardian|
 
 
-### isRegisteredAsset
+### isAsset
 
 Check if an asset is supported
 
 
 ```solidity
-function isRegisteredAsset(address asset) external view returns (bool);
+function isAsset(address asset) external view returns (bool);
 ```
 **Parameters**
 
@@ -582,7 +582,7 @@ struct kRegistryStorage {
     mapping(address => EnumerableSetLib.AddressSet) vaultsByAsset;
     mapping(bytes32 => address) singletonAssets;
     mapping(address => address) assetToKToken;
-    mapping(address => bool) isRegisteredAsset;
+    mapping(address => bool) isAsset;
     EnumerableSetLib.AddressSet supportedAssets;
     mapping(address => EnumerableSetLib.AddressSet) vaultAdapters;
     mapping(address => bool) registeredAdapters;

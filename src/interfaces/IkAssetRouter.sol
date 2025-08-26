@@ -29,7 +29,7 @@ interface IkAssetRouter {
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event Initialized(address indexed registry, address indexed owner, address admin, bool paused);
+    event ContractInitialized(address indexed registry);
     event AssetsPushed(address indexed from, uint256 amount);
     event AssetsRequestPulled(
         address indexed vault, address indexed asset, address indexed batchReceiver, uint256 amount
@@ -79,12 +79,12 @@ interface IkAssetRouter {
     error ZeroAmount();
     error InsufficientVirtualBalance();
     error ContractPaused();
-    error OnlyStakingVault();
     error ProposalNotFound();
     error ProposalAlreadyExecuted();
     error ProposalCancelled();
     error CooldownNotPassed();
     error InvalidCooldown();
+    error ProposalAlreadyExists();
 
     /*//////////////////////////////////////////////////////////////
                             KMINTER FUNCTIONS

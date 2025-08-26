@@ -56,20 +56,11 @@ contract kAssetRouterTest is DeploymentBaseTest {
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Test contract initialization state
-    function test_InitialState() public view {
-        // Check basic properties
+    function test_InitialState() public view {    
         assertEq(assetRouter.contractName(), "kAssetRouter", "Contract name incorrect");
         assertEq(assetRouter.contractVersion(), "1.0.0", "Contract version incorrect");
-
-        // Check initialization parameters
-        assertEq(assetRouter.owner(), users.owner, "Owner not set correctly");
-        assertTrue(assetRouter.hasAnyRole(users.admin, ADMIN_ROLE), "Admin role not granted");
         assertFalse(assetRouter.isPaused(), "Should be unpaused initially");
-
-        // Check registry integration
         assertEq(address(assetRouter.registry()), address(registry), "Registry not set correctly");
-
-        // Check default cooldown (should be set to 1 in setUp)
         assertEq(assetRouter.getSettlementCooldown(), 1, "Settlement cooldown not set correctly");
     }
 
@@ -79,14 +70,12 @@ contract kAssetRouterTest is DeploymentBaseTest {
         kAssetRouter newAssetRouterImpl = new kAssetRouter();
 
         bytes memory initData =
-            abi.encodeWithSelector(kAssetRouter.initialize.selector, address(registry), users.owner, users.admin, users.emergencyAdmin, false);
+            abi.encodeWithSelector(kAssetRouter.initialize.selector, address(registry));
 
         ERC1967Factory factory = new ERC1967Factory();
         address newProxy = factory.deployAndCall(address(newAssetRouterImpl), users.admin, initData);
 
         kAssetRouter newRouter = kAssetRouter(payable(newProxy));
-        assertEq(newRouter.owner(), users.owner, "Owner not set");
-        assertTrue(newRouter.hasAnyRole(users.admin, ADMIN_ROLE), "Admin role not granted");
         assertFalse(newRouter.isPaused(), "Should be unpaused");
 
         // Check default cooldown is set
@@ -99,11 +88,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
         bytes memory initData = abi.encodeWithSelector(
             kAssetRouter.initialize.selector,
-            address(0), // zero registry
-            users.owner,
-            users.admin,
-            users.emergencyAdmin,
-            false
+            address(0)
         );
 
         ERC1967Factory factory = new ERC1967Factory();
@@ -114,7 +99,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     /// @dev Test double initialization reverts
     function test_Initialize_RevertDoubleInit() public {
         vm.expectRevert();
-        assetRouter.initialize(address(registry), users.owner, users.admin, users.emergencyAdmin, false);
+        assetRouter.initialize(address(registry));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -207,7 +192,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     /// @dev Test asset transfer reverts when called by non-staking vault
     function test_KAssetTransfer_OnlyStakingVault() public {
         vm.prank(users.alice);
-        vm.expectRevert(IkAssetRouter.OnlyStakingVault.selector);
+        vm.expectRevert(kBase.OnlyStakingVault.selector);
         assetRouter.kAssetTransfer(address(alphaVault), address(betaVault), USDC_MAINNET, TEST_AMOUNT, TEST_BATCH_ID);
     }
 

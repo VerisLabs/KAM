@@ -176,10 +176,11 @@ contract DeploymentBaseTest is BaseTest {
         // Deploy proxy with initialization
         bytes memory initData = abi.encodeWithSelector(
             kRegistry.initialize.selector,
-            users.owner, // owner
-            users.admin, // admin
-            users.relayer, // relayer (using relayer for now)
-            users.guardian
+            users.owner, 
+            users.admin, 
+            users.emergencyAdmin,
+            users.guardian,
+            users.relayer
         );
 
         address registryProxy = factory.deployAndCall(address(registryImpl), users.admin, initData);
@@ -198,11 +199,7 @@ contract DeploymentBaseTest is BaseTest {
         // Deploy proxy with initialization
         bytes memory initData = abi.encodeWithSelector(
             kAssetRouter.initialize.selector,
-            address(registry),
-            users.owner, 
-            users.admin, 
-            users.emergencyAdmin,
-            false // not paused
+            address(registry)
         );
 
         address assetRouterProxy = factory.deployAndCall(address(assetRouterImpl), users.admin, initData);
@@ -241,10 +238,7 @@ contract DeploymentBaseTest is BaseTest {
         // Deploy proxy with initialization
         bytes memory initData = abi.encodeWithSelector(
             kMinter.initialize.selector,
-            address(registry), // registry
-            users.owner, // owner
-            users.admin, // admin
-            users.emergencyAdmin // emergency admin
+            address(registry)
         );
 
         address minterProxy = factory.deployAndCall(address(minterImpl), users.admin, initData);
@@ -296,15 +290,15 @@ contract DeploymentBaseTest is BaseTest {
         // Deploy proxy with initialization
         bytes memory initData = abi.encodeWithSelector(
             kStakingVault.initialize.selector,
-            address(registry), // registry
-            users.owner, // owner
-            users.admin, // admin
-            false, // not paused initially
-            name, // vault name
-            symbol, // vault symbol
-            6, // decimals (matching USDC)
-            DEFAULT_DUST_AMOUNT, // dust amount
-            users.emergencyAdmin, // emergency admin
+            address(registry), 
+            users.owner, 
+            users.admin,
+            false, // paused
+            name,
+            symbol,
+            6, // decimals
+            DEFAULT_DUST_AMOUNT, 
+            users.emergencyAdmin,
             asset // underlying asset (USDC for now)
         );
 
@@ -436,11 +430,8 @@ contract DeploymentBaseTest is BaseTest {
         // Note: Staking vaults do NOT mint kTokens - they accept existing kTokens from users
         // and mint their own stkTokens. kMinter handles institutional flows, kAssetRouter handles yield.
 
-        vm.stopPrank();
+        registry.grantRoles(users.institution, INSTITUTION_ROLE);
 
-        // Grant INSTITUTION_ROLE to test institution (requires owner for kMinter)
-        vm.startPrank(users.owner);
-        minter.grantRoles(users.institution, INSTITUTION_ROLE);
         vm.stopPrank();
     }
 
@@ -536,8 +527,8 @@ contract DeploymentBaseTest is BaseTest {
         assertEq(registry.getContractById(registry.K_MINTER()), address(minter));
 
         // Check assets are registered
-        assertTrue(registry.isRegisteredAsset(USDC_MAINNET));
-        assertTrue(registry.isRegisteredAsset(WBTC_MAINNET));
+        assertTrue(registry.isAsset(USDC_MAINNET));
+        assertTrue(registry.isAsset(WBTC_MAINNET));
 
         // Check kTokens are registered
         assertEq(registry.assetToKToken(USDC_MAINNET), address(kUSD));

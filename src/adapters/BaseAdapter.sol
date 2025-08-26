@@ -124,7 +124,7 @@ contract BaseAdapter is OwnableRoles, ReentrancyGuardTransient {
 
     /// @notice Checks if an address is a relayer
     /// @return Whether the address is a relayer
-    function _getRelayer() internal view returns (bool) {
+    function _isRelayer() internal view returns (bool) {
         return _registry().isRelayer(msg.sender);
     }
 
@@ -183,7 +183,7 @@ contract BaseAdapter is OwnableRoles, ReentrancyGuardTransient {
 
     /// @notice Restricts function access to the relayer
     modifier onlyRelayer() {
-        if (!_getRelayer()) revert OnlyKAssetRouter(); // Reuse error for simplicity
+        if (!_isRelayer()) revert OnlyKAssetRouter(); // Reuse error for simplicity
         _;
     }
 

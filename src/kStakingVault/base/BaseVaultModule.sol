@@ -225,7 +225,7 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     /// @notice Checks if an account has relayer role
     /// @param account The account to check
     /// @return Whether the account has relayer role
-    function _getRelayer(address account) internal view returns (bool) {
+    function _isRelayer(address account) internal view returns (bool) {
         return _registry().isRelayer(account);
     }
 
@@ -340,7 +340,7 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     /// @notice Restricts function access to the relayer
     /// @dev Only callable internally by inheriting contracts
     modifier onlyRelayer() {
-        if (!_getRelayer(msg.sender)) revert OnlyRelayer();
+        if (!_isRelayer(msg.sender)) revert OnlyRelayer();
         _;
     }
 }

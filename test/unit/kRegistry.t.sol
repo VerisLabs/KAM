@@ -106,7 +106,7 @@ contract kRegistryTest is DeploymentBaseTest {
         address testKToken = registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
 
         // Verify asset registration
-        assertTrue(registry.isRegisteredAsset(TEST_ASSET), "Asset not registered");
+        assertTrue(registry.isAsset(TEST_ASSET), "Asset not registered");
         assertEq(registry.getAssetById(TEST_ASSET_ID), TEST_ASSET, "Asset ID mapping incorrect");
 
         assertEq(registry.assetToKToken(TEST_ASSET), testKToken, "Asset->kToken mapping incorrect");
@@ -442,7 +442,7 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.stopPrank();
 
         // Step 3: Verify complete registration
-        assertTrue(registry.isRegisteredAsset(TEST_ASSET), "Asset should be registered");
+        assertTrue(registry.isAsset(TEST_ASSET), "Asset should be registered");
         assertTrue(registry.isVault(TEST_VAULT), "Vault should be registered");
 
         // Step 4: Verify relationships

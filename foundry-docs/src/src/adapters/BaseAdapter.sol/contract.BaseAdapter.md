@@ -110,13 +110,13 @@ function _getKAssetRouter() internal view returns (address router);
 |`router`|`address`|The kAssetRouter contract address|
 
 
-### _getRelayer
+### _isRelayer
 
 Checks if an address is a relayer
 
 
 ```solidity
-function _getRelayer() internal view returns (bool);
+function _isRelayer() internal view returns (bool);
 ```
 **Returns**
 

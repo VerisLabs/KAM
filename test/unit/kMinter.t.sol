@@ -38,19 +38,10 @@ contract kMinterTest is DeploymentBaseTest {
 
     /// @dev Test contract initialization state
     function test_InitialState() public view {
-        // Check basic properties
         assertEq(minter.contractName(), "kMinter", "Contract name incorrect");
         assertEq(minter.contractVersion(), "1.0.0", "Contract version incorrect");
-
-        // Check initialization parameters
-        assertEq(minter.owner(), users.owner, "Owner not set correctly");
-        assertTrue(minter.hasAnyRole(users.admin, ADMIN_ROLE), "Admin role not granted");
         assertFalse(minter.isPaused(), "Should be unpaused initially");
-
-        // Check registry integration
         assertEq(address(minter.registry()), address(registry), "Registry not set correctly");
-
-        // Check initial request counter
         assertEq(minter.getRequestCounter(), 0, "Request counter should be zero initially");
     }
 
@@ -60,15 +51,12 @@ contract kMinterTest is DeploymentBaseTest {
         kMinter newMinterImpl = new kMinter();
 
         bytes memory initData = abi.encodeWithSelector(
-            kMinter.initialize.selector, address(registry), users.owner, users.admin, users.emergencyAdmin
-        );
+            kMinter.initialize.selector, address(registry));
 
         ERC1967Factory factory = new ERC1967Factory();
         address newProxy = factory.deployAndCall(address(newMinterImpl), users.admin, initData);
 
         kMinter newMinter = kMinter(payable(newProxy));
-        assertEq(newMinter.owner(), users.owner, "Owner not set");
-        assertTrue(newMinter.hasAnyRole(users.admin, ADMIN_ROLE), "Admin role not granted");
         assertFalse(newMinter.isPaused(), "Should be unpaused");
     }
 
@@ -78,10 +66,7 @@ contract kMinterTest is DeploymentBaseTest {
 
         bytes memory initData = abi.encodeWithSelector(
             kMinter.initialize.selector,
-            address(0), // zero registry
-            users.owner,
-            users.admin,
-            users.emergencyAdmin
+            address(0)
         );
 
         ERC1967Factory factory = new ERC1967Factory();
@@ -92,7 +77,7 @@ contract kMinterTest is DeploymentBaseTest {
     /// @dev Test double initialization reverts
     function test_Initialize_RevertDoubleInit() public {
         vm.expectRevert();
-        minter.initialize(address(registry), users.owner, users.admin, users.emergencyAdmin);
+        minter.initialize(address(registry));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -132,11 +117,11 @@ contract kMinterTest is DeploymentBaseTest {
     }
 
     /// @dev Test mint requires institution role
-    function test_Mint_OnlyInstitution() public {
+    function test_Mint_WrongRole() public {
         uint256 amount = TEST_AMOUNT;
 
         vm.prank(users.alice);
-        vm.expectRevert(IkMinter.OnlyInstitution.selector);
+        vm.expectRevert(kBase.WrongRole.selector);
         minter.mint(USDC_MAINNET, users.alice, amount);
     }
 
@@ -210,9 +195,9 @@ contract kMinterTest is DeploymentBaseTest {
     }
 
     /// @dev Test redemption request requires institution role
-    function test_RequestRedeem_OnlyInstitution() public {
+    function test_RequestRedeem_WrongRole() public {
         vm.prank(users.alice);
-        vm.expectRevert(IkMinter.OnlyInstitution.selector);
+        vm.expectRevert(kBase.WrongRole.selector);
         minter.requestRedeem(USDC_MAINNET, users.alice, TEST_AMOUNT);
     }
 
@@ -272,11 +257,11 @@ contract kMinterTest is DeploymentBaseTest {
     }
 
     /// @dev Test redemption requires institution role
-    function test_Redeem_OnlyInstitution() public {
+    function test_Redeem_WrongRole() public {
         bytes32 requestId = keccak256("test");
 
         vm.prank(users.alice);
-        vm.expectRevert(IkMinter.OnlyInstitution.selector);
+        vm.expectRevert(kBase.WrongRole.selector);
         minter.redeem(requestId);
     }
 
@@ -307,11 +292,11 @@ contract kMinterTest is DeploymentBaseTest {
     }
 
     /// @dev Test cancel request requires institution role
-    function test_CancelRequest_OnlyInstitution() public {
+    function test_CancelRequest_WrongRole() public {
         bytes32 requestId = keccak256("test");
 
         vm.prank(users.alice);
-        vm.expectRevert(IkMinter.OnlyInstitution.selector);
+        vm.expectRevert(kBase.WrongRole.selector);
         minter.cancelRequest(requestId);
     }
 

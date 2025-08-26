@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
@@ -9,14 +8,7 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 /// @title kBase
 /// @notice Base contract providing common functionality for all KAM protocol contracts
 /// @dev Includes registry integration, role management, pause functionality, and helper methods
-contract kBase is OwnableRoles, ReentrancyGuardTransient {
-    /*//////////////////////////////////////////////////////////////
-                                ROLES
-    //////////////////////////////////////////////////////////////*/
-
-    uint256 internal constant ADMIN_ROLE = _ROLE_0;
-    uint256 internal constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
-
+contract kBase is ReentrancyGuardTransient {
     /*//////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -37,12 +29,16 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     error ZeroAddress();
     error InvalidRegistry();
     error NotInitialized();
+    error AlreadyInitialized();
     error ContractNotFound(bytes32 identifier);
     error AssetNotSupported(address asset);
     error InvalidVault(address vault);
-    error OnlyKMinter();
-    error OnlyGuardian();
-    error OnlyRelayer();
+    error IsPaused();
+    error IsNotAdmin();
+    error WrongRole();
+    error WrongAsset();
+    error OnlyMinter();
+    error OnlyStakingVault();
 
     /*//////////////////////////////////////////////////////////////
                         STORAGE LAYOUT
@@ -76,23 +72,16 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
 
     /// @notice Initializes the base contract with registry and pause state
     /// @param registry_ Address of the kRegistry contract
-    /// @param paused_ Initial pause state
     /// @dev Can only be called once during initialization
-    function __kBase_init(address registry_, address owner_, address admin_, bool paused_) internal {
+    function __kBase_init(address registry_) internal {
         kBaseStorage storage $ = _getBaseStorage();
 
         if ($.initialized) revert AlreadyInitialized();
         if (registry_ == address(0)) revert InvalidRegistry();
 
-        if (owner_ == address(0)) revert ZeroAddress();
-        if (admin_ == address(0)) revert ZeroAddress();
-
         $.registry = registry_;
-        $.paused = paused_;
+        $.paused = false;
         $.initialized = true;
-
-        _initializeOwner(owner_);
-        _grantRoles(admin_, ADMIN_ROLE);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -135,16 +124,66 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
         if (router == address(0)) revert ContractNotFound(K_ASSET_ROUTER);
     }
 
-    /// @notice Checks if an address is a relayer
-    /// @return Whether the address is a relayer
-    function _getRelayer() internal view returns (bool) {
-        return _registry().isRelayer(msg.sender);
+    /// @notice Checks if an address is a admin
+    /// @return Whether the address is a admin
+    function _isAdmin(address user) internal view returns (bool) {
+        return _registry().isAdmin(user);
     }
 
+    /// @notice Checks if an address is a emergencyAdmin
+    /// @return Whether the address is a emergencyAdmin
+    function _isEmergencyAdmin(address user) internal view returns (bool) {
+        return _registry().isEmergencyAdmin(user);
+    }
+    
     /// @notice Checks if an address is a guardian
     /// @return Whether the address is a guardian
-    function _getGuardian() internal view returns (bool) {
-        return _registry().isGuardian(msg.sender);
+    function _isGuardian(address user) internal view returns (bool) {
+        return _registry().isGuardian(user);
+    }
+
+    /// @notice Checks if an address is a relayer
+    /// @return Whether the address is a relayer
+    function _isRelayer(address user) internal view returns (bool) {
+        return _registry().isRelayer(user);
+    }
+
+    /// @notice Checks if an address is a institution
+    /// @return Whether the address is a institution
+    function _isInstitution(address user) internal view returns (bool) {
+        return _registry().isInstitution(user);
+    }
+
+    /// @notice Checks if an address is a institution
+    /// @return Whether the address is a institution
+    function _isPaused() internal view returns (bool) {
+        kBaseStorage storage $ = _getBaseStorage();
+        if (!$.initialized) revert NotInitialized();
+        return $.paused;
+    }
+
+    /// @notice Gets the kMinter singleton contract address
+    /// @return minter The kMinter contract address
+    /// @dev Reverts if kMinter not set in registry
+    function _isKMinter(address user) internal view returns (bool) {
+        bool isTrue;
+        address _kminter = _registry().getContractById(K_MINTER);
+        if (_kminter == user) isTrue = true;
+        return isTrue;
+    }
+
+    /// @notice Checks if an address is a registered vault
+    /// @param vault The address to check
+    /// @return Whether the address is a registered vault
+    function _isVault(address vault) internal view returns (bool) {
+        return _registry().isVault(vault);
+    }
+
+    /// @notice Checks if an asset is registered
+    /// @param asset The asset address to check
+    /// @return Whether the asset is registered
+    function _isAsset(address asset) internal view returns (bool) {
+        return _registry().isAsset(asset);
     }
 
     /// @notice Gets the current batch ID for a given vault
@@ -153,6 +192,16 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /// @dev Reverts if vault not registered
     function _getBatchId(address vault) internal view returns (bytes32 batchId) {
         return IkStakingVault(vault).getBatchId();
+    }
+
+    /// @notice Gets the current batch ID for a given vault
+    /// @param vault_ The vault address
+    /// @return batchId_ The current batch ID
+    /// @dev Reverts if vault not registered
+    function _getBatchReceiver(address vault_, bytes32 batchId_) internal view returns (address) {
+        address addr = IkStakingVault(vault_).getBatchReceiver(batchId_);
+        if (addr == address(0)) revert ZeroAddress();
+        return addr;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -172,7 +221,7 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
     /// @param asset The asset address to check
     /// @return Whether the asset is supported
     function _isAssetRegistered(address asset) internal view returns (bool) {
-        return _registry().isRegisteredAsset(asset);
+        return _registry().isAsset(asset);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -197,20 +246,6 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
         if (vault == address(0)) revert InvalidVault(vault);
     }
 
-    /// @notice Checks if an address is a registered vault
-    /// @param vault The address to check
-    /// @return Whether the address is a registered vault
-    function _isVault(address vault) internal view returns (bool) {
-        return _registry().isVault(vault);
-    }
-
-    /// @notice Checks if an asset is registered
-    /// @param asset The asset address to check
-    /// @return Whether the asset is registered
-    function _isRegisteredAsset(address asset) internal view returns (bool) {
-        return _registry().isRegisteredAsset(asset);
-    }
-
     /// @notice Sets the pause state of the contract
     /// @param paused_ New pause state
     /// @dev Only callable internally by inheriting contracts
@@ -219,36 +254,5 @@ contract kBase is OwnableRoles, ReentrancyGuardTransient {
         if (!$.initialized) revert NotInitialized();
         $.paused = paused_;
         emit Paused(paused_);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                          MODIFIERS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Restricts function access to the kMinter contract
-    modifier onlyKMinter() {
-        if (msg.sender != _getKMinter()) revert OnlyKMinter();
-        _;
-    }
-
-    /// @notice Restricts function access to the relayer
-    /// @dev Only callable internally by inheriting contracts
-    modifier onlyRelayer() {
-        if (!_getRelayer()) revert OnlyRelayer();
-        _;
-    }
-
-    /// @notice Restricts function access to the guardian
-    /// @dev Only callable internally by inheriting contracts
-    modifier onlyGuardian() {
-        if (!_getGuardian()) revert OnlyGuardian();
-        _;
-    }
-
-    /// @notice Ensures the asset is supported by the protocol
-    /// @param asset The asset address to validate
-    modifier onlyRegisteredAsset(address asset) {
-        if (!_isAssetRegistered(asset)) revert AssetNotSupported(asset);
-        _;
     }
 }

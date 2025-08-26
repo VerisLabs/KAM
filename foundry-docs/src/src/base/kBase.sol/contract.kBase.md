@@ -149,13 +149,13 @@ function _getKAssetRouter() internal view returns (address router);
 |`router`|`address`|The kAssetRouter contract address|
 
 
-### _getRelayer
+### _isRelayer
 
 Checks if an address is a relayer
 
 
 ```solidity
-function _getRelayer() internal view returns (bool);
+function _isRelayer() internal view returns (bool);
 ```
 **Returns**
 
@@ -164,13 +164,13 @@ function _getRelayer() internal view returns (bool);
 |`<none>`|`bool`|Whether the address is a relayer|
 
 
-### _getGuardian
+### _isGuardian
 
 Checks if an address is a guardian
 
 
 ```solidity
-function _getGuardian() internal view returns (bool);
+function _isGuardian() internal view returns (bool);
 ```
 **Returns**
 
@@ -313,13 +313,13 @@ function _isVault(address vault) internal view returns (bool);
 |`<none>`|`bool`|Whether the address is a registered vault|
 
 
-### _isRegisteredAsset
+### _isAsset
 
 Checks if an asset is registered
 
 
 ```solidity
-function _isRegisteredAsset(address asset) internal view returns (bool);
+function _isAsset(address asset) internal view returns (bool);
 ```
 **Parameters**
 

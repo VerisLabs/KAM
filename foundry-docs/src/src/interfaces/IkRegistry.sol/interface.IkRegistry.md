@@ -101,11 +101,11 @@ function isRelayer(address account) external view returns (bool);
 function isGuardian(address account) external view returns (bool);
 ```
 
-### isRegisteredAsset
+### isAsset
 
 
 ```solidity
-function isRegisteredAsset(address asset) external view returns (bool);
+function isAsset(address asset) external view returns (bool);
 ```
 
 ### isVault

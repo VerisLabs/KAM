@@ -99,11 +99,11 @@ contract DeploymentTest is DeploymentBaseTest {
     /// @dev Test asset registration
     function test_AssetRegistration() public {
         // Check USDC registration
-        assertTrue(registry.isRegisteredAsset(USDC_MAINNET), "USDC not registered");
+        assertTrue(registry.isAsset(USDC_MAINNET), "USDC not registered");
         assertEq(registry.assetToKToken(USDC_MAINNET), address(kUSD), "USDC->kUSD mapping incorrect");
 
         // Check WBTC registration
-        assertTrue(registry.isRegisteredAsset(WBTC_MAINNET), "WBTC not registered");
+        assertTrue(registry.isAsset(WBTC_MAINNET), "WBTC not registered");
         assertEq(registry.assetToKToken(WBTC_MAINNET), address(kBTC), "WBTC->kBTC mapping incorrect");
     }
 
@@ -166,10 +166,8 @@ contract DeploymentTest is DeploymentBaseTest {
     function test_ContractOwnership() public {
         // Check owners
         assertEq(registry.owner(), users.owner, "Registry owner incorrect");
-        assertEq(assetRouter.owner(), users.owner, "AssetRouter owner incorrect");
         assertEq(kUSD.owner(), users.owner, "kUSD owner incorrect");
         assertEq(kBTC.owner(), users.owner, "kBTC owner incorrect");
-        assertEq(minter.owner(), users.owner, "Minter owner incorrect");
         assertEq(dnVault.owner(), users.owner, "DN Vault owner incorrect");
         assertEq(alphaVault.owner(), users.owner, "Alpha Vault owner incorrect");
         assertEq(betaVault.owner(), users.owner, "Beta Vault owner incorrect");

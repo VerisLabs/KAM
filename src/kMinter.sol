@@ -26,12 +26,6 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
 
     /*//////////////////////////////////////////////////////////////
-                                ROLES
-    //////////////////////////////////////////////////////////////*/
-
-    uint256 internal constant INSTITUTION_ROLE = _ROLE_3;
-
-    /*//////////////////////////////////////////////////////////////
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
@@ -54,22 +48,6 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     }
 
     /*//////////////////////////////////////////////////////////////
-                                MODIFIERS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Ensures function cannot be called when contract is paused
-    modifier whenNotPaused() {
-        if (_getBaseStorage().paused) revert ContractPaused();
-        _;
-    }
-
-    /// @notice Ensures function can only be called by an institution
-    modifier onlyInstitution() {
-        if (!hasAnyRole(msg.sender, INSTITUTION_ROLE)) revert OnlyInstitution();
-        _;
-    }
-
-    /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -80,28 +58,15 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
     /// @notice Initializes the kMinter contract
     /// @param registry_ Address of the registry contract
-    /// @param owner_ Address of the owner
-    /// @param admin_ Address of the admin
-    /// @param emergencyAdmin_ Address of the emergency admin
     function initialize(
-        address registry_,
-        address owner_,
-        address admin_,
-        address emergencyAdmin_
+        address registry_
     )
         external
         initializer
     {
         if (registry_ == address(0)) revert ZeroAddress();
-        if (owner_ == address(0)) revert ZeroAddress();
-        if (admin_ == address(0)) revert ZeroAddress();
-        if (emergencyAdmin_ == address(0)) revert ZeroAddress();
-
-        // Initialize ownership and roles
-        __kBase_init(registry_, owner_, admin_, false);
-        _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);
-
-        emit Initialized(registry_, owner_, admin_, emergencyAdmin_);
+        __kBase_init(registry_);
+        emit ContractInitialized(registry_);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -121,13 +86,13 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         external
         payable
         nonReentrant
-        whenNotPaused
-        onlyInstitution
-        onlyRegisteredAsset(asset_)
     {
+        if(_isPaused()) revert IsPaused();
+        if(!_isInstitution(msg.sender)) revert WrongRole();
+        if(!_isAsset(asset_)) revert WrongAsset();
+
         if (amount_ == 0) revert ZeroAmount();
         if (to_ == address(0)) revert ZeroAddress();
-        if (!_isRegisteredAsset(asset_)) revert InvalidAsset();
 
         address kToken = _getKTokenForAsset(asset_);
         address dnVault = _getDNVaultByAsset(asset_);
@@ -162,15 +127,15 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         external
         payable
         nonReentrant
-        whenNotPaused
-        onlyInstitution
-        onlyRegisteredAsset(asset_)
         returns (bytes32 requestId)
     {
+        if(_isPaused()) revert IsPaused();
+        if(!_isInstitution(msg.sender)) revert WrongRole();
+        if(!_isAsset(asset_)) revert WrongAsset();
+
         if (amount_ == 0) revert ZeroAmount();
         if (to_ == address(0)) revert ZeroAddress();
-        if (!_isRegisteredAsset(asset_)) revert InvalidAsset();
-
+        
         address kToken = _getKTokenForAsset(asset_);
         if (kToken.balanceOf(msg.sender) < amount_) revert InsufficientBalance();
 
@@ -207,7 +172,10 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
     /// @notice Executes redemption for a request in a settled batch
     /// @param requestId Request ID to execute
-    function redeem(bytes32 requestId) external payable nonReentrant whenNotPaused onlyInstitution {
+    function redeem(bytes32 requestId) external payable nonReentrant {
+        if(_isPaused()) revert IsPaused();
+        if(!_isInstitution(msg.sender)) revert WrongRole();
+
         kMinterStorage storage $ = _getkMinterStorage();
         RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
 
@@ -221,7 +189,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         redeemRequest.status = RequestStatus.REDEEMED;
 
         address vault = _getDNVaultByAsset(redeemRequest.asset);
-        address batchReceiver = IkStakingVault(vault).getBatchReceiver(redeemRequest.batchId);
+        address batchReceiver = _getBatchReceiver(vault, redeemRequest.batchId);
         if (batchReceiver == address(0)) revert ZeroAddress();
 
         // Burn kTokens
@@ -240,7 +208,10 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
     /// @notice Cancels a redemption request before batch settlement
     /// @param requestId Request ID to cancel
-    function cancelRequest(bytes32 requestId) external payable nonReentrant whenNotPaused onlyInstitution {
+    function cancelRequest(bytes32 requestId) external payable nonReentrant {
+        if(_isPaused()) revert IsPaused();
+        if(!_isInstitution(msg.sender)) revert WrongRole();
+        
         kMinterStorage storage $ = _getkMinterStorage();
         RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
 
@@ -285,7 +256,8 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
     /// @notice Set contract pause state
     /// @param paused New pause state
-    function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
+    function setPaused(bool paused) external {
+        if(!_isEmergencyAdmin(msg.sender)) revert WrongRole();
         _setPaused(paused);
     }
 
@@ -337,7 +309,8 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @notice Authorizes contract upgrades
     /// @dev Only callable by ADMIN_ROLE
     /// @param newImplementation New implementation address
-    function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE) {
+    function _authorizeUpgrade(address newImplementation) internal view override {
+        if(!_isAdmin(msg.sender)) revert WrongRole();
         if (newImplementation == address(0)) revert ZeroAddress();
     }
 

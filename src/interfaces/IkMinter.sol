@@ -29,7 +29,7 @@ interface IkMinter {
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event Initialized(address indexed registry, address indexed owner, address admin, address emergencyAdmin);
+    event ContractInitialized(address indexed registry);
     event Minted(address indexed to, uint256 amount, bytes32 batchId);
     event RedeemRequestCreated(
         bytes32 indexed requestId,
@@ -52,7 +52,6 @@ interface IkMinter {
     error RequestNotFound();
     error RequestNotEligible();
     error RequestAlreadyProcessed();
-    error OnlyInstitution();
     error BatchClosed();
     error BatchSettled();
     error ContractPaused();
