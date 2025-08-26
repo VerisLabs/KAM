@@ -14,7 +14,7 @@ import {
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { LibClone } from "solady/utils/LibClone.sol";
+import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 import { kBase } from "src/base/kBase.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
@@ -24,7 +24,6 @@ import { kAssetRouter } from "src/kAssetRouter.sol";
 /// @title kAssetRouterTest
 /// @notice Comprehensive unit tests for kAssetRouter contract with timelock settlement
 contract kAssetRouterTest is DeploymentBaseTest {
-    using LibClone for address;
 
     // Test constants
     bytes32 internal constant TEST_BATCH_ID = bytes32(uint256(1));
@@ -80,12 +79,10 @@ contract kAssetRouterTest is DeploymentBaseTest {
         kAssetRouter newAssetRouterImpl = new kAssetRouter();
 
         bytes memory initData =
-            abi.encodeWithSelector(kAssetRouter.initialize.selector, address(registry), users.owner, users.admin, false);
+            abi.encodeWithSelector(kAssetRouter.initialize.selector, address(registry), users.owner, users.admin, users.emergencyAdmin, false);
 
-        address newProxy = address(newAssetRouterImpl).clone();
-        (bool success,) = newProxy.call(initData);
-
-        assertTrue(success, "Initialization should succeed");
+        ERC1967Factory factory = new ERC1967Factory();
+        address newProxy = factory.deployAndCall(address(newAssetRouterImpl), users.admin, initData);
 
         kAssetRouter newRouter = kAssetRouter(payable(newProxy));
         assertEq(newRouter.owner(), users.owner, "Owner not set");
@@ -105,19 +102,19 @@ contract kAssetRouterTest is DeploymentBaseTest {
             address(0), // zero registry
             users.owner,
             users.admin,
+            users.emergencyAdmin,
             false
         );
 
-        address newProxy = address(newAssetRouterImpl).clone();
-        (bool success,) = newProxy.call(initData);
-
-        assertFalse(success, "Should revert with zero registry");
+        ERC1967Factory factory = new ERC1967Factory();
+        vm.expectRevert();
+        factory.deployAndCall(address(newAssetRouterImpl), users.admin, initData);
     }
 
     /// @dev Test double initialization reverts
     function test_Initialize_RevertDoubleInit() public {
         vm.expectRevert();
-        assetRouter.initialize(address(registry), users.owner, users.admin, false);
+        assetRouter.initialize(address(registry), users.owner, users.admin, users.emergencyAdmin, false);
     }
 
     /*//////////////////////////////////////////////////////////////

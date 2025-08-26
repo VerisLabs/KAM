@@ -79,11 +79,13 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @param owner_ Address of the owner
     /// @param admin_ Address of the admin
     /// @param paused_ Initial pause state
-    function initialize(address registry_, address owner_, address admin_, bool paused_) external initializer {
+    function initialize(address registry_, address owner_, address admin_, address emergencyAdmin_, bool paused_) external initializer {
         __kBase_init(registry_, owner_, admin_, paused_);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         $.vaultSettlementCooldown = DEFAULT_VAULT_SETTLEMENT_COOLDOWN;
+
+        _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);
 
         emit Initialized(registry_, owner_, admin_, paused_);
     }

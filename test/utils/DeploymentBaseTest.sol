@@ -4,11 +4,11 @@ pragma solidity 0.8.30;
 import { BaseTest, console2 } from "./BaseTest.sol";
 import {
     ADMIN_ROLE,
-    BATCH_CUTOFF_TIME,
     EMERGENCY_ADMIN_ROLE,
     INSTITUTION_ROLE,
     MINTER_ROLE,
-    SETTLEMENT_INTERVAL,
+    RELAYER_ROLE,
+    GUARDIAN_ROLE,
     USDC_MAINNET,
     WBTC_MAINNET,
     _1000_USDC,
@@ -198,10 +198,11 @@ contract DeploymentBaseTest is BaseTest {
         // Deploy proxy with initialization
         bytes memory initData = abi.encodeWithSelector(
             kAssetRouter.initialize.selector,
-            address(registry), // registry
-            users.owner, // owner
-            users.admin, // admin
-            false // not paused initially
+            address(registry),
+            users.owner, 
+            users.admin, 
+            users.emergencyAdmin,
+            false // not paused
         );
 
         address assetRouterProxy = factory.deployAndCall(address(assetRouterImpl), users.admin, initData);
@@ -219,22 +220,11 @@ contract DeploymentBaseTest is BaseTest {
         // Deploy kUSD through registry
         vm.startPrank(users.admin);
         address kUSDAddress = registry.registerAsset(KUSD_NAME, KUSD_SYMBOL, USDC_MAINNET, registry.USDC());
-        vm.stopPrank();
         kUSD = kToken(payable(kUSDAddress));
-
-        // Set metadata for kUSD
-        vm.startPrank(users.admin);
         kUSD.grantEmergencyRole(users.emergencyAdmin);
-        vm.stopPrank();
-
-        // Deploy kBTC through registry
-        vm.startPrank(users.admin);
+        
         address kBTCAddress = registry.registerAsset(KBTC_NAME, KBTC_SYMBOL, WBTC_MAINNET, registry.WBTC());
-        vm.stopPrank();
         kBTC = kToken(payable(kBTCAddress));
-
-        // Set metadata for kBTC
-        vm.startPrank(users.admin);
         kBTC.grantEmergencyRole(users.emergencyAdmin);
         vm.stopPrank();
 
@@ -357,12 +347,6 @@ contract DeploymentBaseTest is BaseTest {
         registry.registerVault(address(dnVault), IkRegistry.VaultType.DN, USDC_MAINNET);
         registry.registerVault(address(alphaVault), IkRegistry.VaultType.ALPHA, USDC_MAINNET);
         registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, USDC_MAINNET);
-        vm.stopPrank();
-
-        // Grant factory role to admin for vault registration
-        vm.prank(users.owner);
-        registry.grantRoles(users.guardian, 4);
-        vm.startPrank(users.admin);
 
         // Register adapters for vaults (if adapters were deployed)
         if (address(custodialAdapter) != address(0)) {
@@ -406,13 +390,6 @@ contract DeploymentBaseTest is BaseTest {
         require(success3, "Beta vault batch creation failed");
 
         vm.stopPrank();
-
-        vm.prank(users.owner);
-        dnVault.grantRoles(users.relayer, 4); // RELAYER_ROLE = _ROLE_2 = 4
-        vm.prank(users.owner);
-        alphaVault.grantRoles(users.relayer, 4);
-        vm.prank(users.owner);
-        betaVault.grantRoles(users.relayer, 4);
     }
 
     /// @dev Register modules with vaults
@@ -462,12 +439,9 @@ contract DeploymentBaseTest is BaseTest {
         vm.stopPrank();
 
         // Grant INSTITUTION_ROLE to test institution (requires owner for kMinter)
-        vm.prank(users.owner);
-        minter.grantRoles(users.institution, 8); // INSTITUTION_ROLE = _ROLE_3 = 8
-
-        // Grant EMERGENCY_ADMIN_ROLE to emergency admin for kAssetRouter (requires owner)
-        vm.prank(users.owner);
-        assetRouter.grantRoles(users.emergencyAdmin, EMERGENCY_ADMIN_ROLE);
+        vm.startPrank(users.owner);
+        minter.grantRoles(users.institution, INSTITUTION_ROLE);
+        vm.stopPrank();
     }
 
     /// @dev Fund test users with mainnet assets

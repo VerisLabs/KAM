@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { LibClone } from "solady/utils/LibClone.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
 import { kBatchReceiver } from "src/kBatchReceiver.sol";

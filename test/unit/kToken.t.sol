@@ -13,14 +13,12 @@ import {
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { LibClone } from "solady/utils/LibClone.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 import { kToken } from "src/kToken.sol";
 
 /// @title kTokenTest
 /// @notice Comprehensive unit tests for kToken contract
 contract kTokenTest is DeploymentBaseTest {
-    using LibClone for address;
 
     // Test constants
     uint256 internal constant TEST_AMOUNT = 1000 * _1_USDC;

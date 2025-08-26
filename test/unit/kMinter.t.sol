@@ -5,7 +5,7 @@ import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, 
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { LibClone } from "solady/utils/LibClone.sol";
+import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 import { kBase } from "src/base/kBase.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { kMinter } from "src/kMinter.sol";
@@ -13,7 +13,6 @@ import { kMinter } from "src/kMinter.sol";
 /// @title kMinterTest
 /// @notice Comprehensive unit tests for kMinter contract
 contract kMinterTest is DeploymentBaseTest {
-    using LibClone for address;
 
     // Test constants
     uint256 internal constant TEST_AMOUNT = 1000 * _1_USDC;
@@ -64,10 +63,8 @@ contract kMinterTest is DeploymentBaseTest {
             kMinter.initialize.selector, address(registry), users.owner, users.admin, users.emergencyAdmin
         );
 
-        address newProxy = address(newMinterImpl).clone();
-        (bool success,) = newProxy.call(initData);
-
-        assertTrue(success, "Initialization should succeed");
+        ERC1967Factory factory = new ERC1967Factory();
+        address newProxy = factory.deployAndCall(address(newMinterImpl), users.admin, initData);
 
         kMinter newMinter = kMinter(payable(newProxy));
         assertEq(newMinter.owner(), users.owner, "Owner not set");
@@ -87,10 +84,9 @@ contract kMinterTest is DeploymentBaseTest {
             users.emergencyAdmin
         );
 
-        address newProxy = address(newMinterImpl).clone();
-        (bool success,) = newProxy.call(initData);
-
-        assertFalse(success, "Should revert with zero registry");
+        ERC1967Factory factory = new ERC1967Factory();
+        vm.expectRevert();
+        factory.deployAndCall(address(newMinterImpl), users.admin, initData);
     }
 
     /// @dev Test double initialization reverts

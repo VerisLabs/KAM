@@ -232,7 +232,6 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         $.userRequests[redeemRequest.user].remove(requestId);
         $.totalLockedAssets[redeemRequest.asset] -= redeemRequest.amount;
 
-        // Optimistically ithdraw from BatchReceiver to recipient (1:1 with kTokens burned)
         // If batch is not settled, this will fail
         IkBatchReceiver(batchReceiver).pullAssets(redeemRequest.recipient, redeemRequest.amount, redeemRequest.batchId);
 

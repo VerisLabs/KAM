@@ -183,6 +183,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
     function testFuzz_PullAssets_DifferentReceivers(address receiver, uint256 amount) public {
         vm.assume(receiver != address(0));
         vm.assume(receiver != address(batchReceiver));
+        vm.assume(receiver != USDC_MAINNET);
 
         uint256 maxBalance = IERC20(USDC_MAINNET).balanceOf(address(batchReceiver));
         amount = bound(amount, 1, maxBalance);
