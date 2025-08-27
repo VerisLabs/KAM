@@ -1,5 +1,5 @@
 # Proxy
-[Git Source](https://github.com/VerisLabs/KAM/blob/7fe450d42e02311faf605d62cd48b6af1b05e41f/src/abstracts/Proxy.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/abstracts/Proxy.sol)
 
 *This abstract contract provides a fallback function that delegates all calls to another contract using the EVM
 instruction `delegatecall`. We refer to the second contract as the _implementation_ behind the proxy, and it has to

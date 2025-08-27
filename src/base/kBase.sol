@@ -11,7 +11,7 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 /// @dev Includes registry integration, role management, pause functionality, and helper methods
 contract kBase is ReentrancyGuardTransient {
     using SafeTransferLib for address;
-    
+
     /*//////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -107,11 +107,11 @@ contract kBase is ReentrancyGuardTransient {
     /// @notice rescues locked assets in the contract
     /// @param asset_ the asset_ to rescue address
     /// @param to_ the address that will receive the assets
-    function _rescueAssets(address asset_, address to_, uint256 amount_) internal {   
-        if(!_isAdmin(msg.sender)) revert WrongRole(); 
-        if(_isAsset(asset_)) revert WrongAsset();
-        if(to_ == address(0)) revert ZeroAddress();
-        if(amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
+    function _rescueAssets(address asset_, address to_, uint256 amount_) internal {
+        if (!_isAdmin(msg.sender)) revert WrongRole();
+        if (_isAsset(asset_)) revert WrongAsset();
+        if (to_ == address(0)) revert ZeroAddress();
+        if (amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
 
         asset_.safeTransfer(to_, amount_);
         emit RescuedAssets(asset_, to_, amount_);

@@ -1,5 +1,5 @@
 # kBatchReceiver
-[Git Source](https://github.com/VerisLabs/KAM/blob/7fe450d42e02311faf605d62cd48b6af1b05e41f/src/kBatchReceiver.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/kBatchReceiver.sol)
 
 **Inherits:**
 [IkBatchReceiver](/src/interfaces/IkBatchReceiver.sol/interface.IkBatchReceiver.md)
@@ -28,6 +28,13 @@ address public asset;
 
 ```solidity
 bytes32 public batchId;
+```
+
+
+### isInitialised
+
+```solidity
+bool public isInitialised;
 ```
 
 

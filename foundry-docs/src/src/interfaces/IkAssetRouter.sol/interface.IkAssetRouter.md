@@ -1,5 +1,5 @@
 # IkAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/7fe450d42e02311faf605d62cd48b6af1b05e41f/src/interfaces/IkAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/interfaces/IkAssetRouter.sol)
 
 Interface for kAssetRouter for asset routing and settlement
 
@@ -169,25 +169,6 @@ function cancelProposal(bytes32 proposalId) external;
 |`proposalId`|`bytes32`|The proposal ID to cancel|
 
 
-### updateProposal
-
-Update a settlement proposal before execution
-
-
-```solidity
-function updateProposal(bytes32 proposalId, uint256 totalAssets, uint256 netted, uint256 yield, bool profit) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`proposalId`|`bytes32`|The proposal ID to update|
-|`totalAssets`|`uint256`|New total assets value|
-|`netted`|`uint256`|New netted amount|
-|`yield`|`uint256`|New yield amount|
-|`profit`|`bool`|New profit status|
-
-
 ### setPaused
 
 Set contract pause state
@@ -216,6 +197,21 @@ function setSettlementCooldown(uint256 cooldown) external;
 |Name|Type|Description|
 |----|----|-----------|
 |`cooldown`|`uint256`|New cooldown period in seconds|
+
+
+### getPendingProposals
+
+Get All the pendingProposals
+
+
+```solidity
+function getPendingProposals(address vault_) external view returns (bytes32[] memory pendingProposals);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`pendingProposals`|`bytes32[]`|An array of proposalIds|
 
 
 ### getDNVaultByAsset
@@ -538,6 +534,24 @@ error ProposalAlreadyExecuted();
 error ProposalCancelled();
 ```
 
+### ProposalAlreadyExists
+
+```solidity
+error ProposalAlreadyExists();
+```
+
+### ZeroProposals
+
+```solidity
+error ZeroProposals();
+```
+
+### BatchIdAlreadyProposed
+
+```solidity
+error BatchIdAlreadyProposed();
+```
+
 ### CooldownNotPassed
 
 ```solidity
@@ -548,12 +562,6 @@ error CooldownNotPassed();
 
 ```solidity
 error InvalidCooldown();
-```
-
-### ProposalAlreadyExists
-
-```solidity
-error ProposalAlreadyExists();
 ```
 
 ## Structs
@@ -578,8 +586,6 @@ struct VaultSettlementProposal {
     uint256 yield;
     bool profit;
     uint256 executeAfter;
-    bool executed;
-    bool cancelled;
 }
 ```
 

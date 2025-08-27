@@ -132,7 +132,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param institution_ the institution address
     /// @dev Only callable by VENDOR_ROLE
     function grantInstitutionRole(address institution_) external {
-        if(!isVendor(msg.sender)) revert WrongRole();
+        if (!isVendor(msg.sender)) revert WrongRole();
         _grantRoles(institution_, INSTITUTION_ROLE);
     }
 
@@ -140,7 +140,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param vendor_ the vendor address
     /// @dev Only callable by ADMIN_ROLE
     function grantVendorRole(address vendor_) external {
-        if(!isAdmin(msg.sender)) revert WrongRole();
+        if (!isAdmin(msg.sender)) revert WrongRole();
         _grantRoles(vendor_, VENDOR_ROLE);
     }
 
@@ -148,7 +148,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param relayer_ the relayer address
     /// @dev Only callable by ADMIN_ROLE
     function grantRelayerRole(address relayer_) external {
-        if(!isAdmin(msg.sender)) revert WrongRole();
+        if (!isAdmin(msg.sender)) revert WrongRole();
         _grantRoles(relayer_, RELAYER_ROLE);
     }
 
@@ -168,7 +168,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         external
         returns (address)
     {
-        if(!isAdmin(msg.sender)) revert WrongRole();
+        if (!isAdmin(msg.sender)) revert WrongRole();
         if (asset == address(0)) revert ZeroAddress();
         if (id == bytes32(0)) revert ZeroAddress();
 
@@ -219,7 +219,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param asset Underlying asset the vault manages
     /// @dev Only callable by ADMIN_ROLE, sets as primary if first of its type
     function registerVault(address vault, VaultType type_, address asset) external {
-        if(!isAdmin(msg.sender)) revert WrongRole();
+        if (!isAdmin(msg.sender)) revert WrongRole();
         if (vault == address(0)) revert ZeroAddress();
         kRegistryStorage storage $ = _getkRegistryStorage();
         if ($.isVault[vault]) revert AlreadyRegistered();
@@ -246,7 +246,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param vault The vault address
     /// @param adapter The adapter address
     function registerAdapter(address vault, address adapter) external {
-        if(!isAdmin(msg.sender)) revert WrongRole();
+        if (!isAdmin(msg.sender)) revert WrongRole();
         if (vault == address(0) || adapter == address(0)) {
             revert InvalidAdapter();
         }
@@ -273,7 +273,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Removes an adapter for a specific vault
     /// @param vault The vault address
     function removeAdapter(address vault, address adapter) external {
-        if(!isAdmin(msg.sender)) revert WrongRole();
+        if (!isAdmin(msg.sender)) revert WrongRole();
         kRegistryStorage storage $ = _getkRegistryStorage();
 
         if (!$.vaultAdapters[vault].contains(adapter)) revert InvalidAdapter();

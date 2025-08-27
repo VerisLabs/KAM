@@ -72,7 +72,7 @@ contract kBatchReceiver is IkBatchReceiver {
         address sender = msg.sender;
         if (sender != kMinter) revert OnlyKMinter();
         if (asset_ == asset) revert AssetCantBeRescue();
-        
+
         uint256 balance = asset_.balanceOf(address(this));
         asset_.safeTransfer(sender, balance);
         emit RescuedAssets(asset_, sender, balance);

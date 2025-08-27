@@ -63,7 +63,7 @@ contract FeesModule is BaseVaultModule {
     /// @param _hurdleRate The new yearly hurdle rate
     /// @dev Fee is a basis point (1% = 100)
     function setHurdleRate(uint16 _hurdleRate) external {
-        if(!_isAdmin(msg.sender)) revert WrongRole();
+        if (!_isAdmin(msg.sender)) revert WrongRole();
         if (_hurdleRate > MAX_BPS) revert("Fee exceeds maximum");
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         $.hurdleRate = _hurdleRate;
@@ -74,7 +74,7 @@ contract FeesModule is BaseVaultModule {
     /// @param _isHard Whether the hard hurdle rate is enabled
     /// @dev If true, performance fees will only be charged to the excess return
     function setHardHurdleRate(bool _isHard) external {
-        if(!_isAdmin(msg.sender)) revert WrongRole();
+        if (!_isAdmin(msg.sender)) revert WrongRole();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         $.isHardHurdleRate = _isHard;
         emit HardHurdleRateUpdated(_isHard);
@@ -84,7 +84,7 @@ contract FeesModule is BaseVaultModule {
     /// @param _managementFee The new management fee
     /// @dev Fee is a basis point (1% = 100)
     function setManagementFee(uint16 _managementFee) external {
-        if(!_isAdmin(msg.sender)) revert WrongRole();
+        if (!_isAdmin(msg.sender)) revert WrongRole();
         if (_managementFee > MAX_BPS) revert("Fee exceeds maximum");
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         uint16 oldFee = $.managementFee;
@@ -96,7 +96,7 @@ contract FeesModule is BaseVaultModule {
     /// @param _performanceFee The new performance fee
     /// @dev Fee is a basis point (1% = 100)
     function setPerformanceFee(uint16 _performanceFee) external {
-        if(!_isAdmin(msg.sender)) revert WrongRole();
+        if (!_isAdmin(msg.sender)) revert WrongRole();
         if (_performanceFee > MAX_BPS) revert("Fee exceeds maximum");
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         uint16 oldFee = $.performanceFee;
@@ -108,7 +108,7 @@ contract FeesModule is BaseVaultModule {
     /// @param _timestamp The timestamp of the fee charge
     /// @dev Should only be called by the vault
     function notifyManagementFeesCharged(uint64 _timestamp) external {
-        if(!_isAdmin(msg.sender)) revert WrongRole();
+        if (!_isAdmin(msg.sender)) revert WrongRole();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (_timestamp < $.lastFeesChargedManagement || _timestamp > block.timestamp) revert("Invalid timestamp");
         $.lastFeesChargedManagement = _timestamp;
@@ -120,7 +120,7 @@ contract FeesModule is BaseVaultModule {
     /// @param _timestamp The timestamp of the fee charge
     /// @dev Should only be called by the vault
     function notifyPerformanceFeesCharged(uint64 _timestamp) external {
-        if(!_isAdmin(msg.sender)) revert WrongRole();
+        if (!_isAdmin(msg.sender)) revert WrongRole();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (_timestamp < $.lastFeesChargedPerformance || _timestamp > block.timestamp) revert("Invalid timestamp");
         $.lastFeesChargedPerformance = _timestamp;

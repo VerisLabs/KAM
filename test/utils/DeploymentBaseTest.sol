@@ -22,11 +22,12 @@ import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 // Protocol contracts
 import { kAssetRouter } from "src/kAssetRouter.sol";
+
+import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { kMinter } from "src/kMinter.sol";
 import { kRegistry } from "src/kRegistry.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { kToken } from "src/kToken.sol";
-import { kBatchReceiver } from "src/kBatchReceiver.sol";
 
 // Modules
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";

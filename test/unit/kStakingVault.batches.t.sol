@@ -10,16 +10,17 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
-import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
-import { BatchModule } from "src/kStakingVault/modules/BatchModule.sol";
+
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
+import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
+import { BatchModule } from "src/kStakingVault/modules/BatchModule.sol";
 
 /// @title kStakingVaultBatchesTest
 /// @notice Tests for batch management functionality in kStakingVault
 contract kStakingVaultBatchesTest is BaseVaultTest {
     using SafeTransferLib for address;
-    
+
     event BatchCreated(bytes32 indexed batchId);
     event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
     event BatchSettled(bytes32 indexed batchId);
@@ -39,14 +40,14 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
     function test_CreateNewBatch_Success() public {
         bytes32 currentBatch = vault.getBatchId();
-        
+
         vm.prank(users.relayer);
         vm.expectEmit(false, false, false, false);
         emit BatchCreated(bytes32(0));
         vault.createNewBatch();
-        
+
         bytes32 newBatch = vault.getBatchId();
-        
+
         assertTrue(newBatch != currentBatch);
         assertTrue(newBatch != bytes32(0));
     }
@@ -55,7 +56,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vm.prank(users.alice);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.createNewBatch();
-        
+
         vm.prank(users.admin);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.createNewBatch();
@@ -63,12 +64,12 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
     function test_CreateNewBatch_Multiple() public {
         bytes32[] memory batches = new bytes32[](3);
-        
+
         for (uint256 i = 0; i < 3; i++) {
             vm.prank(users.relayer);
             vault.createNewBatch();
             batches[i] = vault.getBatchId();
-            
+
             for (uint256 j = 0; j < i; j++) {
                 assertTrue(batches[i] != batches[j]);
             }
@@ -83,13 +84,13 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
     function test_CloseBatch_Success() public {
         // Get current batch
         bytes32 batchId = vault.getBatchId();
-        
+
         // Close batch without creating new one
         vm.prank(users.relayer);
         vm.expectEmit(true, false, false, true);
         emit BatchClosed(batchId);
         vault.closeBatch(batchId, false);
-        
+
         // Try to close again should revert
         vm.prank(users.relayer);
         vm.expectRevert(BaseVaultModule.Closed.selector);
@@ -99,10 +100,10 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
     /// @dev Test closeBatch with create flag
     function test_CloseBatch_WithCreateNew() public {
         bytes32 batchId = vault.getBatchId();
-        
+
         vm.prank(users.relayer);
         vault.closeBatch(batchId, true);
-        
+
         bytes32 newBatch = vault.getBatchId();
         assertTrue(newBatch != batchId);
         assertTrue(newBatch != bytes32(0));
@@ -111,12 +112,12 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
     /// @dev Test closeBatch requires relayer role
     function test_CloseBatch_RequiresRelayerRole() public {
         bytes32 batchId = vault.getBatchId();
-        
+
         // Non-relayer should fail
         vm.prank(users.alice);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.closeBatch(batchId, false);
-        
+
         vm.prank(users.admin);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.closeBatch(batchId, false);
@@ -125,11 +126,11 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
     /// @dev Test closeBatch on already closed batch
     function test_CloseBatch_AlreadyClosed() public {
         bytes32 batchId = vault.getBatchId();
-        
+
         // Close batch first time
         vm.prank(users.relayer);
         vault.closeBatch(batchId, false);
-        
+
         // Try to close again
         vm.prank(users.relayer);
         vm.expectRevert(BaseVaultModule.Closed.selector);
@@ -144,33 +145,27 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
     function test_SettleBatch_Success() public {
         // Create a stake request to have a batch to settle
         _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
-        
+
         vm.prank(users.alice);
         kUSD.approve(address(vault), 1000 * _1_USDC);
-        
+
         bytes32 batchId = vault.getBatchId();
-        
+
         vm.prank(users.alice);
         vault.requestStake(users.alice, 1000 * _1_USDC);
-        
+
         // Close the batch
         vm.prank(users.relayer);
         vault.closeBatch(batchId, true);
-        
+
         // Settle batch through assetRouter (which calls settleBatch)
         uint256 lastTotalAssets = vault.totalAssets();
-        
+
         vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET,
-            address(vault),
-            batchId,
-            lastTotalAssets + 1000 * _1_USDC,
-            1000 * _1_USDC,
-            0,
-            false
+            USDC_MAINNET, address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 1000 * _1_USDC, 0, false
         );
-        
+
         // Execute settlement which internally calls settleBatch
         vm.expectEmit(true, false, false, true);
         emit BatchSettled(batchId);
@@ -180,16 +175,16 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
     /// @dev Test settleBatch requires kAssetRouter
     function test_SettleBatch_RequiresKAssetRouter() public {
         bytes32 batchId = vault.getBatchId();
-        
+
         // Direct call should fail
         vm.prank(users.alice);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.settleBatch(batchId);
-        
+
         vm.prank(users.relayer);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.settleBatch(batchId);
-        
+
         vm.prank(users.admin);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.settleBatch(batchId);
@@ -199,33 +194,27 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
     function test_SettleBatch_AlreadySettled_Revert() public {
         // Create and settle a batch
         _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
-        
+
         vm.prank(users.alice);
         kUSD.approve(address(vault), 1000 * _1_USDC);
-        
+
         bytes32 batchId = vault.getBatchId();
-        
+
         vm.prank(users.alice);
         vault.requestStake(users.alice, 1000 * _1_USDC);
-        
+
         vm.prank(users.relayer);
         vault.closeBatch(batchId, true);
-        
+
         // Settle batch
         uint256 lastTotalAssets = vault.totalAssets();
         _executeBatchSettlement(address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 1000 * _1_USDC, 0, false);
-        
+
         // Try to settle again through assetRouter
         vm.prank(users.relayer);
         vm.expectRevert(IkAssetRouter.BatchIdAlreadyProposed.selector);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET,
-            address(vault),
-            batchId,
-            lastTotalAssets + 1000 * _1_USDC,
-            1000 * _1_USDC,
-            0,
-            false
+            USDC_MAINNET, address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 1000 * _1_USDC, 0, false
         );
 
         // Should revert with Settled error
@@ -243,17 +232,17 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vm.prank(users.relayer);
         vault.createNewBatch();
         bytes32 batchId = vault.getBatchId();
-        
+
         // Deploy batch receiver as kAssetRouter
         vm.prank(address(assetRouter));
         vm.expectEmit(false, true, false, true);
         emit BatchReceiverCreated(address(0), batchId); // Don't know exact address
         address receiver = vault.createBatchReceiver(batchId);
-        
+
         // Verify receiver was deployed
         assertTrue(receiver != address(0));
         assertTrue(receiver.code.length > 0);
-        
+
         // Verify receiver is initialized correctly
         kBatchReceiver batchReceiver = kBatchReceiver(receiver);
         assertEq(batchReceiver.batchId(), batchId);
@@ -266,31 +255,31 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vm.prank(users.relayer);
         vault.createNewBatch();
         bytes32 batchId = vault.getBatchId();
-        
+
         // Deploy batch receiver first time
         vm.prank(address(assetRouter));
         address receiver1 = vault.createBatchReceiver(batchId);
-        
+
         // Deploy again should return same address
         vm.prank(address(assetRouter));
         address receiver2 = vault.createBatchReceiver(batchId);
-        
+
         assertEq(receiver1, receiver2);
     }
 
     /// @dev Test createBatchReceiver requires kAssetRouter role
     function test_CreateBatchReceiver_RequiresKAssetRouter() public {
         bytes32 batchId = vault.getBatchId();
-        
+
         // Non-kAssetRouter should fail
         vm.prank(users.alice);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.createBatchReceiver(batchId);
-        
+
         vm.prank(users.relayer);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.createBatchReceiver(batchId);
-        
+
         vm.prank(users.admin);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.createBatchReceiver(batchId);
@@ -303,12 +292,16 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
     /// @dev Test selectors function returns correct selectors
     function test_Selectors() public {
         bytes4[] memory moduleSelectors = batchModule.selectors();
-        
+
         assertEq(moduleSelectors.length, 4, "Should return 4 selectors");
         assertEq(moduleSelectors[0], BatchModule.createNewBatch.selector, "First selector should be createNewBatch");
         assertEq(moduleSelectors[1], BatchModule.closeBatch.selector, "Second selector should be closeBatch");
         assertEq(moduleSelectors[2], BatchModule.settleBatch.selector, "Third selector should be settleBatch");
-        assertEq(moduleSelectors[3], BatchModule.createBatchReceiver.selector, "Fourth selector should be createBatchReceiver");
+        assertEq(
+            moduleSelectors[3],
+            BatchModule.createBatchReceiver.selector,
+            "Fourth selector should be createBatchReceiver"
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -319,18 +312,18 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
     function test_BatchLifecycle_Complete() public {
         // 1. Get initial batch
         bytes32 batch1 = vault.getBatchId();
-        
+
         // 2. User stakes in batch
         _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
         vm.prank(users.alice);
         kUSD.approve(address(vault), 1000 * _1_USDC);
         vm.prank(users.alice);
         bytes32 requestId = vault.requestStake(users.alice, 1000 * _1_USDC);
-        
+
         // 3. Close batch and create new one
         vm.prank(users.relayer);
         vault.closeBatch(batch1, true);
-        
+
         vm.prank(users.relayer);
         bytes32 batch2 = vault.getBatchId();
 
@@ -338,15 +331,15 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         console2.logBytes32(batch2);
 
         assertTrue(batch2 != batch1);
-        
+
         // 4. Settle the closed batch
         uint256 lastTotalAssets = vault.totalAssets();
         _executeBatchSettlement(address(vault), batch1, lastTotalAssets + 1000 * _1_USDC, 1000 * _1_USDC, 0, false);
-        
+
         // 5. User can claim from settled batch
         vm.prank(users.alice);
         vault.claimStakedShares(batch1, requestId);
-        
+
         // Verify user received stkTokens
         assertGt(vault.balanceOf(users.alice), 0);
     }
@@ -356,24 +349,24 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         // Pause the vault
         vm.prank(users.emergencyAdmin);
         kStakingVault(payable(address(vault))).setPaused(true);
-        
+
         // Batch operations should still work (they're admin functions)
-        
+
         // Create new batch should work
         vm.prank(users.relayer);
         vault.createNewBatch();
         bytes32 newBatch = vault.getBatchId();
         assertTrue(newBatch != bytes32(0));
-        
+
         // Close batch should work
         vm.prank(users.relayer);
         vault.closeBatch(newBatch, false);
-        
+
         // Create another batch for testing
         vm.prank(users.relayer);
         vault.createNewBatch();
         bytes32 anotherBatch = vault.getBatchId();
-        
+
         // Create batch receiver should work
         vm.prank(address(assetRouter));
         address receiver = vault.createBatchReceiver(anotherBatch);
@@ -390,12 +383,12 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vm.prank(users.alice);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.closeBatch(bytes32(0), false);
-        
+
         // Settle batch with zero ID
         vm.prank(users.alice);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.settleBatch(bytes32(0));
-        
+
         // Create receiver for zero ID
         vm.prank(users.alice);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
@@ -405,16 +398,16 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
     /// @dev Test batch operations with max batch ID
     function test_BatchOperations_MaxBatchId() public {
         bytes32 maxBatchId = bytes32(type(uint256).max);
-        
+
         // These should check role first before any other validation
         vm.prank(users.alice);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.closeBatch(maxBatchId, false);
-        
+
         vm.prank(users.alice);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.settleBatch(maxBatchId);
-        
+
         vm.prank(users.alice);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.createBatchReceiver(maxBatchId);

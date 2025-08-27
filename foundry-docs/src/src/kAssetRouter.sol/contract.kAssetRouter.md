@@ -1,5 +1,5 @@
 # kAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/7fe450d42e02311faf605d62cd48b6af1b05e41f/src/kAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/kAssetRouter.sol)
 
 **Inherits:**
 [IkAssetRouter](/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), Multicallable
@@ -232,33 +232,6 @@ function cancelProposal(bytes32 proposalId) external nonReentrant;
 |`proposalId`|`bytes32`|The proposal ID to cancel|
 
 
-### updateProposal
-
-Update a settlement proposal before execution
-
-
-```solidity
-function updateProposal(
-    bytes32 proposalId,
-    uint256 totalAssets_,
-    uint256 netted,
-    uint256 yield,
-    bool profit
-)
-    external
-    nonReentrant;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`proposalId`|`bytes32`|The proposal ID to update|
-|`totalAssets_`|`uint256`|New total assets value|
-|`netted`|`uint256`|New netted amount|
-|`yield`|`uint256`|New yield amount|
-|`profit`|`bool`|New profit status|
-
-
 ### _executeSettlement
 
 Internal function to execute settlement logic
@@ -302,6 +275,21 @@ function setSettlementCooldown(uint256 cooldown) external;
 |Name|Type|Description|
 |----|----|-----------|
 |`cooldown`|`uint256`|New cooldown period in seconds|
+
+
+### getPendingProposals
+
+Get All the pendingProposals
+
+
+```solidity
+function getPendingProposals(address vault) external view returns (bytes32[] memory pendingProposals);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`pendingProposals`|`bytes32[]`|An array of proposalIds|
 
 
 ### getSettlementProposal
@@ -382,6 +370,28 @@ function _virtualBalance(address vault, address asset) internal view returns (ui
 |Name|Type|Description|
 |----|----|-----------|
 |`balance`|`uint256`|the balance of the vault in all adapters.|
+
+
+### isPendingProposal
+
+verifies if a proposal is pending or not
+
+
+```solidity
+function isPendingProposal(address vault, bytes32 proposalId) internal view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault`|`address`|the vault address|
+|`proposalId`|`bytes32`|the proposalId to verify|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|bool proposal exists or not|
 
 
 ### isPaused
@@ -535,7 +545,11 @@ storage-location: erc7201:kam.storage.kAssetRouter
 
 ```solidity
 struct kAssetRouterStorage {
+    uint256 proposalCounter;
     uint256 vaultSettlementCooldown;
+    EnumerableSetLib.Bytes32Set executedProposalIds;
+    EnumerableSetLib.Bytes32Set batchIds;
+    mapping(address vault => EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;
     mapping(address account => mapping(bytes32 batchId => Balances)) vaultBatchBalances;
     mapping(address vault => mapping(bytes32 batchId => uint256)) vaultRequestedShares;
     mapping(bytes32 proposalId => VaultSettlementProposal) settlementProposals;

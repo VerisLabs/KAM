@@ -92,15 +92,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
     /// @param to Address to receive the stkTokens
     /// @param amount Amount of kTokens to stake
     /// @return requestId Request ID for this staking request
-    function requestStake(
-        address to,
-        uint256 amount
-    )
-        external
-        payable
-        nonReentrant
-        returns (bytes32 requestId)
-    {
+    function requestStake(address to, uint256 amount) external payable nonReentrant returns (bytes32 requestId) {
         if (_isPaused()) revert IsPaused();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (amount == 0) revert ZeroAmount();
@@ -358,7 +350,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
     /// @notice Authorize upgrade (only owner can upgrade)
     /// @dev This allows upgrading the main contract while keeping modules separate
     function _authorizeUpgrade(address newImplementation) internal view override {
-        if(!_isAdmin(msg.sender)) revert WrongRole();
+        if (!_isAdmin(msg.sender)) revert WrongRole();
         if (newImplementation == address(0)) revert ZeroAddress();
     }
 

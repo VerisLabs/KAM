@@ -1,5 +1,5 @@
 # FeesModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/7fe450d42e02311faf605d62cd48b6af1b05e41f/src/kStakingVault/modules/FeesModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/kStakingVault/modules/FeesModule.sol)
 
 **Inherits:**
 [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md)
@@ -55,7 +55,7 @@ Sets the yearly hurdle rate for the underlying asset
 
 
 ```solidity
-function setHurdleRate(uint16 _hurdleRate) external onlyRoles(ADMIN_ROLE);
+function setHurdleRate(uint16 _hurdleRate) external;
 ```
 **Parameters**
 
@@ -72,7 +72,7 @@ Sets the hard hurdle rate
 
 
 ```solidity
-function setHardHurdleRate(bool _isHard) external onlyRoles(ADMIN_ROLE);
+function setHardHurdleRate(bool _isHard) external;
 ```
 **Parameters**
 
@@ -89,7 +89,7 @@ Sets the management fee
 
 
 ```solidity
-function setManagementFee(uint16 _managementFee) external onlyRoles(ADMIN_ROLE);
+function setManagementFee(uint16 _managementFee) external;
 ```
 **Parameters**
 
@@ -106,7 +106,7 @@ Sets the performance fee
 
 
 ```solidity
-function setPerformanceFee(uint16 _performanceFee) external onlyRoles(ADMIN_ROLE);
+function setPerformanceFee(uint16 _performanceFee) external;
 ```
 **Parameters**
 
@@ -123,7 +123,7 @@ Notifies the module that management fees have been charged from backend
 
 
 ```solidity
-function notifyManagementFeesCharged(uint64 _timestamp) external onlyRoles(ADMIN_ROLE);
+function notifyManagementFeesCharged(uint64 _timestamp) external;
 ```
 **Parameters**
 
@@ -140,7 +140,7 @@ Notifies the module that performance fees have been charged from backend
 
 
 ```solidity
-function notifyPerformanceFeesCharged(uint64 _timestamp) external onlyRoles(ADMIN_ROLE);
+function notifyPerformanceFeesCharged(uint64 _timestamp) external;
 ```
 **Parameters**
 

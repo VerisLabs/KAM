@@ -255,7 +255,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     }
 
     function rescueReceiverAssets(address batchReceiver, address asset_, address to_, uint256 amount_) external {
-        if(batchReceiver == address(0) || asset_ == address(0) || to_ == address(0)) revert ZeroAddress();
+        if (batchReceiver == address(0) || asset_ == address(0) || to_ == address(0)) revert ZeroAddress();
         IkBatchReceiver(batchReceiver).rescueAssets(asset_);
         _rescueAssets(asset_, to_, amount_);
     }

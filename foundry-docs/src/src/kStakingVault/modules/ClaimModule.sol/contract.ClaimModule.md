@@ -1,5 +1,5 @@
 # ClaimModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/7fe450d42e02311faf605d62cd48b6af1b05e41f/src/kStakingVault/modules/ClaimModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/kStakingVault/modules/ClaimModule.sol)
 
 **Inherits:**
 [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md)
@@ -16,7 +16,7 @@ Claims stkTokens from a settled staking batch
 
 
 ```solidity
-function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable nonReentrant whenNotPaused;
+function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable nonReentrant;
 ```
 **Parameters**
 
@@ -32,7 +32,7 @@ Claims kTokens from a settled unstaking batch (simplified implementation)
 
 
 ```solidity
-function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable nonReentrant whenNotPaused;
+function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable nonReentrant;
 ```
 **Parameters**
 

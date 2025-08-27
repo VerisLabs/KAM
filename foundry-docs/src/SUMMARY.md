@@ -25,7 +25,6 @@
     - [IkToken](src/interfaces/IkToken.sol/interface.IkToken.md)
   - [❱ kStakingVault](src/kStakingVault/README.md)
     - [❱ base](src/kStakingVault/base/README.md)
-      - [IFeesModule](src/kStakingVault/base/BaseVaultModule.sol/interface.IFeesModule.md)
       - [BaseVaultModule](src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md)
     - [❱ modules](src/kStakingVault/modules/README.md)
       - [BatchModule](src/kStakingVault/modules/BatchModule.sol/contract.BatchModule.md)

@@ -132,13 +132,7 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
     /// @param registry_ Address of the kRegistry contract
     /// @param paused_ Initial pause state
     /// @dev Can only be called once during initialization
-    function __BaseVaultModule_init(
-        address registry_,
-        address feeReceiver_,
-        bool paused_
-    )
-        internal
-    {
+    function __BaseVaultModule_init(address registry_, address feeReceiver_, bool paused_) internal {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
 
         if ($.initialized) revert AlreadyInit();

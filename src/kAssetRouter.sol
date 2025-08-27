@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { Multicallable } from "solady/utils/Multicallable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
-import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 
 import { kBase } from "src/base/kBase.sol";
 
@@ -237,7 +237,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
-        if($.batchIds.contains(batchId)) revert BatchIdAlreadyProposed();
+        if ($.batchIds.contains(batchId)) revert BatchIdAlreadyProposed();
         $.batchIds.add(batchId);
 
         // Generate unique proposal ID
@@ -245,10 +245,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         proposalId = keccak256(abi.encodePacked(vault, batchId, block.timestamp, $.proposalCounter));
 
         // Check if proposal already exists
-        if($.executedProposalIds.contains(proposalId)) revert ProposalAlreadyExecuted();
+        if ($.executedProposalIds.contains(proposalId)) revert ProposalAlreadyExecuted();
         if ($.vaultPendingProposalIds[vault].contains(proposalId)) revert ProposalAlreadyExists();
         $.vaultPendingProposalIds[vault].add(proposalId);
-        
+
         uint256 executeAfter = block.timestamp + $.vaultSettlementCooldown;
 
         // Store the proposal
@@ -415,7 +415,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     function getPendingProposals(address vault) external view returns (bytes32[] memory pendingProposals) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         pendingProposals = $.vaultPendingProposalIds[vault].values();
-        if(pendingProposals.length == 0) revert ZeroProposals();
+        if (pendingProposals.length == 0) revert ZeroProposals();
     }
 
     /// @notice Get details of a settlement proposal
@@ -478,7 +478,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @param vault the vault address
     /// @param proposalId the proposalId to verify
     /// @return bool proposal exists or not
-    function isPendingProposal(address vault, bytes32 proposalId) internal view returns(bool) {
+    function isPendingProposal(address vault, bytes32 proposalId) internal view returns (bool) {
         return _getkAssetRouterStorage().vaultPendingProposalIds[vault].contains(proposalId);
     }
 

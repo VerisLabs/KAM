@@ -537,7 +537,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
         // Verify proposal state
         IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(proposalId);
-        
+
         // Step 2: Check cannot execute before cooldown
         (bool canExecute, string memory reason) = assetRouter.canExecuteProposal(proposalId);
         assertFalse(canExecute, "Should not be able to execute immediately");

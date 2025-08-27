@@ -72,7 +72,7 @@ contract BaseVaultTest is DeploymentBaseTest {
 
         vm.prank(users.relayer);
         assetRouter.executeSettleBatch(proposalId);
-        
+
         vm.prank(user);
         vault.claimStakedShares(batchId, requestId);
     }
@@ -97,7 +97,7 @@ contract BaseVaultTest is DeploymentBaseTest {
 
         bytes32 batchId = dnVault.getBatchId();
         vm.prank(users.relayer);
-        IkStakingVault(address(dnVault)).closeBatch(batchId, true);        
+        IkStakingVault(address(dnVault)).closeBatch(batchId, true);
 
         // Settle batch
         uint256 totalAssets = INITIAL_DEPOSIT * 3 + LARGE_DEPOSIT + INITIAL_DEPOSIT;
@@ -139,7 +139,7 @@ contract BaseVaultTest is DeploymentBaseTest {
             deal(USDC_MAINNET, address(assetRouter), totalAssets);
         }
 
-        if(vault == address(minter)) vault = address(dnVault);
+        if (vault == address(minter)) vault = address(dnVault);
 
         vm.prank(users.relayer);
         bytes32 proposalId =
