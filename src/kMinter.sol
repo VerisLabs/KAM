@@ -58,12 +58,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
     /// @notice Initializes the kMinter contract
     /// @param registry_ Address of the registry contract
-    function initialize(
-        address registry_
-    )
-        external
-        initializer
-    {
+    function initialize(address registry_) external initializer {
         if (registry_ == address(0)) revert ZeroAddress();
         __kBase_init(registry_);
         emit ContractInitialized(registry_);
@@ -78,18 +73,10 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @param asset_ Address of the asset to mint
     /// @param to_ Address of the recipient
     /// @param amount_ Amount of the asset to mint
-    function mint(
-        address asset_,
-        address to_,
-        uint256 amount_
-    )
-        external
-        payable
-        nonReentrant
-    {
-        if(_isPaused()) revert IsPaused();
-        if(!_isInstitution(msg.sender)) revert WrongRole();
-        if(!_isAsset(asset_)) revert WrongAsset();
+    function mint(address asset_, address to_, uint256 amount_) external payable nonReentrant {
+        if (_isPaused()) revert IsPaused();
+        if (!_isInstitution(msg.sender)) revert WrongRole();
+        if (!_isAsset(asset_)) revert WrongAsset();
 
         if (amount_ == 0) revert ZeroAmount();
         if (to_ == address(0)) revert ZeroAddress();
@@ -129,13 +116,13 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         nonReentrant
         returns (bytes32 requestId)
     {
-        if(_isPaused()) revert IsPaused();
-        if(!_isInstitution(msg.sender)) revert WrongRole();
-        if(!_isAsset(asset_)) revert WrongAsset();
+        if (_isPaused()) revert IsPaused();
+        if (!_isInstitution(msg.sender)) revert WrongRole();
+        if (!_isAsset(asset_)) revert WrongAsset();
 
         if (amount_ == 0) revert ZeroAmount();
         if (to_ == address(0)) revert ZeroAddress();
-        
+
         address kToken = _getKTokenForAsset(asset_);
         if (kToken.balanceOf(msg.sender) < amount_) revert InsufficientBalance();
 
@@ -173,8 +160,8 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @notice Executes redemption for a request in a settled batch
     /// @param requestId Request ID to execute
     function redeem(bytes32 requestId) external payable nonReentrant {
-        if(_isPaused()) revert IsPaused();
-        if(!_isInstitution(msg.sender)) revert WrongRole();
+        if (_isPaused()) revert IsPaused();
+        if (!_isInstitution(msg.sender)) revert WrongRole();
 
         kMinterStorage storage $ = _getkMinterStorage();
         RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
@@ -209,9 +196,9 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @notice Cancels a redemption request before batch settlement
     /// @param requestId Request ID to cancel
     function cancelRequest(bytes32 requestId) external payable nonReentrant {
-        if(_isPaused()) revert IsPaused();
-        if(!_isInstitution(msg.sender)) revert WrongRole();
-        
+        if (_isPaused()) revert IsPaused();
+        if (!_isInstitution(msg.sender)) revert WrongRole();
+
         kMinterStorage storage $ = _getkMinterStorage();
         RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
 
@@ -257,8 +244,20 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @notice Set contract pause state
     /// @param paused New pause state
     function setPaused(bool paused) external {
-        if(!_isEmergencyAdmin(msg.sender)) revert WrongRole();
         _setPaused(paused);
+    }
+
+    /// @notice Rescue Assets
+    /// @param asset_ the address of the asset to rescue
+    /// @param to_ the address to send the rescue assets to
+    function rescueMinterAssets(address asset_, address to_, uint256 amount_) external {
+        _rescueAssets(asset_, to_, amount_);
+    }
+
+    function rescueReceiverAssets(address batchReceiver, address asset_, address to_, uint256 amount_) external {
+        if(batchReceiver == address(0) || asset_ == address(0) || to_ == address(0)) revert ZeroAddress();
+        IkBatchReceiver(batchReceiver).rescueAssets(asset_);
+        _rescueAssets(asset_, to_, amount_);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -310,7 +309,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @dev Only callable by ADMIN_ROLE
     /// @param newImplementation New implementation address
     function _authorizeUpgrade(address newImplementation) internal view override {
-        if(!_isAdmin(msg.sender)) revert WrongRole();
+        if (!_isAdmin(msg.sender)) revert WrongRole();
         if (newImplementation == address(0)) revert ZeroAddress();
     }
 

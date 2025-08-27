@@ -1,5 +1,5 @@
 # kMinter
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kMinter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7fe450d42e02311faf605d62cd48b6af1b05e41f/src/kMinter.sol)
 
 **Inherits:**
 [IkMinter](/src/interfaces/IkMinter.sol/interface.IkMinter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
@@ -10,13 +10,6 @@ Institutional minting and redemption manager for kTokens
 
 
 ## State Variables
-### INSTITUTION_ROLE
-
-```solidity
-uint256 internal constant INSTITUTION_ROLE = _ROLE_3;
-```
-
-
 ### KMINTER_STORAGE_LOCATION
 
 ```solidity
@@ -30,24 +23,6 @@ bytes32 private constant KMINTER_STORAGE_LOCATION = 0xd0574379115d2b8497bfd9020a
 
 ```solidity
 function _getkMinterStorage() private pure returns (kMinterStorage storage $);
-```
-
-### whenNotPaused
-
-Ensures function cannot be called when contract is paused
-
-
-```solidity
-modifier whenNotPaused();
-```
-
-### onlyInstitution
-
-Ensures function can only be called by an institution
-
-
-```solidity
-modifier onlyInstitution();
 ```
 
 ### constructor
@@ -65,16 +40,13 @@ Initializes the kMinter contract
 
 
 ```solidity
-function initialize(address registry_, address owner_, address admin_, address emergencyAdmin_) external initializer;
+function initialize(address registry_) external initializer;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`registry_`|`address`|Address of the registry contract|
-|`owner_`|`address`|Address of the owner|
-|`admin_`|`address`|Address of the admin|
-|`emergencyAdmin_`|`address`|Address of the emergency admin|
 
 
 ### mint
@@ -85,17 +57,7 @@ Creates new kTokens by accepting underlying asset deposits in a 1:1 ratio
 
 
 ```solidity
-function mint(
-    address asset_,
-    address to_,
-    uint256 amount_
-)
-    external
-    payable
-    nonReentrant
-    whenNotPaused
-    onlyInstitution
-    onlyRegisteredAsset(asset_);
+function mint(address asset_, address to_, uint256 amount_) external payable nonReentrant;
 ```
 **Parameters**
 
@@ -122,9 +84,6 @@ function requestRedeem(
     external
     payable
     nonReentrant
-    whenNotPaused
-    onlyInstitution
-    onlyRegisteredAsset(asset_)
     returns (bytes32 requestId);
 ```
 **Parameters**
@@ -148,7 +107,7 @@ Executes redemption for a request in a settled batch
 
 
 ```solidity
-function redeem(bytes32 requestId) external payable nonReentrant whenNotPaused onlyInstitution;
+function redeem(bytes32 requestId) external payable nonReentrant;
 ```
 **Parameters**
 
@@ -163,7 +122,7 @@ Cancels a redemption request before batch settlement
 
 
 ```solidity
-function cancelRequest(bytes32 requestId) external payable nonReentrant whenNotPaused onlyInstitution;
+function cancelRequest(bytes32 requestId) external payable nonReentrant;
 ```
 **Parameters**
 
@@ -201,7 +160,7 @@ Set contract pause state
 
 
 ```solidity
-function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE);
+function setPaused(bool paused) external;
 ```
 **Parameters**
 
@@ -209,6 +168,30 @@ function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE);
 |----|----|-----------|
 |`paused`|`bool`|New pause state|
 
+
+### rescueMinterAssets
+
+Rescue Assets
+
+
+```solidity
+function rescueMinterAssets(address asset_, address to_, uint256 amount_) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset_`|`address`|the address of the asset to rescue|
+|`to_`|`address`|the address to send the rescue assets to|
+|`amount_`|`uint256`||
+
+
+### rescueReceiverAssets
+
+
+```solidity
+function rescueReceiverAssets(address batchReceiver, address asset_, address to_, uint256 amount_) external;
+```
 
 ### isPaused
 
@@ -311,7 +294,7 @@ Authorizes contract upgrades
 
 
 ```solidity
-function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE);
+function _authorizeUpgrade(address newImplementation) internal view override;
 ```
 **Parameters**
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ADMIN_ROLE, MINTER_ROLE, USDC_MAINNET, WBTC_MAINNET, _1_USDC, _1_WBTC } from "../utils/Constants.sol";
+import { ADMIN_ROLE, MINTER_ROLE, INSTITUTION_ROLE, USDC_MAINNET, WBTC_MAINNET, _1_USDC, _1_WBTC } from "../utils/Constants.sol";
 
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
@@ -66,12 +66,11 @@ contract DeploymentTest is DeploymentBaseTest {
 
     /// @dev Test role assignments
     function test_RoleAssignments() public {
-        // Check admin roles
+        // Check roles
         assertHasRole(address(registry), users.admin, ADMIN_ROLE);
-        assertHasRole(address(assetRouter), users.admin, ADMIN_ROLE);
         assertHasRole(address(kUSD), users.admin, ADMIN_ROLE);
         assertHasRole(address(kBTC), users.admin, ADMIN_ROLE);
-        assertHasRole(address(minter), users.admin, ADMIN_ROLE);
+        assertHasRole(address(registry), users.institution, INSTITUTION_ROLE);
 
         // Check only kMinter has MINTER_ROLE on kTokens (institutional 1:1 minting)
         assertHasRole(address(kUSD), address(minter), MINTER_ROLE);
@@ -91,9 +90,6 @@ contract DeploymentTest is DeploymentBaseTest {
             OwnableRoles(address(kUSD)).hasAnyRole(address(betaVault), MINTER_ROLE),
             "Beta vault should not have kToken MINTER_ROLE"
         );
-
-        // Check institution role
-        assertHasRole(address(minter), users.institution, 8); // INSTITUTION_ROLE
     }
 
     /// @dev Test asset registration

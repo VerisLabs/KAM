@@ -9,6 +9,7 @@ interface IkBatchReceiver {
 
     event BatchReceiverInitialized(address indexed kMinter, bytes32 indexed batchId, address asset);
     event PulledAssets(address indexed receiver, address indexed asset, uint256 amount);
+    event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -18,6 +19,7 @@ interface IkBatchReceiver {
     error OnlyKMinter();
     error InvalidBatchId();
     error ZeroAmount();
+    error AssetCantBeRescue();
 
     /*//////////////////////////////////////////////////////////////
                               GETTERS
@@ -32,4 +34,5 @@ interface IkBatchReceiver {
     //////////////////////////////////////////////////////////////*/
 
     function pullAssets(address receiver, uint256 amount, bytes32 _batchId) external;
+    function rescueAssets(address asset_) external;
 }

@@ -19,7 +19,6 @@ import { kToken } from "src/kToken.sol";
 /// @title kTokenTest
 /// @notice Comprehensive unit tests for kToken contract
 contract kTokenTest is DeploymentBaseTest {
-
     // Test constants
     uint256 internal constant TEST_AMOUNT = 1000 * _1_USDC;
     address internal constant ZERO_ADDRESS = address(0);

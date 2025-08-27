@@ -1,5 +1,5 @@
 # IkAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/interfaces/IkAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7fe450d42e02311faf605d62cd48b6af1b05e41f/src/interfaces/IkAssetRouter.sol)
 
 Interface for kAssetRouter for asset routing and settlement
 
@@ -394,10 +394,10 @@ function contractVersion() external pure returns (string memory);
 
 
 ## Events
-### Initialized
+### ContractInitialized
 
 ```solidity
-event Initialized(address indexed registry, address indexed owner, address admin, bool paused);
+event ContractInitialized(address indexed registry);
 ```
 
 ### AssetsPushed
@@ -508,12 +508,6 @@ event SettlementCooldownUpdated(uint256 oldCooldown, uint256 newCooldown);
 ```
 
 ## Errors
-### ZeroAmount
-
-```solidity
-error ZeroAmount();
-```
-
 ### InsufficientVirtualBalance
 
 ```solidity
@@ -524,12 +518,6 @@ error InsufficientVirtualBalance();
 
 ```solidity
 error ContractPaused();
-```
-
-### OnlyStakingVault
-
-```solidity
-error OnlyStakingVault();
 ```
 
 ### ProposalNotFound
@@ -560,6 +548,12 @@ error CooldownNotPassed();
 
 ```solidity
 error InvalidCooldown();
+```
+
+### ProposalAlreadyExists
+
+```solidity
+error ProposalAlreadyExists();
 ```
 
 ## Structs

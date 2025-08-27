@@ -25,6 +25,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     uint256 internal constant GUARDIAN_ROLE = _ROLE_2;
     uint256 internal constant RELAYER_ROLE = _ROLE_3;
     uint256 internal constant INSTITUTION_ROLE = _ROLE_4;
+    uint256 internal constant VENDOR_ROLE = _ROLE_5;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
@@ -83,12 +84,15 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param owner_ Contract owner address
     /// @param admin_ Admin role recipient
     function initialize(
-        address owner_, 
-        address admin_, 
+        address owner_,
+        address admin_,
         address emergencyAdmin_,
-        address guardian_, 
+        address guardian_,
         address relayer_
-    ) external initializer {
+    )
+        external
+        initializer
+    {
         if (owner_ == address(0)) revert ZeroAddress();
         if (admin_ == address(0)) revert ZeroAddress();
         if (emergencyAdmin_ == address(0)) revert ZeroAddress();
@@ -97,6 +101,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
 
         _initializeOwner(owner_);
         _grantRoles(admin_, ADMIN_ROLE);
+        _grantRoles(admin_, VENDOR_ROLE);
         _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);
         _grantRoles(guardian_, GUARDIAN_ROLE);
         _grantRoles(relayer_, RELAYER_ROLE);
@@ -120,6 +125,34 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     }
 
     /*//////////////////////////////////////////////////////////////
+                          ROLES MANAGEMENT
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice grant the institution role to a given address
+    /// @param institution_ the institution address
+    /// @dev Only callable by VENDOR_ROLE
+    function grantInstitutionRole(address institution_) external {
+        if(!isVendor(msg.sender)) revert WrongRole();
+        _grantRoles(institution_, INSTITUTION_ROLE);
+    }
+
+    /// @notice grant the vendor role to a given address
+    /// @param vendor_ the vendor address
+    /// @dev Only callable by ADMIN_ROLE
+    function grantVendorRole(address vendor_) external {
+        if(!isAdmin(msg.sender)) revert WrongRole();
+        _grantRoles(vendor_, VENDOR_ROLE);
+    }
+
+    /// @notice grant the relayer role to a given address
+    /// @param relayer_ the relayer address
+    /// @dev Only callable by ADMIN_ROLE
+    function grantRelayerRole(address relayer_) external {
+        if(!isAdmin(msg.sender)) revert WrongRole();
+        _grantRoles(relayer_, RELAYER_ROLE);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                           ASSET MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
@@ -133,9 +166,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         bytes32 id
     )
         external
-        onlyRoles(ADMIN_ROLE)
         returns (address)
     {
+        if(!isAdmin(msg.sender)) revert WrongRole();
         if (asset == address(0)) revert ZeroAddress();
         if (id == bytes32(0)) revert ZeroAddress();
 
@@ -185,7 +218,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param type_ Type of vault (MINTER, DN, ALPHA, BETA)
     /// @param asset Underlying asset the vault manages
     /// @dev Only callable by ADMIN_ROLE, sets as primary if first of its type
-    function registerVault(address vault, VaultType type_, address asset) external onlyRoles(ADMIN_ROLE) {
+    function registerVault(address vault, VaultType type_, address asset) external {
+        if(!isAdmin(msg.sender)) revert WrongRole();
         if (vault == address(0)) revert ZeroAddress();
         kRegistryStorage storage $ = _getkRegistryStorage();
         if ($.isVault[vault]) revert AlreadyRegistered();
@@ -211,7 +245,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Registers an adapter for a specific vault
     /// @param vault The vault address
     /// @param adapter The adapter address
-    function registerAdapter(address vault, address adapter) external onlyRoles(ADMIN_ROLE) {
+    function registerAdapter(address vault, address adapter) external {
+        if(!isAdmin(msg.sender)) revert WrongRole();
         if (vault == address(0) || adapter == address(0)) {
             revert InvalidAdapter();
         }
@@ -237,7 +272,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
 
     /// @notice Removes an adapter for a specific vault
     /// @param vault The vault address
-    function removeAdapter(address vault, address adapter) external onlyRoles(ADMIN_ROLE) {
+    function removeAdapter(address vault, address adapter) external {
+        if(!isAdmin(msg.sender)) revert WrongRole();
         kRegistryStorage storage $ = _getkRegistryStorage();
 
         if (!$.vaultAdapters[vault].contains(adapter)) revert InvalidAdapter();
@@ -332,32 +368,38 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
 
     /// @notice Check if caller is the Admin
     /// @return Whether the caller is a Admin
-    function isAdmin(address user) external view returns (bool) {
+    function isAdmin(address user) public view returns (bool) {
         return _hasRole(user, ADMIN_ROLE);
     }
 
     /// @notice Check if caller is the EmergencyAdmin
     /// @return Whether the caller is a EmergencyAdmin
-    function isEmergencyAdmin(address user) external view returns (bool) {
+    function isEmergencyAdmin(address user) public view returns (bool) {
         return _hasRole(user, EMERGENCY_ADMIN_ROLE);
     }
 
     /// @notice Check if caller is the Guardian
     /// @return Whether the caller is a Guardian
-    function isGuardian(address user) external view returns (bool) {
+    function isGuardian(address user) public view returns (bool) {
         return _hasRole(user, GUARDIAN_ROLE);
     }
 
     /// @notice Check if the caller is the relayer
     /// @return Whether the caller is the relayer
-    function isRelayer(address user) external view returns (bool) {
+    function isRelayer(address user) public view returns (bool) {
         return _hasRole(user, RELAYER_ROLE);
     }
 
     /// @notice Check if the caller is a institution
     /// @return Whether the caller is a institution
-    function isInstitution(address user) external view returns (bool) {
+    function isInstitution(address user) public view returns (bool) {
         return _hasRole(user, INSTITUTION_ROLE);
+    }
+
+    /// @notice Check if the caller is a vendor
+    /// @return Whether the caller is a vendor
+    function isVendor(address user) public view returns (bool) {
+        return _hasRole(user, VENDOR_ROLE);
     }
 
     /// @notice check if the user has the given role

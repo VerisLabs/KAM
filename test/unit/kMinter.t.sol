@@ -13,7 +13,6 @@ import { kMinter } from "src/kMinter.sol";
 /// @title kMinterTest
 /// @notice Comprehensive unit tests for kMinter contract
 contract kMinterTest is DeploymentBaseTest {
-
     // Test constants
     uint256 internal constant TEST_AMOUNT = 1000 * _1_USDC;
     address internal constant ZERO_ADDRESS = address(0);
@@ -50,8 +49,7 @@ contract kMinterTest is DeploymentBaseTest {
         // Deploy fresh implementation for testing
         kMinter newMinterImpl = new kMinter();
 
-        bytes memory initData = abi.encodeWithSelector(
-            kMinter.initialize.selector, address(registry));
+        bytes memory initData = abi.encodeWithSelector(kMinter.initialize.selector, address(registry));
 
         ERC1967Factory factory = new ERC1967Factory();
         address newProxy = factory.deployAndCall(address(newMinterImpl), users.admin, initData);
@@ -64,10 +62,7 @@ contract kMinterTest is DeploymentBaseTest {
     function test_Initialize_RevertZeroRegistry() public {
         kMinter newMinterImpl = new kMinter();
 
-        bytes memory initData = abi.encodeWithSelector(
-            kMinter.initialize.selector,
-            address(0)
-        );
+        bytes memory initData = abi.encodeWithSelector(kMinter.initialize.selector, address(0));
 
         ERC1967Factory factory = new ERC1967Factory();
         vm.expectRevert();
@@ -128,7 +123,7 @@ contract kMinterTest is DeploymentBaseTest {
     /// @dev Test mint reverts with zero amount
     function test_Mint_RevertZeroAmount() public {
         vm.prank(users.institution);
-        vm.expectRevert(IkMinter.ZeroAmount.selector);
+        vm.expectRevert(kBase.ZeroAmount.selector);
         minter.mint(USDC_MAINNET, users.alice, 0);
     }
 
@@ -155,7 +150,7 @@ contract kMinterTest is DeploymentBaseTest {
         minter.setPaused(true);
 
         vm.prank(users.institution);
-        vm.expectRevert(IkMinter.ContractPaused.selector);
+        vm.expectRevert(kBase.IsPaused.selector);
         minter.mint(USDC_MAINNET, users.alice, TEST_AMOUNT);
     }
 
@@ -204,7 +199,7 @@ contract kMinterTest is DeploymentBaseTest {
     /// @dev Test redemption request reverts with zero amount
     function test_RequestRedeem_RevertZeroAmount() public {
         vm.prank(users.institution);
-        vm.expectRevert(IkMinter.ZeroAmount.selector);
+        vm.expectRevert(kBase.ZeroAmount.selector);
         minter.requestRedeem(USDC_MAINNET, users.institution, 0);
     }
 
@@ -239,7 +234,7 @@ contract kMinterTest is DeploymentBaseTest {
         minter.setPaused(true);
 
         vm.prank(users.institution);
-        vm.expectRevert(IkMinter.ContractPaused.selector);
+        vm.expectRevert(kBase.IsPaused.selector);
         minter.requestRedeem(USDC_MAINNET, users.institution, TEST_AMOUNT);
     }
 
@@ -274,7 +269,7 @@ contract kMinterTest is DeploymentBaseTest {
         bytes32 requestId = keccak256("test");
 
         vm.prank(users.institution);
-        vm.expectRevert(IkMinter.ContractPaused.selector);
+        vm.expectRevert(kBase.IsPaused.selector);
         minter.redeem(requestId);
     }
 
@@ -309,7 +304,7 @@ contract kMinterTest is DeploymentBaseTest {
         bytes32 requestId = keccak256("test");
 
         vm.prank(users.institution);
-        vm.expectRevert(IkMinter.ContractPaused.selector);
+        vm.expectRevert(kBase.IsPaused.selector);
         minter.cancelRequest(requestId);
     }
 

@@ -1,5 +1,5 @@
 # IkRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/interfaces/IkRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7fe450d42e02311faf605d62cd48b6af1b05e41f/src/interfaces/IkRegistry.sol)
 
 
 ## Functions
@@ -14,7 +14,14 @@ function setSingletonContract(bytes32 id, address contractAddress) external;
 
 
 ```solidity
-function registerAsset(address asset, bytes32 id) external returns (address);
+function registerAsset(
+    string memory name,
+    string memory symbol,
+    address asset,
+    bytes32 id
+)
+    external
+    returns (address);
 ```
 
 ### registerVault
@@ -36,6 +43,27 @@ function registerAdapter(address vault, address adapter) external;
 
 ```solidity
 function removeAdapter(address vault, address adapter) external;
+```
+
+### grantInstitutionRole
+
+
+```solidity
+function grantInstitutionRole(address institution_) external;
+```
+
+### grantVendorRole
+
+
+```solidity
+function grantVendorRole(address vendor_) external;
+```
+
+### grantRelayerRole
+
+
+```solidity
+function grantRelayerRole(address relayer_) external;
 ```
 
 ### getContractById
@@ -87,18 +115,46 @@ function getVaultByAssetAndType(address asset, uint8 vaultType) external view re
 function getVaultType(address vault) external view returns (uint8);
 ```
 
-### isRelayer
+### isAdmin
 
 
 ```solidity
-function isRelayer(address account) external view returns (bool);
+function isAdmin(address user) external view returns (bool);
+```
+
+### isEmergencyAdmin
+
+
+```solidity
+function isEmergencyAdmin(address user) external view returns (bool);
 ```
 
 ### isGuardian
 
 
 ```solidity
-function isGuardian(address account) external view returns (bool);
+function isGuardian(address user) external view returns (bool);
+```
+
+### isRelayer
+
+
+```solidity
+function isRelayer(address user) external view returns (bool);
+```
+
+### isInstitution
+
+
+```solidity
+function isInstitution(address user) external view returns (bool);
+```
+
+### isVendor
+
+
+```solidity
+function isVendor(address user) external view returns (bool);
 ```
 
 ### isAsset
@@ -190,7 +246,7 @@ event AdapterRemoved(address indexed vault, address indexed adapter);
 ### KTokenDeployed
 
 ```solidity
-event KTokenDeployed(address indexed kTokenContract);
+event KTokenDeployed(address indexed kTokenContract, string name_, string symbol_, uint8 decimals_);
 ```
 
 ### KTokenImplementationSet
@@ -276,6 +332,12 @@ error KTokenImplementationNotSet();
 
 ```solidity
 error MinterNotSet();
+```
+
+### WrongRole
+
+```solidity
+error WrongRole();
 ```
 
 ## Enums

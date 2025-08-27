@@ -24,7 +24,6 @@ import { kAssetRouter } from "src/kAssetRouter.sol";
 /// @title kAssetRouterTest
 /// @notice Comprehensive unit tests for kAssetRouter contract with timelock settlement
 contract kAssetRouterTest is DeploymentBaseTest {
-
     // Test constants
     bytes32 internal constant TEST_BATCH_ID = bytes32(uint256(1));
     uint256 internal constant TEST_AMOUNT = 1000 * _1_USDC;
@@ -56,7 +55,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Test contract initialization state
-    function test_InitialState() public view {    
+    function test_InitialState() public view {
         assertEq(assetRouter.contractName(), "kAssetRouter", "Contract name incorrect");
         assertEq(assetRouter.contractVersion(), "1.0.0", "Contract version incorrect");
         assertFalse(assetRouter.isPaused(), "Should be unpaused initially");
@@ -69,8 +68,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // Deploy fresh implementation for testing
         kAssetRouter newAssetRouterImpl = new kAssetRouter();
 
-        bytes memory initData =
-            abi.encodeWithSelector(kAssetRouter.initialize.selector, address(registry));
+        bytes memory initData = abi.encodeWithSelector(kAssetRouter.initialize.selector, address(registry));
 
         ERC1967Factory factory = new ERC1967Factory();
         address newProxy = factory.deployAndCall(address(newAssetRouterImpl), users.admin, initData);
@@ -86,10 +84,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     function test_Initialize_RevertZeroRegistry() public {
         kAssetRouter newAssetRouterImpl = new kAssetRouter();
 
-        bytes memory initData = abi.encodeWithSelector(
-            kAssetRouter.initialize.selector,
-            address(0)
-        );
+        bytes memory initData = abi.encodeWithSelector(kAssetRouter.initialize.selector, address(0));
 
         ERC1967Factory factory = new ERC1967Factory();
         vm.expectRevert();
@@ -134,7 +129,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     /// @dev Test asset push reverts with zero amount
     function test_KAssetPush_RevertZeroAmount() public {
         vm.prank(address(minter));
-        vm.expectRevert(IkAssetRouter.ZeroAmount.selector);
+        vm.expectRevert(kBase.ZeroAmount.selector);
         assetRouter.kAssetPush(USDC_MAINNET, 0, TEST_BATCH_ID);
     }
 
@@ -185,7 +180,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     /// @dev Test asset transfer reverts with zero amount
     function test_KAssetTransfer_RevertZeroAmount() public {
         vm.prank(address(alphaVault));
-        vm.expectRevert(IkAssetRouter.ZeroAmount.selector);
+        vm.expectRevert(kBase.ZeroAmount.selector);
         assetRouter.kAssetTransfer(address(alphaVault), address(betaVault), USDC_MAINNET, 0, TEST_BATCH_ID);
     }
 
@@ -252,7 +247,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assetRouter.setPaused(true);
 
         vm.prank(users.relayer);
-        vm.expectRevert(IkAssetRouter.ContractPaused.selector);
+        vm.expectRevert(kBase.IsPaused.selector);
         assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), TEST_BATCH_ID, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
@@ -323,7 +318,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
         // Try to execute
         vm.prank(users.alice);
-        vm.expectRevert(IkAssetRouter.ContractPaused.selector);
+        vm.expectRevert(kBase.IsPaused.selector);
         assetRouter.executeSettleBatch(testProposalId);
     }
 

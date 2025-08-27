@@ -1,5 +1,5 @@
 # kToken
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kToken.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7fe450d42e02311faf605d62cd48b6af1b05e41f/src/kToken.sol)
 
 **Inherits:**
 ERC20, OwnableRoles, ReentrancyGuard, Multicallable
@@ -79,26 +79,16 @@ Disables initializers to prevent implementation contract from being initialized
 
 
 ```solidity
-constructor(address owner_, address admin_, address emergencyAdmin_, address minter_, uint8 decimals_);
+constructor(
+    address owner_,
+    address admin_,
+    address emergencyAdmin_,
+    address minter_,
+    string memory name_,
+    string memory symbol_,
+    uint8 decimals_
+);
 ```
-
-### setupMetadata
-
-Sets token metadata (separate call to avoid stack too deep)
-
-*Must be called after initialize, only by admin*
-
-
-```solidity
-function setupMetadata(string calldata name_, string calldata symbol_) external onlyRoles(ADMIN_ROLE);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`name_`|`string`|Token name|
-|`symbol_`|`string`|Token symbol|
-
 
 ### mint
 
@@ -387,13 +377,7 @@ event Burned(address indexed from, uint256 amount);
 ### TokenCreated
 
 ```solidity
-event TokenCreated(address indexed token, address owner);
-```
-
-### TokenInitialized
-
-```solidity
-event TokenInitialized(string name, string symbol, uint8 decimals);
+event TokenCreated(address indexed token, address owner, string name, string symbol, uint8 decimals);
 ```
 
 ### PauseState

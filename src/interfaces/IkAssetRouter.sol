@@ -76,7 +76,6 @@ interface IkAssetRouter {
                                 ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error ZeroAmount();
     error InsufficientVirtualBalance();
     error ContractPaused();
     error ProposalNotFound();

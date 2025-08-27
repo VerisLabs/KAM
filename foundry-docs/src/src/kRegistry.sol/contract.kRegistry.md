@@ -1,5 +1,5 @@
 # kRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7fe450d42e02311faf605d62cd48b6af1b05e41f/src/kRegistry.sol)
 
 **Inherits:**
 [IkRegistry](/src/interfaces/IkRegistry.sol/interface.IkRegistry.md), Initializable, UUPSUpgradeable, OwnableRoles
@@ -17,10 +17,10 @@ uint256 internal constant ADMIN_ROLE = _ROLE_0;
 ```
 
 
-### RELAYER_ROLE
+### EMERGENCY_ADMIN_ROLE
 
 ```solidity
-uint256 internal constant RELAYER_ROLE = _ROLE_1;
+uint256 internal constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
 ```
 
 
@@ -28,6 +28,27 @@ uint256 internal constant RELAYER_ROLE = _ROLE_1;
 
 ```solidity
 uint256 internal constant GUARDIAN_ROLE = _ROLE_2;
+```
+
+
+### RELAYER_ROLE
+
+```solidity
+uint256 internal constant RELAYER_ROLE = _ROLE_3;
+```
+
+
+### INSTITUTION_ROLE
+
+```solidity
+uint256 internal constant INSTITUTION_ROLE = _ROLE_4;
+```
+
+
+### VENDOR_ROLE
+
+```solidity
+uint256 internal constant VENDOR_ROLE = _ROLE_5;
 ```
 
 
@@ -89,7 +110,15 @@ Initializes the kRegistry contract
 
 
 ```solidity
-function initialize(address owner_, address admin_, address relayer_, address guardian_) external initializer;
+function initialize(
+    address owner_,
+    address admin_,
+    address emergencyAdmin_,
+    address guardian_,
+    address relayer_
+)
+    external
+    initializer;
 ```
 **Parameters**
 
@@ -97,8 +126,9 @@ function initialize(address owner_, address admin_, address relayer_, address gu
 |----|----|-----------|
 |`owner_`|`address`|Contract owner address|
 |`admin_`|`address`|Admin role recipient|
-|`relayer_`|`address`||
+|`emergencyAdmin_`|`address`||
 |`guardian_`|`address`||
+|`relayer_`|`address`||
 
 
 ### setSingletonContract
@@ -119,6 +149,57 @@ function setSingletonContract(bytes32 id, address contractAddress) external only
 |`contractAddress`|`address`|Address of the singleton contract|
 
 
+### grantInstitutionRole
+
+grant the institution role to a given address
+
+*Only callable by VENDOR_ROLE*
+
+
+```solidity
+function grantInstitutionRole(address institution_) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`institution_`|`address`|the institution address|
+
+
+### grantVendorRole
+
+grant the vendor role to a given address
+
+*Only callable by ADMIN_ROLE*
+
+
+```solidity
+function grantVendorRole(address vendor_) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vendor_`|`address`|the vendor address|
+
+
+### grantRelayerRole
+
+grant the relayer role to a given address
+
+*Only callable by ADMIN_ROLE*
+
+
+```solidity
+function grantRelayerRole(address relayer_) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`relayer_`|`address`|the relayer address|
+
+
 ### registerAsset
 
 Register support for a new asset and its corresponding kToken
@@ -127,12 +208,21 @@ Register support for a new asset and its corresponding kToken
 
 
 ```solidity
-function registerAsset(address asset, bytes32 id) external onlyRoles(ADMIN_ROLE) returns (address);
+function registerAsset(
+    string memory name_,
+    string memory symbol_,
+    address asset,
+    bytes32 id
+)
+    external
+    returns (address);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
+|`name_`|`string`||
+|`symbol_`|`string`||
 |`asset`|`address`|Underlying asset address (e.g., USDC, WBTC)|
 |`id`|`bytes32`||
 
@@ -145,7 +235,7 @@ Register a new vault in the protocol
 
 
 ```solidity
-function registerVault(address vault, VaultType type_, address asset) external onlyRoles(ADMIN_ROLE);
+function registerVault(address vault, VaultType type_, address asset) external;
 ```
 **Parameters**
 
@@ -162,7 +252,7 @@ Registers an adapter for a specific vault
 
 
 ```solidity
-function registerAdapter(address vault, address adapter) external onlyRoles(ADMIN_ROLE);
+function registerAdapter(address vault, address adapter) external;
 ```
 **Parameters**
 
@@ -178,7 +268,7 @@ Removes an adapter for a specific vault
 
 
 ```solidity
-function removeAdapter(address vault, address adapter) external onlyRoles(ADMIN_ROLE);
+function removeAdapter(address vault, address adapter) external;
 ```
 **Parameters**
 
@@ -331,19 +421,34 @@ function getVaultType(address vault) external view returns (uint8);
 |`<none>`|`uint8`|Vault type|
 
 
-### isRelayer
+### isAdmin
 
-Check if the caller is the relayer
+Check if caller is the Admin
 
 
 ```solidity
-function isRelayer(address user) external view returns (bool);
+function isAdmin(address user) public view returns (bool);
 ```
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`bool`|Whether the caller is the relayer|
+|`<none>`|`bool`|Whether the caller is a Admin|
+
+
+### isEmergencyAdmin
+
+Check if caller is the EmergencyAdmin
+
+
+```solidity
+function isEmergencyAdmin(address user) public view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the caller is a EmergencyAdmin|
 
 
 ### isGuardian
@@ -352,13 +457,73 @@ Check if caller is the Guardian
 
 
 ```solidity
-function isGuardian(address user) external view returns (bool);
+function isGuardian(address user) public view returns (bool);
 ```
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`bool`|Whether the caller is a Guardian|
+
+
+### isRelayer
+
+Check if the caller is the relayer
+
+
+```solidity
+function isRelayer(address user) public view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the caller is the relayer|
+
+
+### isInstitution
+
+Check if the caller is a institution
+
+
+```solidity
+function isInstitution(address user) public view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the caller is a institution|
+
+
+### isVendor
+
+Check if the caller is a vendor
+
+
+```solidity
+function isVendor(address user) public view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the caller is a vendor|
+
+
+### _hasRole
+
+check if the user has the given role
+
+
+```solidity
+function _hasRole(address user, uint256 role_) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Wether the caller have the given role|
 
 
 ### isAsset

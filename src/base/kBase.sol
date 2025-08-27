@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
@@ -9,11 +10,14 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 /// @notice Base contract providing common functionality for all KAM protocol contracts
 /// @dev Includes registry integration, role management, pause functionality, and helper methods
 contract kBase is ReentrancyGuardTransient {
+    using SafeTransferLib for address;
+    
     /*//////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
     event Paused(bool paused);
+    event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
@@ -27,6 +31,7 @@ contract kBase is ReentrancyGuardTransient {
     //////////////////////////////////////////////////////////////*/
 
     error ZeroAddress();
+    error ZeroAmount();
     error InvalidRegistry();
     error NotInitialized();
     error AlreadyInitialized();
@@ -85,6 +90,34 @@ contract kBase is ReentrancyGuardTransient {
     }
 
     /*//////////////////////////////////////////////////////////////
+                          ROLES FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Sets the pause state of the contract
+    /// @param paused_ New pause state
+    /// @dev Only callable internally by inheriting contracts
+    function _setPaused(bool paused_) internal {
+        if (!_isEmergencyAdmin(msg.sender)) revert WrongRole();
+        kBaseStorage storage $ = _getBaseStorage();
+        if (!$.initialized) revert NotInitialized();
+        $.paused = paused_;
+        emit Paused(paused_);
+    }
+
+    /// @notice rescues locked assets in the contract
+    /// @param asset_ the asset_ to rescue address
+    /// @param to_ the address that will receive the assets
+    function _rescueAssets(address asset_, address to_, uint256 amount_) internal {   
+        if(!_isAdmin(msg.sender)) revert WrongRole(); 
+        if(_isAsset(asset_)) revert WrongAsset();
+        if(to_ == address(0)) revert ZeroAddress();
+        if(amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
+
+        asset_.safeTransfer(to_, amount_);
+        emit RescuedAssets(asset_, to_, amount_);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                           REGISTRY GETTER
     //////////////////////////////////////////////////////////////*/
 
@@ -108,6 +141,24 @@ contract kBase is ReentrancyGuardTransient {
                           GETTERS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Gets the current batch ID for a given vault
+    /// @param vault The vault address
+    /// @return batchId The current batch ID
+    /// @dev Reverts if vault not registered
+    function _getBatchId(address vault) internal view returns (bytes32 batchId) {
+        return IkStakingVault(vault).getBatchId();
+    }
+
+    /// @notice Gets the current batch receiver for a given batchId
+    /// @param vault_ The vault address
+    /// @param batchId_ The batch ID
+    /// @return batchReceiver The address of the batchReceiver where tokens will be sent
+    /// @dev Reverts if vault not registered
+    function _getBatchReceiver(address vault_, bytes32 batchId_) internal view returns (address batchReceiver) {
+        batchReceiver = IkStakingVault(vault_).getBatchReceiver(batchId_);
+        if (batchReceiver == address(0)) revert ZeroAddress();
+    }
+
     /// @notice Gets the kMinter singleton contract address
     /// @return minter The kMinter contract address
     /// @dev Reverts if kMinter not set in registry
@@ -124,6 +175,37 @@ contract kBase is ReentrancyGuardTransient {
         if (router == address(0)) revert ContractNotFound(K_ASSET_ROUTER);
     }
 
+    /// @notice Gets the kToken address for a given asset
+    /// @param asset The underlying asset address
+    /// @return kToken The corresponding kToken address
+    /// @dev Reverts if asset not supported
+    function _getKTokenForAsset(address asset) internal view returns (address kToken) {
+        kToken = _registry().assetToKToken(asset);
+        if (kToken == address(0)) revert AssetNotSupported(asset);
+    }
+
+    /// @notice Gets the asset managed by a vault
+    /// @param vault The vault address
+    /// @return assets The asset address managed by the vault
+    /// @dev Reverts if vault not registered
+    function _getVaultAssets(address vault) internal view returns (address[] memory assets) {
+        assets = _registry().getVaultAssets(vault);
+        if (assets.length == 0) revert InvalidVault(vault);
+    }
+
+    /// @notice Gets the DN vault address for a given asset
+    /// @param asset The asset address
+    /// @return vault The corresponding DN vault address
+    /// @dev Reverts if asset not supported
+    function _getDNVaultByAsset(address asset) internal view returns (address vault) {
+        vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN));
+        if (vault == address(0)) revert InvalidVault(vault);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            VALIDATORS
+    //////////////////////////////////////////////////////////////*/
+
     /// @notice Checks if an address is a admin
     /// @return Whether the address is a admin
     function _isAdmin(address user) internal view returns (bool) {
@@ -135,7 +217,7 @@ contract kBase is ReentrancyGuardTransient {
     function _isEmergencyAdmin(address user) internal view returns (bool) {
         return _registry().isEmergencyAdmin(user);
     }
-    
+
     /// @notice Checks if an address is a guardian
     /// @return Whether the address is a guardian
     function _isGuardian(address user) internal view returns (bool) {
@@ -184,75 +266,5 @@ contract kBase is ReentrancyGuardTransient {
     /// @return Whether the asset is registered
     function _isAsset(address asset) internal view returns (bool) {
         return _registry().isAsset(asset);
-    }
-
-    /// @notice Gets the current batch ID for a given vault
-    /// @param vault The vault address
-    /// @return batchId The current batch ID
-    /// @dev Reverts if vault not registered
-    function _getBatchId(address vault) internal view returns (bytes32 batchId) {
-        return IkStakingVault(vault).getBatchId();
-    }
-
-    /// @notice Gets the current batch ID for a given vault
-    /// @param vault_ The vault address
-    /// @return batchId_ The current batch ID
-    /// @dev Reverts if vault not registered
-    function _getBatchReceiver(address vault_, bytes32 batchId_) internal view returns (address) {
-        address addr = IkStakingVault(vault_).getBatchReceiver(batchId_);
-        if (addr == address(0)) revert ZeroAddress();
-        return addr;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                          ASSET HELPERS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Gets the kToken address for a given asset
-    /// @param asset The underlying asset address
-    /// @return kToken The corresponding kToken address
-    /// @dev Reverts if asset not supported
-    function _getKTokenForAsset(address asset) internal view returns (address kToken) {
-        kToken = _registry().assetToKToken(asset);
-        if (kToken == address(0)) revert AssetNotSupported(asset);
-    }
-
-    /// @notice Checks if an asset is supported by the protocol
-    /// @param asset The asset address to check
-    /// @return Whether the asset is supported
-    function _isAssetRegistered(address asset) internal view returns (bool) {
-        return _registry().isAsset(asset);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                          VAULT HELPERS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Gets the asset managed by a vault
-    /// @param vault The vault address
-    /// @return assets The asset address managed by the vault
-    /// @dev Reverts if vault not registered
-    function _getVaultAssets(address vault) internal view returns (address[] memory assets) {
-        assets = _registry().getVaultAssets(vault);
-        if (assets.length == 0) revert InvalidVault(vault);
-    }
-
-    /// @notice Gets the DN vault address for a given asset
-    /// @param asset The asset address
-    /// @return vault The corresponding DN vault address
-    /// @dev Reverts if asset not supported
-    function _getDNVaultByAsset(address asset) internal view returns (address vault) {
-        vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN));
-        if (vault == address(0)) revert InvalidVault(vault);
-    }
-
-    /// @notice Sets the pause state of the contract
-    /// @param paused_ New pause state
-    /// @dev Only callable internally by inheriting contracts
-    function _setPaused(bool paused_) internal {
-        kBaseStorage storage $ = _getBaseStorage();
-        if (!$.initialized) revert NotInitialized();
-        $.paused = paused_;
-        emit Paused(paused_);
     }
 }

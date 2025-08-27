@@ -1,5 +1,5 @@
 # kAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7fe450d42e02311faf605d62cd48b6af1b05e41f/src/kAssetRouter.sol)
 
 **Inherits:**
 [IkAssetRouter](/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), Multicallable
@@ -36,20 +36,6 @@ bytes32 private constant KASSETROUTER_STORAGE_LOCATION =
 function _getkAssetRouterStorage() private pure returns (kAssetRouterStorage storage $);
 ```
 
-### whenNotPaused
-
-
-```solidity
-modifier whenNotPaused();
-```
-
-### onlyStakingVault
-
-
-```solidity
-modifier onlyStakingVault();
-```
-
 ### constructor
 
 
@@ -63,16 +49,13 @@ Initialize the kAssetRouter with asset and admin configuration
 
 
 ```solidity
-function initialize(address registry_, address owner_, address admin_, bool paused_) external initializer;
+function initialize(address registry_) external initializer;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`registry_`|`address`|Address of the kRegistry contract|
-|`owner_`|`address`|Address of the owner|
-|`admin_`|`address`|Address of the admin|
-|`paused_`|`bool`|Initial pause state|
 
 
 ### kAssetPush
@@ -81,16 +64,7 @@ Push assets from kMinter to designated DN vault
 
 
 ```solidity
-function kAssetPush(
-    address _asset,
-    uint256 amount,
-    bytes32 batchId
-)
-    external
-    payable
-    nonReentrant
-    whenNotPaused
-    onlyKMinter;
+function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable nonReentrant;
 ```
 **Parameters**
 
@@ -115,9 +89,7 @@ function kAssetRequestPull(
 )
     external
     payable
-    nonReentrant
-    whenNotPaused
-    onlyKMinter;
+    nonReentrant;
 ```
 **Parameters**
 
@@ -144,9 +116,7 @@ function kAssetTransfer(
 )
     external
     payable
-    nonReentrant
-    whenNotPaused
-    onlyStakingVault;
+    nonReentrant;
 ```
 **Parameters**
 
@@ -165,16 +135,7 @@ Request to pull shares for kStakingVault redemptions
 
 
 ```solidity
-function kSharesRequestPush(
-    address sourceVault,
-    uint256 amount,
-    bytes32 batchId
-)
-    external
-    payable
-    nonReentrant
-    whenNotPaused
-    onlyStakingVault;
+function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant;
 ```
 **Parameters**
 
@@ -191,16 +152,7 @@ Request to pull shares for kStakingVault redemptions
 
 
 ```solidity
-function kSharesRequestPull(
-    address sourceVault,
-    uint256 amount,
-    bytes32 batchId
-)
-    external
-    payable
-    nonReentrant
-    whenNotPaused
-    onlyStakingVault;
+function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant;
 ```
 **Parameters**
 
@@ -229,8 +181,6 @@ function proposeSettleBatch(
     external
     payable
     nonReentrant
-    whenNotPaused
-    onlyRelayer
     returns (bytes32 proposalId);
 ```
 **Parameters**
@@ -258,7 +208,7 @@ Execute a settlement proposal after cooldown period
 
 
 ```solidity
-function executeSettleBatch(bytes32 proposalId) external nonReentrant whenNotPaused;
+function executeSettleBatch(bytes32 proposalId) external nonReentrant;
 ```
 **Parameters**
 
@@ -273,7 +223,7 @@ Cancel a settlement proposal before execution
 
 
 ```solidity
-function cancelProposal(bytes32 proposalId) external nonReentrant whenNotPaused onlyGuardian;
+function cancelProposal(bytes32 proposalId) external nonReentrant;
 ```
 **Parameters**
 
@@ -296,9 +246,7 @@ function updateProposal(
     bool profit
 )
     external
-    nonReentrant
-    whenNotPaused
-    onlyRelayer;
+    nonReentrant;
 ```
 **Parameters**
 
@@ -332,7 +280,7 @@ Set contract pause state
 
 
 ```solidity
-function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE);
+function setPaused(bool paused) external;
 ```
 **Parameters**
 
@@ -347,7 +295,7 @@ Set the cooldown period for settlement proposals
 
 
 ```solidity
-function setSettlementCooldown(uint256 cooldown) external onlyRoles(ADMIN_ROLE);
+function setSettlementCooldown(uint256 cooldown) external;
 ```
 **Parameters**
 
@@ -531,7 +479,7 @@ Authorize contract upgrade
 
 
 ```solidity
-function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE);
+function _authorizeUpgrade(address newImplementation) internal view override;
 ```
 **Parameters**
 

@@ -294,6 +294,7 @@ interface IkRegistry {
     error InvalidParameter();
     error KTokenImplementationNotSet();
     error MinterNotSet();
+    error WrongRole();
 
     /*//////////////////////////////////////////////////////////////
                               FUNCTIONS
@@ -311,7 +312,9 @@ interface IkRegistry {
     function registerVault(address vault, VaultType type_, address asset) external;
     function registerAdapter(address vault, address adapter) external;
     function removeAdapter(address vault, address adapter) external;
-
+    function grantInstitutionRole(address institution_) external;
+    function grantVendorRole(address vendor_) external;
+    function grantRelayerRole(address relayer_) external;
     function getContractById(bytes32 id) external view returns (address);
     function getAssetById(bytes32 id) external view returns (address);
     function getAllAssets() external view returns (address[] memory);
@@ -324,6 +327,7 @@ interface IkRegistry {
     function isGuardian(address user) external view returns (bool);
     function isRelayer(address user) external view returns (bool);
     function isInstitution(address user) external view returns (bool);
+    function isVendor(address user) external view returns (bool);
     function isAsset(address asset) external view returns (bool);
     function isVault(address vault) external view returns (bool);
     function isSingletonContract(address contractAddress) external view returns (bool);

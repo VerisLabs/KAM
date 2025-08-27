@@ -62,4 +62,17 @@ contract kBatchReceiver is IkBatchReceiver {
         asset.safeTransfer(receiver, amount);
         emit PulledAssets(receiver, asset, amount);
     }
+
+    /// @notice Transfers assets from kMinter to the specified receiver
+    /// @param asset_ Asset address
+    /// @dev Only callable by kMinter, transfers assets to kMinter
+    function rescueAssets(address asset_) external {
+        address sender = msg.sender;
+        if (sender != kMinter) revert OnlyKMinter();
+        if (asset_ == asset) revert AssetCantBeRescue();
+        
+        uint256 balance = asset_.balanceOf(address(this));
+        asset_.safeTransfer(sender, balance);
+        emit RescuedAssets(asset_, sender, balance);
+    }
 }

@@ -5,10 +5,10 @@ import { BaseTest, console2 } from "./BaseTest.sol";
 import {
     ADMIN_ROLE,
     EMERGENCY_ADMIN_ROLE,
+    GUARDIAN_ROLE,
     INSTITUTION_ROLE,
     MINTER_ROLE,
     RELAYER_ROLE,
-    GUARDIAN_ROLE,
     USDC_MAINNET,
     WBTC_MAINNET,
     _1000_USDC,
@@ -175,12 +175,7 @@ contract DeploymentBaseTest is BaseTest {
 
         // Deploy proxy with initialization
         bytes memory initData = abi.encodeWithSelector(
-            kRegistry.initialize.selector,
-            users.owner, 
-            users.admin, 
-            users.emergencyAdmin,
-            users.guardian,
-            users.relayer
+            kRegistry.initialize.selector, users.owner, users.admin, users.emergencyAdmin, users.guardian, users.relayer
         );
 
         address registryProxy = factory.deployAndCall(address(registryImpl), users.admin, initData);
@@ -197,10 +192,7 @@ contract DeploymentBaseTest is BaseTest {
         assetRouterImpl = new kAssetRouter();
 
         // Deploy proxy with initialization
-        bytes memory initData = abi.encodeWithSelector(
-            kAssetRouter.initialize.selector,
-            address(registry)
-        );
+        bytes memory initData = abi.encodeWithSelector(kAssetRouter.initialize.selector, address(registry));
 
         address assetRouterProxy = factory.deployAndCall(address(assetRouterImpl), users.admin, initData);
         assetRouter = kAssetRouter(payable(assetRouterProxy));
@@ -219,7 +211,7 @@ contract DeploymentBaseTest is BaseTest {
         address kUSDAddress = registry.registerAsset(KUSD_NAME, KUSD_SYMBOL, USDC_MAINNET, registry.USDC());
         kUSD = kToken(payable(kUSDAddress));
         kUSD.grantEmergencyRole(users.emergencyAdmin);
-        
+
         address kBTCAddress = registry.registerAsset(KBTC_NAME, KBTC_SYMBOL, WBTC_MAINNET, registry.WBTC());
         kBTC = kToken(payable(kBTCAddress));
         kBTC.grantEmergencyRole(users.emergencyAdmin);
@@ -236,10 +228,7 @@ contract DeploymentBaseTest is BaseTest {
         minterImpl = new kMinter();
 
         // Deploy proxy with initialization
-        bytes memory initData = abi.encodeWithSelector(
-            kMinter.initialize.selector,
-            address(registry)
-        );
+        bytes memory initData = abi.encodeWithSelector(kMinter.initialize.selector, address(registry));
 
         address minterProxy = factory.deployAndCall(address(minterImpl), users.admin, initData);
         minter = kMinter(payable(minterProxy));
@@ -290,14 +279,14 @@ contract DeploymentBaseTest is BaseTest {
         // Deploy proxy with initialization
         bytes memory initData = abi.encodeWithSelector(
             kStakingVault.initialize.selector,
-            address(registry), 
-            users.owner, 
+            address(registry),
+            users.owner,
             users.admin,
             false, // paused
             name,
             symbol,
             6, // decimals
-            DEFAULT_DUST_AMOUNT, 
+            DEFAULT_DUST_AMOUNT,
             users.emergencyAdmin,
             asset // underlying asset (USDC for now)
         );
@@ -418,11 +407,9 @@ contract DeploymentBaseTest is BaseTest {
     function _setupRoles() internal {
         // Grant MINTER_ROLE to contracts using kToken's specific functions (requires admin)
         vm.startPrank(users.admin);
-
         // Grant MINTER_ROLE to kMinter for institutional minting (1:1 backing)
         kUSD.grantMinterRole(address(minter));
         kBTC.grantMinterRole(address(minter));
-
         // Grant MINTER_ROLE to kAssetRouter for yield distribution and settlement
         kUSD.grantMinterRole(address(assetRouter));
         kBTC.grantMinterRole(address(assetRouter));
@@ -430,8 +417,7 @@ contract DeploymentBaseTest is BaseTest {
         // Note: Staking vaults do NOT mint kTokens - they accept existing kTokens from users
         // and mint their own stkTokens. kMinter handles institutional flows, kAssetRouter handles yield.
 
-        registry.grantRoles(users.institution, INSTITUTION_ROLE);
-
+        registry.grantInstitutionRole(users.institution);
         vm.stopPrank();
     }
 
