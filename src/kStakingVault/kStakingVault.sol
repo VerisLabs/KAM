@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
@@ -14,7 +13,6 @@ import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
-
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
@@ -77,9 +75,9 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         $.decimals = decimals_;
         $.underlyingAsset = asset_;
         $.dustAmount = dustAmount_.toUint96();
+        $.sharePriceWatermark = 10 ** decimals_;
         $.kToken = _registry().assetToKToken(asset_);
         $.receiverImplementation = address(new kBatchReceiver(_registry().getContractById(K_MINTER)));
-        $.sharePriceWatermark = 10 ** decimals_;
 
         emit Initialized(registry_, name_, symbol_, decimals_, asset_);
     }
@@ -178,7 +176,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
 
     /// @notice Cancels a staking request
     /// @param requestId Request ID to cancel
-    function cancelStakeRequest(bytes32 requestId) external {
+    function cancelStakeRequest(bytes32 requestId) external payable nonReentrant {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         BaseVaultModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
 
@@ -189,7 +187,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         request.status = BaseVaultModuleTypes.RequestStatus.CANCELLED;
         $.userRequests[msg.sender].remove(requestId);
 
-        address vault = _getDNVaultByAsset($.underlyingAsset);
+        $.totalPendingStake -= request.kTokenAmount;
         if ($.batches[request.batchId].isClosed) revert Closed();
         if ($.batches[request.batchId].isSettled) revert Settled();
 
@@ -198,8 +196,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         );
 
         $.kToken.safeTransfer(request.user, request.kTokenAmount);
-
-        $.totalPendingStake -= request.kTokenAmount;
 
         emit StakeRequestCancelled(bytes32(requestId));
     }
@@ -252,7 +248,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
     /// @param paused_ New pause state
     /// @dev Only callable internally by inheriting contracts
     function setPaused(bool paused_) external {
-        _isEmergencyAdmin(msg.sender);
+        if (!_isEmergencyAdmin(msg.sender)) revert WrongRole();
         _setPaused(paused_);
     }
 

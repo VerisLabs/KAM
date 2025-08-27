@@ -1,5 +1,5 @@
 # BaseVaultModuleTypes
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/kStakingVault/types/BaseVaultModuleTypes.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/kStakingVault/types/BaseVaultModuleTypes.sol)
 
 Library containing all data structures used in the ModuleBase
 

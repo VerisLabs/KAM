@@ -84,6 +84,9 @@ contract DeploymentTest is DeploymentBaseTest {
         assertHasRole(address(kUSD), address(minter), MINTER_ROLE);
         assertHasRole(address(kBTC), address(minter), MINTER_ROLE);
 
+        assertHasRole(address(kUSD), address(assetRouter), MINTER_ROLE);
+        assertHasRole(address(kBTC), address(assetRouter), MINTER_ROLE);
+
         // Staking vaults should NOT have MINTER_ROLE on kTokens
         // They accept existing kTokens from users and mint their own stkTokens
         assertFalse(

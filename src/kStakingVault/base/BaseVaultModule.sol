@@ -2,14 +2,11 @@
 pragma solidity 0.8.30;
 
 import { ERC20 } from "solady/tokens/ERC20.sol";
-
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
-
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { Extsload } from "src/abstracts/Extsload.sol";
-
-import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 import { IVaultFees } from "src/interfaces/modules/IVaultFees.sol";
@@ -21,6 +18,7 @@ import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTyp
 abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
     using FixedPointMathLib for uint256;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+    using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -43,6 +41,8 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
     event Paused(bool paused);
     event Initialized(address registry, string name, string symbol, uint8 decimals, address asset);
     event TotalAssetsUpdated(uint256 oldTotalAssets, uint256 newTotalAssets);
+    event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+    event RescuedETH(address indexed asset, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
@@ -61,11 +61,8 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
     error InvalidRegistry();
     error NotInitialized();
     error ContractNotFound(bytes32 identifier);
-    error OnlyKAssetRouter();
-    error OnlyRelayer();
     error ZeroAmount();
     error AmountBelowDustThreshold();
-    error ContractPaused();
     error Closed();
     error Settled();
     error RequestNotFound();
@@ -74,6 +71,8 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
     error IsPaused();
     error AlreadyInit();
     error WrongRole();
+    error WrongAsset();
+    error TransferFailed();
     error NotClosed();
 
     /*//////////////////////////////////////////////////////////////
@@ -166,6 +165,36 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (!$.initialized) revert NotInitialized();
         return IkRegistry($.registry);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                RESCUER
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice rescues locked assets (ETH or ERC20) in the contract
+    /// @param asset_ the asset to rescue (use address(0) for ETH)
+    /// @param to_ the address that will receive the assets
+    /// @param amount_ the amount to rescue
+    function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
+        if (!_isAdmin(msg.sender)) revert WrongRole();
+        if (to_ == address(0)) revert ZeroAddress();
+
+        if (asset_ == address(0)) {
+            // Rescue ETH
+            if (amount_ == 0 || amount_ > address(this).balance) revert ZeroAmount();
+
+            (bool success,) = to_.call{ value: amount_ }("");
+            if (!success) revert TransferFailed();
+
+            emit RescuedETH(to_, amount_);
+        } else {
+            // Rescue ERC20 tokens
+            if (_isAsset(asset_)) revert WrongAsset();
+            if (amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
+
+            asset_.safeTransfer(to_, amount_);
+            emit RescuedAssets(asset_, to_, amount_);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -326,5 +355,12 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
         address _kAssetRouter = _registry().getContractById(K_ASSET_ROUTER);
         if (_kAssetRouter == kAssetRouter_) isTrue = true;
         return isTrue;
+    }
+
+    /// @notice Checks if an asset is registered
+    /// @param asset The asset address to check
+    /// @return Whether the asset is registered
+    function _isAsset(address asset) internal view returns (bool) {
+        return _registry().isAsset(asset);
     }
 }

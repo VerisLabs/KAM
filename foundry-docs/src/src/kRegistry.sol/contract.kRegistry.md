@@ -1,5 +1,5 @@
 # kRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/kRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/kRegistry.sol)
 
 **Inherits:**
 [IkRegistry](/src/interfaces/IkRegistry.sol/interface.IkRegistry.md), Initializable, UUPSUpgradeable, OwnableRoles
@@ -131,6 +131,23 @@ function initialize(
 |`relayer_`|`address`||
 
 
+### rescueAssets
+
+rescues locked assets (ETH or ERC20) in the contract
+
+
+```solidity
+function rescueAssets(address asset_, address to_, uint256 amount_) external payable;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset_`|`address`|the asset to rescue (use address(0) for ETH)|
+|`to_`|`address`|the address that will receive the assets|
+|`amount_`|`uint256`|the amount to rescue|
+
+
 ### setSingletonContract
 
 Set a singleton contract address
@@ -139,7 +156,7 @@ Set a singleton contract address
 
 
 ```solidity
-function setSingletonContract(bytes32 id, address contractAddress) external onlyRoles(ADMIN_ROLE);
+function setSingletonContract(bytes32 id, address contractAddress) external;
 ```
 **Parameters**
 
@@ -427,7 +444,7 @@ Check if caller is the Admin
 
 
 ```solidity
-function isAdmin(address user) public view returns (bool);
+function isAdmin(address user) external view returns (bool);
 ```
 **Returns**
 
@@ -442,7 +459,7 @@ Check if caller is the EmergencyAdmin
 
 
 ```solidity
-function isEmergencyAdmin(address user) public view returns (bool);
+function isEmergencyAdmin(address user) external view returns (bool);
 ```
 **Returns**
 
@@ -457,7 +474,7 @@ Check if caller is the Guardian
 
 
 ```solidity
-function isGuardian(address user) public view returns (bool);
+function isGuardian(address user) external view returns (bool);
 ```
 **Returns**
 
@@ -472,7 +489,7 @@ Check if the caller is the relayer
 
 
 ```solidity
-function isRelayer(address user) public view returns (bool);
+function isRelayer(address user) external view returns (bool);
 ```
 **Returns**
 
@@ -487,7 +504,7 @@ Check if the caller is a institution
 
 
 ```solidity
-function isInstitution(address user) public view returns (bool);
+function isInstitution(address user) external view returns (bool);
 ```
 **Returns**
 
@@ -502,28 +519,13 @@ Check if the caller is a vendor
 
 
 ```solidity
-function isVendor(address user) public view returns (bool);
+function isVendor(address user) external view returns (bool);
 ```
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`bool`|Whether the caller is a vendor|
-
-
-### _hasRole
-
-check if the user has the given role
-
-
-```solidity
-function _hasRole(address user, uint256 role_) internal view returns (bool);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|Wether the caller have the given role|
 
 
 ### isAsset
@@ -568,27 +570,6 @@ function isVault(address vault) external view returns (bool);
 |`<none>`|`bool`|Whether the vault is registered|
 
 
-### isSingletonContract
-
-Check if a contract is a singleton contract
-
-
-```solidity
-function isSingletonContract(address contractAddress) external view returns (bool);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`contractAddress`|`address`|Contract address|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|Whether the contract is a singleton contract|
-
-
 ### getAdapters
 
 Get the adapter for a specific vault
@@ -616,12 +597,13 @@ Check if an adapter is registered
 
 
 ```solidity
-function isAdapterRegistered(address adapter) external view returns (bool);
+function isAdapterRegistered(address vault, address adapter) external view returns (bool);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
+|`vault`|`address`||
 |`adapter`|`address`|Adapter address|
 
 **Returns**
@@ -671,6 +653,21 @@ function assetToKToken(address asset) external view returns (address);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`address`|KToken address|
+
+
+### _hasRole
+
+check if the user has the given role
+
+
+```solidity
+function _hasRole(address user, uint256 role_) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Wether the caller have the given role|
 
 
 ### _authorizeUpgrade
@@ -737,18 +734,16 @@ storage-location: erc7201:kam.storage.kRegistry
 
 ```solidity
 struct kRegistryStorage {
+    EnumerableSetLib.AddressSet supportedAssets;
+    EnumerableSetLib.AddressSet allVaults;
     mapping(bytes32 => address) singletonContracts;
-    mapping(address => bool) isSingletonContract;
     mapping(address => bool) isVault;
     mapping(address => uint8 vaultType) vaultType;
     mapping(address => mapping(uint8 vaultType => address)) assetToVault;
     mapping(address => EnumerableSetLib.AddressSet) vaultAsset;
-    EnumerableSetLib.AddressSet allVaults;
     mapping(address => EnumerableSetLib.AddressSet) vaultsByAsset;
     mapping(bytes32 => address) singletonAssets;
     mapping(address => address) assetToKToken;
-    mapping(address => bool) isAsset;
-    EnumerableSetLib.AddressSet supportedAssets;
     mapping(address => EnumerableSetLib.AddressSet) vaultAdapters;
     mapping(address => bool) registeredAdapters;
 }

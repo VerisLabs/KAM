@@ -276,25 +276,23 @@ interface IkRegistry {
     event AdapterRemoved(address indexed vault, address indexed adapter);
     event KTokenDeployed(address indexed kTokenContract, string name_, string symbol_, uint8 decimals_);
     event KTokenImplementationSet(address indexed implementation);
+    event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+    event RescuedETH(address indexed asset, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
     //////////////////////////////////////////////////////////////*/
 
     error ZeroAddress();
+    error ZeroAmount();
     error AlreadyRegistered();
     error AssetNotSupported();
-    error ContractNotSet();
     error AdapterNotRegistered();
     error InvalidAdapter();
     error AdapterAlreadySet();
-    error SaltAlreadyUsed();
-    error TokenInitializationFailed();
-    error KTokenNotRegistered();
-    error InvalidParameter();
-    error KTokenImplementationNotSet();
-    error MinterNotSet();
     error WrongRole();
+    error WrongAsset();
+    error TransferFailed();
 
     /*//////////////////////////////////////////////////////////////
                               FUNCTIONS
@@ -330,9 +328,8 @@ interface IkRegistry {
     function isVendor(address user) external view returns (bool);
     function isAsset(address asset) external view returns (bool);
     function isVault(address vault) external view returns (bool);
-    function isSingletonContract(address contractAddress) external view returns (bool);
     function getAdapters(address vault) external view returns (address[] memory);
-    function isAdapterRegistered(address adapter) external view returns (bool);
+    function isAdapterRegistered(address vault, address adapter) external view returns (bool);
     function getVaultAssets(address vault) external view returns (address[] memory);
     function assetToKToken(address asset) external view returns (address);
 }

@@ -1,5 +1,5 @@
 # kBatchReceiver
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/kBatchReceiver.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/kBatchReceiver.sol)
 
 **Inherits:**
 [IkBatchReceiver](/src/interfaces/IkBatchReceiver.sol/interface.IkBatchReceiver.md)
@@ -101,12 +101,12 @@ Transfers assets from kMinter to the specified receiver
 
 
 ```solidity
-function rescueAssets(address asset_) external;
+function rescueAssets(address asset_) external payable;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`asset_`|`address`|Asset address|
+|`asset_`|`address`|Asset address (use address(0) for ETH)|
 
 

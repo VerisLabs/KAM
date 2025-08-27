@@ -1,5 +1,5 @@
 # IkStakingVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/interfaces/IkStakingVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/interfaces/IkStakingVault.sol)
 
 **Inherits:**
 [IVaultBatch](/src/interfaces/modules/IVaultBatch.sol/interface.IVaultBatch.md), [IVaultClaim](/src/interfaces/modules/IVaultClaim.sol/interface.IVaultClaim.md), [IVaultFees](/src/interfaces/modules/IVaultFees.sol/interface.IVaultFees.md)

@@ -6,27 +6,6 @@ pragma solidity 0.8.30;
 /// @dev Defines the standard interface for kToken implementations with ERC20 compatibility
 interface IkToken {
     /*//////////////////////////////////////////////////////////////
-                                EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event Minted(address indexed to, uint256 amount);
-    event Burned(address indexed from, uint256 amount);
-    event UpgradeAuthorized(address indexed newImplementation, address indexed sender);
-    event TokenInitialized(string name, string symbol, uint8 decimals);
-    event PauseState(bool isPaused);
-    event AuthorizedCallerUpdated(address indexed caller, bool authorized);
-    event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
-
-    /*//////////////////////////////////////////////////////////////
-                                ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error Paused();
-    error ZeroAddress();
-    error ZeroAmount();
-    error ContractNotPaused();
-
-    /*//////////////////////////////////////////////////////////////
                             CORE OPERATIONS
     //////////////////////////////////////////////////////////////*/
 

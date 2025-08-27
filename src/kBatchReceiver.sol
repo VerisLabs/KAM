@@ -39,9 +39,9 @@ contract kBatchReceiver is IkBatchReceiver {
         if (isInitialised) revert IsInitialised();
         if (_asset == address(0)) revert ZeroAddress();
 
+        isInitialised = true;
         batchId = _batchId;
         asset = _asset;
-        isInitialised = true;
 
         emit BatchReceiverInitialized(kMinter, batchId, asset);
     }
@@ -66,15 +66,30 @@ contract kBatchReceiver is IkBatchReceiver {
     }
 
     /// @notice Transfers assets from kMinter to the specified receiver
-    /// @param asset_ Asset address
+    /// @param asset_ Asset address (use address(0) for ETH)
     /// @dev Only callable by kMinter, transfers assets to kMinter
-    function rescueAssets(address asset_) external {
+    function rescueAssets(address asset_) external payable {
         address sender = msg.sender;
         if (sender != kMinter) revert OnlyKMinter();
-        if (asset_ == asset) revert AssetCantBeRescue();
 
-        uint256 balance = asset_.balanceOf(address(this));
-        asset_.safeTransfer(sender, balance);
-        emit RescuedAssets(asset_, sender, balance);
+        if (asset_ == address(0)) {
+            // Rescue ETH
+            uint256 balance = address(this).balance;
+            if (balance == 0) revert ZeroAmount();
+
+            (bool success,) = sender.call{ value: balance }("");
+            if (!success) revert TransferFailed();
+
+            emit RescuedETH(sender, balance);
+        } else {
+            // Rescue ERC20 tokens
+            if (asset_ == asset) revert AssetCantBeRescue();
+
+            uint256 balance = asset_.balanceOf(address(this));
+            if (balance == 0) revert ZeroAmount();
+
+            asset_.safeTransfer(sender, balance);
+            emit RescuedAssets(asset_, sender, balance);
+        }
     }
 }

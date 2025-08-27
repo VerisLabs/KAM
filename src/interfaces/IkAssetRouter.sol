@@ -75,10 +75,8 @@ interface IkAssetRouter {
     //////////////////////////////////////////////////////////////*/
 
     error InsufficientVirtualBalance();
-    error ContractPaused();
     error ProposalNotFound();
     error ProposalAlreadyExecuted();
-    error ProposalCancelled();
     error ProposalAlreadyExists();
     error ZeroProposals();
     error BatchIdAlreadyProposed();
@@ -171,10 +169,6 @@ interface IkAssetRouter {
     /*//////////////////////////////////////////////////////////////
                             ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Set contract pause state
-    /// @param paused New pause state
-    function setPaused(bool paused) external;
 
     /// @notice Set the cooldown period for settlement proposals
     /// @param cooldown New cooldown period in seconds

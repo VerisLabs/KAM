@@ -1,5 +1,5 @@
 # MultiFacetProxy
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/base/MultiFacetProxy.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/base/MultiFacetProxy.sol)
 
 **Inherits:**
 [Proxy](/src/abstracts/Proxy.sol/abstract.Proxy.md), OwnableRoles
@@ -91,7 +91,7 @@ Adds multiple function selector mappings to an implementation
 
 
 ```solidity
-function addFunctions(bytes4[] calldata selectors, address implementation, bool forceOverride) public;
+function addFunctions(bytes4[] calldata selectors, address implementation, bool forceOverride) external;
 ```
 **Parameters**
 
@@ -125,7 +125,7 @@ Removes multiple function selector mappings
 
 
 ```solidity
-function removeFunctions(bytes4[] calldata selectors) public;
+function removeFunctions(bytes4[] calldata selectors) external;
 ```
 **Parameters**
 

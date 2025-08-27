@@ -1,5 +1,5 @@
 # ClaimModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/kStakingVault/modules/ClaimModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/kStakingVault/modules/ClaimModule.sol)
 
 **Inherits:**
 [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md)
@@ -107,11 +107,5 @@ error RequestNotPending();
 
 ```solidity
 error NotBeneficiary();
-```
-
-### MinimumOutputNotMet
-
-```solidity
-error MinimumOutputNotMet();
 ```
 

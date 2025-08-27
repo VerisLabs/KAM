@@ -1,5 +1,5 @@
 # kAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/kAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/kAssetRouter.sol)
 
 **Inherits:**
 [IkAssetRouter](/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), Multicallable
@@ -247,21 +247,6 @@ function _executeSettlement(VaultSettlementProposal storage proposal) private;
 |`proposal`|`VaultSettlementProposal`|The settlement proposal to execute|
 
 
-### setPaused
-
-Set contract pause state
-
-
-```solidity
-function setPaused(bool paused) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`paused`|`bool`|New pause state|
-
-
 ### setSettlementCooldown
 
 Set the cooldown period for settlement proposals
@@ -372,13 +357,13 @@ function _virtualBalance(address vault, address asset) internal view returns (ui
 |`balance`|`uint256`|the balance of the vault in all adapters.|
 
 
-### isPendingProposal
+### _isPendingProposal
 
 verifies if a proposal is pending or not
 
 
 ```solidity
-function isPendingProposal(address vault, bytes32 proposalId) internal view returns (bool);
+function _isPendingProposal(address vault, bytes32 proposalId) internal view returns (bool);
 ```
 **Parameters**
 

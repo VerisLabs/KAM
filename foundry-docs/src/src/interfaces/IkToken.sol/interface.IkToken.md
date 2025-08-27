@@ -1,5 +1,5 @@
 # IkToken
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/interfaces/IkToken.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/interfaces/IkToken.sol)
 
 Interface for kToken with role-based minting and burning capabilities
 
@@ -394,72 +394,4 @@ function contractVersion() external pure returns (string memory);
 |----|----|-----------|
 |`<none>`|`string`|The contract version as a string|
 
-
-## Events
-### Minted
-
-```solidity
-event Minted(address indexed to, uint256 amount);
-```
-
-### Burned
-
-```solidity
-event Burned(address indexed from, uint256 amount);
-```
-
-### UpgradeAuthorized
-
-```solidity
-event UpgradeAuthorized(address indexed newImplementation, address indexed sender);
-```
-
-### TokenInitialized
-
-```solidity
-event TokenInitialized(string name, string symbol, uint8 decimals);
-```
-
-### PauseState
-
-```solidity
-event PauseState(bool isPaused);
-```
-
-### AuthorizedCallerUpdated
-
-```solidity
-event AuthorizedCallerUpdated(address indexed caller, bool authorized);
-```
-
-### EmergencyWithdrawal
-
-```solidity
-event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
-```
-
-## Errors
-### Paused
-
-```solidity
-error Paused();
-```
-
-### ZeroAddress
-
-```solidity
-error ZeroAddress();
-```
-
-### ZeroAmount
-
-```solidity
-error ZeroAmount();
-```
-
-### ContractNotPaused
-
-```solidity
-error ContractNotPaused();
-```
 

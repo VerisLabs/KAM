@@ -1,5 +1,5 @@
 # kBase
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/base/kBase.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/base/kBase.sol)
 
 **Inherits:**
 ReentrancyGuardTransient
@@ -64,7 +64,7 @@ function __kBase_init(address registry_) internal;
 |`registry_`|`address`|Address of the kRegistry contract|
 
 
-### _setPaused
+### setPaused
 
 Sets the pause state of the contract
 
@@ -72,7 +72,7 @@ Sets the pause state of the contract
 
 
 ```solidity
-function _setPaused(bool paused_) internal;
+function setPaused(bool paused_) external;
 ```
 **Parameters**
 
@@ -81,21 +81,21 @@ function _setPaused(bool paused_) internal;
 |`paused_`|`bool`|New pause state|
 
 
-### _rescueAssets
+### rescueAssets
 
-rescues locked assets in the contract
+rescues locked assets (ETH or ERC20) in the contract
 
 
 ```solidity
-function _rescueAssets(address asset_, address to_, uint256 amount_) internal;
+function rescueAssets(address asset_, address to_, uint256 amount_) external payable;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`asset_`|`address`|the asset_ to rescue address|
+|`asset_`|`address`|the asset to rescue (use address(0) for ETH)|
 |`to_`|`address`|the address that will receive the assets|
-|`amount_`|`uint256`||
+|`amount_`|`uint256`|the amount to rescue|
 
 
 ### registry
@@ -444,6 +444,12 @@ event Paused(bool paused);
 event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
 ```
 
+### RescuedETH
+
+```solidity
+event RescuedETH(address indexed asset, uint256 amount);
+```
+
 ## Errors
 ### ZeroAddress
 
@@ -499,12 +505,6 @@ error InvalidVault(address vault);
 error IsPaused();
 ```
 
-### IsNotAdmin
-
-```solidity
-error IsNotAdmin();
-```
-
 ### WrongRole
 
 ```solidity
@@ -527,6 +527,12 @@ error OnlyMinter();
 
 ```solidity
 error OnlyStakingVault();
+```
+
+### TransferFailed
+
+```solidity
+error TransferFailed();
 ```
 
 ## Structs

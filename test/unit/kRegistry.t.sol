@@ -56,7 +56,6 @@ contract kRegistryTest is DeploymentBaseTest {
 
         // Verify registration
         assertEq(registry.getContractById(TEST_CONTRACT_ID), TEST_CONTRACT, "Contract not registered");
-        assertTrue(registry.isSingletonContract(TEST_CONTRACT), "Contract not marked as singleton");
     }
 
     /// @dev Test singleton contract registration requires admin role
@@ -82,7 +81,7 @@ contract kRegistryTest is DeploymentBaseTest {
         // Second registration should fail
         vm.prank(users.admin);
         vm.expectRevert(IkRegistry.AlreadyRegistered.selector);
-        registry.setSingletonContract(keccak256("DIFFERENT_ID"), TEST_CONTRACT);
+        registry.setSingletonContract(TEST_CONTRACT_ID, address(0x01));
     }
 
     /// @dev Test getContractById reverts when contract not set
@@ -325,7 +324,9 @@ contract kRegistryTest is DeploymentBaseTest {
 
     /// @dev Test isAdapterRegistered returns false for non-existent adapter
     function test_IsAdapterRegistered_NonExistent() public view {
-        assertFalse(registry.isAdapterRegistered(TEST_ADAPTER), "Should return false for non-existent adapter");
+        assertFalse(
+            registry.isAdapterRegistered(TEST_VAULT, TEST_ADAPTER), "Should return false for non-existent adapter"
+        );
     }
 
     /*//////////////////////////////////////////////////////////////

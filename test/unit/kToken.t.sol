@@ -13,7 +13,6 @@ import {
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { IkToken } from "src/interfaces/IkToken.sol";
 import { kToken } from "src/kToken.sol";
 
 /// @title kTokenTest
@@ -86,7 +85,7 @@ contract kTokenTest is DeploymentBaseTest {
         kUSD.setPaused(true);
 
         vm.prank(address(minter));
-        vm.expectRevert(IkToken.Paused.selector);
+        vm.expectRevert(kToken.Paused.selector);
         kUSD.mint(users.alice, TEST_AMOUNT);
     }
 
@@ -142,7 +141,7 @@ contract kTokenTest is DeploymentBaseTest {
         kUSD.setPaused(true);
 
         vm.prank(address(minter));
-        vm.expectRevert(IkToken.Paused.selector);
+        vm.expectRevert(kToken.Paused.selector);
         kUSD.burn(users.alice, TEST_AMOUNT);
     }
 
@@ -330,7 +329,7 @@ contract kTokenTest is DeploymentBaseTest {
 
         // Try to transfer
         vm.prank(users.alice);
-        vm.expectRevert(IkToken.Paused.selector);
+        vm.expectRevert(kToken.Paused.selector);
         kUSD.transfer(users.bob, TEST_AMOUNT);
     }
 
@@ -401,7 +400,7 @@ contract kTokenTest is DeploymentBaseTest {
     function test_EmergencyWithdraw_RequiresPaused() public {
         // Should revert when not paused
         vm.prank(users.emergencyAdmin);
-        vm.expectRevert(IkToken.ContractNotPaused.selector);
+        vm.expectRevert(kToken.ContractNotPaused.selector);
         kUSD.emergencyWithdraw(ZERO_ADDRESS, users.treasury, 1 ether);
     }
 
@@ -412,7 +411,7 @@ contract kTokenTest is DeploymentBaseTest {
         kUSD.setPaused(true);
 
         vm.prank(users.emergencyAdmin);
-        vm.expectRevert(IkToken.ZeroAddress.selector);
+        vm.expectRevert(kToken.ZeroAddress.selector);
         kUSD.emergencyWithdraw(ZERO_ADDRESS, ZERO_ADDRESS, 1 ether);
     }
 
@@ -423,7 +422,7 @@ contract kTokenTest is DeploymentBaseTest {
         kUSD.setPaused(true);
 
         vm.prank(users.emergencyAdmin);
-        vm.expectRevert(IkToken.ZeroAmount.selector);
+        vm.expectRevert(kToken.ZeroAmount.selector);
         kUSD.emergencyWithdraw(ZERO_ADDRESS, users.treasury, 0);
     }
 

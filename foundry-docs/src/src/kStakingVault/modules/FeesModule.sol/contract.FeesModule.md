@@ -1,5 +1,5 @@
 # FeesModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/kStakingVault/modules/FeesModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/kStakingVault/modules/FeesModule.sol)
 
 **Inherits:**
 [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md)
@@ -156,7 +156,7 @@ Computes the last fee batch
 
 ```solidity
 function computeLastBatchFees()
-    public
+    external
     view
     returns (uint256 managementFees, uint256 performanceFees, uint256 totalFees);
 ```
@@ -216,7 +216,7 @@ Returns the current hurdle rate used for performance fee calculations
 
 
 ```solidity
-function hurdleRate() public view returns (uint16);
+function hurdleRate() external view returns (uint16);
 ```
 **Returns**
 
@@ -231,7 +231,7 @@ Returns the current performance fee percentage
 
 
 ```solidity
-function performanceFee() public view returns (uint16);
+function performanceFee() external view returns (uint16);
 ```
 **Returns**
 
@@ -246,7 +246,7 @@ Returns the next performance fee timestamp so the backend can schedule the fee c
 
 
 ```solidity
-function nextPerformanceFeeTimestamp() public view returns (uint256);
+function nextPerformanceFeeTimestamp() external view returns (uint256);
 ```
 **Returns**
 
@@ -261,7 +261,7 @@ Returns the next management fee timestamp so the backend can schedule the fee co
 
 
 ```solidity
-function nextManagementFeeTimestamp() public view returns (uint256);
+function nextManagementFeeTimestamp() external view returns (uint256);
 ```
 **Returns**
 
@@ -276,7 +276,7 @@ Returns the current management fee percentage
 
 
 ```solidity
-function managementFee() public view returns (uint16);
+function managementFee() external view returns (uint16);
 ```
 **Returns**
 
@@ -291,7 +291,7 @@ Returns the address that receives collected fees
 
 
 ```solidity
-function feeReceiver() public view returns (address);
+function feeReceiver() external view returns (address);
 ```
 **Returns**
 
@@ -306,7 +306,7 @@ Returns the high watermark for share price used in performance fee calculations
 
 
 ```solidity
-function sharePriceWatermark() public view returns (uint256);
+function sharePriceWatermark() external view returns (uint256);
 ```
 **Returns**
 

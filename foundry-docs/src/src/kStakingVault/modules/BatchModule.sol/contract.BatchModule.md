@@ -1,5 +1,5 @@
 # BatchModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/kStakingVault/modules/BatchModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/kStakingVault/modules/BatchModule.sol)
 
 **Inherits:**
 [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md)
@@ -68,7 +68,7 @@ Deploys BatchReceiver for specific batch
 
 
 ```solidity
-function createBatchReceiver(bytes32 _batchId) external returns (address);
+function createBatchReceiver(bytes32 _batchId) external nonReentrant returns (address);
 ```
 **Parameters**
 

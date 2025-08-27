@@ -46,15 +46,12 @@ interface IkMinter {
                               ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error BatchNotSettled();
     error InsufficientBalance();
     error RequestNotFound();
     error RequestNotEligible();
     error RequestAlreadyProcessed();
     error BatchClosed();
     error BatchSettled();
-    error ContractPaused();
-    error InvalidAsset();
 
     /*//////////////////////////////////////////////////////////////
                               FUNCTIONS
@@ -64,8 +61,6 @@ interface IkMinter {
     function requestRedeem(address asset, address to, uint256 amount) external payable returns (bytes32 requestId);
     function redeem(bytes32 requestId) external payable;
     function cancelRequest(bytes32 requestId) external payable;
-    function setPaused(bool paused) external;
-    function rescueMinterAssets(address asset, address to, uint256 amount) external;
     function rescueReceiverAssets(address batchReceiver, address asset, address to, uint256 amount) external;
 
     function isPaused() external view returns (bool);

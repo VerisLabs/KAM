@@ -1,5 +1,5 @@
 # kToken
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/kToken.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/kToken.sol)
 
 **Inherits:**
 ERC20, OwnableRoles, ReentrancyGuard, Multicallable
@@ -41,21 +41,21 @@ bool _isPaused;
 ### _name
 
 ```solidity
-string _name;
+string private _name;
 ```
 
 
 ### _symbol
 
 ```solidity
-string _symbol;
+string private _symbol;
 ```
 
 
 ### _decimals
 
 ```solidity
-uint8 _decimals;
+uint8 private _decimals;
 ```
 
 
@@ -398,6 +398,18 @@ event AuthorizedCallerUpdated(address indexed caller, bool authorized);
 event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
 ```
 
+### RescuedAssets
+
+```solidity
+event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+```
+
+### RescuedETH
+
+```solidity
+event RescuedETH(address indexed asset, uint256 amount);
+```
+
 ## Errors
 ### Paused
 
@@ -421,5 +433,11 @@ error ZeroAmount();
 
 ```solidity
 error ContractNotPaused();
+```
+
+### TransferFailed
+
+```solidity
+error TransferFailed();
 ```
 

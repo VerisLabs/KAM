@@ -1,5 +1,5 @@
 # kMinter
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/kMinter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/kMinter.sol)
 
 **Inherits:**
 [IkMinter](/src/interfaces/IkMinter.sol/interface.IkMinter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
@@ -152,38 +152,6 @@ function _createRedeemRequestId(address user, uint256 amount, uint256 timestamp)
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`bytes32`|Request ID|
-
-
-### setPaused
-
-Set contract pause state
-
-
-```solidity
-function setPaused(bool paused) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`paused`|`bool`|New pause state|
-
-
-### rescueMinterAssets
-
-Rescue Assets
-
-
-```solidity
-function rescueMinterAssets(address asset_, address to_, uint256 amount_) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`asset_`|`address`|the address of the asset to rescue|
-|`to_`|`address`|the address to send the rescue assets to|
-|`amount_`|`uint256`||
 
 
 ### rescueReceiverAssets

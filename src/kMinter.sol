@@ -175,6 +175,10 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         // Update state
         redeemRequest.status = RequestStatus.REDEEMED;
 
+        // Delete request
+        $.userRequests[redeemRequest.user].remove(requestId);
+        $.totalLockedAssets[redeemRequest.asset] -= redeemRequest.amount;
+
         address vault = _getDNVaultByAsset(redeemRequest.asset);
         address batchReceiver = _getBatchReceiver(vault, redeemRequest.batchId);
         if (batchReceiver == address(0)) revert ZeroAddress();
@@ -182,10 +186,6 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         // Burn kTokens
         address kToken = _getKTokenForAsset(redeemRequest.asset);
         IkToken(kToken).burn(address(this), redeemRequest.amount);
-
-        // Delete request
-        $.userRequests[redeemRequest.user].remove(requestId);
-        $.totalLockedAssets[redeemRequest.asset] -= redeemRequest.amount;
 
         // If batch is not settled, this will fail
         IkBatchReceiver(batchReceiver).pullAssets(redeemRequest.recipient, redeemRequest.amount, redeemRequest.batchId);
@@ -241,23 +241,10 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
                           ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Set contract pause state
-    /// @param paused New pause state
-    function setPaused(bool paused) external {
-        _setPaused(paused);
-    }
-
-    /// @notice Rescue Assets
-    /// @param asset_ the address of the asset to rescue
-    /// @param to_ the address to send the rescue assets to
-    function rescueMinterAssets(address asset_, address to_, uint256 amount_) external {
-        _rescueAssets(asset_, to_, amount_);
-    }
-
     function rescueReceiverAssets(address batchReceiver, address asset_, address to_, uint256 amount_) external {
         if (batchReceiver == address(0) || asset_ == address(0) || to_ == address(0)) revert ZeroAddress();
         IkBatchReceiver(batchReceiver).rescueAssets(asset_);
-        _rescueAssets(asset_, to_, amount_);
+        this.rescueAssets(asset_, to_, amount_);
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -1,5 +1,5 @@
 # IkMinter
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/interfaces/IkMinter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/interfaces/IkMinter.sol)
 
 Interface for kMinter
 
@@ -31,20 +31,6 @@ function redeem(bytes32 requestId) external payable;
 
 ```solidity
 function cancelRequest(bytes32 requestId) external payable;
-```
-
-### setPaused
-
-
-```solidity
-function setPaused(bool paused) external;
-```
-
-### rescueMinterAssets
-
-
-```solidity
-function rescueMinterAssets(address asset, address to, uint256 amount) external;
 ```
 
 ### rescueReceiverAssets
@@ -121,12 +107,6 @@ event Cancelled(bytes32 indexed requestId);
 ```
 
 ## Errors
-### BatchNotSettled
-
-```solidity
-error BatchNotSettled();
-```
-
 ### InsufficientBalance
 
 ```solidity
@@ -161,18 +141,6 @@ error BatchClosed();
 
 ```solidity
 error BatchSettled();
-```
-
-### ContractPaused
-
-```solidity
-error ContractPaused();
-```
-
-### InvalidAsset
-
-```solidity
-error InvalidAsset();
 ```
 
 ## Structs

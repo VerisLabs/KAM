@@ -246,7 +246,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         // Check if proposal already exists
         if ($.executedProposalIds.contains(proposalId)) revert ProposalAlreadyExecuted();
-        if ($.vaultPendingProposalIds[vault].contains(proposalId)) revert ProposalAlreadyExists();
+        if (_isPendingProposal(vault, proposalId)) revert ProposalAlreadyExists();
         $.vaultPendingProposalIds[vault].add(proposalId);
 
         uint256 executeAfter = block.timestamp + $.vaultSettlementCooldown;
@@ -275,18 +275,19 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
         // Validations
-        if (!$.vaultPendingProposalIds[proposal.vault].contains(proposalId)) revert ProposalNotFound();
+        address vault = proposal.vault;
+        if (!_isPendingProposal(vault, proposalId)) revert ProposalNotFound();
         if (block.timestamp < proposal.executeAfter) {
             revert CooldownNotPassed();
         }
 
         $.executedProposalIds.add(proposalId);
-        $.vaultPendingProposalIds[proposal.vault].remove(proposalId);
+        $.vaultPendingProposalIds[vault].remove(proposalId);
 
         // Execute the settlement logic
         _executeSettlement(proposal);
 
-        emit SettlementExecuted(proposalId, proposal.vault, proposal.batchId, msg.sender);
+        emit SettlementExecuted(proposalId, vault, proposal.batchId, msg.sender);
     }
 
     /// @notice Cancel a settlement proposal before execution
@@ -298,12 +299,13 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
-        if (!$.vaultPendingProposalIds[proposal.vault].contains(proposalId)) revert ProposalNotFound();
+        address vault = proposal.vault;
+        if (!_isPendingProposal(vault, proposalId)) revert ProposalNotFound();
 
-        $.vaultPendingProposalIds[proposal.vault].remove(proposalId);
+        $.vaultPendingProposalIds[vault].remove(proposalId);
         $.batchIds.remove(proposal.batchId);
 
-        emit SettlementCancelled(proposalId, proposal.vault, proposal.batchId);
+        emit SettlementCancelled(proposalId, vault, proposal.batchId);
     }
 
     /// @notice Internal function to execute settlement logic
@@ -383,15 +385,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /*////////////////////////////////////////////////////////////
                           ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Set contract pause state
-    /// @param paused New pause state
-    function setPaused(bool paused) external {
-        if (!_isEmergencyAdmin(msg.sender)) revert WrongRole();
-
-        _setPaused(paused);
-        emit Paused(paused);
-    }
 
     /// @notice Set the cooldown period for settlement proposals
     /// @param cooldown New cooldown period in seconds
@@ -478,7 +471,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @param vault the vault address
     /// @param proposalId the proposalId to verify
     /// @return bool proposal exists or not
-    function isPendingProposal(address vault, bytes32 proposalId) internal view returns (bool) {
+    function _isPendingProposal(address vault, bytes32 proposalId) internal view returns (bool) {
         return _getkAssetRouterStorage().vaultPendingProposalIds[vault].contains(proposalId);
     }
 

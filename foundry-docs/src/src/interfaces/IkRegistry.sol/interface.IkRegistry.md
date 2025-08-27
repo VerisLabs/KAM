@@ -1,5 +1,5 @@
 # IkRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/interfaces/IkRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/interfaces/IkRegistry.sol)
 
 
 ## Functions
@@ -171,13 +171,6 @@ function isAsset(address asset) external view returns (bool);
 function isVault(address vault) external view returns (bool);
 ```
 
-### isSingletonContract
-
-
-```solidity
-function isSingletonContract(address contractAddress) external view returns (bool);
-```
-
 ### getAdapters
 
 
@@ -189,7 +182,7 @@ function getAdapters(address vault) external view returns (address[] memory);
 
 
 ```solidity
-function isAdapterRegistered(address adapter) external view returns (bool);
+function isAdapterRegistered(address vault, address adapter) external view returns (bool);
 ```
 
 ### getVaultAssets
@@ -255,11 +248,29 @@ event KTokenDeployed(address indexed kTokenContract, string name_, string symbol
 event KTokenImplementationSet(address indexed implementation);
 ```
 
+### RescuedAssets
+
+```solidity
+event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+```
+
+### RescuedETH
+
+```solidity
+event RescuedETH(address indexed asset, uint256 amount);
+```
+
 ## Errors
 ### ZeroAddress
 
 ```solidity
 error ZeroAddress();
+```
+
+### ZeroAmount
+
+```solidity
+error ZeroAmount();
 ```
 
 ### AlreadyRegistered
@@ -272,12 +283,6 @@ error AlreadyRegistered();
 
 ```solidity
 error AssetNotSupported();
-```
-
-### ContractNotSet
-
-```solidity
-error ContractNotSet();
 ```
 
 ### AdapterNotRegistered
@@ -298,46 +303,22 @@ error InvalidAdapter();
 error AdapterAlreadySet();
 ```
 
-### SaltAlreadyUsed
-
-```solidity
-error SaltAlreadyUsed();
-```
-
-### TokenInitializationFailed
-
-```solidity
-error TokenInitializationFailed();
-```
-
-### KTokenNotRegistered
-
-```solidity
-error KTokenNotRegistered();
-```
-
-### InvalidParameter
-
-```solidity
-error InvalidParameter();
-```
-
-### KTokenImplementationNotSet
-
-```solidity
-error KTokenImplementationNotSet();
-```
-
-### MinterNotSet
-
-```solidity
-error MinterNotSet();
-```
-
 ### WrongRole
 
 ```solidity
 error WrongRole();
+```
+
+### WrongAsset
+
+```solidity
+error WrongAsset();
+```
+
+### TransferFailed
+
+```solidity
+error TransferFailed();
 ```
 
 ## Enums

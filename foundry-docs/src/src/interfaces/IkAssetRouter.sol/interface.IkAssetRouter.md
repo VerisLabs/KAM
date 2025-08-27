@@ -1,5 +1,5 @@
 # IkAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/interfaces/IkAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/interfaces/IkAssetRouter.sol)
 
 Interface for kAssetRouter for asset routing and settlement
 
@@ -167,21 +167,6 @@ function cancelProposal(bytes32 proposalId) external;
 |Name|Type|Description|
 |----|----|-----------|
 |`proposalId`|`bytes32`|The proposal ID to cancel|
-
-
-### setPaused
-
-Set contract pause state
-
-
-```solidity
-function setPaused(bool paused) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`paused`|`bool`|New pause state|
 
 
 ### setSettlementCooldown
@@ -510,12 +495,6 @@ event SettlementCooldownUpdated(uint256 oldCooldown, uint256 newCooldown);
 error InsufficientVirtualBalance();
 ```
 
-### ContractPaused
-
-```solidity
-error ContractPaused();
-```
-
 ### ProposalNotFound
 
 ```solidity
@@ -526,12 +505,6 @@ error ProposalNotFound();
 
 ```solidity
 error ProposalAlreadyExecuted();
-```
-
-### ProposalCancelled
-
-```solidity
-error ProposalCancelled();
 ```
 
 ### ProposalAlreadyExists

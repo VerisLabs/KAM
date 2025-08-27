@@ -1,5 +1,5 @@
 # BaseVaultModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/kStakingVault/base/BaseVaultModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/kStakingVault/base/BaseVaultModule.sol)
 
 **Inherits:**
 ERC20, ReentrancyGuardTransient, [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
@@ -106,6 +106,23 @@ function _registry() internal view returns (IkRegistry);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`IkRegistry`|IkRegistry interface for registry interaction|
+
+
+### rescueAssets
+
+rescues locked assets (ETH or ERC20) in the contract
+
+
+```solidity
+function rescueAssets(address asset_, address to_, uint256 amount_) external payable;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset_`|`address`|the asset to rescue (use address(0) for ETH)|
+|`to_`|`address`|the address that will receive the assets|
+|`amount_`|`uint256`|the amount to rescue|
 
 
 ### _getKMinter
@@ -436,6 +453,27 @@ function _isKAssetRouter(address kAssetRouter_) internal view returns (bool);
 |`<none>`|`bool`|minter The kMinter contract address|
 
 
+### _isAsset
+
+Checks if an asset is registered
+
+
+```solidity
+function _isAsset(address asset) internal view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The asset address to check|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the asset is registered|
+
+
 ## Events
 ### StakeRequestCreated
 
@@ -494,6 +532,18 @@ event Initialized(address registry, string name, string symbol, uint8 decimals, 
 event TotalAssetsUpdated(uint256 oldTotalAssets, uint256 newTotalAssets);
 ```
 
+### RescuedAssets
+
+```solidity
+event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+```
+
+### RescuedETH
+
+```solidity
+event RescuedETH(address indexed asset, uint256 amount);
+```
+
 ## Errors
 ### ZeroAddress
 
@@ -519,18 +569,6 @@ error NotInitialized();
 error ContractNotFound(bytes32 identifier);
 ```
 
-### OnlyKAssetRouter
-
-```solidity
-error OnlyKAssetRouter();
-```
-
-### OnlyRelayer
-
-```solidity
-error OnlyRelayer();
-```
-
 ### ZeroAmount
 
 ```solidity
@@ -541,12 +579,6 @@ error ZeroAmount();
 
 ```solidity
 error AmountBelowDustThreshold();
-```
-
-### ContractPaused
-
-```solidity
-error ContractPaused();
 ```
 
 ### Closed
@@ -595,6 +627,18 @@ error AlreadyInit();
 
 ```solidity
 error WrongRole();
+```
+
+### WrongAsset
+
+```solidity
+error WrongAsset();
+```
+
+### TransferFailed
+
+```solidity
+error TransferFailed();
 ```
 
 ### NotClosed

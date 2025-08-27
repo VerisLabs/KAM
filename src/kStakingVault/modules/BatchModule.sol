@@ -68,16 +68,15 @@ contract BatchModule is BaseVaultModule {
     /// @notice Deploys BatchReceiver for specific batch
     /// @param _batchId Batch ID to deploy receiver for
     /// @dev Only callable by kAssetRouter
-    function createBatchReceiver(bytes32 _batchId) external returns (address) {
+    function createBatchReceiver(bytes32 _batchId) external nonReentrant returns (address) {
         if (!_isKAssetRouter(msg.sender)) revert WrongRole();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         address receiver = $.batches[_batchId].batchReceiver;
         if (receiver != address(0)) return receiver;
 
         receiver = LibClone.clone($.receiverImplementation);
-        kBatchReceiver(receiver).initialize(_batchId, $.underlyingAsset);
-
         $.batches[_batchId].batchReceiver = receiver;
+        kBatchReceiver(receiver).initialize(_batchId, $.underlyingAsset);
 
         emit BatchReceiverCreated(receiver, _batchId);
 

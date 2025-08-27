@@ -1,5 +1,5 @@
 # IkBatchReceiver
-[Git Source](https://github.com/VerisLabs/KAM/blob/20318b955ccd8109bf3be0a23f88fb6d93069dbe/src/interfaces/IkBatchReceiver.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/interfaces/IkBatchReceiver.sol)
 
 Interface for kBatchReceiver
 
@@ -37,7 +37,7 @@ function pullAssets(address receiver, uint256 amount, bytes32 _batchId) external
 
 
 ```solidity
-function rescueAssets(address asset_) external;
+function rescueAssets(address asset_) external payable;
 ```
 
 ## Events
@@ -57,6 +57,12 @@ event PulledAssets(address indexed receiver, address indexed asset, uint256 amou
 
 ```solidity
 event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+```
+
+### RescuedETH
+
+```solidity
+event RescuedETH(address indexed asset, uint256 amount);
 ```
 
 ## Errors
@@ -90,15 +96,15 @@ error ZeroAmount();
 error AssetCantBeRescue();
 ```
 
-### WrongRole
-
-```solidity
-error WrongRole();
-```
-
 ### IsInitialised
 
 ```solidity
 error IsInitialised();
+```
+
+### TransferFailed
+
+```solidity
+error TransferFailed();
 ```
 

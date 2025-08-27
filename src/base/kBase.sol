@@ -18,6 +18,7 @@ contract kBase is ReentrancyGuardTransient {
 
     event Paused(bool paused);
     event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+    event RescuedETH(address indexed asset, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
@@ -39,11 +40,11 @@ contract kBase is ReentrancyGuardTransient {
     error AssetNotSupported(address asset);
     error InvalidVault(address vault);
     error IsPaused();
-    error IsNotAdmin();
     error WrongRole();
     error WrongAsset();
     error OnlyMinter();
     error OnlyStakingVault();
+    error TransferFailed();
 
     /*//////////////////////////////////////////////////////////////
                         STORAGE LAYOUT
@@ -96,7 +97,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @notice Sets the pause state of the contract
     /// @param paused_ New pause state
     /// @dev Only callable internally by inheriting contracts
-    function _setPaused(bool paused_) internal {
+    function setPaused(bool paused_) external {
         if (!_isEmergencyAdmin(msg.sender)) revert WrongRole();
         kBaseStorage storage $ = _getBaseStorage();
         if (!$.initialized) revert NotInitialized();
@@ -104,17 +105,30 @@ contract kBase is ReentrancyGuardTransient {
         emit Paused(paused_);
     }
 
-    /// @notice rescues locked assets in the contract
-    /// @param asset_ the asset_ to rescue address
+    /// @notice rescues locked assets (ETH or ERC20) in the contract
+    /// @param asset_ the asset to rescue (use address(0) for ETH)
     /// @param to_ the address that will receive the assets
-    function _rescueAssets(address asset_, address to_, uint256 amount_) internal {
+    /// @param amount_ the amount to rescue
+    function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
         if (!_isAdmin(msg.sender)) revert WrongRole();
-        if (_isAsset(asset_)) revert WrongAsset();
         if (to_ == address(0)) revert ZeroAddress();
-        if (amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
 
-        asset_.safeTransfer(to_, amount_);
-        emit RescuedAssets(asset_, to_, amount_);
+        if (asset_ == address(0)) {
+            // Rescue ETH
+            if (amount_ == 0 || amount_ > address(this).balance) revert ZeroAmount();
+
+            (bool success,) = to_.call{ value: amount_ }("");
+            if (!success) revert TransferFailed();
+
+            emit RescuedETH(to_, amount_);
+        } else {
+            // Rescue ERC20 tokens
+            if (_isAsset(asset_)) revert WrongAsset();
+            if (amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
+
+            asset_.safeTransfer(to_, amount_);
+            emit RescuedAssets(asset_, to_, amount_);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -2,11 +2,8 @@
 pragma solidity 0.8.30;
 
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
-import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
-import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title FeesModule
 /// @notice Handles batch operations for staking and unstaking
@@ -133,7 +130,7 @@ contract FeesModule is BaseVaultModule {
     /// @return performanceFees The performance fees for the last batch
     /// @return totalFees The total fees for the last batch
     function computeLastBatchFees()
-        public
+        external
         view
         returns (uint256 managementFees, uint256 performanceFees, uint256 totalFees)
     {
@@ -215,43 +212,43 @@ contract FeesModule is BaseVaultModule {
 
     /// @notice Returns the current hurdle rate used for performance fee calculations
     /// @return The hurdle rate in basis points (e.g., 500 = 5%)
-    function hurdleRate() public view returns (uint16) {
+    function hurdleRate() external view returns (uint16) {
         return _getBaseVaultModuleStorage().hurdleRate;
     }
 
     /// @notice Returns the current performance fee percentage
     /// @return The performance fee in basis points (e.g., 2000 = 20%)
-    function performanceFee() public view returns (uint16) {
+    function performanceFee() external view returns (uint16) {
         return _getBaseVaultModuleStorage().performanceFee;
     }
 
     /// @notice Returns the next performance fee timestamp so the backend can schedule the fee collection
     /// @return The next performance fee timestamp
-    function nextPerformanceFeeTimestamp() public view returns (uint256) {
+    function nextPerformanceFeeTimestamp() external view returns (uint256) {
         return lastFeesChargedPerformance() + PERFORMANCE_FEE_INTERVAL;
     }
 
     /// @notice Returns the next management fee timestamp so the backend can schedule the fee collection
     /// @return The next management fee timestamp
-    function nextManagementFeeTimestamp() public view returns (uint256) {
+    function nextManagementFeeTimestamp() external view returns (uint256) {
         return lastFeesChargedManagement() + MANAGEMENT_FEE_INTERVAL;
     }
 
     /// @notice Returns the current management fee percentage
     /// @return The management fee in basis points (e.g., 100 = 1%)
-    function managementFee() public view returns (uint16) {
+    function managementFee() external view returns (uint16) {
         return _getBaseVaultModuleStorage().managementFee;
     }
 
     /// @notice Returns the address that receives collected fees
     /// @return The fee receiver address
-    function feeReceiver() public view returns (address) {
+    function feeReceiver() external view returns (address) {
         return _getBaseVaultModuleStorage().feeReceiver;
     }
 
     /// @notice Returns the high watermark for share price used in performance fee calculations
     /// @return The share price watermark value
-    function sharePriceWatermark() public view returns (uint256) {
+    function sharePriceWatermark() external view returns (uint256) {
         return _getBaseVaultModuleStorage().sharePriceWatermark;
     }
 

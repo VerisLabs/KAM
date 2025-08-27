@@ -2,14 +2,11 @@
 pragma solidity 0.8.30;
 
 import { ERC20 } from "solady/tokens/ERC20.sol";
-
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IAdapter } from "src/interfaces/IAdapter.sol";
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
@@ -30,7 +27,6 @@ contract ClaimModule is BaseVaultModule {
     error InvalidBatchId();
     error RequestNotPending();
     error NotBeneficiary();
-    error MinimumOutputNotMet();
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
