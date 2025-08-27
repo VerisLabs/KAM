@@ -227,7 +227,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(proposal.yield, TEST_PROFIT, "Yield incorrect");
         assertTrue(proposal.profit, "Profit flag incorrect");
         assertEq(proposal.executeAfter, block.timestamp + 1, "ExecuteAfter incorrect");
-        assertFalse(proposal.executed, "Should not be executed");
         // Dispute mechanism removed - no disputed field to check
     }
 
@@ -471,7 +470,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(proposal.yield, TEST_PROFIT, "Yield incorrect");
         assertTrue(proposal.profit, "Profit flag incorrect");
         assertGt(proposal.executeAfter, 0, "executeAfter should be set");
-        assertFalse(proposal.executed, "Should not be executed");
         // Dispute mechanism removed - no disputed field to check
     }
 
@@ -539,9 +537,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
         // Verify proposal state
         IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(proposalId);
-        assertFalse(proposal.executed, "Should not be executed yet");
-        // Dispute mechanism removed - no disputed field to check
-
+        
         // Step 2: Check cannot execute before cooldown
         (bool canExecute, string memory reason) = assetRouter.canExecuteProposal(proposalId);
         assertFalse(canExecute, "Should not be able to execute immediately");
@@ -574,58 +570,12 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
         // Verify proposal is cancelled
         IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(proposalId);
-        assertTrue(proposal.cancelled, "Proposal should be cancelled");
 
         // Cannot execute cancelled proposal
         vm.prank(users.relayer);
         vm.warp(block.timestamp + 2);
-        vm.expectRevert(IkAssetRouter.ProposalCancelled.selector);
-        assetRouter.executeSettleBatch(proposalId);
-    }
-
-    /// @dev Test proposal update
-    function test_UpdateProposal_Success() public {
-        bytes32 batchId = TEST_BATCH_ID;
-
-        // Create proposal with initial values
-        vm.prank(users.relayer);
-        bytes32 proposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
-        );
-
-        // Update proposal with new values
-        uint256 newTotalAssets = TEST_TOTAL_ASSETS * 2;
-        uint256 newNetted = TEST_NETTED * 2;
-        uint256 newYield = TEST_LOSS;
-        bool newProfit = false;
-
-        vm.prank(users.relayer);
-        vm.expectEmit(true, false, false, true);
-        emit IkAssetRouter.SettlementUpdated(proposalId, newTotalAssets, newNetted, newYield, newProfit);
-        assetRouter.updateProposal(proposalId, newTotalAssets, newNetted, newYield, newProfit);
-
-        // Verify proposal was updated
-        IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(proposalId);
-        assertEq(proposal.totalAssets, newTotalAssets, "Total assets should be updated");
-        assertEq(proposal.netted, newNetted, "Netted should be updated");
-        assertEq(proposal.yield, newYield, "Yield should be updated");
-        assertEq(proposal.profit, newProfit, "Profit flag should be updated");
-    }
-
-    /// @dev Test cannot update executed proposal
-    function test_UpdateProposal_RevertExecuted() public {
-        bytes32 batchId = TEST_BATCH_ID;
-
-        vm.prank(users.relayer);
-        bytes32 proposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
-        );
-
-        vm.warp(block.timestamp + 2);
-        bytes32 fakeProposalId = keccak256("fake");
-        vm.prank(users.relayer);
         vm.expectRevert(IkAssetRouter.ProposalNotFound.selector);
-        assetRouter.updateProposal(fakeProposalId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true);
+        assetRouter.executeSettleBatch(proposalId);
     }
 
     /// @dev Test cannot cancel already cancelled proposal
@@ -643,35 +593,27 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
         // Try to cancel again
         vm.prank(users.guardian);
-        vm.expectRevert(IkAssetRouter.ProposalCancelled.selector);
+        vm.expectRevert(IkAssetRouter.ProposalNotFound.selector);
         assetRouter.cancelProposal(proposalId);
     }
 
     /// @dev Test multiple proposals for same batch
-    function test_MultipleProposals_SameBatch() public {
+    function test_MultipleProposals_SameBatch_Revert() public {
         bytes32 batchId = TEST_BATCH_ID;
 
         // Create first proposal
         vm.prank(users.relayer);
-        bytes32 proposalId1 = assetRouter.proposeSettleBatch(
+        bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS, TEST_NETTED, TEST_PROFIT, true
         );
 
         // Create second proposal for same batch (different timestamp makes different ID)
         vm.warp(block.timestamp + 1);
         vm.prank(users.relayer);
-        bytes32 proposalId2 = assetRouter.proposeSettleBatch(
+        vm.expectRevert(IkAssetRouter.BatchIdAlreadyProposed.selector);
+        proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(dnVault), batchId, TEST_TOTAL_ASSETS + 1000, TEST_NETTED + 100, TEST_PROFIT + 10, true
         );
-
-        // Verify both proposals exist independently
-        assertNotEq(proposalId1, proposalId2, "Proposal IDs should be different");
-
-        IkAssetRouter.VaultSettlementProposal memory proposal1 = assetRouter.getSettlementProposal(proposalId1);
-        IkAssetRouter.VaultSettlementProposal memory proposal2 = assetRouter.getSettlementProposal(proposalId2);
-
-        assertEq(proposal1.totalAssets, TEST_TOTAL_ASSETS, "First proposal should have original values");
-        assertEq(proposal2.totalAssets, TEST_TOTAL_ASSETS + 1000, "Second proposal should have updated values");
     }
 
     /// @dev Test settlement with loss instead of profit

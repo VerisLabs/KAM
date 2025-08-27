@@ -17,6 +17,7 @@ contract kBatchReceiver is IkBatchReceiver {
     address public immutable kMinter;
     address public asset;
     bytes32 public batchId;
+    bool public isInitialised;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -35,11 +36,12 @@ contract kBatchReceiver is IkBatchReceiver {
     /// @param _asset Address of the asset contract
     /// @dev Sets batch ID and asset, then emits initialization event
     function initialize(bytes32 _batchId, address _asset) external {
-        if (asset != address(0)) revert();
-        if (_asset == address(0)) revert();
+        if (isInitialised) revert IsInitialised();
+        if (_asset == address(0)) revert ZeroAddress();
 
         batchId = _batchId;
         asset = _asset;
+        isInitialised = true;
 
         emit BatchReceiverInitialized(kMinter, batchId, asset);
     }

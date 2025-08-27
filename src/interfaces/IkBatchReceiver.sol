@@ -20,6 +20,8 @@ interface IkBatchReceiver {
     error InvalidBatchId();
     error ZeroAmount();
     error AssetCantBeRescue();
+    error WrongRole();
+    error IsInitialised();
 
     /*//////////////////////////////////////////////////////////////
                               GETTERS

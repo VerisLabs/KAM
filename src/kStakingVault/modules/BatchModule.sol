@@ -32,14 +32,16 @@ contract BatchModule is BaseVaultModule {
     /// @notice Creates a new batch for processing requests
     /// @return The new batch ID
     /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
-    function createNewBatch() external onlyRelayer returns (bytes32) {
+    function createNewBatch() external returns (bytes32) {
+        if(!_isRelayer(msg.sender)) revert WrongRole();
         return _createNewBatch();
     }
 
     // @notice Closes a batch to prevent new requests
     /// @param _batchId The batch ID to close
     /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
-    function closeBatch(bytes32 _batchId, bool _create) external onlyRelayer {
+    function closeBatch(bytes32 _batchId, bool _create) external {
+        if(!_isRelayer(msg.sender)) revert WrongRole();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if ($.batches[_batchId].isClosed) revert Closed();
         $.batches[_batchId].isClosed = true;
@@ -53,8 +55,10 @@ contract BatchModule is BaseVaultModule {
     /// @notice Marks a batch as settled
     /// @param _batchId The batch ID to settle
     /// @dev Only callable by kMinter, indicates assets have been distributed
-    function settleBatch(bytes32 _batchId) external onlyKAssetRouter {
+    function settleBatch(bytes32 _batchId) external {
+        if(!_isKAssetRouter(msg.sender)) revert WrongRole();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (!$.batches[_batchId].isClosed) revert NotClosed();
         if ($.batches[_batchId].isSettled) revert Settled();
         $.batches[_batchId].isSettled = true;
 
@@ -64,7 +68,8 @@ contract BatchModule is BaseVaultModule {
     /// @notice Deploys BatchReceiver for specific batch
     /// @param _batchId Batch ID to deploy receiver for
     /// @dev Only callable by kAssetRouter
-    function createBatchReceiver(bytes32 _batchId) external onlyKAssetRouter returns (address) {
+    function createBatchReceiver(bytes32 _batchId) external returns (address) {
+        if(!_isKAssetRouter(msg.sender)) revert WrongRole();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         address receiver = $.batches[_batchId].batchReceiver;
         if (receiver != address(0)) return receiver;

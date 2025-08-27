@@ -15,9 +15,6 @@ import { kBatchReceiver } from "src/kBatchReceiver.sol";
 contract kBatchReceiverTest is DeploymentBaseTest {
     using LibClone for address;
 
-    // Test contract instances
-    kBatchReceiver public batchReceiver;
-
     // Test constants
     bytes32 constant TEST_BATCH_ID = bytes32(uint256(1));
     uint256 constant TEST_AMOUNT = _100_USDC;

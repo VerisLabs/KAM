@@ -7,6 +7,7 @@ import { Multicallable } from "solady/utils/Multicallable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
+import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 
 import { kBase } from "src/base/kBase.sol";
 
@@ -22,6 +23,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
     using SafeCastLib for uint128;
+    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
 
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
@@ -36,7 +38,11 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @custom:storage-location erc7201:kam.storage.kAssetRouter
     struct kAssetRouterStorage {
+        uint256 proposalCounter;
         uint256 vaultSettlementCooldown;
+        EnumerableSetLib.Bytes32Set executedProposalIds;
+        EnumerableSetLib.Bytes32Set batchIds;
+        mapping(address vault => EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;
         mapping(address account => mapping(bytes32 batchId => Balances)) vaultBatchBalances;
         mapping(address vault => mapping(bytes32 batchId => uint256)) vaultRequestedShares;
         mapping(bytes32 proposalId => VaultSettlementProposal) settlementProposals;
@@ -231,12 +237,18 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
+        if($.batchIds.contains(batchId)) revert BatchIdAlreadyProposed();
+        $.batchIds.add(batchId);
+
         // Generate unique proposal ID
-        proposalId = keccak256(abi.encodePacked(vault, batchId, block.timestamp));
+        $.proposalCounter++;
+        proposalId = keccak256(abi.encodePacked(vault, batchId, block.timestamp, $.proposalCounter));
 
         // Check if proposal already exists
-        if ($.settlementProposals[proposalId].executeAfter != 0) revert ProposalAlreadyExists();
-
+        if($.executedProposalIds.contains(proposalId)) revert ProposalAlreadyExecuted();
+        if ($.vaultPendingProposalIds[vault].contains(proposalId)) revert ProposalAlreadyExists();
+        $.vaultPendingProposalIds[vault].add(proposalId);
+        
         uint256 executeAfter = block.timestamp + $.vaultSettlementCooldown;
 
         // Store the proposal
@@ -248,9 +260,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             netted: netted,
             yield: yield,
             profit: profit,
-            executeAfter: executeAfter,
-            executed: false,
-            cancelled: false
+            executeAfter: executeAfter
         });
 
         emit SettlementProposed(proposalId, vault, batchId, totalAssets_, netted, yield, profit, executeAfter);
@@ -265,15 +275,13 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
         // Validations
-        if (proposal.executeAfter == 0) revert ProposalNotFound();
-        if (proposal.executed) revert ProposalAlreadyExecuted();
-        if (proposal.cancelled) revert ProposalCancelled();
+        if (!$.vaultPendingProposalIds[proposal.vault].contains(proposalId)) revert ProposalNotFound();
         if (block.timestamp < proposal.executeAfter) {
             revert CooldownNotPassed();
         }
 
-        // Mark as executed
-        proposal.executed = true;
+        $.executedProposalIds.add(proposalId);
+        $.vaultPendingProposalIds[proposal.vault].remove(proposalId);
 
         // Execute the settlement logic
         _executeSettlement(proposal);
@@ -290,51 +298,12 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
-        // Validations
-        if (proposal.executeAfter == 0) revert ProposalNotFound();
-        if (proposal.executed) revert ProposalAlreadyExecuted();
-        if (proposal.cancelled) revert ProposalCancelled();
+        if (!$.vaultPendingProposalIds[proposal.vault].contains(proposalId)) revert ProposalNotFound();
 
-        // Mark as cancelled
-        proposal.cancelled = true;
+        $.vaultPendingProposalIds[proposal.vault].remove(proposalId);
+        $.batchIds.remove(proposal.batchId);
 
         emit SettlementCancelled(proposalId, proposal.vault, proposal.batchId);
-    }
-
-    /// @notice Update a settlement proposal before execution
-    /// @param proposalId The proposal ID to update
-    /// @param totalAssets_ New total assets value
-    /// @param netted New netted amount
-    /// @param yield New yield amount
-    /// @param profit New profit status
-    function updateProposal(
-        bytes32 proposalId,
-        uint256 totalAssets_,
-        uint256 netted,
-        uint256 yield,
-        bool profit
-    )
-        external
-        nonReentrant
-    {
-        if (_isPaused()) revert IsPaused();
-        if (!_isRelayer(msg.sender)) revert WrongRole();
-
-        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-        VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
-
-        // Validations
-        if (proposal.executeAfter == 0) revert ProposalNotFound();
-        if (proposal.executed) revert ProposalAlreadyExecuted();
-        if (proposal.cancelled) revert ProposalCancelled();
-
-        // Update proposal parameters
-        proposal.totalAssets = totalAssets_;
-        proposal.netted = netted;
-        proposal.yield = yield;
-        proposal.profit = profit;
-
-        emit SettlementUpdated(proposalId, totalAssets_, netted, yield, profit);
     }
 
     /// @notice Internal function to execute settlement logic
@@ -441,6 +410,14 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Get All the pendingProposals
+    /// @return pendingProposals An array of proposalIds
+    function getPendingProposals(address vault) external view returns (bytes32[] memory pendingProposals) {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        pendingProposals = $.vaultPendingProposalIds[vault].values();
+        if(pendingProposals.length == 0) revert ZeroProposals();
+    }
+
     /// @notice Get details of a settlement proposal
     /// @param proposalId The proposal ID
     /// @return proposal The settlement proposal details
@@ -463,12 +440,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         if (proposal.executeAfter == 0) {
             return (false, "Proposal not found");
-        }
-        if (proposal.executed) {
-            return (false, "Already executed");
-        }
-        if (proposal.cancelled) {
-            return (false, "Proposal cancelled");
         }
         if (block.timestamp < proposal.executeAfter) {
             return (false, "Cooldown not passed");
@@ -501,6 +472,14 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                 ++i;
             }
         }
+    }
+
+    /// @notice verifies if a proposal is pending or not
+    /// @param vault the vault address
+    /// @param proposalId the proposalId to verify
+    /// @return bool proposal exists or not
+    function isPendingProposal(address vault, bytes32 proposalId) internal view returns(bool) {
+        return _getkAssetRouterStorage().vaultPendingProposalIds[vault].contains(proposalId);
     }
 
     /// @notice Check if contract is paused

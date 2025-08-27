@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-
 import { ERC20 } from "solady/tokens/ERC20.sol";
 
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
@@ -14,28 +12,15 @@ import { Extsload } from "src/abstracts/Extsload.sol";
 import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
+import { IVaultFees } from "src/interfaces/modules/IVaultFees.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
-
-interface IFeesModule {
-    function computeLastBatchFees()
-        external
-        view
-        returns (uint256 managementFees, uint256 performanceFees, uint256 totalFees);
-}
 
 /// @title BaseVaultModule
 /// @notice Base contract for all modules
 /// @dev Provides shared storage, roles, and common functionality
-abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
+abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
     using FixedPointMathLib for uint256;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-
-    /*//////////////////////////////////////////////////////////////
-                                ROLES
-    //////////////////////////////////////////////////////////////*/
-
-    uint256 public constant ADMIN_ROLE = _ROLE_0;
-    uint256 public constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -56,7 +41,7 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     );
     event UnstakeRequestCancelled(bytes32 indexed requestId);
     event Paused(bool paused);
-    event Initialized(address registry, address owner, address admin);
+    event Initialized(address registry, string name, string symbol, uint8 decimals, address asset);
     event TotalAssetsUpdated(uint256 oldTotalAssets, uint256 newTotalAssets);
 
     /*//////////////////////////////////////////////////////////////
@@ -86,6 +71,10 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     error RequestNotFound();
     error RequestNotEligible();
     error InvalidVault();
+    error IsPaused();
+    error AlreadyInit();
+    error WrongRole();
+    error NotClosed();
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -145,8 +134,6 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     /// @dev Can only be called once during initialization
     function __BaseVaultModule_init(
         address registry_,
-        address owner_,
-        address admin_,
         address feeReceiver_,
         bool paused_
     )
@@ -154,11 +141,8 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
 
-        if ($.initialized) revert AlreadyInitialized();
+        if ($.initialized) revert AlreadyInit();
         if (registry_ == address(0)) revert InvalidRegistry();
-
-        if (owner_ == address(0)) revert ZeroAddress();
-        if (admin_ == address(0)) revert ZeroAddress();
 
         $.registry = registry_;
         $.paused = paused_;
@@ -166,9 +150,6 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
         $.initialized = true;
         $.lastFeesChargedManagement = uint64(block.timestamp);
         $.lastFeesChargedPerformance = uint64(block.timestamp);
-
-        _initializeOwner(owner_);
-        _grantRoles(admin_, ADMIN_ROLE);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -220,13 +201,6 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     function _getDNVaultByAsset(address asset_) internal view returns (address vault) {
         vault = _registry().getVaultByAssetAndType(asset_, uint8(IkRegistry.VaultType.DN));
         if (vault == address(0)) revert InvalidVault();
-    }
-
-    /// @notice Checks if an account has relayer role
-    /// @param account The account to check
-    /// @return Whether the account has relayer role
-    function _isRelayer(address account) internal view returns (bool) {
-        return _registry().isRelayer(account);
     }
 
     /// @notice Returns the underlying asset address (for compatibility)
@@ -316,31 +290,47 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     /// @notice Calculates accumulated fees
     /// @return accumulatedFees Accumulated fees
     function _accumulatedFees() internal view returns (uint256) {
-        (,, uint256 totalFees) = IFeesModule(address(this)).computeLastBatchFees();
+        (,, uint256 totalFees) = IVaultFees(address(this)).computeLastBatchFees();
         return totalFees;
     }
 
     /*//////////////////////////////////////////////////////////////
-                              MODIFIERS
+                            VALIDATORS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Modifier to restrict function execution when contract is paused
-    /// @dev Reverts with Paused() if isPaused is true
-    modifier whenNotPaused() virtual {
-        if (_getBaseVaultModuleStorage().paused) revert ContractPaused();
-        _;
+    /// @notice Checks if an address is a admin
+    /// @return Whether the address is a admin
+    function _isAdmin(address user) internal view returns (bool) {
+        return _registry().isAdmin(user);
     }
 
-    /// @notice Restricts function access to the kAssetRouter contract
-    modifier onlyKAssetRouter() {
-        if (msg.sender != _getKAssetRouter()) revert OnlyKAssetRouter();
-        _;
+    /// @notice Checks if an address is a emergencyAdmin
+    /// @return Whether the address is a emergencyAdmin
+    function _isEmergencyAdmin(address user) internal view returns (bool) {
+        return _registry().isEmergencyAdmin(user);
     }
 
-    /// @notice Restricts function access to the relayer
-    /// @dev Only callable internally by inheriting contracts
-    modifier onlyRelayer() {
-        if (!_isRelayer(msg.sender)) revert OnlyRelayer();
-        _;
+    /// @notice Checks if an address is a relayer
+    /// @return Whether the address is a relayer
+    function _isRelayer(address user) internal view returns (bool) {
+        return _registry().isRelayer(user);
+    }
+
+    /// @notice Checks if an address is a institution
+    /// @return Whether the address is a institution
+    function _isPaused() internal view returns (bool) {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (!$.initialized) revert NotInitialized();
+        return $.paused;
+    }
+
+    /// @notice Gets the kMinter singleton contract address
+    /// @return minter The kMinter contract address
+    /// @dev Reverts if kMinter not set in registry
+    function _isKAssetRouter(address kAssetRouter_) internal view returns (bool) {
+        bool isTrue;
+        address _kAssetRouter = _registry().getContractById(K_ASSET_ROUTER);
+        if (_kAssetRouter == kAssetRouter_) isTrue = true;
+        return isTrue;
     }
 }

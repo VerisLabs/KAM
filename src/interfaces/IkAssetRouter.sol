@@ -21,8 +21,6 @@ interface IkAssetRouter {
         uint256 yield;
         bool profit;
         uint256 executeAfter;
-        bool executed;
-        bool cancelled;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -81,9 +79,11 @@ interface IkAssetRouter {
     error ProposalNotFound();
     error ProposalAlreadyExecuted();
     error ProposalCancelled();
+    error ProposalAlreadyExists();
+    error ZeroProposals();
+    error BatchIdAlreadyProposed();
     error CooldownNotPassed();
     error InvalidCooldown();
-    error ProposalAlreadyExists();
 
     /*//////////////////////////////////////////////////////////////
                             KMINTER FUNCTIONS
@@ -168,21 +168,6 @@ interface IkAssetRouter {
     /// @param proposalId The proposal ID to cancel
     function cancelProposal(bytes32 proposalId) external;
 
-    /// @notice Update a settlement proposal before execution
-    /// @param proposalId The proposal ID to update
-    /// @param totalAssets New total assets value
-    /// @param netted New netted amount
-    /// @param yield New yield amount
-    /// @param profit New profit status
-    function updateProposal(
-        bytes32 proposalId,
-        uint256 totalAssets,
-        uint256 netted,
-        uint256 yield,
-        bool profit
-    )
-        external;
-
     /*//////////////////////////////////////////////////////////////
                             ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -199,6 +184,9 @@ interface IkAssetRouter {
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Get All the pendingProposals
+    /// @return pendingProposals An array of proposalIds
+    function getPendingProposals(address vault_) external view returns (bytes32[] memory pendingProposals);
     /// @notice Gets the DN vault address for a given asset
     /// @param asset The asset address
     /// @return vault The corresponding DN vault address

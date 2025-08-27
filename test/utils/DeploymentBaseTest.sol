@@ -26,6 +26,7 @@ import { kMinter } from "src/kMinter.sol";
 import { kRegistry } from "src/kRegistry.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { kToken } from "src/kToken.sol";
+import { kBatchReceiver } from "src/kBatchReceiver.sol";
 
 // Modules
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
@@ -72,6 +73,7 @@ contract DeploymentBaseTest is BaseTest {
     kStakingVault public dnVault; // DN vault (works with kMinter)
     kStakingVault public alphaVault; // ALPHA vault
     kStakingVault public betaVault; // BETA vault
+    kBatchReceiver public batchReceiver;
 
     // Modules for kStakingVault
     ClaimModule public claimModule;
@@ -251,13 +253,13 @@ contract DeploymentBaseTest is BaseTest {
         stakingVaultImpl = new kStakingVault();
 
         // Deploy DN Vault (Type 0 - works with kMinter for institutional flows)
-        dnVault = _deployVault(DN_VAULT_NAME, DN_VAULT_SYMBOL, IkRegistry.VaultType.DN, "DN");
+        dnVault = _deployVault(DN_VAULT_NAME, DN_VAULT_SYMBOL, "DN");
 
         // Deploy Alpha Vault (Type 1 - for retail staking)
-        alphaVault = _deployVault(ALPHA_VAULT_NAME, ALPHA_VAULT_SYMBOL, IkRegistry.VaultType.ALPHA, "Alpha");
+        alphaVault = _deployVault(ALPHA_VAULT_NAME, ALPHA_VAULT_SYMBOL, "Alpha");
 
         // Deploy Beta Vault (Type 2 - for advanced staking strategies)
-        betaVault = _deployVault(BETA_VAULT_NAME, BETA_VAULT_SYMBOL, IkRegistry.VaultType.BETA, "Beta");
+        betaVault = _deployVault(BETA_VAULT_NAME, BETA_VAULT_SYMBOL, "Beta");
 
         // Label shared components
         vm.label(address(stakingVaultImpl), "kStakingVaultImpl");
@@ -270,7 +272,6 @@ contract DeploymentBaseTest is BaseTest {
     function _deployVault(
         string memory name,
         string memory symbol,
-        IkRegistry.VaultType vaultType,
         string memory label
     )
         internal
@@ -279,16 +280,16 @@ contract DeploymentBaseTest is BaseTest {
         // Deploy proxy with initialization
         bytes memory initData = abi.encodeWithSelector(
             kStakingVault.initialize.selector,
-            address(registry),
             users.owner,
             users.admin,
+            address(registry),
             false, // paused
             name,
             symbol,
             6, // decimals
             DEFAULT_DUST_AMOUNT,
-            users.emergencyAdmin,
-            asset // underlying asset (USDC for now)
+            asset, // underlying asset (USDC for now)
+            users.treasury // feeCollector
         );
 
         address vaultProxy = factory.deployAndCall(address(stakingVaultImpl), users.admin, initData);
