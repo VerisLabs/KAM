@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.20;
 
-import { DeploymentManager } from "../utils/DeploymentManager.sol";
-
+import { Script } from "forge-std/Script.sol";
 import { console } from "forge-std/console.sol";
+
+import { DeploymentManager } from "../utils/DeploymentManager.sol";
 import { kRegistry } from "src/kRegistry.sol";
 
-contract RegisterSingletonsScript is DeploymentManager {
+contract RegisterSingletonsScript is Script, DeploymentManager {
     function run() public {
         // Read network configuration and existing deployments
         NetworkConfig memory config = readNetworkConfig();
@@ -19,25 +20,24 @@ contract RegisterSingletonsScript is DeploymentManager {
         );
         require(existing.contracts.kMinter != address(0), "kMinter not deployed - run 02_DeployMinter first");
 
-        kRegistry registry = kRegistry(payable(existing.contracts.kRegistry));
-
         console.log("=== REGISTRY SINGLETON REGISTRATION ===");
         console.log("Network:", config.network);
-        console.log("Execute these calls via Defender Admin UI:");
-        console.log("");
-        console.log("1. registry.setSingletonContract(");
-        console.log("     registry.K_ASSET_ROUTER(), // Contract ID");
-        console.log("     ", existing.contracts.kAssetRouter, " // kAssetRouter address");
-        console.log("   );");
-        console.log("");
-        console.log("2. registry.setSingletonContract(");
-        console.log("     registry.K_MINTER(), // Contract ID");
-        console.log("     ", existing.contracts.kMinter, " // kMinter address");
-        console.log("   );");
-        console.log("");
-        console.log("Admin address:", config.roles.admin);
+
+        vm.startBroadcast();
+
+        kRegistry registry = kRegistry(payable(existing.contracts.kRegistry));
+
+        // Register kAssetRouter as singleton
+        registry.setSingletonContract(registry.K_ASSET_ROUTER(), existing.contracts.kAssetRouter);
+
+        // Register kMinter as singleton
+        registry.setSingletonContract(registry.K_MINTER(), existing.contracts.kMinter);
+
+        vm.stopBroadcast();
+
+        console.log("=== REGISTRATION COMPLETE ===");
+        console.log("Registered kAssetRouter:", existing.contracts.kAssetRouter);
+        console.log("Registered kMinter:", existing.contracts.kMinter);
         console.log("Registry address:", existing.contracts.kRegistry);
-        console.log("=======================================");
-        console.log("Note: Execute via Defender Admin UI for security");
     }
 }

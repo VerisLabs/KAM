@@ -17,7 +17,6 @@ abstract contract DeploymentManager is Script {
         uint256 chainId;
         RoleAddresses roles;
         AssetAddresses assets;
-        DefenderConfig defender;
     }
 
     struct RoleAddresses {
@@ -35,10 +34,6 @@ abstract contract DeploymentManager is Script {
         address WBTC;
     }
 
-    struct DefenderConfig {
-        string approvalProcessId;
-    }
-
     struct DeploymentOutput {
         uint256 chainId;
         string network;
@@ -47,17 +42,23 @@ abstract contract DeploymentManager is Script {
     }
 
     struct ContractAddresses {
+        address ERC1967Factory;
+        address kRegistryImpl;
         address kRegistry;
+        address kMinterImpl;
         address kMinter;
+        address kAssetRouterImpl;
         address kAssetRouter;
         address kUSD;
         address kBTC;
         address batchModule;
         address claimModule;
         address feesModule;
+        address kStakingVaultImpl;
         address dnVault;
         address alphaVault;
         address betaVault;
+        address custodialAdapterImpl;
         address custodialAdapter;
     }
 
@@ -100,9 +101,6 @@ abstract contract DeploymentManager is Script {
         config.assets.USDC = json.readAddress(".assets.USDC");
         config.assets.WBTC = json.readAddress(".assets.WBTC");
 
-        // Parse defender config
-        config.defender.approvalProcessId = json.readString(".defender.approvalProcessId");
-
         return config;
     }
 
@@ -126,12 +124,28 @@ abstract contract DeploymentManager is Script {
         output.timestamp = json.readUint(".timestamp");
 
         // Parse contract addresses (use try/catch pattern for missing addresses)
+        try vm.parseJson(json, ".contracts.ERC1967Factory") returns (bytes memory data) {
+            output.contracts.ERC1967Factory = abi.decode(data, (address));
+        } catch { }
+
+        try vm.parseJson(json, ".contracts.kRegistryImpl") returns (bytes memory data) {
+            output.contracts.kRegistryImpl = abi.decode(data, (address));
+        } catch { }
+
         try vm.parseJson(json, ".contracts.kRegistry") returns (bytes memory data) {
             output.contracts.kRegistry = abi.decode(data, (address));
         } catch { }
 
+        try vm.parseJson(json, ".contracts.kMinterImpl") returns (bytes memory data) {
+            output.contracts.kMinterImpl = abi.decode(data, (address));
+        } catch { }
+
         try vm.parseJson(json, ".contracts.kMinter") returns (bytes memory data) {
             output.contracts.kMinter = abi.decode(data, (address));
+        } catch { }
+
+        try vm.parseJson(json, ".contracts.kAssetRouterImpl") returns (bytes memory data) {
+            output.contracts.kAssetRouterImpl = abi.decode(data, (address));
         } catch { }
 
         try vm.parseJson(json, ".contracts.kAssetRouter") returns (bytes memory data) {
@@ -158,6 +172,10 @@ abstract contract DeploymentManager is Script {
             output.contracts.feesModule = abi.decode(data, (address));
         } catch { }
 
+        try vm.parseJson(json, ".contracts.kStakingVaultImpl") returns (bytes memory data) {
+            output.contracts.kStakingVaultImpl = abi.decode(data, (address));
+        } catch { }
+
         try vm.parseJson(json, ".contracts.dnVault") returns (bytes memory data) {
             output.contracts.dnVault = abi.decode(data, (address));
         } catch { }
@@ -168,6 +186,10 @@ abstract contract DeploymentManager is Script {
 
         try vm.parseJson(json, ".contracts.betaVault") returns (bytes memory data) {
             output.contracts.betaVault = abi.decode(data, (address));
+        } catch { }
+
+        try vm.parseJson(json, ".contracts.custodialAdapterImpl") returns (bytes memory data) {
+            output.contracts.custodialAdapterImpl = abi.decode(data, (address));
         } catch { }
 
         try vm.parseJson(json, ".contracts.custodialAdapter") returns (bytes memory data) {
@@ -191,10 +213,18 @@ abstract contract DeploymentManager is Script {
         output.timestamp = block.timestamp;
 
         // Update the specific contract address
-        if (keccak256(bytes(contractName)) == keccak256(bytes("kRegistry"))) {
+        if (keccak256(bytes(contractName)) == keccak256(bytes("ERC1967Factory"))) {
+            output.contracts.ERC1967Factory = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("kRegistryImpl"))) {
+            output.contracts.kRegistryImpl = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("kRegistry"))) {
             output.contracts.kRegistry = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("kMinterImpl"))) {
+            output.contracts.kMinterImpl = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("kMinter"))) {
             output.contracts.kMinter = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("kAssetRouterImpl"))) {
+            output.contracts.kAssetRouterImpl = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("kAssetRouter"))) {
             output.contracts.kAssetRouter = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("kUSD"))) {
@@ -207,12 +237,16 @@ abstract contract DeploymentManager is Script {
             output.contracts.claimModule = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("feesModule"))) {
             output.contracts.feesModule = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("kStakingVaultImpl"))) {
+            output.contracts.kStakingVaultImpl = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("dnVault"))) {
             output.contracts.dnVault = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("alphaVault"))) {
             output.contracts.alphaVault = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("betaVault"))) {
             output.contracts.betaVault = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("custodialAdapterImpl"))) {
+            output.contracts.custodialAdapterImpl = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("custodialAdapter"))) {
             output.contracts.custodialAdapter = contractAddress;
         }
@@ -234,17 +268,23 @@ abstract contract DeploymentManager is Script {
         json = string.concat(json, '"timestamp":', vm.toString(output.timestamp), ",");
         json = string.concat(json, '"contracts":{');
 
+        json = string.concat(json, '"ERC1967Factory":"', vm.toString(output.contracts.ERC1967Factory), '",');
+        json = string.concat(json, '"kRegistryImpl":"', vm.toString(output.contracts.kRegistryImpl), '",');
         json = string.concat(json, '"kRegistry":"', vm.toString(output.contracts.kRegistry), '",');
+        json = string.concat(json, '"kMinterImpl":"', vm.toString(output.contracts.kMinterImpl), '",');
         json = string.concat(json, '"kMinter":"', vm.toString(output.contracts.kMinter), '",');
+        json = string.concat(json, '"kAssetRouterImpl":"', vm.toString(output.contracts.kAssetRouterImpl), '",');
         json = string.concat(json, '"kAssetRouter":"', vm.toString(output.contracts.kAssetRouter), '",');
         json = string.concat(json, '"kUSD":"', vm.toString(output.contracts.kUSD), '",');
         json = string.concat(json, '"kBTC":"', vm.toString(output.contracts.kBTC), '",');
         json = string.concat(json, '"batchModule":"', vm.toString(output.contracts.batchModule), '",');
         json = string.concat(json, '"claimModule":"', vm.toString(output.contracts.claimModule), '",');
         json = string.concat(json, '"feesModule":"', vm.toString(output.contracts.feesModule), '",');
+        json = string.concat(json, '"kStakingVaultImpl":"', vm.toString(output.contracts.kStakingVaultImpl), '",');
         json = string.concat(json, '"dnVault":"', vm.toString(output.contracts.dnVault), '",');
         json = string.concat(json, '"alphaVault":"', vm.toString(output.contracts.alphaVault), '",');
         json = string.concat(json, '"betaVault":"', vm.toString(output.contracts.betaVault), '",');
+        json = string.concat(json, '"custodialAdapterImpl":"', vm.toString(output.contracts.custodialAdapterImpl), '",');
         json = string.concat(json, '"custodialAdapter":"', vm.toString(output.contracts.custodialAdapter), '"');
 
         json = string.concat(json, "}}");

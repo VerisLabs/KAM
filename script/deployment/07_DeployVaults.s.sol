@@ -1,18 +1,28 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.20;
 
-import { DefenderScript } from "../utils/DefenderScript.s.sol";
-
+import { Script } from "forge-std/Script.sol";
 import { console } from "forge-std/console.sol";
+import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
+
+import { DeploymentManager } from "../utils/DeploymentManager.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 
-contract DeployVaultsScript is DefenderScript {
+contract DeployVaultsScript is Script, DeploymentManager {
+    ERC1967Factory factory;
+    address stakingVaultImpl;
+    NetworkConfig config;
+    DeploymentOutput existing;
+
     function run() public {
         // Read network configuration and existing deployments
-        NetworkConfig memory config = readNetworkConfig();
-        DeploymentOutput memory existing = readDeploymentOutput();
+        config = readNetworkConfig();
+        existing = readDeploymentOutput();
 
         // Validate required contracts are deployed
+        require(
+            existing.contracts.ERC1967Factory != address(0), "ERC1967Factory not deployed - run 01_DeployRegistry first"
+        );
         require(existing.contracts.kRegistry != address(0), "kRegistry not deployed - run 01_DeployRegistry first");
         require(
             existing.contracts.batchModule != address(0), "batchModule not deployed - run 06_DeployVaultModules first"
@@ -24,71 +34,96 @@ contract DeployVaultsScript is DefenderScript {
             existing.contracts.feesModule != address(0), "feesModule not deployed - run 06_DeployVaultModules first"
         );
 
-        // Vault configuration
-        uint128 DEFAULT_DUST_AMOUNT = 1000; // 0.001 USDC (6 decimals)
-
         console.log("=== DEPLOYING VAULTS ===");
         console.log("Network:", config.network);
 
-        // Deploy DN Vault (Type 0 - works with kMinter for institutional flows)
-        address dnVault = _deployWithDefender(
-            "dnVault",
-            abi.encodeWithSelector(
-                kStakingVault.initialize.selector,
-                config.roles.owner, // owner_
-                config.roles.admin, // admin_
-                existing.contracts.kRegistry, // registry_
-                false, // paused_
-                "DN KAM Vault", // name_
-                "dnkUSD", // symbol_
-                6, // decimals_
-                DEFAULT_DUST_AMOUNT, // dustAmount_
-                config.assets.USDC, // asset_
-                config.roles.treasury // feeCollector_
-            )
-        );
+        vm.startBroadcast();
 
-        // Deploy Alpha Vault (Type 1 - for retail staking)
-        address alphaVault = _deployWithDefender(
-            "alphaVault",
-            abi.encodeWithSelector(
-                kStakingVault.initialize.selector,
-                config.roles.owner, // owner_
-                config.roles.admin, // admin_
-                existing.contracts.kRegistry, // registry_
-                false, // paused_
-                "Alpha KAM Vault", // name_
-                "akUSD", // symbol_
-                6, // decimals_
-                DEFAULT_DUST_AMOUNT, // dustAmount_
-                config.assets.USDC, // asset_
-                config.roles.treasury // feeCollector_
-            )
-        );
+        // Get factory reference and deploy implementation
+        factory = ERC1967Factory(existing.contracts.ERC1967Factory);
+        stakingVaultImpl = address(new kStakingVault());
 
-        // Deploy Beta Vault (Type 2 - for advanced staking strategies)
-        address betaVault = _deployWithDefender(
-            "betaVault",
-            abi.encodeWithSelector(
-                kStakingVault.initialize.selector,
-                config.roles.owner, // owner_
-                config.roles.admin, // admin_
-                existing.contracts.kRegistry, // registry_
-                false, // paused_
-                "Beta KAM Vault", // name_
-                "bkUSD", // symbol_
-                6, // decimals_
-                DEFAULT_DUST_AMOUNT, // dustAmount_
-                config.assets.USDC, // asset_
-                config.roles.treasury // feeCollector_
-            )
-        );
+        // Deploy vaults
+        address dnVault = _deployDNVault();
+        address alphaVault = _deployAlphaVault();
+        address betaVault = _deployBetaVault();
+
+        vm.stopBroadcast();
 
         console.log("=== DEPLOYMENT COMPLETE ===");
-        console.log("DN Vault:", dnVault);
-        console.log("Alpha Vault:", alphaVault);
-        console.log("Beta Vault:", betaVault);
+        console.log("kStakingVault implementation deployed at:", stakingVaultImpl);
+        console.log("DN Vault proxy deployed at:", dnVault);
+        console.log("Alpha Vault proxy deployed at:", alphaVault);
+        console.log("Beta Vault proxy deployed at:", betaVault);
         console.log("Network:", config.network);
-        console.log("Addresses saved to deployments/output/", config.network, "/addresses.json");
+
+        // Auto-write contract addresses to deployment JSON
+        writeContractAddress("kStakingVaultImpl", stakingVaultImpl);
+        writeContractAddress("dnVault", dnVault);
+        writeContractAddress("alphaVault", alphaVault);
+        writeContractAddress("betaVault", betaVault);
+    }
+
+    function _deployDNVault() internal returns (address) {
+        uint128 DEFAULT_DUST_AMOUNT = 1000;
+        return factory.deployAndCall(
+            stakingVaultImpl,
+            msg.sender,
+            abi.encodeWithSelector(
+                kStakingVault.initialize.selector,
+                config.roles.owner,
+                config.roles.admin,
+                existing.contracts.kRegistry,
+                false,
+                "DN KAM Vault",
+                "dnkUSD",
+                6,
+                DEFAULT_DUST_AMOUNT,
+                config.assets.USDC,
+                config.roles.treasury
+            )
+        );
+    }
+
+    function _deployAlphaVault() internal returns (address) {
+        uint128 DEFAULT_DUST_AMOUNT = 1000;
+        return factory.deployAndCall(
+            stakingVaultImpl,
+            msg.sender,
+            abi.encodeWithSelector(
+                kStakingVault.initialize.selector,
+                config.roles.owner,
+                config.roles.admin,
+                existing.contracts.kRegistry,
+                false,
+                "Alpha KAM Vault",
+                "akUSD",
+                6,
+                DEFAULT_DUST_AMOUNT,
+                config.assets.USDC,
+                config.roles.treasury
+            )
+        );
+    }
+
+    function _deployBetaVault() internal returns (address) {
+        uint128 DEFAULT_DUST_AMOUNT = 1000;
+        return factory.deployAndCall(
+            stakingVaultImpl,
+            msg.sender,
+            abi.encodeWithSelector(
+                kStakingVault.initialize.selector,
+                config.roles.owner,
+                config.roles.admin,
+                existing.contracts.kRegistry,
+                false,
+                "Beta KAM Vault",
+                "bkUSD",
+                6,
+                DEFAULT_DUST_AMOUNT,
+                config.assets.USDC,
+                config.roles.treasury
+            )
+        );
     }
 }

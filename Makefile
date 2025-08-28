@@ -1,7 +1,9 @@
 # KAM Protocol Deployment Makefile
 # Usage: make deploy-mainnet, make deploy-sepolia, make deploy-localhost
+-include .env
+export
 
-.PHONY: help deploy-mainnet deploy-sepolia deploy-localhost deploy-all verify clean
+.PHONY: help deploy-mainnet deploy-sepolia deploy-localhost deploy-all deploy-mock-assets verify clean clean-all
 
 # Default target
 help:
@@ -12,9 +14,11 @@ help:
 	@echo "make deploy-localhost   - Deploy to localhost"
 	@echo "make deploy-all         - Deploy complete protocol (current network)"
 	@echo "make verify             - Verify deployment configuration"
-	@echo "make clean              - Clean build artifacts"
+	@echo "make clean              - Clean localhost deployment files"
+	@echo "make clean-all          - Clean ALL deployment files (DANGER)"
 	@echo ""
 	@echo "Individual deployment steps:"
+	@echo "make deploy-mock-assets - Deploy mock assets for testnets (00)"
 	@echo "make deploy-core        - Deploy core contracts (01-03)"
 	@echo "make setup-singletons   - Register singletons (04)"
 	@echo "make deploy-tokens      - Deploy kTokens (05)"
@@ -27,19 +31,26 @@ help:
 # Network-specific deployments
 deploy-mainnet:
 	@echo "🔴 Deploying to MAINNET..."
-	@$(MAKE) deploy-all RPC_URL=mainnet
+	@$(MAKE) deploy-all FORGE_ARGS="--rpc-url ${RPC_MAINNET} --broadcast --account maxDeployer --sender ${DEPLOYER_ADDRESS} --verify --etherscan-api-key ${ETHERSCAN_MAINNET_KEY}"
 
 deploy-sepolia:
 	@echo "🟡 Deploying to SEPOLIA..."
-	@$(MAKE) deploy-all RPC_URL=sepolia
+	@$(MAKE) deploy-mock-assets FORGE_ARGS="--rpc-url ${RPC_SEPOLIA} --broadcast --account maxDeployer --sender ${DEPLOYER_ADDRESS}"
+	@$(MAKE) deploy-all FORGE_ARGS="--rpc-url ${RPC_SEPOLIA} --broadcast --account maxDeployer --sender ${DEPLOYER_ADDRESS}"
 
 deploy-localhost:
 	@echo "🟢 Deploying to LOCALHOST..."
-	@$(MAKE) deploy-all RPC_URL=localhost
+	@$(MAKE) deploy-mock-assets FORGE_ARGS="--rpc-url http://localhost:8545 --broadcast --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+	@$(MAKE) deploy-all FORGE_ARGS="--rpc-url http://localhost:8545 --broadcast --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 # Complete deployment sequence
 deploy-all: deploy-core setup-singletons deploy-tokens deploy-modules deploy-vaults setup-modules deploy-adapters configure
 	@echo "✅ Complete protocol deployment finished!"
+
+# Mock assets (00) - Only for testnets
+deploy-mock-assets:
+	@echo "🪙 Deploying mock assets for testnet..."
+	forge script script/deployment/00_DeployMockAssets.s.sol $(FORGE_ARGS)
 
 # Core contracts (01-03)
 deploy-core:
@@ -52,13 +63,13 @@ deploy-core:
 setup-singletons:
 	@echo "⚙️  Registry singleton setup..."
 	forge script script/deployment/04_RegisterSingletons.s.sol $(FORGE_ARGS)
-	@echo "⚠️  Execute the displayed admin calls via Defender UI"
+	@echo "⚠️  Execute the displayed admin calls via admin account"
 
 # Token deployment (05)
 deploy-tokens:
 	@echo "🪙 Token deployment setup..."
 	forge script script/deployment/05_DeployTokens.s.sol $(FORGE_ARGS)
-	@echo "⚠️  Execute the displayed admin calls via Defender UI"
+	@echo "⚠️  Execute the displayed admin calls via admin account"
 
 # Vault modules (06)
 deploy-modules:
@@ -74,7 +85,7 @@ deploy-vaults:
 setup-modules:
 	@echo "🔗 Module registration setup..."
 	forge script script/deployment/08_RegisterModules.s.sol $(FORGE_ARGS)
-	@echo "⚠️  Execute the displayed admin calls via Defender UI"
+	@echo "⚠️  Execute the displayed admin calls via admin account"
 
 # Adapters (09)
 deploy-adapters:
@@ -85,7 +96,7 @@ deploy-adapters:
 configure:
 	@echo "⚙️  Protocol configuration setup..."
 	forge script script/deployment/10_ConfigureProtocol.s.sol $(FORGE_ARGS)
-	@echo "⚠️  Execute the displayed admin calls via Defender UI"
+	@echo "⚠️  Execute the displayed admin calls via admin account"
 
 # Verification
 verify:
@@ -109,20 +120,15 @@ build:
 
 clean:
 	forge clean
+	rm -rf deployments/output/localhost/addresses.json
+
+clean-all:
+	forge clean
 	rm -rf deployments/output/*/addresses.json
 
 # Documentation
 docs:
 	forge doc --serve --port 4000
-
-# Forge arguments for different networks
-ifeq ($(RPC_URL),mainnet)
-	FORGE_ARGS = --rpc-url mainnet --verify --etherscan-api-key $(ETHERSCAN_MAINNET_KEY)
-else ifeq ($(RPC_URL),sepolia)
-	FORGE_ARGS = --rpc-url sepolia --verify --etherscan-api-key $(ETHERSCAN_MAINNET_KEY)
-else
-	FORGE_ARGS = --rpc-url http://localhost:8545
-endif
 
 # Color output
 RED    = \033[0;31m

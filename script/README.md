@@ -1,6 +1,6 @@
 # KAM Protocol Deployment Guide
 
-Complete guide for deploying the KAM protocol using JSON configs, Makefile automation, and OpenZeppelin Defender security.
+Complete guide for deploying the KAM protocol using JSON configs and Makefile automation.
 
 ## 🚀 Quick Start
 
@@ -10,16 +10,15 @@ Complete guide for deploying the KAM protocol using JSON configs, Makefile autom
 
 ## Prerequisites
 
-1. **OpenZeppelin Defender Account** with configured approval process
-2. **Foundry** installed and configured (`curl -L https://foundry.paradigm.xyz | bash`)
-3. **RPC endpoints** configured in root `.env` file
+1. **Foundry** installed and configured (`curl -L https://foundry.paradigm.xyz | bash`)
+2. **RPC endpoints** configured in root `.env` file
+3. **Admin accounts** configured for multi-signature operations
 
 ## 🔒 Security Features
 
-- **No private keys in configs** - All keys managed by Defender vault
-- **Multi-signature approvals** - Required for all deployments
+- **No private keys in configs** - All keys managed externally
+- **Multi-signature approvals** - Required for admin operations
 - **Bytecode verification** - Automatic verification of deployed contracts
-- **Audit trail** - Complete deployment history via Defender
 - **Auto address tracking** - JSON-based deployment address management
 
 ## 📁 File Structure
@@ -58,9 +57,6 @@ deployments/
   "assets": {
     "USDC": "0xA0b86a33E6d8c30c9b61aEB5eF6c5C756fA2A45F1",
     "WBTC": "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f"
-  },
-  "defender": {
-    "approvalProcessId": "your-approval-process-id"
   }
 }
 ```
@@ -94,22 +90,22 @@ deployments/
 
 ## 🔒 Security Features
 
-- ✅ **No private keys in configs** - Uses DefenderScript security
+- ✅ **No private keys in configs** - Uses standard Script security
 - ✅ **Auto address tracking** - Addresses saved to JSON automatically
 - ✅ **Dependency validation** - Scripts check previous deployments
 - ✅ **Network detection** - Auto-detects chain from foundry context
-- ✅ **Multi-sig required** - All deployments via Defender approval
+- ✅ **Multi-sig required** - All admin operations require multi-signature
 
 ## 🔄 Deployment Flow
 
 1. **01-03**: Core contracts (Registry, Minter, AssetRouter)
-2. **04**: Register singletons (admin calls via Defender)
-3. **05**: Deploy kTokens (admin calls via Defender)
+2. **04**: Register singletons (admin calls required)
+3. **05**: Deploy kTokens (admin calls required)
 4. **06**: Deploy vault modules
 5. **07**: Deploy vaults (DN, Alpha, Beta)
-6. **08**: Register modules (admin calls via Defender)
+6. **08**: Register modules (admin calls required)
 7. **09**: Deploy adapters
-8. **10**: Configure protocol (admin calls via Defender)
+8. **10**: Configure protocol (admin calls required)
 
 Scripts automatically read previous deployment addresses and validate dependencies.
 
@@ -123,20 +119,20 @@ forge script script/deployment/01_DeployRegistry.s.sol --rpc-url mainnet
 forge script script/deployment/02_DeployMinter.s.sol --rpc-url mainnet
 forge script script/deployment/03_DeployAssetRouter.s.sol --rpc-url mainnet
 
-# Registry setup (requires admin calls via Defender UI)
+# Registry setup (requires admin calls)
 forge script script/deployment/04_RegisterSingletons.s.sol --rpc-url mainnet
 
-# Token deployment (requires admin calls via Defender UI)  
+# Token deployment (requires admin calls)  
 forge script script/deployment/05_DeployTokens.s.sol --rpc-url mainnet
 
 # Vault system (automatically saves addresses to JSON)
 forge script script/deployment/06_DeployVaultModules.s.sol --rpc-url mainnet
 forge script script/deployment/07_DeployVaults.s.sol --rpc-url mainnet
 
-# Module registration (requires admin calls via Defender UI)
+# Module registration (requires admin calls)
 forge script script/deployment/08_RegisterModules.s.sol --rpc-url mainnet
 
-# Adapters and final config (requires admin calls via Defender UI)
+# Adapters and final config (requires admin calls)
 forge script script/deployment/09_DeployAdapters.s.sol --rpc-url mainnet
 forge script script/deployment/10_ConfigureProtocol.s.sol --rpc-url mainnet
 ```
@@ -145,7 +141,7 @@ forge script script/deployment/10_ConfigureProtocol.s.sol --rpc-url mainnet
 
 ### Set Settlement Cooldown
 ```solidity
-// Via Defender Admin UI:
+// Via admin account:
 kAssetRouter(addresses.kAssetRouter).setSettlementCooldown(0); // Testing
 // OR
 kAssetRouter(addresses.kAssetRouter).setSettlementCooldown(3600); // 1 hour production
@@ -153,7 +149,7 @@ kAssetRouter(addresses.kAssetRouter).setSettlementCooldown(3600); // 1 hour prod
 
 ### Create Initial Batches (Optional)
 ```solidity
-// Via Defender Relayer UI:
+// Via relayer account:
 bytes4 createBatchSelector = bytes4(keccak256("createNewBatch()"));
 addresses.dnVault.call(abi.encodeWithSelector(createBatchSelector));
 addresses.alphaVault.call(abi.encodeWithSelector(createBatchSelector));
@@ -182,9 +178,9 @@ cat output/mainnet/addresses.json | grep -v "0x000000000000000000000000000000000
    - Scripts validate previous deployments automatically
    - Run scripts in order (01-10) or use `make deploy-all`
 
-3. **Defender approval process**
-   - Check Defender UI for pending approvals
-   - Ensure approval process ID is correct in config
+3. **Admin operations**
+   - Check admin account for pending transactions
+   - Ensure multi-signature requirements are met
 
 4. **Address validation**
    - Config addresses cannot be zero address
@@ -203,13 +199,13 @@ cat output/mainnet/addresses.json | grep -v "0x000000000000000000000000000000000
 - Scripts auto-detect network from foundry RPC settings
 - Addresses are automatically written to JSON after each deployment
 - Later scripts automatically read earlier deployment addresses
-- Admin calls are shown in console - execute via Defender UI for security
+- Admin calls are shown in console - execute via admin account for security
 - Use `make clean` to reset deployment files for fresh deployment
 
 ## Security Notes
 
 - **No private keys in JSON configs** - Only addresses stored
-- **DefenderScript security** - All deployments via Defender approval
-- **Bytecode verification** - Automatic via Defender integration
-- **Multi-sig enforcement** - Admin calls require Defender UI execution
+- **Standard Script security** - All deployments via standard foundry scripts
+- **Bytecode verification** - Manual verification via etherscan
+- **Multi-sig enforcement** - Admin calls require multi-signature execution
 - **Complete audit trail** - JSON deployment records maintained

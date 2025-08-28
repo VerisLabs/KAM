@@ -13,8 +13,5 @@
   "assets": {
     "USDC": "0xA0b86a33E6d8c30c9b61aEB5eF6c5C756fA2A45F1",
     "WBTC": "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f"
-  },
-  "defender": {
-    "approvalProcessId": "your-mainnet-approval-process-id"
   }
 }

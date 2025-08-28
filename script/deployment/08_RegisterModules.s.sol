@@ -33,7 +33,7 @@ contract RegisterModulesScript is DeploymentManager {
         console.log("Network:", config.network);
         console.log("");
 
-        console.log("Execute these calls via Defender Admin UI:");
+        console.log("Execute these admin calls:");
         console.log("");
 
         console.log("1. Get module selectors:");
@@ -57,6 +57,6 @@ contract RegisterModulesScript is DeploymentManager {
 
         console.log("Admin address:", config.roles.admin);
         console.log("=======================================");
-        console.log("Note: Execute via Defender Admin UI for security");
+        console.log("Note: Execute via admin account for security");
     }
 }

@@ -1,20 +1,17 @@
 {
-  "network": "sepolia", 
-  "chainId": 11155111,
-  "roles": {
-    "owner": "0x0000000000000000000000000000000000000001",
-    "admin": "0x0000000000000000000000000000000000000002",
-    "emergencyAdmin": "0x0000000000000000000000000000000000000003", 
-    "guardian": "0x0000000000000000000000000000000000000004",
-    "relayer": "0x0000000000000000000000000000000000000005",
-    "institution": "0x0000000000000000000000000000000000000006",
-    "treasury": "0x0000000000000000000000000000000000000007"
-  },
-  "assets": {
-    "USDC": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
-    "WBTC": "0x29f2D40B0605204364af54EC677bD022dA425d03"
-  },
-  "defender": {
-    "approvalProcessId": "your-sepolia-approval-process-id"
-  }
+    "network": "sepolia",
+    "chainId": 11155111,
+    "roles": {
+        "owner": "0x762fDC3B613E4E7CD3c96DF8D0908D52632522dc",
+        "admin": "0x762fDC3B613E4E7CD3c96DF8D0908D52632522dc",
+        "emergencyAdmin": "0x762fDC3B613E4E7CD3c96DF8D0908D52632522dc",
+        "guardian": "0x762fDC3B613E4E7CD3c96DF8D0908D52632522dc",
+        "relayer": "0x762fDC3B613E4E7CD3c96DF8D0908D52632522dc",
+        "institution": "0x762fDC3B613E4E7CD3c96DF8D0908D52632522dc",
+        "treasury": "0x762fDC3B613E4E7CD3c96DF8D0908D52632522dc"
+    },
+    "assets": {
+        "USDC": "0x3eCd85EbB54892F2427B25874cc8E54aB04dDe63",
+        "WBTC": "0xbc4FE2373496F984a69Cf31a0F89F550cAdbb7d1"
+    }
 }

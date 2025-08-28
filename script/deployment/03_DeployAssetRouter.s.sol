@@ -1,26 +1,43 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.20;
 
-import { DefenderScript } from "../utils/DefenderScript.s.sol";
-
+import { Script } from "forge-std/Script.sol";
 import { console } from "forge-std/console.sol";
+import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
+
+import { DeploymentManager } from "../utils/DeploymentManager.sol";
 import { kAssetRouter } from "src/kAssetRouter.sol";
 
-contract DeployAssetRouterScript is DefenderScript {
+contract DeployAssetRouterScript is Script, DeploymentManager {
     function run() public {
         // Read network configuration and existing deployments
         NetworkConfig memory config = readNetworkConfig();
         DeploymentOutput memory existing = readDeploymentOutput();
 
-        // Validate registry was deployed
+        // Validate factory and registry were deployed
+        require(
+            existing.contracts.ERC1967Factory != address(0), "ERC1967Factory not deployed - run 01_DeployRegistry first"
+        );
         require(existing.contracts.kRegistry != address(0), "kRegistry not deployed - run 01_DeployRegistry first");
 
-        address deployment = _deployWithDefender(
-            "kAssetRouter", abi.encodeWithSelector(kAssetRouter.initialize.selector, existing.contracts.kRegistry)
-        );
+        vm.startBroadcast();
+
+        // Get factory reference
+        ERC1967Factory factory = ERC1967Factory(existing.contracts.ERC1967Factory);
+
+        // Deploy kAssetRouter implementation
+        kAssetRouter assetRouterImpl = new kAssetRouter();
+
+        // Deploy proxy with initialization
+        bytes memory initData = abi.encodeWithSelector(kAssetRouter.initialize.selector, existing.contracts.kRegistry);
+
+        address assetRouterProxy = factory.deployAndCall(address(assetRouterImpl), msg.sender, initData);
+
+        vm.stopBroadcast();
 
         console.log("=== DEPLOYMENT COMPLETE ===");
-        console.log("kAssetRouter deployed at:", deployment);
+        console.log("kAssetRouter implementation deployed at:", address(assetRouterImpl));
+        console.log("kAssetRouter proxy deployed at:", assetRouterProxy);
         console.log("Registry:", existing.contracts.kRegistry);
         console.log("Network:", config.network);
         console.log("");
@@ -30,5 +47,9 @@ contract DeployAssetRouterScript is DefenderScript {
         } else {
             console.log("      assetRouter.setSettlementCooldown(3600); // 1 hour production");
         }
+
+        // Auto-write contract addresses to deployment JSON
+        writeContractAddress("kAssetRouterImpl", address(assetRouterImpl));
+        writeContractAddress("kAssetRouter", assetRouterProxy);
     }
 }

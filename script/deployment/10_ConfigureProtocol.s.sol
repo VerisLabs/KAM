@@ -28,7 +28,7 @@ contract ConfigureProtocolScript is DeploymentManager {
         console.log("Network:", config.network);
         console.log("");
 
-        console.log("Execute these calls via Defender Admin UI:");
+        console.log("Execute these admin calls:");
         console.log("");
 
         console.log("1. Contract addresses:");
@@ -74,6 +74,5 @@ contract ConfigureProtocolScript is DeploymentManager {
 
         console.log("=======================================");
         console.log("Protocol deployment complete!");
-        console.log("Use Defender Admin UI for secure configuration");
     }
 }
