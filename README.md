@@ -128,6 +128,7 @@ Requests are grouped into time-based batches for gas-efficient settlement:
 | MINTER_ROLE          | Mint/burn tokens           | kToken                    |
 | INSTITUTION_ROLE     | Mint/redeem kTokens        | kMinter                   |
 | RELAYER_ROLE         | Settle batches             | kAssetRouter, BatchModule |
+| VENDOR_ROLE          | Adds Institutions          | kRegistry                 |
 
 ## Safety
 
