@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
@@ -14,7 +13,6 @@ import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
-
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
@@ -39,25 +37,23 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
 
     /// @notice Initializes the kStakingVault contract (stack optimized)
     /// @dev Phase 1: Core initialization without strings to avoid stack too deep
-    /// @param asset_ Underlying asset address
-    /// @param owner_ Owner address
-    /// @param admin_ Admin address
-    /// @param emergencyAdmin_ Emergency admin address
+    /// @param registry_ The registry address
+    /// @param paused_ If the vault is paused_
     /// @param name_ Token name
     /// @param symbol_ Token symbol
     /// @param decimals_ Token decimals
     /// @param dustAmount_ Minimum amount threshold
-    /// @param paused_ Initial pause state
+    /// @param asset_ Underlying asset address
+    /// @param feeCollector_ feeCollector address
     function initialize(
-        address registry_,
         address owner_,
         address admin_,
+        address registry_,
         bool paused_,
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
         uint128 dustAmount_,
-        address emergencyAdmin_,
         address asset_,
         address feeCollector_
     )
@@ -65,14 +61,12 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         initializer
     {
         if (asset_ == address(0)) revert ZeroAddress();
-        if (owner_ == address(0)) revert ZeroAddress();
-        if (admin_ == address(0)) revert ZeroAddress();
-        if (emergencyAdmin_ == address(0)) revert ZeroAddress();
 
         // Initialize ownership and roles
-        __BaseVaultModule_init(registry_, owner_, admin_, feeCollector_, paused_);
-        __MultiFacetProxy__init(ADMIN_ROLE);
-        _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);
+        __BaseVaultModule_init(registry_, feeCollector_, paused_);
+        __MultiFacetProxy__init(1);
+        _initializeOwner(owner_);
+        _grantRoles(admin_, 1);
 
         // Initialize storage with optimized packing
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
@@ -81,11 +75,11 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         $.decimals = decimals_;
         $.underlyingAsset = asset_;
         $.dustAmount = dustAmount_.toUint96();
+        $.sharePriceWatermark = 10 ** decimals_;
         $.kToken = _registry().assetToKToken(asset_);
         $.receiverImplementation = address(new kBatchReceiver(_registry().getContractById(K_MINTER)));
-        $.sharePriceWatermark = 10 ** decimals_;
 
-        emit Initialized(registry_, owner_, admin_);
+        emit Initialized(registry_, name_, symbol_, decimals_, asset_);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -96,16 +90,8 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
     /// @param to Address to receive the stkTokens
     /// @param amount Amount of kTokens to stake
     /// @return requestId Request ID for this staking request
-    function requestStake(
-        address to,
-        uint256 amount
-    )
-        external
-        payable
-        nonReentrant
-        whenNotPaused
-        returns (bytes32 requestId)
-    {
+    function requestStake(address to, uint256 amount) external payable nonReentrant returns (bytes32 requestId) {
+        if (_isPaused()) revert IsPaused();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (amount == 0) revert ZeroAmount();
         if ($.kToken.balanceOf(msg.sender) < amount) revert InsufficientBalance();
@@ -153,9 +139,9 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         external
         payable
         nonReentrant
-        whenNotPaused
         returns (bytes32 requestId)
     {
+        if (_isPaused()) revert IsPaused();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (stkTokenAmount == 0) revert ZeroAmount();
         if (balanceOf(msg.sender) < stkTokenAmount) revert InsufficientBalance();
@@ -190,7 +176,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
 
     /// @notice Cancels a staking request
     /// @param requestId Request ID to cancel
-    function cancelStakeRequest(bytes32 requestId) external {
+    function cancelStakeRequest(bytes32 requestId) external payable nonReentrant {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         BaseVaultModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
 
@@ -201,7 +187,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         request.status = BaseVaultModuleTypes.RequestStatus.CANCELLED;
         $.userRequests[msg.sender].remove(requestId);
 
-        address vault = _getDNVaultByAsset($.underlyingAsset);
+        $.totalPendingStake -= request.kTokenAmount;
         if ($.batches[request.batchId].isClosed) revert Closed();
         if ($.batches[request.batchId].isSettled) revert Settled();
 
@@ -211,14 +197,13 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
 
         $.kToken.safeTransfer(request.user, request.kTokenAmount);
 
-        $.totalPendingStake -= request.kTokenAmount;
-
         emit StakeRequestCancelled(bytes32(requestId));
     }
 
     /// @notice Cancels an unstaking request
     /// @param requestId Request ID to cancel
-    function cancelUnstakeRequest(bytes32 requestId) external payable nonReentrant whenNotPaused {
+    function cancelUnstakeRequest(bytes32 requestId) external payable nonReentrant {
+        if (_isPaused()) revert IsPaused();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
 
@@ -262,7 +247,8 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
     /// @notice Sets the pause state of the contract
     /// @param paused_ New pause state
     /// @dev Only callable internally by inheriting contracts
-    function setPaused(bool paused_) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
+    function setPaused(bool paused_) external {
+        if (!_isEmergencyAdmin(msg.sender)) revert WrongRole();
         _setPaused(paused_);
     }
 
@@ -359,7 +345,8 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
 
     /// @notice Authorize upgrade (only owner can upgrade)
     /// @dev This allows upgrading the main contract while keeping modules separate
-    function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE) {
+    function _authorizeUpgrade(address newImplementation) internal view override {
+        if (!_isAdmin(msg.sender)) revert WrongRole();
         if (newImplementation == address(0)) revert ZeroAddress();
     }
 

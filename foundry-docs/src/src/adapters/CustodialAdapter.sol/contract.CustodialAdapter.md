@@ -1,5 +1,5 @@
 # CustodialAdapter
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/adapters/CustodialAdapter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/70c31cd66a975b95c3bd6540ffd61af97eae3226/src/adapters/CustodialAdapter.sol)
 
 **Inherits:**
 [BaseAdapter](/src/adapters/BaseAdapter.sol/contract.BaseAdapter.md), Initializable, UUPSUpgradeable
@@ -41,15 +41,13 @@ Initializes the MetaVault adapter
 
 
 ```solidity
-function initialize(address registry_, address owner_, address admin_) external initializer;
+function initialize(address registry_) external initializer;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`registry_`|`address`|Address of the kRegistry contract|
-|`owner_`|`address`|Address of the owner|
-|`admin_`|`address`|Address of the admin|
 
 
 ### deposit
@@ -58,15 +56,7 @@ Deposits assets to external strategy
 
 
 ```solidity
-function deposit(
-    address asset,
-    uint256 amount,
-    address onBehalfOf
-)
-    external
-    nonReentrant
-    onlyKAssetRouter
-    whenRegistered;
+function deposit(address asset, uint256 amount, address onBehalfOf) external nonReentrant;
 ```
 **Parameters**
 
@@ -83,16 +73,7 @@ Redeems assets from external strategy
 
 
 ```solidity
-function redeem(
-    address asset,
-    uint256 amount,
-    address onBehalfOf
-)
-    external
-    virtual
-    nonReentrant
-    onlyKAssetRouter
-    whenRegistered;
+function redeem(address asset, uint256 amount, address onBehalfOf) external virtual nonReentrant;
 ```
 **Parameters**
 
@@ -218,7 +199,7 @@ Sets the custodial address for a vault
 
 
 ```solidity
-function setVaultDestination(address vault, address custodialAddress) external onlyRoles(ADMIN_ROLE);
+function setVaultDestination(address vault, address custodialAddress) external;
 ```
 **Parameters**
 
@@ -234,7 +215,7 @@ Sets the total assets for a given vault
 
 
 ```solidity
-function setTotalAssets(address vault, address asset, uint256 totalAssets_) external onlyKAssetRouter;
+function setTotalAssets(address vault, address asset, uint256 totalAssets_) external;
 ```
 **Parameters**
 
@@ -251,7 +232,7 @@ Authorize contract upgrade
 
 
 ```solidity
-function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE);
+function _authorizeUpgrade(address newImplementation) internal view override;
 ```
 **Parameters**
 
@@ -295,6 +276,12 @@ event RedemptionProcessed(uint256 indexed requestId, uint256 assets);
 
 ```solidity
 event AdapterBalanceUpdated(address indexed vault, address indexed asset, uint256 newBalance);
+```
+
+### Initialised
+
+```solidity
+event Initialised(address indexed registry);
 ```
 
 ## Errors

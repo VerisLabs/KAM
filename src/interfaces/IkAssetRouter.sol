@@ -21,15 +21,13 @@ interface IkAssetRouter {
         uint256 yield;
         bool profit;
         uint256 executeAfter;
-        bool executed;
-        bool cancelled;
     }
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event Initialized(address indexed registry, address indexed owner, address admin, bool paused);
+    event ContractInitialized(address indexed registry);
     event AssetsPushed(address indexed from, uint256 amount);
     event AssetsRequestPulled(
         address indexed vault, address indexed asset, address indexed batchReceiver, uint256 amount
@@ -76,13 +74,12 @@ interface IkAssetRouter {
                                 ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error ZeroAmount();
     error InsufficientVirtualBalance();
-    error ContractPaused();
-    error OnlyStakingVault();
     error ProposalNotFound();
     error ProposalAlreadyExecuted();
-    error ProposalCancelled();
+    error ProposalAlreadyExists();
+    error ZeroProposals();
+    error BatchIdAlreadyProposed();
     error CooldownNotPassed();
     error InvalidCooldown();
 
@@ -169,28 +166,9 @@ interface IkAssetRouter {
     /// @param proposalId The proposal ID to cancel
     function cancelProposal(bytes32 proposalId) external;
 
-    /// @notice Update a settlement proposal before execution
-    /// @param proposalId The proposal ID to update
-    /// @param totalAssets New total assets value
-    /// @param netted New netted amount
-    /// @param yield New yield amount
-    /// @param profit New profit status
-    function updateProposal(
-        bytes32 proposalId,
-        uint256 totalAssets,
-        uint256 netted,
-        uint256 yield,
-        bool profit
-    )
-        external;
-
     /*//////////////////////////////////////////////////////////////
                             ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Set contract pause state
-    /// @param paused New pause state
-    function setPaused(bool paused) external;
 
     /// @notice Set the cooldown period for settlement proposals
     /// @param cooldown New cooldown period in seconds
@@ -200,6 +178,9 @@ interface IkAssetRouter {
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Get All the pendingProposals
+    /// @return pendingProposals An array of proposalIds
+    function getPendingProposals(address vault_) external view returns (bytes32[] memory pendingProposals);
     /// @notice Gets the DN vault address for a given asset
     /// @param asset The asset address
     /// @return vault The corresponding DN vault address

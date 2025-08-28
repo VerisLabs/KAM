@@ -1,8 +1,8 @@
 # BaseVaultModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kStakingVault/base/BaseVaultModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/70c31cd66a975b95c3bd6540ffd61af97eae3226/src/kStakingVault/base/BaseVaultModule.sol)
 
 **Inherits:**
-OwnableRoles, ERC20, ReentrancyGuardTransient, [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
+ERC20, ReentrancyGuardTransient, [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
 
 Base contract for all modules
 
@@ -10,20 +10,6 @@ Base contract for all modules
 
 
 ## State Variables
-### ADMIN_ROLE
-
-```solidity
-uint256 public constant ADMIN_ROLE = _ROLE_0;
-```
-
-
-### EMERGENCY_ADMIN_ROLE
-
-```solidity
-uint256 public constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
-```
-
-
 ### ONE_HUNDRED_PERCENT
 
 ```solidity
@@ -77,22 +63,13 @@ Initializes the base contract with registry and pause state
 
 
 ```solidity
-function __BaseVaultModule_init(
-    address registry_,
-    address owner_,
-    address admin_,
-    address feeReceiver_,
-    bool paused_
-)
-    internal;
+function __BaseVaultModule_init(address registry_, address feeReceiver_, bool paused_) internal;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`registry_`|`address`|Address of the kRegistry contract|
-|`owner_`|`address`||
-|`admin_`|`address`||
 |`feeReceiver_`|`address`||
 |`paused_`|`bool`|Initial pause state|
 
@@ -129,6 +106,23 @@ function _registry() internal view returns (IkRegistry);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`IkRegistry`|IkRegistry interface for registry interaction|
+
+
+### rescueAssets
+
+rescues locked assets (ETH or ERC20) in the contract
+
+
+```solidity
+function rescueAssets(address asset_, address to_, uint256 amount_) external payable;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset_`|`address`|the asset to rescue (use address(0) for ETH)|
+|`to_`|`address`|the address that will receive the assets|
+|`amount_`|`uint256`|the amount to rescue|
 
 
 ### _getKMinter
@@ -186,27 +180,6 @@ function _getDNVaultByAsset(address asset_) internal view returns (address vault
 |Name|Type|Description|
 |----|----|-----------|
 |`vault`|`address`|The corresponding DN vault address|
-
-
-### _getRelayer
-
-Checks if an account has relayer role
-
-
-```solidity
-function _getRelayer(address account) internal view returns (bool);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`account`|`address`|The account to check|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|Whether the account has relayer role|
 
 
 ### asset
@@ -403,36 +376,103 @@ function _accumulatedFees() internal view returns (uint256);
 |`<none>`|`uint256`|accumulatedFees Accumulated fees|
 
 
-### whenNotPaused
+### _isAdmin
 
-Modifier to restrict function execution when contract is paused
-
-*Reverts with Paused() if isPaused is true*
+Checks if an address is a admin
 
 
 ```solidity
-modifier whenNotPaused() virtual;
+function _isAdmin(address user) internal view returns (bool);
 ```
+**Returns**
 
-### onlyKAssetRouter
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a admin|
 
-Restricts function access to the kAssetRouter contract
+
+### _isEmergencyAdmin
+
+Checks if an address is a emergencyAdmin
 
 
 ```solidity
-modifier onlyKAssetRouter();
+function _isEmergencyAdmin(address user) internal view returns (bool);
 ```
+**Returns**
 
-### onlyRelayer
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a emergencyAdmin|
 
-Restricts function access to the relayer
 
-*Only callable internally by inheriting contracts*
+### _isRelayer
+
+Checks if an address is a relayer
 
 
 ```solidity
-modifier onlyRelayer();
+function _isRelayer(address user) internal view returns (bool);
 ```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a relayer|
+
+
+### _isPaused
+
+Checks if an address is a institution
+
+
+```solidity
+function _isPaused() internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a institution|
+
+
+### _isKAssetRouter
+
+Gets the kMinter singleton contract address
+
+*Reverts if kMinter not set in registry*
+
+
+```solidity
+function _isKAssetRouter(address kAssetRouter_) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|minter The kMinter contract address|
+
+
+### _isAsset
+
+Checks if an asset is registered
+
+
+```solidity
+function _isAsset(address asset) internal view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The asset address to check|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the asset is registered|
+
 
 ## Events
 ### StakeRequestCreated
@@ -483,13 +523,25 @@ event Paused(bool paused);
 ### Initialized
 
 ```solidity
-event Initialized(address registry, address owner, address admin);
+event Initialized(address registry, string name, string symbol, uint8 decimals, address asset);
 ```
 
 ### TotalAssetsUpdated
 
 ```solidity
 event TotalAssetsUpdated(uint256 oldTotalAssets, uint256 newTotalAssets);
+```
+
+### RescuedAssets
+
+```solidity
+event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+```
+
+### RescuedETH
+
+```solidity
+event RescuedETH(address indexed asset, uint256 amount);
 ```
 
 ## Errors
@@ -517,18 +569,6 @@ error NotInitialized();
 error ContractNotFound(bytes32 identifier);
 ```
 
-### OnlyKAssetRouter
-
-```solidity
-error OnlyKAssetRouter();
-```
-
-### OnlyRelayer
-
-```solidity
-error OnlyRelayer();
-```
-
 ### ZeroAmount
 
 ```solidity
@@ -539,12 +579,6 @@ error ZeroAmount();
 
 ```solidity
 error AmountBelowDustThreshold();
-```
-
-### ContractPaused
-
-```solidity
-error ContractPaused();
 ```
 
 ### Closed
@@ -575,6 +609,42 @@ error RequestNotEligible();
 
 ```solidity
 error InvalidVault();
+```
+
+### IsPaused
+
+```solidity
+error IsPaused();
+```
+
+### AlreadyInit
+
+```solidity
+error AlreadyInit();
+```
+
+### WrongRole
+
+```solidity
+error WrongRole();
+```
+
+### WrongAsset
+
+```solidity
+error WrongAsset();
+```
+
+### TransferFailed
+
+```solidity
+error TransferFailed();
+```
+
+### NotClosed
+
+```solidity
+error NotClosed();
 ```
 
 ## Structs

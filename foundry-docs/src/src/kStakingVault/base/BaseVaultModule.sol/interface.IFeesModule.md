@@ -1,5 +1,5 @@
 # IFeesModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kStakingVault/base/BaseVaultModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7fe450d42e02311faf605d62cd48b6af1b05e41f/src/kStakingVault/base/BaseVaultModule.sol)
 
 
 ## Functions

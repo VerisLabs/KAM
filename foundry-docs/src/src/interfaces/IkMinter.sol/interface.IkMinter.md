@@ -1,5 +1,5 @@
 # IkMinter
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/interfaces/IkMinter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/70c31cd66a975b95c3bd6540ffd61af97eae3226/src/interfaces/IkMinter.sol)
 
 Interface for kMinter
 
@@ -33,11 +33,11 @@ function redeem(bytes32 requestId) external payable;
 function cancelRequest(bytes32 requestId) external payable;
 ```
 
-### setPaused
+### rescueReceiverAssets
 
 
 ```solidity
-function setPaused(bool paused) external;
+function rescueReceiverAssets(address batchReceiver, address asset, address to, uint256 amount) external;
 ```
 
 ### isPaused
@@ -69,10 +69,10 @@ function getRequestCounter() external view returns (uint256);
 ```
 
 ## Events
-### Initialized
+### ContractInitialized
 
 ```solidity
-event Initialized(address indexed registry, address indexed owner, address admin, address emergencyAdmin);
+event ContractInitialized(address indexed registry);
 ```
 
 ### Minted
@@ -107,18 +107,6 @@ event Cancelled(bytes32 indexed requestId);
 ```
 
 ## Errors
-### ZeroAmount
-
-```solidity
-error ZeroAmount();
-```
-
-### BatchNotSettled
-
-```solidity
-error BatchNotSettled();
-```
-
 ### InsufficientBalance
 
 ```solidity
@@ -143,12 +131,6 @@ error RequestNotEligible();
 error RequestAlreadyProcessed();
 ```
 
-### OnlyInstitution
-
-```solidity
-error OnlyInstitution();
-```
-
 ### BatchClosed
 
 ```solidity
@@ -159,18 +141,6 @@ error BatchClosed();
 
 ```solidity
 error BatchSettled();
-```
-
-### ContractPaused
-
-```solidity
-error ContractPaused();
-```
-
-### InvalidAsset
-
-```solidity
-error InvalidAsset();
 ```
 
 ## Structs

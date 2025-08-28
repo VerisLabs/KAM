@@ -1,41 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-
 import { ERC20 } from "solady/tokens/ERC20.sol";
-
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
-
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { Extsload } from "src/abstracts/Extsload.sol";
-
-import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
+import { IVaultFees } from "src/interfaces/modules/IVaultFees.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
-
-interface IFeesModule {
-    function computeLastBatchFees()
-        external
-        view
-        returns (uint256 managementFees, uint256 performanceFees, uint256 totalFees);
-}
 
 /// @title BaseVaultModule
 /// @notice Base contract for all modules
 /// @dev Provides shared storage, roles, and common functionality
-abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransient, Extsload {
+abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
     using FixedPointMathLib for uint256;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-
-    /*//////////////////////////////////////////////////////////////
-                                ROLES
-    //////////////////////////////////////////////////////////////*/
-
-    uint256 public constant ADMIN_ROLE = _ROLE_0;
-    uint256 public constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
+    using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -56,8 +39,10 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     );
     event UnstakeRequestCancelled(bytes32 indexed requestId);
     event Paused(bool paused);
-    event Initialized(address registry, address owner, address admin);
+    event Initialized(address registry, string name, string symbol, uint8 decimals, address asset);
     event TotalAssetsUpdated(uint256 oldTotalAssets, uint256 newTotalAssets);
+    event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+    event RescuedETH(address indexed asset, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
@@ -76,16 +61,19 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     error InvalidRegistry();
     error NotInitialized();
     error ContractNotFound(bytes32 identifier);
-    error OnlyKAssetRouter();
-    error OnlyRelayer();
     error ZeroAmount();
     error AmountBelowDustThreshold();
-    error ContractPaused();
     error Closed();
     error Settled();
     error RequestNotFound();
     error RequestNotEligible();
     error InvalidVault();
+    error IsPaused();
+    error AlreadyInit();
+    error WrongRole();
+    error WrongAsset();
+    error TransferFailed();
+    error NotClosed();
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -143,22 +131,11 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     /// @param registry_ Address of the kRegistry contract
     /// @param paused_ Initial pause state
     /// @dev Can only be called once during initialization
-    function __BaseVaultModule_init(
-        address registry_,
-        address owner_,
-        address admin_,
-        address feeReceiver_,
-        bool paused_
-    )
-        internal
-    {
+    function __BaseVaultModule_init(address registry_, address feeReceiver_, bool paused_) internal {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
 
-        if ($.initialized) revert AlreadyInitialized();
+        if ($.initialized) revert AlreadyInit();
         if (registry_ == address(0)) revert InvalidRegistry();
-
-        if (owner_ == address(0)) revert ZeroAddress();
-        if (admin_ == address(0)) revert ZeroAddress();
 
         $.registry = registry_;
         $.paused = paused_;
@@ -166,9 +143,6 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
         $.initialized = true;
         $.lastFeesChargedManagement = uint64(block.timestamp);
         $.lastFeesChargedPerformance = uint64(block.timestamp);
-
-        _initializeOwner(owner_);
-        _grantRoles(admin_, ADMIN_ROLE);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -191,6 +165,36 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (!$.initialized) revert NotInitialized();
         return IkRegistry($.registry);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                RESCUER
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice rescues locked assets (ETH or ERC20) in the contract
+    /// @param asset_ the asset to rescue (use address(0) for ETH)
+    /// @param to_ the address that will receive the assets
+    /// @param amount_ the amount to rescue
+    function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
+        if (!_isAdmin(msg.sender)) revert WrongRole();
+        if (to_ == address(0)) revert ZeroAddress();
+
+        if (asset_ == address(0)) {
+            // Rescue ETH
+            if (amount_ == 0 || amount_ > address(this).balance) revert ZeroAmount();
+
+            (bool success,) = to_.call{ value: amount_ }("");
+            if (!success) revert TransferFailed();
+
+            emit RescuedETH(to_, amount_);
+        } else {
+            // Rescue ERC20 tokens
+            if (_isAsset(asset_)) revert WrongAsset();
+            if (amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
+
+            asset_.safeTransfer(to_, amount_);
+            emit RescuedAssets(asset_, to_, amount_);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -220,13 +224,6 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     function _getDNVaultByAsset(address asset_) internal view returns (address vault) {
         vault = _registry().getVaultByAssetAndType(asset_, uint8(IkRegistry.VaultType.DN));
         if (vault == address(0)) revert InvalidVault();
-    }
-
-    /// @notice Checks if an account has relayer role
-    /// @param account The account to check
-    /// @return Whether the account has relayer role
-    function _getRelayer(address account) internal view returns (bool) {
-        return _registry().isRelayer(account);
     }
 
     /// @notice Returns the underlying asset address (for compatibility)
@@ -316,31 +313,54 @@ abstract contract BaseVaultModule is OwnableRoles, ERC20, ReentrancyGuardTransie
     /// @notice Calculates accumulated fees
     /// @return accumulatedFees Accumulated fees
     function _accumulatedFees() internal view returns (uint256) {
-        (,, uint256 totalFees) = IFeesModule(address(this)).computeLastBatchFees();
+        (,, uint256 totalFees) = IVaultFees(address(this)).computeLastBatchFees();
         return totalFees;
     }
 
     /*//////////////////////////////////////////////////////////////
-                              MODIFIERS
+                            VALIDATORS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Modifier to restrict function execution when contract is paused
-    /// @dev Reverts with Paused() if isPaused is true
-    modifier whenNotPaused() virtual {
-        if (_getBaseVaultModuleStorage().paused) revert ContractPaused();
-        _;
+    /// @notice Checks if an address is a admin
+    /// @return Whether the address is a admin
+    function _isAdmin(address user) internal view returns (bool) {
+        return _registry().isAdmin(user);
     }
 
-    /// @notice Restricts function access to the kAssetRouter contract
-    modifier onlyKAssetRouter() {
-        if (msg.sender != _getKAssetRouter()) revert OnlyKAssetRouter();
-        _;
+    /// @notice Checks if an address is a emergencyAdmin
+    /// @return Whether the address is a emergencyAdmin
+    function _isEmergencyAdmin(address user) internal view returns (bool) {
+        return _registry().isEmergencyAdmin(user);
     }
 
-    /// @notice Restricts function access to the relayer
-    /// @dev Only callable internally by inheriting contracts
-    modifier onlyRelayer() {
-        if (!_getRelayer(msg.sender)) revert OnlyRelayer();
-        _;
+    /// @notice Checks if an address is a relayer
+    /// @return Whether the address is a relayer
+    function _isRelayer(address user) internal view returns (bool) {
+        return _registry().isRelayer(user);
+    }
+
+    /// @notice Checks if an address is a institution
+    /// @return Whether the address is a institution
+    function _isPaused() internal view returns (bool) {
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (!$.initialized) revert NotInitialized();
+        return $.paused;
+    }
+
+    /// @notice Gets the kMinter singleton contract address
+    /// @return minter The kMinter contract address
+    /// @dev Reverts if kMinter not set in registry
+    function _isKAssetRouter(address kAssetRouter_) internal view returns (bool) {
+        bool isTrue;
+        address _kAssetRouter = _registry().getContractById(K_ASSET_ROUTER);
+        if (_kAssetRouter == kAssetRouter_) isTrue = true;
+        return isTrue;
+    }
+
+    /// @notice Checks if an asset is registered
+    /// @param asset The asset address to check
+    /// @return Whether the asset is registered
+    function _isAsset(address asset) internal view returns (bool) {
+        return _registry().isAsset(asset);
     }
 }

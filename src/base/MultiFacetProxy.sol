@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 import { Proxy } from "src/abstracts/Proxy.sol";
 
 /// @title MultiFacetProxy
@@ -71,7 +70,7 @@ contract MultiFacetProxy is Proxy, OwnableRoles {
     /// @param selectors Array of function selectors to add
     /// @param implementation The implementation contract address
     /// @param forceOverride If true, allows overwriting existing mappings
-    function addFunctions(bytes4[] calldata selectors, address implementation, bool forceOverride) public {
+    function addFunctions(bytes4[] calldata selectors, address implementation, bool forceOverride) external {
         for (uint256 i = 0; i < selectors.length; i++) {
             addFunction(selectors[i], implementation, forceOverride);
         }
@@ -87,7 +86,7 @@ contract MultiFacetProxy is Proxy, OwnableRoles {
 
     /// @notice Removes multiple function selector mappings
     /// @param selectors Array of function selectors to remove
-    function removeFunctions(bytes4[] calldata selectors) public {
+    function removeFunctions(bytes4[] calldata selectors) external {
         for (uint256 i = 0; i < selectors.length; i++) {
             removeFunction(selectors[i]);
         }

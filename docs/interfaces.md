@@ -35,10 +35,9 @@ Central hub for asset flow coordination between vaults and external strategies. 
 
 **Settlement Operations**
 
-- `proposeSettlement()` - Creates timelock settlement proposal with merkle proof verification
-- `executeSettlement()` - Executes approved settlement after timelock, handling adapter deposits/withdrawals
-- `cancelSettlementProposal()` - Cancels incorrect settlement proposals
-- `updateSettlementProposal()` - Updates settlement parameters before execution
+- `proposeSettleBatch()` - Creates timelock settlement proposal with cooldown period
+- `executeSettleBatch()` - Executes approved settlement after cooldown, handling adapter deposits/withdrawals
+- `cancelProposal()` - Cancels settlement proposals during cooldown period
 
 **Asset Transfer**
 
@@ -85,8 +84,8 @@ ERC20 vault with dual accounting for minter and user pools. Implements automatic
 
 **Staking Operations**
 
-- `requestStake()` - Request to stake kTokens for stkTokens (rebase token)
-- `requestUnstake()` - Request to unstake stkTokens for kTokens plus yield
+- `requestStake()` - Request to stake kTokens for stkTokens (yield-bearing vault shares)
+- `requestUnstake()` - Request to unstake stkTokens for kTokens plus accrued yield
 - `cancelStakeRequest()` - Cancels pending staking requests before batch settlement
 - `cancelUnstakeRequest()` - Cancels pending unstaking requests before batch settlement
 
@@ -184,6 +183,41 @@ Interface for protocol adapters that manage external strategy integrations. All 
 - `name()` - Human readable adapter identification
 - `version()` - Adapter version for compatibility tracking
 
+## Vault Module Interfaces
+
+### IVaultBatch
+
+Interface for vault batch processing functionality within the modular vault system. Handles batch lifecycle, request management, and settlement coordination.
+
+**Batch Operations**
+
+- `getBatchId()` - Returns current active batch identifier
+- `createBatchReceiver()` - Deploys deterministic batch receiver for asset distribution
+- `closeBatch()` - Marks current batch as closed to new requests
+- `settleBatch()` - Processes batch settlement with yield distribution
+
+### IVaultClaim
+
+Interface for processing user claims from settled batches. Manages conversion of requests to actual token distributions.
+
+**Claim Processing**
+
+- `claimStake()` - Claims stkTokens from settled stake requests
+- `claimUnstake()` - Claims underlying assets from settled unstake requests
+- `batchClaimStake()` - Processes multiple stake claims efficiently
+- `batchClaimUnstake()` - Processes multiple unstake claims efficiently
+
+### IVaultFees
+
+Interface for vault fee collection and distribution. Handles both management and performance fees with precise calculations.
+
+**Fee Management**
+
+- `collectManagementFees()` - Collects continuous management fees
+- `collectPerformanceFees()` - Collects fees on positive yields only
+- `setFeeCollector()` - Updates fee collection destination
+- `getFeeAccrued()` - Returns current accrued fee amounts
+
 ## Utility Interfaces
 
 ### IExtsload
@@ -202,3 +236,7 @@ External storage loading interface enabling efficient batch reading of storage s
 - Batch state queries for gas efficiency
 - Debug and analysis tooling support
 - Off-chain computation with on-chain verification
+
+---
+
+**Note**: This document covers the primary interfaces for the KAM protocol. Additional view functions, administrative functions, and implementation-specific methods may exist in the actual contracts but are not exhaustively listed here. Refer to the source code interfaces in `/src/interfaces/` for complete function signatures and documentation.

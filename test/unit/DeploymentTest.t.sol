@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ADMIN_ROLE, MINTER_ROLE, USDC_MAINNET, WBTC_MAINNET, _1_USDC, _1_WBTC } from "../utils/Constants.sol";
+import {
+    ADMIN_ROLE,
+    INSTITUTION_ROLE,
+    MINTER_ROLE,
+    USDC_MAINNET,
+    WBTC_MAINNET,
+    _1_USDC,
+    _1_WBTC
+} from "../utils/Constants.sol";
 
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
@@ -66,16 +74,18 @@ contract DeploymentTest is DeploymentBaseTest {
 
     /// @dev Test role assignments
     function test_RoleAssignments() public {
-        // Check admin roles
+        // Check roles
         assertHasRole(address(registry), users.admin, ADMIN_ROLE);
-        assertHasRole(address(assetRouter), users.admin, ADMIN_ROLE);
         assertHasRole(address(kUSD), users.admin, ADMIN_ROLE);
         assertHasRole(address(kBTC), users.admin, ADMIN_ROLE);
-        assertHasRole(address(minter), users.admin, ADMIN_ROLE);
+        assertHasRole(address(registry), users.institution, INSTITUTION_ROLE);
 
         // Check only kMinter has MINTER_ROLE on kTokens (institutional 1:1 minting)
         assertHasRole(address(kUSD), address(minter), MINTER_ROLE);
         assertHasRole(address(kBTC), address(minter), MINTER_ROLE);
+
+        assertHasRole(address(kUSD), address(assetRouter), MINTER_ROLE);
+        assertHasRole(address(kBTC), address(assetRouter), MINTER_ROLE);
 
         // Staking vaults should NOT have MINTER_ROLE on kTokens
         // They accept existing kTokens from users and mint their own stkTokens
@@ -91,19 +101,16 @@ contract DeploymentTest is DeploymentBaseTest {
             OwnableRoles(address(kUSD)).hasAnyRole(address(betaVault), MINTER_ROLE),
             "Beta vault should not have kToken MINTER_ROLE"
         );
-
-        // Check institution role
-        assertHasRole(address(minter), users.institution, 8); // INSTITUTION_ROLE
     }
 
     /// @dev Test asset registration
     function test_AssetRegistration() public {
         // Check USDC registration
-        assertTrue(registry.isRegisteredAsset(USDC_MAINNET), "USDC not registered");
+        assertTrue(registry.isAsset(USDC_MAINNET), "USDC not registered");
         assertEq(registry.assetToKToken(USDC_MAINNET), address(kUSD), "USDC->kUSD mapping incorrect");
 
         // Check WBTC registration
-        assertTrue(registry.isRegisteredAsset(WBTC_MAINNET), "WBTC not registered");
+        assertTrue(registry.isAsset(WBTC_MAINNET), "WBTC not registered");
         assertEq(registry.assetToKToken(WBTC_MAINNET), address(kBTC), "WBTC->kBTC mapping incorrect");
     }
 
@@ -166,10 +173,8 @@ contract DeploymentTest is DeploymentBaseTest {
     function test_ContractOwnership() public {
         // Check owners
         assertEq(registry.owner(), users.owner, "Registry owner incorrect");
-        assertEq(assetRouter.owner(), users.owner, "AssetRouter owner incorrect");
         assertEq(kUSD.owner(), users.owner, "kUSD owner incorrect");
         assertEq(kBTC.owner(), users.owner, "kBTC owner incorrect");
-        assertEq(minter.owner(), users.owner, "Minter owner incorrect");
         assertEq(dnVault.owner(), users.owner, "DN Vault owner incorrect");
         assertEq(alphaVault.owner(), users.owner, "Alpha Vault owner incorrect");
         assertEq(betaVault.owner(), users.owner, "Beta Vault owner incorrect");

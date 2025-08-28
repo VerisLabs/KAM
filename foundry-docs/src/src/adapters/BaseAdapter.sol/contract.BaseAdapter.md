@@ -1,8 +1,8 @@
 # BaseAdapter
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/adapters/BaseAdapter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/70c31cd66a975b95c3bd6540ffd61af97eae3226/src/adapters/BaseAdapter.sol)
 
 **Inherits:**
-OwnableRoles, ReentrancyGuardTransient
+ReentrancyGuardTransient
 
 Abstract base contract for all protocol adapters
 
@@ -10,27 +10,6 @@ Abstract base contract for all protocol adapters
 
 
 ## State Variables
-### ADMIN_ROLE
-
-```solidity
-uint256 internal constant ADMIN_ROLE = _ROLE_0;
-```
-
-
-### EMERGENCY_ADMIN_ROLE
-
-```solidity
-uint256 internal constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
-```
-
-
-### K_MINTER
-
-```solidity
-bytes32 internal constant K_MINTER = keccak256("K_MINTER");
-```
-
-
 ### K_ASSET_ROUTER
 
 ```solidity
@@ -60,24 +39,32 @@ Initializes the base adapter
 
 
 ```solidity
-function __BaseAdapter_init(
-    address registry_,
-    address owner_,
-    address admin_,
-    string memory name_,
-    string memory version_
-)
-    internal;
+function __BaseAdapter_init(address registry_, string memory name_, string memory version_) internal;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`registry_`|`address`|Address of the kRegistry contract|
-|`owner_`|`address`|Address of the owner|
-|`admin_`|`address`|Address of the admin|
 |`name_`|`string`|Human readable name for this adapter|
 |`version_`|`string`|Version string for this adapter|
+
+
+### registry
+
+Returns the registry contract address
+
+*Reverts if contract not initialized*
+
+
+```solidity
+function registry() external view returns (address);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`address`|The kRegistry contract address|
 
 
 ### _registry
@@ -95,95 +82,21 @@ function _registry() internal view returns (IkRegistry);
 |`<none>`|`IkRegistry`|IkRegistry interface for registry interaction|
 
 
-### _getKAssetRouter
+### rescueAssets
 
-Gets the kAssetRouter singleton contract address
-
-
-```solidity
-function _getKAssetRouter() internal view returns (address router);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`router`|`address`|The kAssetRouter contract address|
-
-
-### _getRelayer
-
-Checks if an address is a relayer
+rescues locked assets (ETH or ERC20) in the contract
 
 
 ```solidity
-function _getRelayer() internal view returns (bool);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|Whether the address is a relayer|
-
-
-### _getKTokenForAsset
-
-Gets the kToken address for a given asset
-
-*Reverts if asset not supported*
-
-
-```solidity
-function _getKTokenForAsset(address asset) internal view returns (address kToken);
+function rescueAssets(address asset_, address to_, uint256 amount_) external payable;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`asset`|`address`|The underlying asset address|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`kToken`|`address`|The corresponding kToken address|
-
-
-### _getVaultAssets
-
-Gets the asset managed by a vault
-
-*Reverts if vault not registered*
-
-
-```solidity
-function _getVaultAssets(address vault) internal view returns (address[] memory assets);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`vault`|`address`|The vault address|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`assets`|`address[]`|The asset address managed by the vault|
-
-
-### registered
-
-Returns whether this adapter is registered
-
-
-```solidity
-function registered() public view returns (bool);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|True if adapter is registered and active|
+|`asset_`|`address`|the asset to rescue (use address(0) for ETH)|
+|`to_`|`address`|the address that will receive the assets|
+|`amount_`|`uint256`|the amount to rescue|
 
 
 ### name
@@ -216,62 +129,107 @@ function version() external view returns (string memory);
 |`<none>`|`string`|Version string|
 
 
-### onlyKAssetRouter
+### _isAdmin
 
-Restricts function access to kAssetRouter only
+Checks if an address is a admin
 
 
 ```solidity
-modifier onlyKAssetRouter();
+function _isAdmin(address user) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a admin|
+
+
+### _isKAssetRouter
+
+Gets the kMinter singleton contract address
+
+*Reverts if kMinter not set in registry*
+
+
+```solidity
+function _isKAssetRouter(address user) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|minter The kMinter contract address|
+
+
+### _isAsset
+
+Checks if an asset is registered
+
+
+```solidity
+function _isAsset(address asset) internal view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The asset address to check|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the asset is registered|
+
+
+## Events
+### RescuedAssets
+
+```solidity
+event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
 ```
 
-### onlyRelayer
-
-Restricts function access to the relayer
-
+### RescuedETH
 
 ```solidity
-modifier onlyRelayer();
-```
-
-### whenRegistered
-
-Ensures the adapter is registered and active
-
-
-```solidity
-modifier whenRegistered();
+event RescuedETH(address indexed asset, uint256 amount);
 ```
 
 ## Errors
-### OnlyKAssetRouter
-
-```solidity
-error OnlyKAssetRouter();
-```
-
-### ContractNotFound
-
-```solidity
-error ContractNotFound(bytes32 identifier);
-```
-
 ### ZeroAddress
 
 ```solidity
 error ZeroAddress();
 ```
 
+### ZeroAmount
+
+```solidity
+error ZeroAmount();
+```
+
+### WrongRole
+
+```solidity
+error WrongRole();
+```
+
+### WrongAsset
+
+```solidity
+error WrongAsset();
+```
+
+### TransferFailed
+
+```solidity
+error TransferFailed();
+```
+
 ### InvalidRegistry
 
 ```solidity
 error InvalidRegistry();
-```
-
-### AssetNotSupported
-
-```solidity
-error AssetNotSupported(address asset);
 ```
 
 ### InvalidAmount
@@ -286,6 +244,12 @@ error InvalidAmount();
 error InvalidAsset();
 ```
 
+### AlreadyInitialized
+
+```solidity
+error AlreadyInitialized();
+```
+
 ## Structs
 ### BaseAdapterStorage
 **Note:**
@@ -295,7 +259,6 @@ storage-location: erc7201:kam.storage.BaseAdapter
 ```solidity
 struct BaseAdapterStorage {
     address registry;
-    bool registered;
     bool initialized;
     string name;
     string version;

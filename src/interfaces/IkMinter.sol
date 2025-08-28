@@ -29,7 +29,7 @@ interface IkMinter {
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event Initialized(address indexed registry, address indexed owner, address admin, address emergencyAdmin);
+    event ContractInitialized(address indexed registry);
     event Minted(address indexed to, uint256 amount, bytes32 batchId);
     event RedeemRequestCreated(
         bytes32 indexed requestId,
@@ -46,17 +46,12 @@ interface IkMinter {
                               ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error ZeroAmount();
-    error BatchNotSettled();
     error InsufficientBalance();
     error RequestNotFound();
     error RequestNotEligible();
     error RequestAlreadyProcessed();
-    error OnlyInstitution();
     error BatchClosed();
     error BatchSettled();
-    error ContractPaused();
-    error InvalidAsset();
 
     /*//////////////////////////////////////////////////////////////
                               FUNCTIONS
@@ -66,9 +61,9 @@ interface IkMinter {
     function requestRedeem(address asset, address to, uint256 amount) external payable returns (bytes32 requestId);
     function redeem(bytes32 requestId) external payable;
     function cancelRequest(bytes32 requestId) external payable;
-    function setPaused(bool paused) external;
-    function isPaused() external view returns (bool);
+    function rescueReceiverAssets(address batchReceiver, address asset, address to, uint256 amount) external;
 
+    function isPaused() external view returns (bool);
     function getRedeemRequest(bytes32 requestId) external view returns (RedeemRequest memory);
     function getUserRequests(address user) external view returns (bytes32[] memory);
     function getRequestCounter() external view returns (uint256);

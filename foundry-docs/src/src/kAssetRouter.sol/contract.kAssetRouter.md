@@ -1,5 +1,5 @@
 # kAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/70c31cd66a975b95c3bd6540ffd61af97eae3226/src/kAssetRouter.sol)
 
 **Inherits:**
 [IkAssetRouter](/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), Multicallable
@@ -36,20 +36,6 @@ bytes32 private constant KASSETROUTER_STORAGE_LOCATION =
 function _getkAssetRouterStorage() private pure returns (kAssetRouterStorage storage $);
 ```
 
-### whenNotPaused
-
-
-```solidity
-modifier whenNotPaused();
-```
-
-### onlyStakingVault
-
-
-```solidity
-modifier onlyStakingVault();
-```
-
 ### constructor
 
 
@@ -63,16 +49,13 @@ Initialize the kAssetRouter with asset and admin configuration
 
 
 ```solidity
-function initialize(address registry_, address owner_, address admin_, bool paused_) external initializer;
+function initialize(address registry_) external initializer;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`registry_`|`address`|Address of the kRegistry contract|
-|`owner_`|`address`|Address of the owner|
-|`admin_`|`address`|Address of the admin|
-|`paused_`|`bool`|Initial pause state|
 
 
 ### kAssetPush
@@ -81,16 +64,7 @@ Push assets from kMinter to designated DN vault
 
 
 ```solidity
-function kAssetPush(
-    address _asset,
-    uint256 amount,
-    bytes32 batchId
-)
-    external
-    payable
-    nonReentrant
-    whenNotPaused
-    onlyKMinter;
+function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable nonReentrant;
 ```
 **Parameters**
 
@@ -115,9 +89,7 @@ function kAssetRequestPull(
 )
     external
     payable
-    nonReentrant
-    whenNotPaused
-    onlyKMinter;
+    nonReentrant;
 ```
 **Parameters**
 
@@ -144,9 +116,7 @@ function kAssetTransfer(
 )
     external
     payable
-    nonReentrant
-    whenNotPaused
-    onlyStakingVault;
+    nonReentrant;
 ```
 **Parameters**
 
@@ -165,16 +135,7 @@ Request to pull shares for kStakingVault redemptions
 
 
 ```solidity
-function kSharesRequestPush(
-    address sourceVault,
-    uint256 amount,
-    bytes32 batchId
-)
-    external
-    payable
-    nonReentrant
-    whenNotPaused
-    onlyStakingVault;
+function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant;
 ```
 **Parameters**
 
@@ -191,16 +152,7 @@ Request to pull shares for kStakingVault redemptions
 
 
 ```solidity
-function kSharesRequestPull(
-    address sourceVault,
-    uint256 amount,
-    bytes32 batchId
-)
-    external
-    payable
-    nonReentrant
-    whenNotPaused
-    onlyStakingVault;
+function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant;
 ```
 **Parameters**
 
@@ -229,8 +181,6 @@ function proposeSettleBatch(
     external
     payable
     nonReentrant
-    whenNotPaused
-    onlyRelayer
     returns (bytes32 proposalId);
 ```
 **Parameters**
@@ -258,7 +208,7 @@ Execute a settlement proposal after cooldown period
 
 
 ```solidity
-function executeSettleBatch(bytes32 proposalId) external nonReentrant whenNotPaused;
+function executeSettleBatch(bytes32 proposalId) external nonReentrant;
 ```
 **Parameters**
 
@@ -273,42 +223,13 @@ Cancel a settlement proposal before execution
 
 
 ```solidity
-function cancelProposal(bytes32 proposalId) external nonReentrant whenNotPaused onlyGuardian;
+function cancelProposal(bytes32 proposalId) external nonReentrant;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`proposalId`|`bytes32`|The proposal ID to cancel|
-
-
-### updateProposal
-
-Update a settlement proposal before execution
-
-
-```solidity
-function updateProposal(
-    bytes32 proposalId,
-    uint256 totalAssets_,
-    uint256 netted,
-    uint256 yield,
-    bool profit
-)
-    external
-    nonReentrant
-    whenNotPaused
-    onlyRelayer;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`proposalId`|`bytes32`|The proposal ID to update|
-|`totalAssets_`|`uint256`|New total assets value|
-|`netted`|`uint256`|New netted amount|
-|`yield`|`uint256`|New yield amount|
-|`profit`|`bool`|New profit status|
 
 
 ### _executeSettlement
@@ -326,34 +247,34 @@ function _executeSettlement(VaultSettlementProposal storage proposal) private;
 |`proposal`|`VaultSettlementProposal`|The settlement proposal to execute|
 
 
-### setPaused
-
-Set contract pause state
-
-
-```solidity
-function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`paused`|`bool`|New pause state|
-
-
 ### setSettlementCooldown
 
 Set the cooldown period for settlement proposals
 
 
 ```solidity
-function setSettlementCooldown(uint256 cooldown) external onlyRoles(ADMIN_ROLE);
+function setSettlementCooldown(uint256 cooldown) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`cooldown`|`uint256`|New cooldown period in seconds|
+
+
+### getPendingProposals
+
+Get All the pendingProposals
+
+
+```solidity
+function getPendingProposals(address vault) external view returns (bytes32[] memory pendingProposals);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`pendingProposals`|`bytes32[]`|An array of proposalIds|
 
 
 ### getSettlementProposal
@@ -434,6 +355,28 @@ function _virtualBalance(address vault, address asset) internal view returns (ui
 |Name|Type|Description|
 |----|----|-----------|
 |`balance`|`uint256`|the balance of the vault in all adapters.|
+
+
+### _isPendingProposal
+
+verifies if a proposal is pending or not
+
+
+```solidity
+function _isPendingProposal(address vault, bytes32 proposalId) internal view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault`|`address`|the vault address|
+|`proposalId`|`bytes32`|the proposalId to verify|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|bool proposal exists or not|
 
 
 ### isPaused
@@ -531,7 +474,7 @@ Authorize contract upgrade
 
 
 ```solidity
-function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE);
+function _authorizeUpgrade(address newImplementation) internal view override;
 ```
 **Parameters**
 
@@ -587,7 +530,11 @@ storage-location: erc7201:kam.storage.kAssetRouter
 
 ```solidity
 struct kAssetRouterStorage {
+    uint256 proposalCounter;
     uint256 vaultSettlementCooldown;
+    EnumerableSetLib.Bytes32Set executedProposalIds;
+    EnumerableSetLib.Bytes32Set batchIds;
+    mapping(address vault => EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;
     mapping(address account => mapping(bytes32 batchId => Balances)) vaultBatchBalances;
     mapping(address vault => mapping(bytes32 batchId => uint256)) vaultRequestedShares;
     mapping(bytes32 proposalId => VaultSettlementProposal) settlementProposals;

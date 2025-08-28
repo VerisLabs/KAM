@@ -14,6 +14,19 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
+                                EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    event Minted(address indexed to, uint256 amount);
+    event Burned(address indexed from, uint256 amount);
+    event TokenCreated(address indexed token, address owner, string name, string symbol, uint8 decimals);
+    event PauseState(bool isPaused);
+    event AuthorizedCallerUpdated(address indexed caller, bool authorized);
+    event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
+    event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+    event RescuedETH(address indexed asset, uint256 amount);
+
+    /*//////////////////////////////////////////////////////////////
                                 ROLES
     //////////////////////////////////////////////////////////////*/
 
@@ -26,20 +39,9 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     //////////////////////////////////////////////////////////////*/
 
     bool _isPaused;
-    string _name;
-    string _symbol;
-    uint8 _decimals;
-
-    /*//////////////////////////////////////////////////////////////
-                                EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event Minted(address indexed to, uint256 amount);
-    event Burned(address indexed from, uint256 amount);
-    event TokenCreated(address indexed token, address owner, string name, string symbol, uint8 decimals);
-    event PauseState(bool isPaused);
-    event AuthorizedCallerUpdated(address indexed caller, bool authorized);
-    event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
+    string private _name;
+    string private _symbol;
+    uint8 private _decimals;
 
     /*//////////////////////////////////////////////////////////////
                                 ERRORS
@@ -49,6 +51,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     error ZeroAddress();
     error ZeroAmount();
     error ContractNotPaused();
+    error TransferFailed();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -219,10 +222,13 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
 
         if (token == address(0)) {
             // Withdraw ETH
-            to.safeTransferETH(amount);
+            (bool success,) = to.call{ value: amount }("");
+            if (!success) revert TransferFailed();
+            emit RescuedETH(to, amount);
         } else {
             // Withdraw ERC20 token
             token.safeTransfer(to, amount);
+            emit RescuedAssets(token, to, amount);
         }
 
         emit EmergencyWithdrawal(token, to, amount, msg.sender);

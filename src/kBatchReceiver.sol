@@ -17,6 +17,7 @@ contract kBatchReceiver is IkBatchReceiver {
     address public immutable kMinter;
     address public asset;
     bytes32 public batchId;
+    bool public isInitialised;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -35,9 +36,10 @@ contract kBatchReceiver is IkBatchReceiver {
     /// @param _asset Address of the asset contract
     /// @dev Sets batch ID and asset, then emits initialization event
     function initialize(bytes32 _batchId, address _asset) external {
-        if (asset != address(0)) revert();
-        if (_asset == address(0)) revert();
+        if (isInitialised) revert IsInitialised();
+        if (_asset == address(0)) revert ZeroAddress();
 
+        isInitialised = true;
         batchId = _batchId;
         asset = _asset;
 
@@ -61,5 +63,33 @@ contract kBatchReceiver is IkBatchReceiver {
 
         asset.safeTransfer(receiver, amount);
         emit PulledAssets(receiver, asset, amount);
+    }
+
+    /// @notice Transfers assets from kMinter to the specified receiver
+    /// @param asset_ Asset address (use address(0) for ETH)
+    /// @dev Only callable by kMinter, transfers assets to kMinter
+    function rescueAssets(address asset_) external payable {
+        address sender = msg.sender;
+        if (sender != kMinter) revert OnlyKMinter();
+
+        if (asset_ == address(0)) {
+            // Rescue ETH
+            uint256 balance = address(this).balance;
+            if (balance == 0) revert ZeroAmount();
+
+            (bool success,) = sender.call{ value: balance }("");
+            if (!success) revert TransferFailed();
+
+            emit RescuedETH(sender, balance);
+        } else {
+            // Rescue ERC20 tokens
+            if (asset_ == asset) revert AssetCantBeRescue();
+
+            uint256 balance = asset_.balanceOf(address(this));
+            if (balance == 0) revert ZeroAmount();
+
+            asset_.safeTransfer(sender, balance);
+            emit RescuedAssets(asset_, sender, balance);
+        }
     }
 }

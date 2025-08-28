@@ -1,5 +1,5 @@
 # BatchModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kStakingVault/modules/BatchModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/70c31cd66a975b95c3bd6540ffd61af97eae3226/src/kStakingVault/modules/BatchModule.sol)
 
 **Inherits:**
 [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md)
@@ -18,7 +18,7 @@ Creates a new batch for processing requests
 
 
 ```solidity
-function createNewBatch() external onlyRelayer returns (bytes32);
+function createNewBatch() external returns (bytes32);
 ```
 **Returns**
 
@@ -33,7 +33,7 @@ function createNewBatch() external onlyRelayer returns (bytes32);
 
 
 ```solidity
-function closeBatch(bytes32 _batchId, bool _create) external onlyRelayer;
+function closeBatch(bytes32 _batchId, bool _create) external;
 ```
 **Parameters**
 
@@ -51,7 +51,7 @@ Marks a batch as settled
 
 
 ```solidity
-function settleBatch(bytes32 _batchId) external onlyKAssetRouter;
+function settleBatch(bytes32 _batchId) external;
 ```
 **Parameters**
 
@@ -68,7 +68,7 @@ Deploys BatchReceiver for specific batch
 
 
 ```solidity
-function createBatchReceiver(bytes32 _batchId) external onlyKAssetRouter returns (address);
+function createBatchReceiver(bytes32 _batchId) external nonReentrant returns (address);
 ```
 **Parameters**
 

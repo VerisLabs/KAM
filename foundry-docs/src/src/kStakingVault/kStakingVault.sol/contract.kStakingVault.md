@@ -1,5 +1,5 @@
 # kStakingVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kStakingVault/kStakingVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/70c31cd66a975b95c3bd6540ffd61af97eae3226/src/kStakingVault/kStakingVault.sol)
 
 **Inherits:**
 Initializable, UUPSUpgradeable, [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/contract.MultiFacetProxy.md)
@@ -28,15 +28,14 @@ Initializes the kStakingVault contract (stack optimized)
 
 ```solidity
 function initialize(
-    address registry_,
     address owner_,
     address admin_,
+    address registry_,
     bool paused_,
     string memory name_,
     string memory symbol_,
     uint8 decimals_,
     uint128 dustAmount_,
-    address emergencyAdmin_,
     address asset_,
     address feeCollector_
 )
@@ -47,17 +46,16 @@ function initialize(
 
 |Name|Type|Description|
 |----|----|-----------|
-|`registry_`|`address`||
-|`owner_`|`address`|Owner address|
-|`admin_`|`address`|Admin address|
-|`paused_`|`bool`|Initial pause state|
+|`owner_`|`address`||
+|`admin_`|`address`||
+|`registry_`|`address`|The registry address|
+|`paused_`|`bool`|If the vault is paused_|
 |`name_`|`string`|Token name|
 |`symbol_`|`string`|Token symbol|
 |`decimals_`|`uint8`|Token decimals|
 |`dustAmount_`|`uint128`|Minimum amount threshold|
-|`emergencyAdmin_`|`address`|Emergency admin address|
 |`asset_`|`address`|Underlying asset address|
-|`feeCollector_`|`address`||
+|`feeCollector_`|`address`|feeCollector address|
 
 
 ### requestStake
@@ -66,15 +64,7 @@ Request to stake kTokens for stkTokens (rebase token)
 
 
 ```solidity
-function requestStake(
-    address to,
-    uint256 amount
-)
-    external
-    payable
-    nonReentrant
-    whenNotPaused
-    returns (bytes32 requestId);
+function requestStake(address to, uint256 amount) external payable nonReentrant returns (bytes32 requestId);
 ```
 **Parameters**
 
@@ -98,15 +88,7 @@ Request to unstake stkTokens for kTokens + yield
 
 
 ```solidity
-function requestUnstake(
-    address to,
-    uint256 stkTokenAmount
-)
-    external
-    payable
-    nonReentrant
-    whenNotPaused
-    returns (bytes32 requestId);
+function requestUnstake(address to, uint256 stkTokenAmount) external payable nonReentrant returns (bytes32 requestId);
 ```
 **Parameters**
 
@@ -128,7 +110,7 @@ Cancels a staking request
 
 
 ```solidity
-function cancelStakeRequest(bytes32 requestId) external;
+function cancelStakeRequest(bytes32 requestId) external payable nonReentrant;
 ```
 **Parameters**
 
@@ -143,7 +125,7 @@ Cancels an unstaking request
 
 
 ```solidity
-function cancelUnstakeRequest(bytes32 requestId) external payable nonReentrant whenNotPaused;
+function cancelUnstakeRequest(bytes32 requestId) external payable nonReentrant;
 ```
 **Parameters**
 
@@ -183,7 +165,7 @@ Sets the pause state of the contract
 
 
 ```solidity
-function setPaused(bool paused_) external onlyRoles(EMERGENCY_ADMIN_ROLE);
+function setPaused(bool paused_) external;
 ```
 **Parameters**
 
@@ -365,7 +347,7 @@ Authorize upgrade (only owner can upgrade)
 
 
 ```solidity
-function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE);
+function _authorizeUpgrade(address newImplementation) internal view override;
 ```
 
 ### receive

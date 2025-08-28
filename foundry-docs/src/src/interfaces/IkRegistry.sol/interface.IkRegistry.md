@@ -1,5 +1,5 @@
 # IkRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/interfaces/IkRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/70c31cd66a975b95c3bd6540ffd61af97eae3226/src/interfaces/IkRegistry.sol)
 
 
 ## Functions
@@ -14,7 +14,14 @@ function setSingletonContract(bytes32 id, address contractAddress) external;
 
 
 ```solidity
-function registerAsset(address asset, bytes32 id) external returns (address);
+function registerAsset(
+    string memory name,
+    string memory symbol,
+    address asset,
+    bytes32 id
+)
+    external
+    returns (address);
 ```
 
 ### registerVault
@@ -36,6 +43,27 @@ function registerAdapter(address vault, address adapter) external;
 
 ```solidity
 function removeAdapter(address vault, address adapter) external;
+```
+
+### grantInstitutionRole
+
+
+```solidity
+function grantInstitutionRole(address institution_) external;
+```
+
+### grantVendorRole
+
+
+```solidity
+function grantVendorRole(address vendor_) external;
+```
+
+### grantRelayerRole
+
+
+```solidity
+function grantRelayerRole(address relayer_) external;
 ```
 
 ### getContractById
@@ -87,25 +115,53 @@ function getVaultByAssetAndType(address asset, uint8 vaultType) external view re
 function getVaultType(address vault) external view returns (uint8);
 ```
 
-### isRelayer
+### isAdmin
 
 
 ```solidity
-function isRelayer(address account) external view returns (bool);
+function isAdmin(address user) external view returns (bool);
+```
+
+### isEmergencyAdmin
+
+
+```solidity
+function isEmergencyAdmin(address user) external view returns (bool);
 ```
 
 ### isGuardian
 
 
 ```solidity
-function isGuardian(address account) external view returns (bool);
+function isGuardian(address user) external view returns (bool);
 ```
 
-### isRegisteredAsset
+### isRelayer
 
 
 ```solidity
-function isRegisteredAsset(address asset) external view returns (bool);
+function isRelayer(address user) external view returns (bool);
+```
+
+### isInstitution
+
+
+```solidity
+function isInstitution(address user) external view returns (bool);
+```
+
+### isVendor
+
+
+```solidity
+function isVendor(address user) external view returns (bool);
+```
+
+### isAsset
+
+
+```solidity
+function isAsset(address asset) external view returns (bool);
 ```
 
 ### isVault
@@ -113,13 +169,6 @@ function isRegisteredAsset(address asset) external view returns (bool);
 
 ```solidity
 function isVault(address vault) external view returns (bool);
-```
-
-### isSingletonContract
-
-
-```solidity
-function isSingletonContract(address contractAddress) external view returns (bool);
 ```
 
 ### getAdapters
@@ -133,7 +182,7 @@ function getAdapters(address vault) external view returns (address[] memory);
 
 
 ```solidity
-function isAdapterRegistered(address adapter) external view returns (bool);
+function isAdapterRegistered(address vault, address adapter) external view returns (bool);
 ```
 
 ### getVaultAssets
@@ -190,7 +239,7 @@ event AdapterRemoved(address indexed vault, address indexed adapter);
 ### KTokenDeployed
 
 ```solidity
-event KTokenDeployed(address indexed kTokenContract);
+event KTokenDeployed(address indexed kTokenContract, string name_, string symbol_, uint8 decimals_);
 ```
 
 ### KTokenImplementationSet
@@ -199,11 +248,29 @@ event KTokenDeployed(address indexed kTokenContract);
 event KTokenImplementationSet(address indexed implementation);
 ```
 
+### RescuedAssets
+
+```solidity
+event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+```
+
+### RescuedETH
+
+```solidity
+event RescuedETH(address indexed asset, uint256 amount);
+```
+
 ## Errors
 ### ZeroAddress
 
 ```solidity
 error ZeroAddress();
+```
+
+### ZeroAmount
+
+```solidity
+error ZeroAmount();
 ```
 
 ### AlreadyRegistered
@@ -218,18 +285,6 @@ error AlreadyRegistered();
 error AssetNotSupported();
 ```
 
-### ContractNotSet
-
-```solidity
-error ContractNotSet();
-```
-
-### AdapterNotRegistered
-
-```solidity
-error AdapterNotRegistered();
-```
-
 ### InvalidAdapter
 
 ```solidity
@@ -242,40 +297,22 @@ error InvalidAdapter();
 error AdapterAlreadySet();
 ```
 
-### SaltAlreadyUsed
+### WrongRole
 
 ```solidity
-error SaltAlreadyUsed();
+error WrongRole();
 ```
 
-### TokenInitializationFailed
+### WrongAsset
 
 ```solidity
-error TokenInitializationFailed();
+error WrongAsset();
 ```
 
-### KTokenNotRegistered
+### TransferFailed
 
 ```solidity
-error KTokenNotRegistered();
-```
-
-### InvalidParameter
-
-```solidity
-error InvalidParameter();
-```
-
-### KTokenImplementationNotSet
-
-```solidity
-error KTokenImplementationNotSet();
-```
-
-### MinterNotSet
-
-```solidity
-error MinterNotSet();
+error TransferFailed();
 ```
 
 ## Enums

@@ -1,5 +1,5 @@
 # IkBatchReceiver
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/interfaces/IkBatchReceiver.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/70c31cd66a975b95c3bd6540ffd61af97eae3226/src/interfaces/IkBatchReceiver.sol)
 
 Interface for kBatchReceiver
 
@@ -33,6 +33,13 @@ function batchId() external view returns (bytes32);
 function pullAssets(address receiver, uint256 amount, bytes32 _batchId) external;
 ```
 
+### rescueAssets
+
+
+```solidity
+function rescueAssets(address asset_) external payable;
+```
+
 ## Events
 ### BatchReceiverInitialized
 
@@ -44,6 +51,18 @@ event BatchReceiverInitialized(address indexed kMinter, bytes32 indexed batchId,
 
 ```solidity
 event PulledAssets(address indexed receiver, address indexed asset, uint256 amount);
+```
+
+### RescuedAssets
+
+```solidity
+event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+```
+
+### RescuedETH
+
+```solidity
+event RescuedETH(address indexed asset, uint256 amount);
 ```
 
 ## Errors
@@ -69,5 +88,23 @@ error InvalidBatchId();
 
 ```solidity
 error ZeroAmount();
+```
+
+### AssetCantBeRescue
+
+```solidity
+error AssetCantBeRescue();
+```
+
+### IsInitialised
+
+```solidity
+error IsInitialised();
+```
+
+### TransferFailed
+
+```solidity
+error TransferFailed();
 ```
 

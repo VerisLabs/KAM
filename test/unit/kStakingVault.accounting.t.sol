@@ -85,6 +85,9 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         uint256 lastTotalAssets = vault.totalAssets();
         uint256 yield = 100_000 * _1_USDC;
 
+        vm.prank(users.relayer);
+        vault.closeBatch(batchId, true);
+
         _executeBatchSettlement(address(vault), batchId, lastTotalAssets + yield, 0, yield, true);
 
         // Total assets should now be 1.1M USDC
@@ -106,6 +109,9 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         bytes32 batchId = vault.getBatchId();
         uint256 lastTotalAssets = vault.totalAssets();
         uint256 lossAmount = 50_000 * _1_USDC;
+
+        vm.prank(users.relayer);
+        vault.closeBatch(batchId, true);
 
         _executeBatchSettlement(address(vault), batchId, lastTotalAssets - lossAmount, 0, lossAmount, false);
 
@@ -138,14 +144,14 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         bytes32 requestId = vault.requestStake(users.bob, bobDeposit);
 
         vm.prank(users.relayer);
+        vault.closeBatch(batchId, true);
+
+        vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET, address(vault), batchId, INITIAL_DEPOSIT + bobDeposit, bobDeposit, 0, false
         );
         vm.prank(users.relayer);
         assetRouter.executeSettleBatch(proposalId);
-
-        vm.prank(users.relayer);
-        vault.closeBatch(batchId, true);
 
         vm.prank(users.bob);
         vault.claimStakedShares(batchId, requestId);
@@ -172,6 +178,9 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         bytes32 batchId = vault.getBatchId();
         uint256 lastTotalAssets = vault.totalAssets();
         uint256 yield = 200_000 * _1_USDC;
+
+        vm.prank(users.relayer);
+        vault.closeBatch(batchId, true);
 
         _executeBatchSettlement(address(vault), batchId, lastTotalAssets + yield, 0, yield, true);
 

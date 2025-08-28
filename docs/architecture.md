@@ -147,7 +147,7 @@ The kAssetRouter is the most complex contract in the KAM protocol, serving as bo
 
 The router maintains three primary mappings for tracking asset states: vault batch balances for pending deposits/withdrawals per vault per batch, share redemption requests per vault per batch, and settlement proposals with timelock protection. The Balances struct packs two uint128 values in a single storage slot for gas efficiency.
 
-Settlement uses a proposal-commit pattern that provides security through time delays and validation. Relayers submit settlement proposals containing total assets, netted amounts, yield calculations, and profit status. After a mandatory cooldown period where proposals can be reviewed, cancelled, or updated, anyone can execute the settlement atomically.
+Settlement uses a proposal-commit pattern that provides security through time delays and validation. Relayers submit settlement proposals containing total assets, netted amounts, yield calculations, and profit status. After a mandatory cooldown period where proposals can be reviewed and cancelled if errors are detected, anyone can execute the settlement atomically.
 
 The router handles four distinct types of asset movements: kMinter push operations when institutions mint tokens, kMinter pull requests when institutions request redemptions, vault transfers when retail users stake/unstake, and share management for complex multi-vault operations.
 
@@ -306,7 +306,7 @@ Retail User          kStakingVault         kAssetRouter           Batch
 
 Settlement is the critical synchronization point between virtual and actual balances, implemented through a secure three-phase process. During the proposal phase, relayers calculate and submit settlement parameters including total assets with yield, netted amounts for deposits minus withdrawals, yield amounts, and profit/loss determination.
 
-The cooldown phase provides a mandatory waiting period (default 1 hour, configurable up to 1 day) where proposals can be reviewed and cancelled if errors are detected. The recent enhancement allows proposals to be updated if incorrect parameters are discovered.
+The cooldown phase provides a mandatory waiting period (default 1 hour, configurable up to 1 day) where proposals can be reviewed and cancelled if errors are detected.
 
 In the execution phase, after cooldown expires, anyone can execute the settlement atomically. The system clears batch balances, handles different settlement types (kMinter vs regular vault), deploys netted assets to adapters with explicit approvals, updates adapter total asset tracking, and marks batches as settled in vaults.
 
@@ -331,7 +331,9 @@ The protocol implements granular permissions via Solady's OwnableRoles with clea
 | EMERGENCY_ADMIN_ROLE | Crisis      | Pause, emergency withdrawals    |
 | MINTER_ROLE          | Tokens      | Mint/burn kTokens               |
 | INSTITUTION_ROLE     | Access      | Use kMinter functions           |
-| RELAYER_ROLE         | Settlement  | Propose and execute settlements |
+| VENDOR_ROLE          | Adapters    | Register adapters, manage assets|
+| RELAYER_ROLE         | Settlement  | Propose batch settlements       |
+| GUARDIAN_ROLE        | Settlement  | Cancel settlement proposals     |
 
 ### Settlement Security
 
@@ -389,6 +391,39 @@ Strategy integration requires implementing the IAdapter interface correctly, reg
 ### Custodial Adapter Flow
 
 The custodial adapter receives deposit calls from kAssetRouter, transfers assets to designated custodial addresses, updates internal balance tracking systems, reports total assets accurately on queries, and handles redemptions when requested by the protocol.
+
+## Advanced Technical Features
+
+### ERC-7201 Namespaced Storage
+
+All contracts implement ERC-7201 "Namespaced Storage Layout" to prevent storage collisions during upgrades. Each storage struct is placed at a deterministic slot calculated as:
+
+```solidity
+keccak256(abi.encode(uint256(keccak256("kam.storage.ContractName")) - 1)) & ~bytes32(uint256(0xff))
+```
+
+This ensures that:
+- Storage layouts are upgrade-safe
+- No accidental overwrites between contracts
+- Clear separation of concerns for each contract's state
+
+### Transient Reentrancy Protection
+
+The protocol uses Solady's `ReentrancyGuardTransient` which leverages Solidity 0.8.30's transient storage opcodes (TSTORE/TLOAD) for gas-efficient reentrancy protection. This provides:
+
+- Cheaper reentrancy protection than traditional storage-based guards  
+- Automatic cleanup after transaction completion
+- No permanent storage pollution
+- Modern EVM optimization for frequent state checks
+
+### UUPS Upgrade Pattern
+
+Core contracts implement the Universal Upgradeable Proxy Standard (UUPS) where the upgrade logic resides in the implementation contract rather than the proxy. This provides:
+
+- Smaller proxy size and reduced deployment costs
+- Implementation-controlled upgrade authorization
+- Better gas efficiency for delegatecalls
+- Reduced proxy complexity
 
 ## Gas Optimizations
 

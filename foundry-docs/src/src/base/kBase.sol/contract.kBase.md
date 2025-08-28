@@ -1,8 +1,8 @@
 # kBase
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/base/kBase.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/70c31cd66a975b95c3bd6540ffd61af97eae3226/src/base/kBase.sol)
 
 **Inherits:**
-OwnableRoles, ReentrancyGuardTransient
+ReentrancyGuardTransient
 
 Base contract providing common functionality for all KAM protocol contracts
 
@@ -10,20 +10,6 @@ Base contract providing common functionality for all KAM protocol contracts
 
 
 ## State Variables
-### ADMIN_ROLE
-
-```solidity
-uint256 internal constant ADMIN_ROLE = _ROLE_0;
-```
-
-
-### EMERGENCY_ADMIN_ROLE
-
-```solidity
-uint256 internal constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
-```
-
-
 ### K_MINTER
 
 ```solidity
@@ -69,16 +55,47 @@ Initializes the base contract with registry and pause state
 
 
 ```solidity
-function __kBase_init(address registry_, address owner_, address admin_, bool paused_) internal;
+function __kBase_init(address registry_) internal;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`registry_`|`address`|Address of the kRegistry contract|
-|`owner_`|`address`||
-|`admin_`|`address`||
-|`paused_`|`bool`|Initial pause state|
+
+
+### setPaused
+
+Sets the pause state of the contract
+
+*Only callable internally by inheriting contracts*
+
+
+```solidity
+function setPaused(bool paused_) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`paused_`|`bool`|New pause state|
+
+
+### rescueAssets
+
+rescues locked assets (ETH or ERC20) in the contract
+
+
+```solidity
+function rescueAssets(address asset_, address to_, uint256 amount_) external payable;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset_`|`address`|the asset to rescue (use address(0) for ETH)|
+|`to_`|`address`|the address that will receive the assets|
+|`amount_`|`uint256`|the amount to rescue|
 
 
 ### registry
@@ -115,6 +132,53 @@ function _registry() internal view returns (IkRegistry);
 |`<none>`|`IkRegistry`|IkRegistry interface for registry interaction|
 
 
+### _getBatchId
+
+Gets the current batch ID for a given vault
+
+*Reverts if vault not registered*
+
+
+```solidity
+function _getBatchId(address vault) internal view returns (bytes32 batchId);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault`|`address`|The vault address|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`batchId`|`bytes32`|The current batch ID|
+
+
+### _getBatchReceiver
+
+Gets the current batch receiver for a given batchId
+
+*Reverts if vault not registered*
+
+
+```solidity
+function _getBatchReceiver(address vault_, bytes32 batchId_) internal view returns (address batchReceiver);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault_`|`address`|The vault address|
+|`batchId_`|`bytes32`|The batch ID|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`batchReceiver`|`address`|The address of the batchReceiver where tokens will be sent|
+
+
 ### _getKMinter
 
 Gets the kMinter singleton contract address
@@ -149,59 +213,6 @@ function _getKAssetRouter() internal view returns (address router);
 |`router`|`address`|The kAssetRouter contract address|
 
 
-### _getRelayer
-
-Checks if an address is a relayer
-
-
-```solidity
-function _getRelayer() internal view returns (bool);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|Whether the address is a relayer|
-
-
-### _getGuardian
-
-Checks if an address is a guardian
-
-
-```solidity
-function _getGuardian() internal view returns (bool);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|Whether the address is a guardian|
-
-
-### _getBatchId
-
-Gets the current batch ID for a given vault
-
-*Reverts if vault not registered*
-
-
-```solidity
-function _getBatchId(address vault) internal view returns (bytes32 batchId);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`vault`|`address`|The vault address|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`batchId`|`bytes32`|The current batch ID|
-
-
 ### _getKTokenForAsset
 
 Gets the kToken address for a given asset
@@ -223,27 +234,6 @@ function _getKTokenForAsset(address asset) internal view returns (address kToken
 |Name|Type|Description|
 |----|----|-----------|
 |`kToken`|`address`|The corresponding kToken address|
-
-
-### _isAssetRegistered
-
-Checks if an asset is supported by the protocol
-
-
-```solidity
-function _isAssetRegistered(address asset) internal view returns (bool);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`asset`|`address`|The asset address to check|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|Whether the asset is supported|
 
 
 ### _getVaultAssets
@@ -292,6 +282,113 @@ function _getDNVaultByAsset(address asset) internal view returns (address vault)
 |`vault`|`address`|The corresponding DN vault address|
 
 
+### _isAdmin
+
+Checks if an address is a admin
+
+
+```solidity
+function _isAdmin(address user) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a admin|
+
+
+### _isEmergencyAdmin
+
+Checks if an address is a emergencyAdmin
+
+
+```solidity
+function _isEmergencyAdmin(address user) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a emergencyAdmin|
+
+
+### _isGuardian
+
+Checks if an address is a guardian
+
+
+```solidity
+function _isGuardian(address user) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a guardian|
+
+
+### _isRelayer
+
+Checks if an address is a relayer
+
+
+```solidity
+function _isRelayer(address user) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a relayer|
+
+
+### _isInstitution
+
+Checks if an address is a institution
+
+
+```solidity
+function _isInstitution(address user) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a institution|
+
+
+### _isPaused
+
+Checks if an address is a institution
+
+
+```solidity
+function _isPaused() internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a institution|
+
+
+### _isKMinter
+
+Gets the kMinter singleton contract address
+
+*Reverts if kMinter not set in registry*
+
+
+```solidity
+function _isKMinter(address user) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|minter The kMinter contract address|
+
+
 ### _isVault
 
 Checks if an address is a registered vault
@@ -313,13 +410,13 @@ function _isVault(address vault) internal view returns (bool);
 |`<none>`|`bool`|Whether the address is a registered vault|
 
 
-### _isRegisteredAsset
+### _isAsset
 
 Checks if an asset is registered
 
 
 ```solidity
-function _isRegisteredAsset(address asset) internal view returns (bool);
+function _isAsset(address asset) internal view returns (bool);
 ```
 **Parameters**
 
@@ -334,69 +431,6 @@ function _isRegisteredAsset(address asset) internal view returns (bool);
 |`<none>`|`bool`|Whether the asset is registered|
 
 
-### _setPaused
-
-Sets the pause state of the contract
-
-*Only callable internally by inheriting contracts*
-
-
-```solidity
-function _setPaused(bool paused_) internal;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`paused_`|`bool`|New pause state|
-
-
-### onlyKMinter
-
-Restricts function access to the kMinter contract
-
-
-```solidity
-modifier onlyKMinter();
-```
-
-### onlyRelayer
-
-Restricts function access to the relayer
-
-*Only callable internally by inheriting contracts*
-
-
-```solidity
-modifier onlyRelayer();
-```
-
-### onlyGuardian
-
-Restricts function access to the guardian
-
-*Only callable internally by inheriting contracts*
-
-
-```solidity
-modifier onlyGuardian();
-```
-
-### onlyRegisteredAsset
-
-Ensures the asset is supported by the protocol
-
-
-```solidity
-modifier onlyRegisteredAsset(address asset);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`asset`|`address`|The asset address to validate|
-
-
 ## Events
 ### Paused
 
@@ -404,11 +438,29 @@ modifier onlyRegisteredAsset(address asset);
 event Paused(bool paused);
 ```
 
+### RescuedAssets
+
+```solidity
+event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+```
+
+### RescuedETH
+
+```solidity
+event RescuedETH(address indexed asset, uint256 amount);
+```
+
 ## Errors
 ### ZeroAddress
 
 ```solidity
 error ZeroAddress();
+```
+
+### ZeroAmount
+
+```solidity
+error ZeroAmount();
 ```
 
 ### InvalidRegistry
@@ -421,6 +473,12 @@ error InvalidRegistry();
 
 ```solidity
 error NotInitialized();
+```
+
+### AlreadyInitialized
+
+```solidity
+error AlreadyInitialized();
 ```
 
 ### ContractNotFound
@@ -441,22 +499,40 @@ error AssetNotSupported(address asset);
 error InvalidVault(address vault);
 ```
 
-### OnlyKMinter
+### IsPaused
 
 ```solidity
-error OnlyKMinter();
+error IsPaused();
 ```
 
-### OnlyGuardian
+### WrongRole
 
 ```solidity
-error OnlyGuardian();
+error WrongRole();
 ```
 
-### OnlyRelayer
+### WrongAsset
 
 ```solidity
-error OnlyRelayer();
+error WrongAsset();
+```
+
+### OnlyMinter
+
+```solidity
+error OnlyMinter();
+```
+
+### OnlyStakingVault
+
+```solidity
+error OnlyStakingVault();
+```
+
+### TransferFailed
+
+```solidity
+error TransferFailed();
 ```
 
 ## Structs

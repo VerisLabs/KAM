@@ -1,5 +1,5 @@
 # kToken
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kToken.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/70c31cd66a975b95c3bd6540ffd61af97eae3226/src/kToken.sol)
 
 **Inherits:**
 ERC20, OwnableRoles, ReentrancyGuard, Multicallable
@@ -41,21 +41,21 @@ bool _isPaused;
 ### _name
 
 ```solidity
-string _name;
+string private _name;
 ```
 
 
 ### _symbol
 
 ```solidity
-string _symbol;
+string private _symbol;
 ```
 
 
 ### _decimals
 
 ```solidity
-uint8 _decimals;
+uint8 private _decimals;
 ```
 
 
@@ -79,26 +79,16 @@ Disables initializers to prevent implementation contract from being initialized
 
 
 ```solidity
-constructor(address owner_, address admin_, address emergencyAdmin_, address minter_, uint8 decimals_);
+constructor(
+    address owner_,
+    address admin_,
+    address emergencyAdmin_,
+    address minter_,
+    string memory name_,
+    string memory symbol_,
+    uint8 decimals_
+);
 ```
-
-### setupMetadata
-
-Sets token metadata (separate call to avoid stack too deep)
-
-*Must be called after initialize, only by admin*
-
-
-```solidity
-function setupMetadata(string calldata name_, string calldata symbol_) external onlyRoles(ADMIN_ROLE);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`name_`|`string`|Token name|
-|`symbol_`|`string`|Token symbol|
-
 
 ### mint
 
@@ -387,13 +377,7 @@ event Burned(address indexed from, uint256 amount);
 ### TokenCreated
 
 ```solidity
-event TokenCreated(address indexed token, address owner);
-```
-
-### TokenInitialized
-
-```solidity
-event TokenInitialized(string name, string symbol, uint8 decimals);
+event TokenCreated(address indexed token, address owner, string name, string symbol, uint8 decimals);
 ```
 
 ### PauseState
@@ -412,6 +396,18 @@ event AuthorizedCallerUpdated(address indexed caller, bool authorized);
 
 ```solidity
 event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
+```
+
+### RescuedAssets
+
+```solidity
+event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+```
+
+### RescuedETH
+
+```solidity
+event RescuedETH(address indexed asset, uint256 amount);
 ```
 
 ## Errors
@@ -437,5 +433,11 @@ error ZeroAmount();
 
 ```solidity
 error ContractNotPaused();
+```
+
+### TransferFailed
+
+```solidity
+error TransferFailed();
 ```
 

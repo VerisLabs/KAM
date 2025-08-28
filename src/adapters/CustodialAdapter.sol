@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
@@ -25,6 +23,7 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     event RedemptionRequested(address indexed asset, uint256 amount, address indexed onBehalfOf);
     event RedemptionProcessed(uint256 indexed requestId, uint256 assets);
     event AdapterBalanceUpdated(address indexed vault, address indexed asset, uint256 newBalance);
+    event Initialised(address indexed registry);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -71,13 +70,13 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
 
     /// @notice Initializes the MetaVault adapter
     /// @param registry_ Address of the kRegistry contract
-    /// @param owner_ Address of the owner
-    /// @param admin_ Address of the admin
-    function initialize(address registry_, address owner_, address admin_) external initializer {
-        __BaseAdapter_init(registry_, owner_, admin_, "CustodialAdapter", "1.0.0");
+    function initialize(address registry_) external initializer {
+        __BaseAdapter_init(registry_, "CustodialAdapter", "1.0.0");
 
         CustodialAdapterStorage storage $ = _getCustodialAdapterStorage();
         $.nextRequestId = 1;
+
+        emit Initialised(registry_);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -88,16 +87,8 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     /// @param asset The asset to deposit
     /// @param amount The amount to deposit
     /// @param onBehalfOf The vault address this deposit is for
-    function deposit(
-        address asset,
-        uint256 amount,
-        address onBehalfOf
-    )
-        external
-        nonReentrant
-        onlyKAssetRouter
-        whenRegistered
-    {
+    function deposit(address asset, uint256 amount, address onBehalfOf) external nonReentrant {
+        if (!_isKAssetRouter(msg.sender)) revert WrongRole();
         if (asset == address(0)) revert InvalidAsset();
         if (amount == 0) revert InvalidAmount();
         if (onBehalfOf == address(0)) revert InvalidAsset();
@@ -122,17 +113,8 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     /// @param asset The asset to redeem
     /// @param amount The amount to redeem
     /// @param onBehalfOf The vault address this redemption is for
-    function redeem(
-        address asset,
-        uint256 amount,
-        address onBehalfOf
-    )
-        external
-        virtual
-        nonReentrant
-        onlyKAssetRouter
-        whenRegistered
-    {
+    function redeem(address asset, uint256 amount, address onBehalfOf) external virtual nonReentrant {
+        if (!_isKAssetRouter(msg.sender)) revert WrongRole();
         if (asset == address(0)) revert InvalidAsset();
         if (amount == 0) revert InvalidAmount();
         if (onBehalfOf == address(0)) revert InvalidAsset();
@@ -201,13 +183,9 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     /// @notice Sets the custodial address for a vault
     /// @param vault The vault address
     /// @param custodialAddress The custodial address for this vault
-    function setVaultDestination(address vault, address custodialAddress) external onlyRoles(ADMIN_ROLE) {
+    function setVaultDestination(address vault, address custodialAddress) external {
+        if (!_isAdmin(msg.sender)) revert WrongRole();
         if (vault == address(0) || custodialAddress == address(0)) {
-            revert InvalidCustodialAddress();
-        }
-
-        // Validate vault is registered
-        if (!_registry().isVault(vault)) {
             revert InvalidCustodialAddress();
         }
 
@@ -215,13 +193,19 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         address oldAddress = $.vaultDestinations[vault];
         $.vaultDestinations[vault] = custodialAddress;
 
+        // Validate vault is registered
+        if (!_registry().isVault(vault)) {
+            revert InvalidCustodialAddress();
+        }
+
         emit VaultDestinationUpdated(vault, oldAddress, custodialAddress);
     }
 
     /// @notice Sets the total assets for a given vault
     /// @param vault The vault address
     /// @param totalAssets_ The total assets to set
-    function setTotalAssets(address vault, address asset, uint256 totalAssets_) external onlyKAssetRouter {
+    function setTotalAssets(address vault, address asset, uint256 totalAssets_) external {
+        if (!_isKAssetRouter(msg.sender)) revert WrongRole();
         CustodialAdapterStorage storage $ = _getCustodialAdapterStorage();
         $.totalAssets[vault][asset] = totalAssets_;
 
@@ -234,7 +218,8 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
 
     /// @notice Authorize contract upgrade
     /// @param newImplementation New implementation address
-    function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE) {
+    function _authorizeUpgrade(address newImplementation) internal view override {
+        if (!_isAdmin(msg.sender)) revert WrongRole();
         if (newImplementation == address(0)) revert ZeroAddress();
     }
 }

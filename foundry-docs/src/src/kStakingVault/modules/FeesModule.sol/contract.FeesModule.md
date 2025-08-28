@@ -1,5 +1,5 @@
 # FeesModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kStakingVault/modules/FeesModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/70c31cd66a975b95c3bd6540ffd61af97eae3226/src/kStakingVault/modules/FeesModule.sol)
 
 **Inherits:**
 [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md)
@@ -55,7 +55,7 @@ Sets the yearly hurdle rate for the underlying asset
 
 
 ```solidity
-function setHurdleRate(uint16 _hurdleRate) external onlyRoles(ADMIN_ROLE);
+function setHurdleRate(uint16 _hurdleRate) external;
 ```
 **Parameters**
 
@@ -72,7 +72,7 @@ Sets the hard hurdle rate
 
 
 ```solidity
-function setHardHurdleRate(bool _isHard) external onlyRoles(ADMIN_ROLE);
+function setHardHurdleRate(bool _isHard) external;
 ```
 **Parameters**
 
@@ -89,7 +89,7 @@ Sets the management fee
 
 
 ```solidity
-function setManagementFee(uint16 _managementFee) external onlyRoles(ADMIN_ROLE);
+function setManagementFee(uint16 _managementFee) external;
 ```
 **Parameters**
 
@@ -106,7 +106,7 @@ Sets the performance fee
 
 
 ```solidity
-function setPerformanceFee(uint16 _performanceFee) external onlyRoles(ADMIN_ROLE);
+function setPerformanceFee(uint16 _performanceFee) external;
 ```
 **Parameters**
 
@@ -123,7 +123,7 @@ Notifies the module that management fees have been charged from backend
 
 
 ```solidity
-function notifyManagementFeesCharged(uint64 _timestamp) external onlyRoles(ADMIN_ROLE);
+function notifyManagementFeesCharged(uint64 _timestamp) external;
 ```
 **Parameters**
 
@@ -140,7 +140,7 @@ Notifies the module that performance fees have been charged from backend
 
 
 ```solidity
-function notifyPerformanceFeesCharged(uint64 _timestamp) external onlyRoles(ADMIN_ROLE);
+function notifyPerformanceFeesCharged(uint64 _timestamp) external;
 ```
 **Parameters**
 
@@ -156,7 +156,7 @@ Computes the last fee batch
 
 ```solidity
 function computeLastBatchFees()
-    public
+    external
     view
     returns (uint256 managementFees, uint256 performanceFees, uint256 totalFees);
 ```
@@ -216,7 +216,7 @@ Returns the current hurdle rate used for performance fee calculations
 
 
 ```solidity
-function hurdleRate() public view returns (uint16);
+function hurdleRate() external view returns (uint16);
 ```
 **Returns**
 
@@ -231,7 +231,7 @@ Returns the current performance fee percentage
 
 
 ```solidity
-function performanceFee() public view returns (uint16);
+function performanceFee() external view returns (uint16);
 ```
 **Returns**
 
@@ -246,7 +246,7 @@ Returns the next performance fee timestamp so the backend can schedule the fee c
 
 
 ```solidity
-function nextPerformanceFeeTimestamp() public view returns (uint256);
+function nextPerformanceFeeTimestamp() external view returns (uint256);
 ```
 **Returns**
 
@@ -261,7 +261,7 @@ Returns the next management fee timestamp so the backend can schedule the fee co
 
 
 ```solidity
-function nextManagementFeeTimestamp() public view returns (uint256);
+function nextManagementFeeTimestamp() external view returns (uint256);
 ```
 **Returns**
 
@@ -276,7 +276,7 @@ Returns the current management fee percentage
 
 
 ```solidity
-function managementFee() public view returns (uint16);
+function managementFee() external view returns (uint16);
 ```
 **Returns**
 
@@ -291,7 +291,7 @@ Returns the address that receives collected fees
 
 
 ```solidity
-function feeReceiver() public view returns (address);
+function feeReceiver() external view returns (address);
 ```
 **Returns**
 
@@ -306,7 +306,7 @@ Returns the high watermark for share price used in performance fee calculations
 
 
 ```solidity
-function sharePriceWatermark() public view returns (uint256);
+function sharePriceWatermark() external view returns (uint256);
 ```
 **Returns**
 

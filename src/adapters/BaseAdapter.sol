@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
@@ -11,34 +9,35 @@ import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 /// @title BaseAdapter
 /// @notice Abstract base contract for all protocol adapters
 /// @dev Provides common functionality and virtual balance tracking for external strategy integrations
-contract BaseAdapter is OwnableRoles, ReentrancyGuardTransient {
+contract BaseAdapter is ReentrancyGuardTransient {
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
-                                ROLES
+                              EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    uint256 internal constant ADMIN_ROLE = _ROLE_0;
-    uint256 internal constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
+    event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+    event RescuedETH(address indexed asset, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    bytes32 internal constant K_MINTER = keccak256("K_MINTER");
     bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error OnlyKAssetRouter();
-    error ContractNotFound(bytes32 identifier);
     error ZeroAddress();
+    error ZeroAmount();
+    error WrongRole();
+    error WrongAsset();
+    error TransferFailed();
     error InvalidRegistry();
-    error AssetNotSupported(address asset);
     error InvalidAmount();
     error InvalidAsset();
+    error AlreadyInitialized();
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -47,7 +46,6 @@ contract BaseAdapter is OwnableRoles, ReentrancyGuardTransient {
     /// @custom:storage-location erc7201:kam.storage.BaseAdapter
     struct BaseAdapterStorage {
         address registry;
-        bool registered;
         bool initialized;
         string name;
         string version;
@@ -69,40 +67,31 @@ contract BaseAdapter is OwnableRoles, ReentrancyGuardTransient {
 
     /// @notice Initializes the base adapter
     /// @param registry_ Address of the kRegistry contract
-    /// @param owner_ Address of the owner
-    /// @param admin_ Address of the admin
     /// @param name_ Human readable name for this adapter
     /// @param version_ Version string for this adapter
-    function __BaseAdapter_init(
-        address registry_,
-        address owner_,
-        address admin_,
-        string memory name_,
-        string memory version_
-    )
-        internal
-    {
+    function __BaseAdapter_init(address registry_, string memory name_, string memory version_) internal {
         // Initialize adapter storage
         BaseAdapterStorage storage $ = _getBaseAdapterStorage();
 
         if ($.initialized) revert AlreadyInitialized();
         if (registry_ == address(0)) revert InvalidRegistry();
-        if (owner_ == address(0)) revert ZeroAddress();
-        if (admin_ == address(0)) revert ZeroAddress();
 
         $.registry = registry_;
-        $.registered = true;
         $.initialized = true;
         $.name = name_;
         $.version = version_;
-
-        _initializeOwner(owner_);
-        _grantRoles(admin_, ADMIN_ROLE);
     }
 
     /*//////////////////////////////////////////////////////////////
                           REGISTRY GETTER
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Returns the registry contract address
+    /// @return The kRegistry contract address
+    /// @dev Reverts if contract not initialized
+    function registry() external view returns (address) {
+        return address(_registry());
+    }
 
     /// @notice Returns the registry contract interface
     /// @return IkRegistry interface for registry interaction
@@ -112,50 +101,38 @@ contract BaseAdapter is OwnableRoles, ReentrancyGuardTransient {
     }
 
     /*//////////////////////////////////////////////////////////////
-                           GETTERS
+                                RESCUER
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Gets the kAssetRouter singleton contract address
-    /// @return router The kAssetRouter contract address
-    function _getKAssetRouter() internal view returns (address router) {
-        router = _registry().getContractById(K_ASSET_ROUTER);
-        if (router == address(0)) revert ContractNotFound(K_ASSET_ROUTER);
-    }
+    /// @notice rescues locked assets (ETH or ERC20) in the contract
+    /// @param asset_ the asset to rescue (use address(0) for ETH)
+    /// @param to_ the address that will receive the assets
+    /// @param amount_ the amount to rescue
+    function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
+        if (!_isAdmin(msg.sender)) revert WrongRole();
+        if (to_ == address(0)) revert ZeroAddress();
 
-    /// @notice Checks if an address is a relayer
-    /// @return Whether the address is a relayer
-    function _getRelayer() internal view returns (bool) {
-        return _registry().isRelayer(msg.sender);
-    }
+        if (asset_ == address(0)) {
+            // Rescue ETH
+            if (amount_ == 0 || amount_ > address(this).balance) revert ZeroAmount();
 
-    /// @notice Gets the kToken address for a given asset
-    /// @param asset The underlying asset address
-    /// @return kToken The corresponding kToken address
-    /// @dev Reverts if asset not supported
-    function _getKTokenForAsset(address asset) internal view returns (address kToken) {
-        kToken = _registry().assetToKToken(asset);
-        if (kToken == address(0)) revert AssetNotSupported(asset);
-    }
+            (bool success,) = to_.call{ value: amount_ }("");
+            if (!success) revert TransferFailed();
 
-    /// @notice Gets the asset managed by a vault
-    /// @param vault The vault address
-    /// @return assets The asset address managed by the vault
-    /// @dev Reverts if vault not registered
-    function _getVaultAssets(address vault) internal view returns (address[] memory assets) {
-        assets = _registry().getVaultAssets(vault);
-        if (assets.length == 0) revert ZeroAddress();
+            emit RescuedETH(to_, amount_);
+        } else {
+            // Rescue ERC20 tokens
+            if (_isAsset(asset_)) revert WrongAsset();
+            if (amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
+
+            asset_.safeTransfer(to_, amount_);
+            emit RescuedAssets(asset_, to_, amount_);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
-                          VIEW FUNCTIONS
+                           GETTERS
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Returns whether this adapter is registered
-    /// @return True if adapter is registered and active
-    function registered() public view returns (bool) {
-        BaseAdapterStorage storage $ = _getBaseAdapterStorage();
-        return $.registered;
-    }
 
     /// @notice Returns the adapter's name
     /// @return Human readable adapter name
@@ -172,24 +149,29 @@ contract BaseAdapter is OwnableRoles, ReentrancyGuardTransient {
     }
 
     /*//////////////////////////////////////////////////////////////
-                              MODIFIERS
+                            VALIDATORS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Restricts function access to kAssetRouter only
-    modifier onlyKAssetRouter() {
-        if (msg.sender != _getKAssetRouter()) revert OnlyKAssetRouter();
-        _;
+    /// @notice Checks if an address is a admin
+    /// @return Whether the address is a admin
+    function _isAdmin(address user) internal view returns (bool) {
+        return _registry().isAdmin(user);
     }
 
-    /// @notice Restricts function access to the relayer
-    modifier onlyRelayer() {
-        if (!_getRelayer()) revert OnlyKAssetRouter(); // Reuse error for simplicity
-        _;
+    /// @notice Gets the kMinter singleton contract address
+    /// @return minter The kMinter contract address
+    /// @dev Reverts if kMinter not set in registry
+    function _isKAssetRouter(address user) internal view returns (bool) {
+        bool isTrue;
+        address _kAssetRouter = _registry().getContractById(K_ASSET_ROUTER);
+        if (_kAssetRouter == user) isTrue = true;
+        return isTrue;
     }
 
-    /// @notice Ensures the adapter is registered and active
-    modifier whenRegistered() {
-        if (!registered()) revert InvalidAsset(); // Reuse error for simplicity
-        _;
+    /// @notice Checks if an asset is registered
+    /// @param asset The asset address to check
+    /// @return Whether the asset is registered
+    function _isAsset(address asset) internal view returns (bool) {
+        return _registry().isAsset(asset);
     }
 }
