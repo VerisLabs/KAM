@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { Multicallable } from "solady/utils/Multicallable.sol";
@@ -22,6 +23,14 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
     using SafeCastLib for uint128;
+    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+
+    /*//////////////////////////////////////////////////////////////
+                               CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+
+    uint256 private constant DEFAULT_VAULT_SETTLEMENT_COOLDOWN = 1 hours;
+    uint256 private constant MAX_VAULT_SETTLEMENT_COOLDOWN = 1 days;
 
     /*//////////////////////////////////////////////////////////////
                             STORAGE LAYOUT
@@ -29,10 +38,14 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @custom:storage-location erc7201:kam.storage.kAssetRouter
     struct kAssetRouterStorage {
-        mapping(address => mapping(uint256 => Balances)) vaultBatchBalances; // vault => batchId =>
-            // pending amounts
-        mapping(address => mapping(address => uint256)) vaultBalances; // vault => asset => balance
-        mapping(address => mapping(uint256 => uint256)) vaultRequestedShares; // vault => batchId => balance
+        uint256 proposalCounter;
+        uint256 vaultSettlementCooldown;
+        EnumerableSetLib.Bytes32Set executedProposalIds;
+        EnumerableSetLib.Bytes32Set batchIds;
+        mapping(address vault => EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;
+        mapping(address account => mapping(bytes32 batchId => Balances)) vaultBatchBalances;
+        mapping(address vault => mapping(bytes32 batchId => uint256)) vaultRequestedShares;
+        mapping(bytes32 proposalId => VaultSettlementProposal) settlementProposals;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kAssetRouter")) - 1)) & ~bytes32(uint256(0xff))
@@ -46,20 +59,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     }
 
     /*//////////////////////////////////////////////////////////////
-                              MODIFIERS
-    //////////////////////////////////////////////////////////////*/
-
-    modifier whenNotPaused() {
-        if (_getBaseStorage().paused) revert ContractPaused();
-        _;
-    }
-
-    modifier onlyStakingVault() {
-        if (!_isVault(msg.sender)) revert OnlyStakingVault();
-        _;
-    }
-
-    /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -69,13 +68,13 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @notice Initialize the kAssetRouter with asset and admin configuration
     /// @param registry_ Address of the kRegistry contract
-    /// @param owner_ Address of the owner
-    /// @param admin_ Address of the admin
-    /// @param paused_ Initial pause state
-    function initialize(address registry_, address owner_, address admin_, bool paused_) external initializer {
-        __kBase_init(registry_, owner_, admin_, paused_);
+    function initialize(address registry_) external initializer {
+        __kBase_init(registry_);
 
-        emit Initialized(registry_, owner_, admin_, paused_);
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        $.vaultSettlementCooldown = DEFAULT_VAULT_SETTLEMENT_COOLDOWN;
+
+        emit ContractInitialized(registry_);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -86,27 +85,14 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @param _asset The asset being deposited
     /// @param amount Amount of assets being pushed
     /// @param batchId The batch ID from the DN vault
-    function kAssetPush(
-        address _asset,
-        uint256 amount,
-        uint256 batchId
-    )
-        external
-        payable
-        nonReentrant
-        whenNotPaused
-        onlyKMinter
-    {
-        if (amount == 0) revert ZeroAmount();
+    function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable nonReentrant {
+        if (_isPaused()) revert IsPaused();
         address kMinter = msg.sender;
+        if (!_isKMinter(kMinter)) revert WrongRole();
+        if (amount == 0) revert ZeroAmount();
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-
-        // Transfer assets from minter to router
-        _asset.safeTransferFrom(kMinter, address(this), amount);
-
         $.vaultBatchBalances[kMinter][batchId].deposited += amount.toUint128();
-
         emit AssetsPushed(kMinter, amount);
     }
 
@@ -116,29 +102,33 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @param batchId The batch ID for this redemption
     function kAssetRequestPull(
         address _asset,
+        address _vault,
         uint256 amount,
-        uint256 batchId
+        bytes32 batchId
     )
         external
         payable
         nonReentrant
-        whenNotPaused
-        onlyKMinter
     {
         if (amount == 0) revert ZeroAmount();
+        if (_isPaused()) revert IsPaused();
+        address kMinter = msg.sender;
+        if (!_isKMinter(kMinter)) revert OnlyMinter();
+        address vault = _getDNVaultByAsset(_asset);
+        if (_virtualBalance(vault, _asset) < amount) {
+            revert InsufficientVirtualBalance();
+        }
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-
-        address kMinter = msg.sender;
-        if ($.vaultBalances[kMinter][_asset] < amount) revert InsufficientVirtualBalance();
-
         $.vaultBatchBalances[kMinter][batchId].requested += amount.toUint128();
 
         // Set batch receiver for the vault
-        IkStakingVault(_getDNVaultByAsset(_asset)).deployBatchReceiver(batchId);
+        address batchReceiver = IkStakingVault(_vault).createBatchReceiver(batchId);
+        if (batchReceiver == address(0)) revert ZeroAddress();
 
-        emit AssetsRequestPulled(kMinter, _asset, amount);
+        emit AssetsRequestPulled(kMinter, _asset, batchReceiver, amount);
     }
+
     /*//////////////////////////////////////////////////////////////
                             kSTAKING VAULT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -154,19 +144,28 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         address targetVault,
         address _asset,
         uint256 amount,
-        uint256 batchId
+        bytes32 batchId
     )
         external
         payable
         nonReentrant
-        whenNotPaused
-        onlyStakingVault
     {
         if (amount == 0) revert ZeroAmount();
+        if (_isPaused()) revert IsPaused();
+        if (!_isVault(msg.sender)) revert OnlyStakingVault();
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
-        if ($.vaultBalances[sourceVault][_asset] < amount) revert InsufficientVirtualBalance();
+        uint256 virtualBalance;
+        if (sourceVault == _getKMinter()) {
+            virtualBalance = _virtualBalance(_getDNVaultByAsset(_asset), _asset);
+        } else {
+            virtualBalance = _virtualBalance(sourceVault, _asset);
+        }
+
+        if (virtualBalance < amount) {
+            revert InsufficientVirtualBalance();
+        }
         // Update batch tracking for settlement
         $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
         $.vaultBatchBalances[targetVault][batchId].deposited += amount.toUint128();
@@ -178,200 +177,317 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @param sourceVault The vault to redeem shares from
     /// @param amount Amount requested for redemption
     /// @param batchId The batch ID for this redemption
-    function kSharesRequestPull(
-        address sourceVault,
-        uint256 amount,
-        uint256 batchId
-    )
-        external
-        payable
-        nonReentrant
-        whenNotPaused
-        onlyStakingVault
-    {
+    function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant {
         if (amount == 0) revert ZeroAmount();
+        if (_isPaused()) revert IsPaused();
+        if (!_isVault(msg.sender)) revert OnlyStakingVault();
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
         $.vaultRequestedShares[sourceVault][batchId] += amount;
 
-        emit SharesRequested(sourceVault, batchId.toUint32(), amount);
+        emit SharesRequestedPushed(sourceVault, batchId, amount);
+    }
+
+    /// @notice Request to pull shares for kStakingVault redemptions
+    /// @param sourceVault The vault to redeem shares from
+    /// @param amount Amount requested for redemption
+    /// @param batchId The batch ID for this redemption
+    function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant {
+        if (amount == 0) revert ZeroAmount();
+        if (_isPaused()) revert IsPaused();
+        if (!_isVault(msg.sender)) revert OnlyStakingVault();
+
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+
+        $.vaultRequestedShares[sourceVault][batchId] -= amount;
+
+        emit SharesRequestedPulled(sourceVault, batchId, amount);
     }
 
     /*//////////////////////////////////////////////////////////////
                             SETTLEMENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Settle a single vault's batch
+    /// @notice Propose a settlement for a vault's batch
+    /// @param asset Asset address
     /// @param vault Vault address to settle
     /// @param batchId Batch ID to settle
-    /// @param totalAssets_ Current total assets in the vault
-    function settleBatch(
+    /// @param totalAssets_ Total assets in the vault with Deposited and Requested and Shares
+    /// @param netted Netted amount in current batch
+    /// @param yield Yield in current batch
+    /// @param profit Whether the batch is profitable
+    /// @return proposalId The unique identifier for this proposal
+    function proposeSettleBatch(
+        address asset,
         address vault,
-        uint256 batchId,
-        uint256 totalAssets_
+        bytes32 batchId,
+        uint256 totalAssets_,
+        uint256 netted,
+        uint256 yield,
+        bool profit
     )
         external
         payable
         nonReentrant
-        whenNotPaused
-        onlyRelayer
+        returns (bytes32 proposalId)
     {
-        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-        address asset = _getVaultAsset(vault);
+        if (_isPaused()) revert IsPaused();
+        if (!_isRelayer(msg.sender)) revert WrongRole();
 
-        uint256 deposited = $.vaultBatchBalances[vault][batchId].deposited;
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+
+        if ($.batchIds.contains(batchId)) revert BatchIdAlreadyProposed();
+        $.batchIds.add(batchId);
+
+        // Generate unique proposal ID
+        $.proposalCounter++;
+        proposalId = keccak256(abi.encodePacked(vault, batchId, block.timestamp, $.proposalCounter));
+
+        // Check if proposal already exists
+        if ($.executedProposalIds.contains(proposalId)) revert ProposalAlreadyExecuted();
+        if (_isPendingProposal(vault, proposalId)) revert ProposalAlreadyExists();
+        $.vaultPendingProposalIds[vault].add(proposalId);
+
+        uint256 executeAfter = block.timestamp + $.vaultSettlementCooldown;
+
+        // Store the proposal
+        $.settlementProposals[proposalId] = VaultSettlementProposal({
+            asset: asset,
+            vault: vault,
+            batchId: batchId,
+            totalAssets: totalAssets_,
+            netted: netted,
+            yield: yield,
+            profit: profit,
+            executeAfter: executeAfter
+        });
+
+        emit SettlementProposed(proposalId, vault, batchId, totalAssets_, netted, yield, profit, executeAfter);
+    }
+
+    /// @notice Execute a settlement proposal after cooldown period
+    /// @param proposalId The proposal ID to execute
+    function executeSettleBatch(bytes32 proposalId) external nonReentrant {
+        if (_isPaused()) revert IsPaused();
+
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
+
+        // Validations
+        address vault = proposal.vault;
+        if (!_isPendingProposal(vault, proposalId)) revert ProposalNotFound();
+        if (block.timestamp < proposal.executeAfter) {
+            revert CooldownNotPassed();
+        }
+
+        $.executedProposalIds.add(proposalId);
+        $.vaultPendingProposalIds[vault].remove(proposalId);
+
+        // Execute the settlement logic
+        _executeSettlement(proposal);
+
+        emit SettlementExecuted(proposalId, vault, proposal.batchId, msg.sender);
+    }
+
+    /// @notice Cancel a settlement proposal before execution
+    /// @param proposalId The proposal ID to cancel
+    function cancelProposal(bytes32 proposalId) external nonReentrant {
+        if (_isPaused()) revert IsPaused();
+        if (!_isGuardian(msg.sender)) revert WrongRole();
+
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
+
+        address vault = proposal.vault;
+        if (!_isPendingProposal(vault, proposalId)) revert ProposalNotFound();
+
+        $.vaultPendingProposalIds[vault].remove(proposalId);
+        $.batchIds.remove(proposal.batchId);
+
+        emit SettlementCancelled(proposalId, vault, proposal.batchId);
+    }
+
+    /// @notice Internal function to execute settlement logic
+    /// @param proposal The settlement proposal to execute
+    function _executeSettlement(VaultSettlementProposal storage proposal) private {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+
+        address asset = proposal.asset;
+        address vault = proposal.vault;
+        bytes32 batchId = proposal.batchId;
+        uint256 totalAssets_ = proposal.totalAssets;
+        uint256 netted = proposal.netted;
+        uint256 yield = proposal.yield;
+        bool profit = proposal.profit;
         uint256 requested = $.vaultBatchBalances[vault][batchId].requested;
 
-        $.vaultBalances[vault][asset] += deposited;
-        if (requested > 0) {
-            $.vaultBalances[vault][asset] -= requested;
-        }
-
-        if (vault == _getKMinter()) {
-            // kMinter settlement: handle institutional deposits and redemptions
-            if (requested > 0) {
-                // Deploy batch receiver for this batch
-                address batchReceiver = IkStakingVault(vault).getSafeBatchReceiver(batchId);
-                // Transfer assets to batch receiver for redemptions
-                asset.safeTransfer(batchReceiver, requested);
-            }
-
-            if (deposited > requested) {
-                address dnVault = _getDNVaultByAsset(asset);
-                uint256 netted = deposited - requested;
-                address adapter = _registry().getAdapter(vault);
-                if (dnVault != address(0)) {
-                    // deposit into adapter
-                    // MetavaultAdapter.deposit(asset, netted, vault);
-                    IAdapter(adapter).deposit(asset, netted, vault);
-                }
-
-                emit Deposited(vault, asset, netted);
-            }
-        } else {
-            // Staking vault settlement
-            // Update virtual balances immediately for cross-vault transfers
-            _settleStakingVault(vault, asset, batchId, deposited, requested, totalAssets_);
-        }
+        address kToken = _getKTokenForAsset(asset);
+        bool isKMinter; // for event Deposited
 
         // Clear batch balances
         delete $.vaultBatchBalances[vault][batchId];
         delete $.vaultRequestedShares[vault][batchId];
 
-        emit BatchSettled(vault, batchId.toUint32(), totalAssets_);
-    }
+        // kMinter settlement
+        if (vault == _getKMinter()) {
+            // kMinter settlement: handle institutional deposits and redemptions
+            isKMinter = true;
 
-    /// @notice Internal function to settle staking vault
-    /// @param vault The vault to settle
-    /// @param asset The asset to settle
-    /// @param batchId The batch ID to settle
-    /// @param deposited The deposited amount
-    /// @param requested The requested amount
-    /// @param totalAssets The total assets in the vault
-    function _settleStakingVault(
-        address vault,
-        address asset,
-        uint256 batchId,
-        uint256 deposited,
-        uint256 requested,
-        uint256 totalAssets
-    )
-        internal
-    {
-        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+            vault = _getDNVaultByAsset(asset);
 
-        uint256 requestedShares = $.vaultRequestedShares[vault][batchId];
-        if (requestedShares > 0) {
-            uint256 sharePrice = IkStakingVault(vault).calculateStkTokenPrice(totalAssets);
-            uint256 kTokensForShares = requestedShares.mulWad(sharePrice);
-            requested += kTokensForShares;
-            $.vaultRequestedShares[vault][batchId] = 0;
+            if (requested > 0) {
+                // Transfer assets to batch receiver for redemptions
+                address receiver = IkStakingVault(vault).getSafeBatchReceiver(batchId);
+                if (receiver == address(0)) revert ZeroAddress();
+                asset.safeTransfer(receiver, requested);
+            }
+        } else {
+            // kMinter yield is sent to insuranceFund, cannot be minted.
+            if (yield > 0) {
+                if (profit) {
+                    IkToken(kToken).mint(vault, yield);
+                    emit YieldDistributed(vault, yield, true);
+                } else {
+                    IkToken(kToken).burn(vault, yield);
+                    emit YieldDistributed(vault, yield, false);
+                }
+            }
         }
 
-        // Handle yield distribution
-        address kToken = _getKTokenForAsset(asset);
-        uint256 lastTotalAssets = IkStakingVault(vault).lastTotalAssets();
+        address[] memory adapters = _registry().getAdapters(vault);
+        IAdapter adapter = IAdapter(adapters[0]);
 
-        _handleYield(vault, asset, totalAssets, lastTotalAssets, kToken);
+        if (netted > 0) {
+            address dnVault = _getDNVaultByAsset(asset);
+            if (vault == dnVault) {
+                // at some point we will have multiple adapters for a vault
+                // for now we just use the first one
+                if (adapters[0] == address(0)) revert ZeroAddress();
+                asset.safeTransfer(address(adapter), netted);
+                adapter.deposit(asset, netted, vault);
+            }
 
-        if (deposited > requested) {
-            uint256 netted = deposited - requested;
-            address adapter = _registry().getAdapter(vault);
-            IAdapter(adapter).deposit(asset, netted, vault);
-
-            emit Deposited(vault, asset, deposited);
+            emit Deposited(vault, asset, netted, isKMinter);
         }
 
         // Update vault's total assets
-        IkStakingVault(vault).updateLastTotalAssets(totalAssets);
-    }
-
-    /// @notice Handle yield distribution
-    /// @param vault The vault to handle yield for
-    /// @param asset The asset to handle yield for
-    /// @param totalAssets The total assets in the vault
-    /// @param lastTotalAssets The last total assets in the vault
-    /// @param kToken The kToken to use for yield distribution
-    function _handleYield(
-        address vault,
-        address asset,
-        uint256 totalAssets,
-        uint256 lastTotalAssets,
-        address kToken
-    )
-        internal
-    {
-        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-        if (totalAssets > lastTotalAssets) {
-            // Positive yield - mint kTokens to vault
-            uint256 profit = totalAssets - lastTotalAssets;
-            $.vaultBalances[vault][asset] += profit;
-            IkToken(kToken).mint(vault, profit);
-            emit YieldDistributed(vault, profit, true);
-        } else if (totalAssets < lastTotalAssets) {
-            // Negative yield - burn kTokens from vault
-            uint256 loss = lastTotalAssets - totalAssets;
-            $.vaultBalances[vault][asset] -= loss;
-            IkToken(kToken).burn(vault, loss);
-            emit YieldDistributed(vault, loss, false);
+        if (_registry().getVaultType(vault) > 0) {
+            adapter.setTotalAssets(vault, asset, totalAssets_);
         }
-    }
 
-    /// @notice In case of not enough funds for kTokens, pull from insurance
-    function _insure(address asset, uint256 requested) internal {
-        // TODO: Implement insurance
-        // call insurance adapter to pull from insurance
+        // Mark batch as settled in the vault
+        IkStakingVault(vault).settleBatch(batchId);
+
+        emit BatchSettled(vault, batchId, totalAssets_);
     }
 
     /*////////////////////////////////////////////////////////////
                           ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Set contract pause state
-    /// @param paused New pause state
-    function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
-        _setPaused(paused);
-        emit Paused(paused);
+    /// @notice Set the cooldown period for settlement proposals
+    /// @param cooldown New cooldown period in seconds
+    function setSettlementCooldown(uint256 cooldown) external {
+        if (!_isAdmin(msg.sender)) revert WrongRole();
+        if (cooldown > MAX_VAULT_SETTLEMENT_COOLDOWN) revert InvalidCooldown();
+
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        uint256 oldCooldown = $.vaultSettlementCooldown;
+        $.vaultSettlementCooldown = cooldown;
+
+        emit SettlementCooldownUpdated(oldCooldown, cooldown);
     }
 
     /*//////////////////////////////////////////////////////////////
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Get All the pendingProposals
+    /// @return pendingProposals An array of proposalIds
+    function getPendingProposals(address vault) external view returns (bytes32[] memory pendingProposals) {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        pendingProposals = $.vaultPendingProposalIds[vault].values();
+        if (pendingProposals.length == 0) revert ZeroProposals();
+    }
+
+    /// @notice Get details of a settlement proposal
+    /// @param proposalId The proposal ID
+    /// @return proposal The settlement proposal details
+    function getSettlementProposal(bytes32 proposalId)
+        external
+        view
+        returns (VaultSettlementProposal memory proposal)
+    {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        proposal = $.settlementProposals[proposalId];
+    }
+
+    /// @notice Check if a proposal can be executed
+    /// @param proposalId The proposal ID
+    /// @return canExecute Whether the proposal can be executed
+    /// @return reason Reason if cannot execute
+    function canExecuteProposal(bytes32 proposalId) external view returns (bool canExecute, string memory reason) {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
+
+        if (proposal.executeAfter == 0) {
+            return (false, "Proposal not found");
+        }
+        if (block.timestamp < proposal.executeAfter) {
+            return (false, "Cooldown not passed");
+        }
+
+        return (true, "");
+    }
+
+    /// @notice Get the current settlement cooldown period
+    /// @return cooldown The cooldown period in seconds
+    function getSettlementCooldown() external view returns (uint256) {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        return $.vaultSettlementCooldown;
+    }
+
+    /// @notice gets the virtual balance of a vault
+    /// @param vault the vault address
+    /// @param asset the asset address
+    /// @return balance the balance of the vault in all adapters.
+    function _virtualBalance(address vault, address asset) internal view returns (uint256 balance) {
+        address[] memory assets = _getVaultAssets(vault);
+        address[] memory adapters = _registry().getAdapters(vault);
+        uint256 length = adapters.length;
+        for (uint256 i; i < length;) {
+            IAdapter adapter = IAdapter(adapters[i]);
+            // For now, assume single asset per vault (use first asset)
+            balance += adapter.totalAssets(vault, assets[0]);
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /// @notice verifies if a proposal is pending or not
+    /// @param vault the vault address
+    /// @param proposalId the proposalId to verify
+    /// @return bool proposal exists or not
+    function _isPendingProposal(address vault, bytes32 proposalId) internal view returns (bool) {
+        return _getkAssetRouterStorage().vaultPendingProposalIds[vault].contains(proposalId);
+    }
+
     /// @notice Check if contract is paused
     /// @return True if paused
     function isPaused() external view returns (bool) {
-        return _getBaseStorage().paused;
+        return _isPaused();
     }
 
-    /// @notice Get virtual asset balance for a specific vault and asset
-    /// @param _vault The vault to query (kMinter, kDNVault, kSVault)
-    /// @param _asset The asset to query (USDC, WBTC, etc.)
-    /// @return Virtual asset balance for the vault
-    function getBalanceOf(address _vault, address _asset) external view returns (uint256) {
-        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-        return $.vaultBalances[_vault][_asset];
+    /// @notice Gets the DN vault address for a given asset
+    /// @param asset The asset address
+    /// @return vault The corresponding DN vault address
+    /// @dev Reverts if asset not supported
+    function getDNVaultByAsset(address asset) external view returns (address vault) {
+        vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN));
+        if (vault == address(0)) revert InvalidVault(vault);
     }
 
     /// @notice Get batch balances for a vault
@@ -381,7 +497,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @return requested Amount requested in this batch
     function getBatchIdBalances(
         address vault,
-        uint256 batchId
+        bytes32 batchId
     )
         external
         view
@@ -396,7 +512,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @param vault Vault address
     /// @param batchId Batch ID
     /// @return Requested shares amount
-    function getRequestedShares(address vault, uint256 batchId) external view returns (uint256) {
+    function getRequestedShares(address vault, bytes32 batchId) external view returns (uint256) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         return $.vaultRequestedShares[vault][batchId];
     }
@@ -407,7 +523,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @notice Authorize contract upgrade
     /// @param newImplementation New implementation address
-    function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE) {
+    function _authorizeUpgrade(address newImplementation) internal view override {
+        if (!_isAdmin(msg.sender)) revert WrongRole();
         if (newImplementation == address(0)) revert ZeroAddress();
     }
 

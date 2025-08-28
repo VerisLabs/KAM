@@ -2,7 +2,7 @@ name: Forge Tests
 
 on:
   push:
-    branches: [ main, development ]
+    branches: [ main, development, developer ]
   pull_request:
     branches: [ main ]
 

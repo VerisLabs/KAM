@@ -1,18 +1,43 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { Initializable } from "solady/utils/Initializable.sol";
+import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { kBase } from "src/base/kBase.sol";
-import { IAdapter } from "src/interfaces/IAdapter.sol";
-import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
+import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 /// @title BaseAdapter
 /// @notice Abstract base contract for all protocol adapters
 /// @dev Provides common functionality and virtual balance tracking for external strategy integrations
-abstract contract BaseAdapter is IAdapter, kBase, Initializable {
+contract BaseAdapter is ReentrancyGuardTransient {
     using SafeTransferLib for address;
+
+    /*//////////////////////////////////////////////////////////////
+                              EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+    event RescuedETH(address indexed asset, uint256 amount);
+
+    /*//////////////////////////////////////////////////////////////
+                              CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+
+    bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
+
+    /*//////////////////////////////////////////////////////////////
+                              ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    error ZeroAddress();
+    error ZeroAmount();
+    error WrongRole();
+    error WrongAsset();
+    error TransferFailed();
+    error InvalidRegistry();
+    error InvalidAmount();
+    error InvalidAsset();
+    error AlreadyInitialized();
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -20,8 +45,8 @@ abstract contract BaseAdapter is IAdapter, kBase, Initializable {
 
     /// @custom:storage-location erc7201:kam.storage.BaseAdapter
     struct BaseAdapterStorage {
-        mapping(address vault => mapping(address asset => uint256)) adapterBalances;
-        bool registered;
+        address registry;
+        bool initialized;
         string name;
         string version;
     }
@@ -37,217 +62,116 @@ abstract contract BaseAdapter is IAdapter, kBase, Initializable {
     }
 
     /*//////////////////////////////////////////////////////////////
-                              MODIFIERS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Restricts function access to kAssetRouter only
-    modifier onlyKAssetRouter() {
-        if (msg.sender != _getKAssetRouter()) revert OnlyKAssetRouter();
-        _;
-    }
-
-    /// @notice Ensures the adapter is registered and active
-    modifier whenRegistered() {
-        if (!registered()) revert InvalidAsset(); // Reuse error for simplicity
-        _;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                              INITIALIZER
+                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Initializes the base adapter
     /// @param registry_ Address of the kRegistry contract
-    /// @param owner_ Address of the owner
-    /// @param admin_ Address of the admin
     /// @param name_ Human readable name for this adapter
     /// @param version_ Version string for this adapter
-    function __BaseAdapter_init(
-        address registry_,
-        address owner_,
-        address admin_,
-        string memory name_,
-        string memory version_
-    )
-        internal
-        initializer
-    {
-        __kBase_init(registry_, owner_, admin_, false);
-
+    function __BaseAdapter_init(address registry_, string memory name_, string memory version_) internal {
+        // Initialize adapter storage
         BaseAdapterStorage storage $ = _getBaseAdapterStorage();
-        $.registered = true;
+
+        if ($.initialized) revert AlreadyInitialized();
+        if (registry_ == address(0)) revert InvalidRegistry();
+
+        $.registry = registry_;
+        $.initialized = true;
         $.name = name_;
         $.version = version_;
     }
 
     /*//////////////////////////////////////////////////////////////
-                          ADAPTER BALANCE TRACKING
+                          REGISTRY GETTER
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Internal function to update adapter balance on deposit
-    /// @param vault The vault address
-    /// @param asset The asset address
-    /// @param amount The amount to add to adapter balance
-    function _adapterDeposit(address vault, address asset, uint256 amount) internal {
-        BaseAdapterStorage storage $ = _getBaseAdapterStorage();
-        $.adapterBalances[vault][asset] += amount;
-        emit AdapterBalanceUpdated(vault, asset, $.adapterBalances[vault][asset]);
+    /// @notice Returns the registry contract address
+    /// @return The kRegistry contract address
+    /// @dev Reverts if contract not initialized
+    function registry() external view returns (address) {
+        return address(_registry());
     }
 
-    /// @notice Internal function to update adapter balance on redemption
-    /// @param vault The vault address
-    /// @param asset The asset address
-    /// @param amount The amount to subtract from adapter balance
-    function _adapterRedeem(address vault, address asset, uint256 amount) internal {
+    /// @notice Returns the registry contract interface
+    /// @return IkRegistry interface for registry interaction
+    function _registry() internal view returns (IkRegistry) {
         BaseAdapterStorage storage $ = _getBaseAdapterStorage();
-        if ($.adapterBalances[vault][asset] < amount) revert InsufficientBalance();
-        $.adapterBalances[vault][asset] -= amount;
-        emit AdapterBalanceUpdated(vault, asset, $.adapterBalances[vault][asset]);
+        return IkRegistry($.registry);
     }
 
     /*//////////////////////////////////////////////////////////////
-                          ABSTRACT FUNCTIONS
+                                RESCUER
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Deposits assets to external strategy - must be implemented by child contracts
-    function deposit(
-        address asset,
-        uint256 amount,
-        address onBehalfOf
-    )
-        external
-        virtual
-        override
-        onlyKAssetRouter
-        whenRegistered
-    {
-        if (asset == address(0)) revert InvalidAsset();
-        if (amount == 0) revert InvalidAmount();
-        if (onBehalfOf == address(0)) revert InvalidAsset();
+    /// @notice rescues locked assets (ETH or ERC20) in the contract
+    /// @param asset_ the asset to rescue (use address(0) for ETH)
+    /// @param to_ the address that will receive the assets
+    /// @param amount_ the amount to rescue
+    function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
+        if (!_isAdmin(msg.sender)) revert WrongRole();
+        if (to_ == address(0)) revert ZeroAddress();
 
-        _deposit(asset, amount, onBehalfOf);
+        if (asset_ == address(0)) {
+            // Rescue ETH
+            if (amount_ == 0 || amount_ > address(this).balance) revert ZeroAmount();
+
+            (bool success,) = to_.call{ value: amount_ }("");
+            if (!success) revert TransferFailed();
+
+            emit RescuedETH(to_, amount_);
+        } else {
+            // Rescue ERC20 tokens
+            if (_isAsset(asset_)) revert WrongAsset();
+            if (amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
+
+            asset_.safeTransfer(to_, amount_);
+            emit RescuedAssets(asset_, to_, amount_);
+        }
     }
-
-    /// @notice Redeems assets from external strategy - must be implemented by child contracts
-    function redeem(
-        address asset,
-        uint256 amount,
-        address onBehalfOf
-    )
-        external
-        virtual
-        override
-        onlyKAssetRouter
-        whenRegistered
-    {
-        if (asset == address(0)) revert InvalidAsset();
-        if (amount == 0) revert InvalidAmount();
-        if (onBehalfOf == address(0)) revert InvalidAsset();
-
-        _redeem(asset, amount, onBehalfOf);
-    }
-
-    /// @notice Implementation-specific deposit logic
-    function _deposit(address asset, uint256 amount, address onBehalfOf) internal virtual;
-
-    /// @notice Implementation-specific redemption logic
-    function _redeem(address asset, uint256 amount, address onBehalfOf) internal virtual;
 
     /*//////////////////////////////////////////////////////////////
-                          VIEW FUNCTIONS
+                           GETTERS
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Returns the adapter balance for a specific vault and asset
-    /// @param vault The vault address
-    /// @param asset The asset address
-    /// @return Adapter balance for the vault
-    function adapterBalance(address vault, address asset) external view override returns (uint256) {
-        BaseAdapterStorage storage $ = _getBaseAdapterStorage();
-        return $.adapterBalances[vault][asset];
-    }
-
-    /// @notice Returns whether this adapter is registered
-    /// @return True if adapter is registered and active
-    function registered() public view override returns (bool) {
-        BaseAdapterStorage storage $ = _getBaseAdapterStorage();
-        return $.registered;
-    }
 
     /// @notice Returns the adapter's name
     /// @return Human readable adapter name
-    function name() external view override returns (string memory) {
+    function name() external view returns (string memory) {
         BaseAdapterStorage storage $ = _getBaseAdapterStorage();
         return $.name;
     }
 
     /// @notice Returns the adapter's version
     /// @return Version string
-    function version() external view override returns (string memory) {
+    function version() external view returns (string memory) {
         BaseAdapterStorage storage $ = _getBaseAdapterStorage();
         return $.version;
     }
 
-    /// @notice Returns the current total assets for a specific vault
-    /// @param vault The vault address
-    /// @param asset The asset to query
-    /// @return Total assets currently deployed for this vault
-    /// @dev Default implementation returns adapter balance, override for more complex calculations
-    function totalAssetsForVault(address vault, address asset) external view virtual override returns (uint256) {
-        return this.adapterBalance(vault, asset);
-    }
-
-    /// @notice Returns estimated total assets for a specific vault including pending yield
-    /// @param vault The vault address
-    /// @param asset The asset to query
-    /// @return Estimated total assets including unrealized gains for this vault
-    /// @dev Default implementation returns totalAssetsForVault, override for yield calculations
-    function estimatedTotalAssetsForVault(
-        address vault,
-        address asset
-    )
-        external
-        view
-        virtual
-        override
-        returns (uint256)
-    {
-        return this.totalAssetsForVault(vault, asset);
-    }
-
     /*//////////////////////////////////////////////////////////////
-                          ADMIN FUNCTIONS
+                            VALIDATORS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Emergency function to pause adapter operations
-    /// @param paused New pause state
-    function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
-        _setPaused(paused);
+    /// @notice Checks if an address is a admin
+    /// @return Whether the address is a admin
+    function _isAdmin(address user) internal view returns (bool) {
+        return _registry().isAdmin(user);
     }
 
-    /*//////////////////////////////////////////////////////////////
-                          EMERGENCY FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Emergency withdrawal function - must be implemented by child contracts
-    /// @param asset Asset to withdraw
-    /// @param amount Amount to withdraw
-    /// @param to Recipient address
-    function emergencyWithdraw(
-        address asset,
-        uint256 amount,
-        address to
-    )
-        external
-        virtual
-        onlyRoles(EMERGENCY_ADMIN_ROLE)
-    {
-        if (asset == address(0)) revert InvalidAsset();
-        if (amount == 0) revert InvalidAmount();
-        if (to == address(0)) revert InvalidAsset();
-
-        _emergencyWithdraw(asset, amount, to);
+    /// @notice Gets the kMinter singleton contract address
+    /// @return minter The kMinter contract address
+    /// @dev Reverts if kMinter not set in registry
+    function _isKAssetRouter(address user) internal view returns (bool) {
+        bool isTrue;
+        address _kAssetRouter = _registry().getContractById(K_ASSET_ROUTER);
+        if (_kAssetRouter == user) isTrue = true;
+        return isTrue;
     }
 
-    /// @notice Implementation-specific emergency withdrawal logic
-    function _emergencyWithdraw(address asset, uint256 amount, address to) internal virtual;
+    /// @notice Checks if an asset is registered
+    /// @param asset The asset address to check
+    /// @return Whether the asset is registered
+    function _isAsset(address asset) internal view returns (bool) {
+        return _registry().isAsset(asset);
+    }
 }

@@ -3,17 +3,28 @@ pragma solidity 0.8.30;
 
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { ERC20 } from "solady/tokens/ERC20.sol";
-import { Initializable } from "solady/utils/Initializable.sol";
 import { Multicallable } from "solady/utils/Multicallable.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 /// @title kToken
 /// @notice ERC20 token with role-based minting and burning capabilities
 /// @dev Implements UUPS upgradeable pattern with 1:1 backing by underlying assets
-contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
+contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     using SafeTransferLib for address;
+
+    /*//////////////////////////////////////////////////////////////
+                                EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    event Minted(address indexed to, uint256 amount);
+    event Burned(address indexed from, uint256 amount);
+    event TokenCreated(address indexed token, address owner, string name, string symbol, uint8 decimals);
+    event PauseState(bool isPaused);
+    event AuthorizedCallerUpdated(address indexed caller, bool authorized);
+    event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
+    event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+    event RescuedETH(address indexed asset, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                                 ROLES
@@ -27,37 +38,10 @@ contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, Reentran
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    /// @custom:storage-location erc7201:kToken.storage.kToken
-    struct kTokenStorage {
-        bool isPaused;
-        string _name;
-        string _symbol;
-        uint8 _decimals;
-    }
-
-    // keccak256(abi.encode(uint256(keccak256("kToken.storage.kToken")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant KTOKEN_STORAGE_LOCATION =
-        0x2fb0aec331268355746e3684d9eaaf2249f450cf0e491ca0657288d2091eea00;
-
-    /// @notice Returns the storage pointer for the kToken contract
-    /// @return $ The storage pointer for the kToken contract
-    function _getkTokenStorage() private pure returns (kTokenStorage storage $) {
-        assembly {
-            $.slot := KTOKEN_STORAGE_LOCATION
-        }
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                                EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event Minted(address indexed to, uint256 amount);
-    event Burned(address indexed from, uint256 amount);
-    event UpgradeAuthorized(address indexed newImplementation, address indexed sender);
-    event TokenInitialized(string name, string symbol, uint8 decimals);
-    event PauseState(bool isPaused);
-    event AuthorizedCallerUpdated(address indexed caller, bool authorized);
-    event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
+    bool _isPaused;
+    string private _name;
+    string private _symbol;
+    uint8 private _decimals;
 
     /*//////////////////////////////////////////////////////////////
                                 ERRORS
@@ -67,6 +51,7 @@ contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, Reentran
     error ZeroAddress();
     error ZeroAmount();
     error ContractNotPaused();
+    error TransferFailed();
 
     /*//////////////////////////////////////////////////////////////
                                MODIFIERS
@@ -75,7 +60,7 @@ contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, Reentran
     /// @notice Prevents function execution when contract is in paused state
     /// @dev Checks isPaused flag in storage and reverts with Paused error if true
     modifier whenNotPaused() {
-        if (_getkTokenStorage().isPaused) revert Paused();
+        if (_isPaused) revert Paused();
         _;
     }
 
@@ -85,27 +70,15 @@ contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, Reentran
 
     /// @notice Disables initializers to prevent implementation contract from being initialized
     /// @dev Calls _disableInitializers from Solady's Initializable to lock implementation
-    constructor() {
-        _disableInitializers();
-    }
-
-    /// @notice Initializes the kToken contract (stack optimized - no strings)
-    /// @dev Sets up roles and basic config. Call setupMetadata separately for name/symbol
-    /// @param owner_ Owner address
-    /// @param admin_ Admin address
-    /// @param emergencyAdmin_ Emergency admin address
-    /// @param minter_ Minter address
-    /// @param decimals_ Token decimals
-    function initialize(
+    constructor(
         address owner_,
         address admin_,
         address emergencyAdmin_,
         address minter_,
+        string memory name_,
+        string memory symbol_,
         uint8 decimals_
-    )
-        external
-        initializer
-    {
+    ) {
         if (owner_ == address(0) || admin_ == address(0) || emergencyAdmin_ == address(0)) {
             revert ZeroAddress();
         }
@@ -117,21 +90,10 @@ contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, Reentran
         _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);
         _grantRoles(minter_, MINTER_ROLE);
 
-        // Initialize basic storage (no strings to avoid stack issues)
-        kTokenStorage storage $ = _getkTokenStorage();
-        $._decimals = decimals_;
-    }
-
-    /// @notice Sets token metadata (separate call to avoid stack too deep)
-    /// @dev Must be called after initialize, only by admin
-    /// @param name_ Token name
-    /// @param symbol_ Token symbol
-    function setupMetadata(string calldata name_, string calldata symbol_) external onlyRoles(ADMIN_ROLE) {
-        kTokenStorage storage $ = _getkTokenStorage();
-        $._name = name_;
-        $._symbol = symbol_;
-
-        emit TokenInitialized(name_, symbol_, $._decimals);
+        _name = name_;
+        _symbol = symbol_;
+        _decimals = decimals_;
+        emit TokenCreated(address(this), owner_, name_, symbol_, _decimals);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -174,28 +136,28 @@ contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, Reentran
     /// @dev Returns the name stored in contract storage during initialization
     /// @return The token name as a string
     function name() public view virtual override returns (string memory) {
-        return _getkTokenStorage()._name;
+        return _name;
     }
 
     /// @notice Retrieves the abbreviated symbol of the token
     /// @dev Returns the symbol stored in contract storage during initialization
     /// @return The token symbol as a string
     function symbol() public view virtual override returns (string memory) {
-        return _getkTokenStorage()._symbol;
+        return _symbol;
     }
 
     /// @notice Retrieves the number of decimal places for the token
     /// @dev Returns the decimals value stored in contract storage during initialization
     /// @return The number of decimal places as uint8
     function decimals() public view virtual override returns (uint8) {
-        return _getkTokenStorage()._decimals;
+        return _decimals;
     }
 
     /// @notice Checks whether the contract is currently in paused state
     /// @dev Reads the isPaused flag from contract storage
     /// @return Boolean indicating if contract operations are paused
     function isPaused() external view returns (bool) {
-        return _getkTokenStorage().isPaused;
+        return _isPaused;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -242,9 +204,9 @@ contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, Reentran
 
     /// @notice Sets the pause state of the contract
     /// @dev Updates the isPaused flag in storage and emits PauseState event
-    /// @param _isPaused Boolean indicating whether to pause (true) or unpause (false) the contract
-    function setPaused(bool _isPaused) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
-        _getkTokenStorage().isPaused = _isPaused;
+    /// @param isPaused_ Boolean indicating whether to pause (true) or unpause (false) the contract
+    function setPaused(bool isPaused_) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
+        _isPaused = isPaused_;
         emit PauseState(_isPaused);
     }
 
@@ -254,17 +216,19 @@ contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, Reentran
     /// @param to Recipient address
     /// @param amount Amount to withdraw
     function emergencyWithdraw(address token, address to, uint256 amount) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
-        kTokenStorage storage $ = _getkTokenStorage();
-        if (!$.isPaused) revert ContractNotPaused();
+        if (!_isPaused) revert ContractNotPaused();
         if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
 
         if (token == address(0)) {
             // Withdraw ETH
-            to.safeTransferETH(amount);
+            (bool success,) = to.call{ value: amount }("");
+            if (!success) revert TransferFailed();
+            emit RescuedETH(to, amount);
         } else {
             // Withdraw ERC20 token
             token.safeTransfer(to, amount);
+            emit RescuedAssets(token, to, amount);
         }
 
         emit EmergencyWithdrawal(token, to, amount, msg.sender);
@@ -281,35 +245,5 @@ contract kToken is Initializable, UUPSUpgradeable, ERC20, OwnableRoles, Reentran
     /// @param amount The quantity of tokens being transferred
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override whenNotPaused {
         super._beforeTokenTransfer(from, to, amount);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        UPGRADE AUTHORIZATION
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Internal function that validates upgrade authorization for UUPS pattern
-    /// @dev Validates new implementation is not zero address and emits authorization event
-    /// @param newImplementation The address of the new contract implementation
-    function _authorizeUpgrade(address newImplementation) internal override onlyRoles(ADMIN_ROLE) {
-        if (newImplementation == address(0)) revert ZeroAddress();
-        emit UpgradeAuthorized(newImplementation, msg.sender);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                          CONTRACT INFO
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Provides the human-readable name identifier for this contract
-    /// @dev Returns a constant string value for contract identification purposes
-    /// @return The contract name as a string literal
-    function contractName() external pure returns (string memory) {
-        return "kToken";
-    }
-
-    /// @notice Provides the version number of this contract implementation
-    /// @dev Returns a constant string value for version tracking purposes
-    /// @return The contract version as a semantic version string
-    function contractVersion() external pure returns (string memory) {
-        return "1.0.0";
     }
 }

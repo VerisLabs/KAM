@@ -7,12 +7,16 @@ solc_version = "0.8.30"
 optimizer = true
 optimizer_runs = 200
 via_ir = true
+ffi = true
+ast = true
+build_info = true
+extra_output = ["storageLayout"]
+dynamic_test_linking = true
 
 [profile.deploy]
-optimization_runs = 200
+optimization_runs = 10_000
 
 [profile.solx]
-solc_version = "/home/v3n/.local/bin/solx"
 optimization = 3
 gas_limit = 100_000_000
                     
@@ -49,9 +53,15 @@ mainnet = "${RPC_MAINNET}"
 [etherscan]
 mainnet = { key = "${ETHERSCAN_MAINNET_KEY}" }
 
+[doc]
+out = "foundry-docs/"
+title = "KAM Contracts Documentation"
+
 [dependencies]
 solady = "0.1.19"
 forge-std = "1.9.7"
+openzeppelin-foundry-upgrades = "0.4.0"
+"@openzeppelin-contracts" = "5.0.2"
 
 [soldeer]
 # whether soldeer manages remappings

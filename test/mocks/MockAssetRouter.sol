@@ -6,11 +6,11 @@ pragma solidity 0.8.30;
 contract MockAssetRouter {
     mapping(address => bool) private _registeredAssets;
 
-    function isRegisteredAsset(address asset) external view returns (bool) {
+    function isAsset(address asset) external view returns (bool) {
         return _registeredAssets[asset];
     }
 
-    function registerAsset(address asset, bool isRegistered) external {
+    function registerAsset(string memory name, string memory symbol, address asset, bool isRegistered) external {
         _registeredAssets[asset] = isRegistered;
     }
 

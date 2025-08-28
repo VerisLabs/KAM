@@ -1,0 +1,8 @@
+version = 1
+
+root = "."
+
+exclude = ["/dependencies/", "/test/"]
+
+[env]
+FOUNDRY_PROFILE = "default"
