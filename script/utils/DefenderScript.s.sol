@@ -5,10 +5,11 @@ import { Script } from "forge-std/Script.sol";
 import { console } from "forge-std/console.sol";
 import { LibString } from "solady/utils/LibString.sol";
 
+import { DeploymentManager } from "./DeploymentManager.sol";
 import { ApprovalProcessResponse, Defender } from "openzeppelin-foundry-upgrades/src/Defender.sol";
 import { Options, Upgrades } from "openzeppelin-foundry-upgrades/src/Upgrades.sol";
 
-contract DefenderScript is Script {
+contract DefenderScript is Script, DeploymentManager {
     using LibString for string;
     using LibString for address;
 
@@ -33,6 +34,9 @@ contract DefenderScript is Script {
         address proxy = Upgrades.deployUUPSProxy(contractName.concat(".sol"), initData, opts);
 
         console.log("Deployed proxy for ", contractName.concat(" at : ").concat(proxy.toHexString()));
+
+        // Auto-write contract address to deployment JSON
+        writeContractAddress(contractName, proxy);
 
         return proxy;
     }

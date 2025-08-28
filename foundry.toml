@@ -12,6 +12,7 @@ ast = true
 build_info = true
 extra_output = ["storageLayout"]
 dynamic_test_linking = true
+fs_permissions = [{ access = "read-write", path = "." }]
 
 [profile.deploy]
 optimization_runs = 10_000
