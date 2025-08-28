@@ -287,7 +287,6 @@ interface IkRegistry {
     error ZeroAmount();
     error AlreadyRegistered();
     error AssetNotSupported();
-    error AdapterNotRegistered();
     error InvalidAdapter();
     error AdapterAlreadySet();
     error WrongRole();

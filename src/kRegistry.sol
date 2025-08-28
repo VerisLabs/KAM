@@ -9,7 +9,6 @@ import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { kToken } from "src/kToken.sol";
 
@@ -215,11 +214,11 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         address minter_ = getContractById(K_MINTER);
         if (minter_ == address(0)) revert ZeroAddress();
 
-        address kToken_ = $.assetToKToken[asset];
-        if (kToken_ != address(0)) revert AlreadyRegistered();
-
         uint8 decimals_ = IERC20Metadata(asset).decimals();
         if (decimals_ == 0) decimals_ = 18;
+
+        address kToken_ = $.assetToKToken[asset];
+        if (kToken_ != address(0)) revert AlreadyRegistered();
 
         kToken_ = address(
             new kToken(
@@ -343,11 +342,10 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         kRegistryStorage storage $ = _getkRegistryStorage();
         if ($.supportedAssets.length() == 0) revert ZeroAddress();
         address[] memory assets = new address[]($.supportedAssets.length());
-        for (uint256 i; i < $.supportedAssets.length();) {
+        uint256 length = $.supportedAssets.length();
+        if (length == 0) revert ZeroAmount();
+        for (uint256 i; i < length; i++) {
             assets[i] = $.supportedAssets.at(i);
-            unchecked {
-                ++i;
-            }
         }
         return assets;
     }

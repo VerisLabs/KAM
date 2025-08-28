@@ -1,5 +1,5 @@
 # kMinter
-[Git Source](https://github.com/VerisLabs/KAM/blob/21fc681bf8c3b068c4bafc99872278de3ba557fb/src/kMinter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/70c31cd66a975b95c3bd6540ffd61af97eae3226/src/kMinter.sol)
 
 **Inherits:**
 [IkMinter](/src/interfaces/IkMinter.sol/interface.IkMinter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)

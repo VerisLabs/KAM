@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, USDC_MAINNET, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
+import {
+    ADMIN_ROLE,
+    EMERGENCY_ADMIN_ROLE,
+    USDC_MAINNET,
+    WBTC_MAINNET,
+    _1000_USDC,
+    _100_USDC,
+    _1_USDC
+} from "../utils/Constants.sol";
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
@@ -65,7 +73,7 @@ contract kMinterTest is DeploymentBaseTest {
         bytes memory initData = abi.encodeWithSelector(kMinter.initialize.selector, address(0));
 
         ERC1967Factory factory = new ERC1967Factory();
-        vm.expectRevert();
+        vm.expectRevert(kBase.ZeroAddress.selector);
         factory.deployAndCall(address(newMinterImpl), users.admin, initData);
     }
 
@@ -139,7 +147,7 @@ contract kMinterTest is DeploymentBaseTest {
         address invalidAsset = address(0x1234567890123456789012345678901234567890);
 
         vm.prank(users.institution);
-        vm.expectRevert(); // AssetNotSupported error from kBase
+        vm.expectRevert(kBase.WrongAsset.selector);
         minter.mint(invalidAsset, users.alice, TEST_AMOUNT);
     }
 
@@ -178,15 +186,10 @@ contract kMinterTest is DeploymentBaseTest {
         vm.prank(users.institution);
         kUSD.approve(address(minter), amount);
 
-        // Request redemption - will fail at kAssetRequestPull due to insufficient virtual balance
-        // This is expected in unit tests since we don't set up full vault state
+        // Request redemption - will fail due to insufficient virtual balance in vault
         vm.prank(users.institution);
-        vm.expectRevert(); // Will revert at kAssetRouter level due to InsufficientVirtualBalance
-
+        vm.expectRevert();
         minter.requestRedeem(USDC_MAINNET, recipient, amount);
-
-        // Since the function reverts, we can't test the full flow in unit tests
-        // Integration tests will cover the complete redemption request flow
     }
 
     /// @dev Test redemption request requires institution role
@@ -215,7 +218,7 @@ contract kMinterTest is DeploymentBaseTest {
         address invalidAsset = address(0x1234567890123456789012345678901234567890);
 
         vm.prank(users.institution);
-        vm.expectRevert(); // AssetNotSupported error from kBase
+        vm.expectRevert(kBase.WrongAsset.selector);
         minter.requestRedeem(invalidAsset, users.institution, TEST_AMOUNT);
     }
 
@@ -330,7 +333,7 @@ contract kMinterTest is DeploymentBaseTest {
     /// @dev Test pause requires emergency admin role
     function test_SetPaused_OnlyEmergencyAdmin() public {
         vm.prank(users.alice);
-        vm.expectRevert();
+        vm.expectRevert(kBase.WrongRole.selector);
         minter.setPaused(true);
     }
 
@@ -390,16 +393,8 @@ contract kMinterTest is DeploymentBaseTest {
 
         // Non-admin should fail
         vm.prank(users.alice);
-        vm.expectRevert();
+        vm.expectRevert(kBase.WrongRole.selector);
         minter.upgradeToAndCall(newImpl, "");
-
-        // Admin should succeed (test passes authorization check)
-        vm.prank(users.admin);
-        // Note: Actual upgrade testing is complex, we just test authorization
-        try minter.upgradeToAndCall(newImpl, "") { }
-        catch {
-            // Expected to fail at implementation level, but access control passed
-        }
     }
 
     /// @dev Test upgrade authorization reverts with zero address
@@ -427,6 +422,152 @@ contract kMinterTest is DeploymentBaseTest {
     }
 
     /*//////////////////////////////////////////////////////////////
+                    TOTAL LOCKED ASSETS TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev Test getTotalLockedAssets for a single asset
+    function test_GetTotalLockedAssets_SingleAsset() public {
+        // Initially should be zero
+        assertEq(minter.getTotalLockedAssets(USDC_MAINNET), 0, "Should start with zero locked assets");
+
+        // Mint some tokens
+        uint256 amount = TEST_AMOUNT;
+        deal(USDC_MAINNET, users.institution, amount);
+        vm.prank(users.institution);
+        IERC20(USDC_MAINNET).approve(address(minter), amount);
+        vm.prank(users.institution);
+        minter.mint(USDC_MAINNET, users.institution, amount);
+
+        // Check locked assets increased
+        assertEq(minter.getTotalLockedAssets(USDC_MAINNET), amount, "Locked assets should equal minted amount");
+    }
+
+    /// @dev Test getTotalLockedAssets with multiple mints
+    function test_GetTotalLockedAssets_MultipleMints() public {
+        uint256 amount1 = TEST_AMOUNT;
+        uint256 amount2 = 500 * _1_USDC;
+        uint256 totalAmount = amount1 + amount2;
+
+        // First mint
+        deal(USDC_MAINNET, users.institution, amount1);
+        vm.prank(users.institution);
+        IERC20(USDC_MAINNET).approve(address(minter), amount1);
+        vm.prank(users.institution);
+        minter.mint(USDC_MAINNET, users.institution, amount1);
+
+        assertEq(minter.getTotalLockedAssets(USDC_MAINNET), amount1, "Should track first mint");
+
+        // Second mint
+        deal(USDC_MAINNET, users.institution, amount2);
+        vm.prank(users.institution);
+        IERC20(USDC_MAINNET).approve(address(minter), amount2);
+        vm.prank(users.institution);
+        minter.mint(USDC_MAINNET, users.alice, amount2);
+
+        assertEq(minter.getTotalLockedAssets(USDC_MAINNET), totalAmount, "Should track cumulative mints");
+    }
+
+    /// @dev Test getTotalLockedAssets for unsupported asset
+    function test_GetTotalLockedAssets_UnsupportedAsset() public {
+        address unsupportedAsset = address(0x1234567890123456789012345678901234567890);
+        assertEq(minter.getTotalLockedAssets(unsupportedAsset), 0, "Unsupported asset should return zero");
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    BATCH INTEGRATION TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev Test that minting interacts with DN vault batches
+    function test_Mint_InteractsWithDNVault() public {
+        uint256 amount = TEST_AMOUNT;
+
+        // Get initial batch ID from DN vault
+        bytes32 initialBatchId = dnVault.getBatchId();
+
+        // Mint tokens
+        deal(USDC_MAINNET, users.institution, amount);
+        vm.prank(users.institution);
+        IERC20(USDC_MAINNET).approve(address(minter), amount);
+
+        // The mint should interact with the current DN vault batch
+        vm.prank(users.institution);
+        minter.mint(USDC_MAINNET, users.institution, amount);
+
+        // Verify DN vault received the assets (through kAssetRouter)
+        // In a full integration test, we would verify the batch balances
+        assertEq(kUSD.balanceOf(users.institution), amount, "kTokens should be minted");
+    }
+
+    /// @dev Test that minting calls kAssetPush on the router
+    function test_Mint_CallsKAssetPush() public {
+        uint256 amount = TEST_AMOUNT;
+
+        // Setup
+        deal(USDC_MAINNET, users.institution, amount);
+        vm.prank(users.institution);
+        IERC20(USDC_MAINNET).approve(address(minter), amount);
+
+        // Get batch balances before mint
+        bytes32 batchId = dnVault.getBatchId();
+        (uint256 depositedBefore,) = assetRouter.getBatchIdBalances(address(minter), batchId);
+
+        // Mint
+        vm.prank(users.institution);
+        minter.mint(USDC_MAINNET, users.institution, amount);
+
+        // Get batch balances after mint
+        (uint256 depositedAfter,) = assetRouter.getBatchIdBalances(address(minter), batchId);
+
+        // Verify kAssetPush was called (deposited amount increased)
+        assertEq(depositedAfter - depositedBefore, amount, "Deposited amount should increase");
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        EDGE CASE TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev Test minting maximum amounts
+    function test_Mint_MaxAmount() public {
+        uint256 maxAmount = type(uint128).max; // Use uint128 max as that's what's used internally
+
+        // Fund institution with max amount
+        deal(USDC_MAINNET, users.institution, maxAmount);
+        vm.prank(users.institution);
+        IERC20(USDC_MAINNET).approve(address(minter), maxAmount);
+
+        // Should succeed with max amount
+        vm.prank(users.institution);
+        minter.mint(USDC_MAINNET, users.institution, maxAmount);
+
+        assertEq(kUSD.balanceOf(users.institution), maxAmount, "Should mint max amount");
+        assertEq(minter.getTotalLockedAssets(USDC_MAINNET), maxAmount, "Should track max amount");
+    }
+
+    /// @dev Test concurrent requests from same user
+    function test_RequestRedeem_Concurrent() public {
+        // Setup: Mint tokens first
+        uint256 totalAmount = 3000 * _1_USDC;
+        deal(USDC_MAINNET, users.institution, totalAmount);
+        vm.prank(users.institution);
+        IERC20(USDC_MAINNET).approve(address(minter), totalAmount);
+        vm.prank(users.institution);
+        minter.mint(USDC_MAINNET, users.institution, totalAmount);
+
+        // Approve all tokens for redemption
+        vm.prank(users.institution);
+        kUSD.approve(address(minter), totalAmount);
+
+        // Create multiple concurrent redemption requests
+        uint256 requestAmount = 1000 * _1_USDC;
+
+        for (uint256 i = 0; i < 3; i++) {
+            vm.prank(users.institution);
+            vm.expectRevert();
+            minter.requestRedeem(USDC_MAINNET, users.institution, requestAmount);
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
                         INTEGRATION TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -450,7 +591,5 @@ contract kMinterTest is DeploymentBaseTest {
         // Step 3: Verify no user requests (minting doesn't create requests)
         bytes32[] memory userRequests = minter.getUserRequests(recipient);
         assertEq(userRequests.length, 0, "Should have no user requests");
-
-        // Note: Redemption workflow requires integration tests due to vault interactions
     }
 }

@@ -10,19 +10,28 @@ The scope of audit involves the complete KAM protocol implementation in `src/`:
 
 ```
 ├── src
+│   ├── abstracts/
+│   │   ├── Extsload.sol              [IN SCOPE - Storage optimization]
+│   │   └── Proxy.sol                 [IN SCOPE - Proxy implementation]
 │   ├── adapters/
 │   │   ├── BaseAdapter.sol
 │   │   └── CustodialAdapter.sol
 │   ├── base/
+│   │   ├── MultiFacetProxy.sol       [IN SCOPE - Diamond proxy base]
 │   │   └── kBase.sol
 │   ├── interfaces/
 │   │   ├── IAdapter.sol
+│   │   ├── IExtsload.sol
 │   │   ├── IkAssetRouter.sol
 │   │   ├── IkBatchReceiver.sol
 │   │   ├── IkMinter.sol
 │   │   ├── IkRegistry.sol
 │   │   ├── IkStakingVault.sol
-│   │   └── IkToken.sol
+│   │   ├── IkToken.sol
+│   │   └── modules/
+│   │       ├── IVaultBatch.sol
+│   │       ├── IVaultClaim.sol
+│   │       └── IVaultFees.sol
 │   ├── kAssetRouter.sol
 │   ├── kBatchReceiver.sol
 │   ├── kMinter.sol
@@ -40,7 +49,7 @@ The scope of audit involves the complete KAM protocol implementation in `src/`:
 │   └── kToken.sol
 ```
 
-Out of scope: `Extsload.sol`, `MultiFacetProxy.sol`, `Proxy.sol`, and external dependencies.
+**Out of scope**: External dependencies (Solady, OpenZeppelin), test contracts, and deployment scripts.
 
 ## Core Protocol Components
 
@@ -60,19 +69,43 @@ Out of scope: `Extsload.sol`, `MultiFacetProxy.sol`, `Proxy.sol`, and external d
 
 **Virtual Balance Accounting** - Assets are tracked through virtual balances rather than direct token holdings, enabling efficient batch processing and settlement coordination without constant token transfers.
 
-**Two-Phase Settlement** - Settlement proposals implement timelock mechanisms with merkle proof verification, allowing for correction of incorrect parameters through cancellation and update functions.
+**Two-Phase Settlement** - Settlement proposals implement timelock mechanisms allowing for correction of incorrect parameters through cancellation before execution. Proposals include cooldown periods (1 hour to 1 day) before execution is permitted.
 
 **Batch Processing Architecture** - Requests are grouped into batches for gas-efficient settlement, with deterministic batch receiver deployment and isolated asset distribution.
 
 **Explicit Approval Pattern** - Adapters receive temporary approvals only during settlement execution, immediately revoked afterward for security.
 
-**Role-Based Access Control** - Comprehensive role system including Owner, Admin, Emergency Admin, Institution, Factory, Relayer, and Guardian roles with specific permissions.
+**Role-Based Access Control** - Comprehensive role system implemented through Solady's OwnableRoles including:
+- Owner: Protocol ownership and ultimate control
+- Admin: Administrative functions and upgrades  
+- Emergency Admin: Pause functionality and emergency operations
+- Institution: Minting and redemption permissions
+- Vendor: Asset management and adapter permissions
+- Relayer: Settlement proposal creation
+- Guardian: Settlement proposal cancellation
 
 **Modular Vault System** - Vaults implement diamond pattern with separate modules for batch processing, claim management, and fee collection.
 
+## Technical Architecture
+
+**ERC-7201 Storage Patterns** - All contracts implement namespaced storage using ERC-7201 to prevent storage collisions during upgrades. Each contract defines unique storage locations with keccak256-derived slots.
+
+**UUPS Upgradeability** - Core contracts (`kMinter`, `kAssetRouter`, `kRegistry`, `kStakingVault`) implement UUPS (Universal Upgradeable Proxy Standard) through Solady's UUPSUpgradeable, enabling controlled protocol upgrades with admin authorization.
+
+**Solady Dependencies** - Protocol extensively uses Solady library for gas optimization and security:
+- `SafeTransferLib` for secure token transfers
+- `ReentrancyGuardTransient` for gas-efficient reentrancy protection  
+- `FixedPointMathLib` for precision arithmetic
+- `EnumerableSetLib` for efficient set operations
+- `OwnableRoles` for role-based access control
+
+**Extsload Pattern** - `kMinter` implements Extsload for storage reading optimization, allowing efficient cross-contract storage access without additional SLOAD operations.
+
+**Transient Reentrancy Protection** - All state-changing functions use transient reentrancy guards that leverage Solidity 0.8.30's transient storage (TSTORE/TLOAD) for gas-efficient protection.
+
 ## Known Caveats
 
-**Settlement Proposal Timelock** - Proposals require timelock delays before execution, potentially causing delays in asset settlement if parameters need correction. The protocol addresses this through proposal cancellation and update mechanisms.
+**Settlement Proposal Timelock** - Proposals require timelock delays before execution, potentially causing delays in asset settlement if parameters need correction. The protocol addresses this through proposal cancellation mechanisms.
 
 **Virtual Balance Synchronization** - Virtual balances must remain synchronized with actual adapter holdings. Discrepancies could arise from direct adapter interactions or external protocol changes affecting adapter behavior.
 
@@ -80,4 +113,14 @@ Out of scope: `Extsload.sol`, `MultiFacetProxy.sol`, `Proxy.sol`, and external d
 
 **CREATE2 Salt Mining** - Batch receiver deployment relies on CREATE2 with specific salt requirements. Registry parameter changes between salt discovery and deployment could invalidate prepared salts.
 
+**ERC-7201 Storage Collision Risks** - While ERC-7201 prevents most storage collisions, incorrect namespace calculations or implementation errors could lead to storage overwrites during upgrades.
+
+**Diamond Pattern Security** - The modular vault architecture using MultiFacetProxy requires careful validation of function selector conflicts and delegation call security. Malicious or incorrectly implemented modules could compromise the entire vault.
+
+**Transient Storage Dependencies** - The protocol's reliance on Solidity 0.8.30's transient storage for reentrancy protection creates a hard dependency on specific compiler behavior and EVM implementations that support TSTORE/TLOAD.
+
+**UUPS Upgrade Authorization** - Upgrade mechanisms depend on proper access control validation. Compromise of admin keys or authorization bypass could allow malicious upgrades across multiple protocol contracts.
+
 **Adapter Integration Complexity** - Each adapter integration requires careful validation of redemption patterns, asset tracking accuracy, and emergency handling procedures. Different DeFi protocols may have varying settlement timeframes and failure modes.
+
+**Virtual Balance Attack Vectors** - Virtual balance accounting creates potential attack vectors where discrepancies between recorded and actual balances could be exploited to drain funds or prevent legitimate withdrawals.
