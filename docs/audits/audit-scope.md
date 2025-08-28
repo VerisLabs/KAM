@@ -11,13 +11,13 @@ The scope of audit involves the complete KAM protocol implementation in `src/`:
 ```
 ├── src
 │   ├── abstracts/
-│   │   ├── Extsload.sol              [IN SCOPE - Storage optimization]
-│   │   └── Proxy.sol                 [IN SCOPE - Proxy implementation]
+│   │   ├── Extsload.sol              [NOT IN SCOPE - Storage optimization]
+│   │   └── Proxy.sol                 [NOT IN SCOPE - Proxy implementation]
 │   ├── adapters/
 │   │   ├── BaseAdapter.sol
 │   │   └── CustodialAdapter.sol
 │   ├── base/
-│   │   ├── MultiFacetProxy.sol       [IN SCOPE - Diamond proxy base]
+│   │   ├── MultiFacetProxy.sol       [NOT IN SCOPE - Diamond proxy base]
 │   │   └── kBase.sol
 │   ├── interfaces/
 │   │   ├── IAdapter.sol
