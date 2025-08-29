@@ -1,10 +1,10 @@
-name: Forge Tests
+name: KAM Forge Tests
 
 on:
   push:
     branches: [ main, development ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, development ]
 
 env:
   FOUNDRY_PROFILE: default
@@ -45,6 +45,5 @@ jobs:
         run: |
           forge test -vv
         id: test
-
         env:
-          RPC_MAINNET: ${{ secrets.MAINNET_RPC_URL }}
+          RPC_MAINNET: ${{ secrets.RPC_MAINNET }}
