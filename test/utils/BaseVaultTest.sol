@@ -130,15 +130,6 @@ contract BaseVaultTest is DeploymentBaseTest {
     )
         internal
     {
-        uint256 startTime = block.timestamp;
-
-        // Ensure kAssetRouter has the physical assets for settlement
-        // In production, backend would retrieve these from external strategies
-        uint256 currentBalance = IERC20(USDC_MAINNET).balanceOf(address(assetRouter));
-        if (currentBalance < totalAssets) {
-            deal(USDC_MAINNET, address(assetRouter), totalAssets);
-        }
-
         if (vault == address(minter)) vault = address(dnVault);
 
         vm.prank(users.relayer);
