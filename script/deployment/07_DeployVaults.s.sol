@@ -59,7 +59,6 @@ contract DeployVaultsScript is Script, DeploymentManager {
     }
 
     function _deployDNVault() internal returns (address) {
-        uint128 DEFAULT_DUST_AMOUNT = 1000;
         return factory.deployAndCall(
             stakingVaultImpl,
             msg.sender,
@@ -71,14 +70,12 @@ contract DeployVaultsScript is Script, DeploymentManager {
                 "DN KAM Vault",
                 "dnkUSD",
                 6,
-                DEFAULT_DUST_AMOUNT,
                 config.assets.USDC
             )
         );
     }
 
     function _deployAlphaVault() internal returns (address) {
-        uint128 DEFAULT_DUST_AMOUNT = 1000;
         return factory.deployAndCall(
             stakingVaultImpl,
             msg.sender,
@@ -90,14 +87,12 @@ contract DeployVaultsScript is Script, DeploymentManager {
                 "Alpha KAM Vault",
                 "akUSD",
                 6,
-                DEFAULT_DUST_AMOUNT,
                 config.assets.USDC
             )
         );
     }
 
     function _deployBetaVault() internal returns (address) {
-        uint128 DEFAULT_DUST_AMOUNT = 1000;
         return factory.deployAndCall(
             stakingVaultImpl,
             msg.sender,
@@ -109,7 +104,6 @@ contract DeployVaultsScript is Script, DeploymentManager {
                 "Beta KAM Vault",
                 "bkUSD",
                 6,
-                DEFAULT_DUST_AMOUNT,
                 config.assets.USDC
             )
         );

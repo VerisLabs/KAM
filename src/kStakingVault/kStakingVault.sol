@@ -53,7 +53,6 @@ contract kStakingVault is
     /// @param name_ Token name
     /// @param symbol_ Token symbol
     /// @param decimals_ Token decimals
-    /// @param dustAmount_ Minimum amount threshold
     /// @param asset_ Underlying asset address
     function initialize(
         address owner_,
@@ -62,7 +61,6 @@ contract kStakingVault is
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
-        uint128 dustAmount_,
         address asset_
     )
         external
@@ -99,7 +97,9 @@ contract kStakingVault is
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (_getPaused($)) revert IsPaused();
         if (amount == 0) revert ZeroAmount();
-        if ($.kToken.balanceOf(msg.sender) < amount) revert InsufficientBalance();
+        if ($.kToken.balanceOf(msg.sender) < amount) {
+            revert InsufficientBalance();
+        }
 
         bytes32 batchId = $.currentBatchId;
 
@@ -148,7 +148,9 @@ contract kStakingVault is
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         if (_getPaused($)) revert IsPaused();
         if (stkTokenAmount == 0) revert ZeroAmount();
-        if (balanceOf(msg.sender) < stkTokenAmount) revert InsufficientBalance();
+        if (balanceOf(msg.sender) < stkTokenAmount) {
+            revert InsufficientBalance();
+        }
 
         bytes32 batchId = $.currentBatchId;
 
@@ -183,9 +185,13 @@ contract kStakingVault is
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         BaseVaultModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
 
-        if (!$.userRequests[msg.sender].contains(requestId)) revert RequestNotFound();
+        if (!$.userRequests[msg.sender].contains(requestId)) {
+            revert RequestNotFound();
+        }
         if (msg.sender != request.user) revert Unauthorized();
-        if (request.status != BaseVaultModuleTypes.RequestStatus.PENDING) revert RequestNotEligible();
+        if (request.status != BaseVaultModuleTypes.RequestStatus.PENDING) {
+            revert RequestNotEligible();
+        }
 
         request.status = BaseVaultModuleTypes.RequestStatus.CANCELLED;
         $.userRequests[msg.sender].remove(requestId);
@@ -211,13 +217,16 @@ contract kStakingVault is
         BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
 
         if (msg.sender != request.user) revert Unauthorized();
-        if (!$.userRequests[msg.sender].contains(requestId)) revert RequestNotFound();
-        if (request.status != BaseVaultModuleTypes.RequestStatus.PENDING) revert RequestNotEligible();
+        if (!$.userRequests[msg.sender].contains(requestId)) {
+            revert RequestNotFound();
+        }
+        if (request.status != BaseVaultModuleTypes.RequestStatus.PENDING) {
+            revert RequestNotEligible();
+        }
 
         request.status = BaseVaultModuleTypes.RequestStatus.CANCELLED;
         $.userRequests[msg.sender].remove(requestId);
 
-        address vault = _getDNVaultByAsset($.underlyingAsset);
         if ($.batches[request.batchId].isClosed) revert Closed();
         if ($.batches[request.batchId].isSettled) revert Settled();
 
