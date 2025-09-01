@@ -31,9 +31,7 @@ import { kToken } from "src/kToken.sol";
 
 // Modules
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
-import { BatchModule } from "src/kStakingVault/modules/BatchModule.sol";
-import { ClaimModule } from "src/kStakingVault/modules/ClaimModule.sol";
-import { FeesModule } from "src/kStakingVault/modules/FeesModule.sol";
+import { ReaderModule } from "src/kStakingVault/modules/ReaderModule.sol";
 
 // Adapters
 import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
@@ -77,9 +75,7 @@ contract DeploymentBaseTest is BaseTest {
     kBatchReceiver public batchReceiver;
 
     // Modules for kStakingVault
-    ClaimModule public claimModule;
-    BatchModule public batchModule;
-    FeesModule public feesModule;
+    ReaderModule public readerModule;
 
     // Adapters
     CustodialAdapter public custodialAdapter;
@@ -245,11 +241,6 @@ contract DeploymentBaseTest is BaseTest {
     function _deployStakingVaults() internal {
         vm.startPrank(users.admin);
 
-        // Deploy modules first (shared across all vaults)
-        claimModule = new ClaimModule();
-        batchModule = new BatchModule();
-        feesModule = new FeesModule();
-
         // Deploy implementation (shared across all vaults)
         stakingVaultImpl = new kStakingVault();
 
@@ -264,9 +255,7 @@ contract DeploymentBaseTest is BaseTest {
 
         // Label shared components
         vm.label(address(stakingVaultImpl), "kStakingVaultImpl");
-        vm.label(address(claimModule), "ClaimModule");
-        vm.label(address(batchModule), "BatchModule");
-        vm.label(address(feesModule), "FeesModule");
+        vm.label(address(readerModule), "ReaderModule");
     }
 
     /// @dev Helper function to deploy a specific vault type
@@ -282,15 +271,13 @@ contract DeploymentBaseTest is BaseTest {
         bytes memory initData = abi.encodeWithSelector(
             kStakingVault.initialize.selector,
             users.owner,
-            users.admin,
             address(registry),
             false, // paused
             name,
             symbol,
             6, // decimals
             DEFAULT_DUST_AMOUNT,
-            asset, // underlying asset (USDC for now)
-            users.treasury // feeCollector
+            asset // underlying asset (USDC for now)
         );
 
         address vaultProxy = factory.deployAndCall(address(stakingVaultImpl), users.admin, initData);
@@ -352,7 +339,7 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Initialize initial batches for all vaults
     function _initializeBatches() internal {
-        // Register the BatchModule and ClaimModule functions with the vaults
+        // Register the VaultBatches and VaultClaims functions with the vaults
         _registerModules();
 
         // Create initial batches for all vaults using relayer role
@@ -379,28 +366,16 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Register modules with vaults
     function _registerModules() internal {
-        // Get module selectors from the modules themselves
-        bytes4[] memory batchSelectors = batchModule.selectors();
-        bytes4[] memory claimSelectors = claimModule.selectors();
-        bytes4[] memory feesSelectors = feesModule.selectors();
+        readerModule = new ReaderModule();
+        bytes4[] memory readerSelectors = readerModule.selectors();
 
         // Register modules as vault admin
-        vm.startPrank(users.admin);
+        vm.startPrank(users.owner);
 
-        // Add batch module functions to all vaults
-        dnVault.addFunctions(batchSelectors, address(batchModule), true);
-        alphaVault.addFunctions(batchSelectors, address(batchModule), true);
-        betaVault.addFunctions(batchSelectors, address(batchModule), true);
-
-        // Add fees module functions to all vaults
-        dnVault.addFunctions(feesSelectors, address(feesModule), true);
-        alphaVault.addFunctions(feesSelectors, address(feesModule), true);
-        betaVault.addFunctions(feesSelectors, address(feesModule), true);
-
-        // Add claim module functions to all vaults
-        dnVault.addFunctions(claimSelectors, address(claimModule), true);
-        alphaVault.addFunctions(claimSelectors, address(claimModule), true);
-        betaVault.addFunctions(claimSelectors, address(claimModule), true);
+        // Add reader module functions to all vaults
+        dnVault.addFunctions(readerSelectors, address(readerModule), true);
+        alphaVault.addFunctions(readerSelectors, address(readerModule), true);
+        betaVault.addFunctions(readerSelectors, address(readerModule), true);
 
         vm.stopPrank();
     }

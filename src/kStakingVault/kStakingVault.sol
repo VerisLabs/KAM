@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { Ownable } from "solady/auth/Ownable.sol";
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
@@ -14,15 +13,27 @@ import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+
+import { VaultBatches } from "src/kStakingVault/base/VaultBatches.sol";
+import { VaultClaims } from "src/kStakingVault/base/VaultClaims.sol";
+import { VaultFees } from "src/kStakingVault/base/VaultFees.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title kStakingVault
 /// @notice Pure ERC20 vault with dual accounting for minter and user pools
 /// @dev Implements automatic yield distribution from minter to user pools with modular architecture
-contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, MultiFacetProxy {
+contract kStakingVault is
+    Initializable,
+    UUPSUpgradeable,
+    Ownable,
+    BaseVaultModule,
+    MultiFacetProxy,
+    VaultFees,
+    VaultClaims,
+    VaultBatches
+{
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using SafeTransferLib for address;
-    using FixedPointMathLib for uint256;
     using SafeCastLib for uint256;
     using SafeCastLib for uint128;
 
@@ -44,18 +55,15 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
     /// @param decimals_ Token decimals
     /// @param dustAmount_ Minimum amount threshold
     /// @param asset_ Underlying asset address
-    /// @param feeCollector_ feeCollector address
     function initialize(
         address owner_,
-        address admin_,
         address registry_,
         bool paused_,
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
         uint128 dustAmount_,
-        address asset_,
-        address feeCollector_
+        address asset_
     )
         external
         initializer
@@ -63,19 +71,16 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         if (asset_ == address(0)) revert ZeroAddress();
 
         // Initialize ownership and roles
-        __BaseVaultModule_init(registry_, feeCollector_, paused_);
-        __MultiFacetProxy__init(1);
+        __BaseVaultModule_init(registry_, paused_);
         _initializeOwner(owner_);
-        _grantRoles(admin_, 1);
 
         // Initialize storage with optimized packing
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         $.name = name_;
         $.symbol = symbol_;
-        $.decimals = decimals_;
+        _setDecimals($, decimals_);
         $.underlyingAsset = asset_;
-        $.dustAmount = dustAmount_.toUint96();
-        $.sharePriceWatermark = 10 ** decimals_;
+        $.sharePriceWatermark = (10 ** decimals_).toUint128();
         $.kToken = _registry().assetToKToken(asset_);
         $.receiverImplementation = address(new kBatchReceiver(_registry().getContractById(K_MINTER)));
 
@@ -91,11 +96,10 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
     /// @param amount Amount of kTokens to stake
     /// @return requestId Request ID for this staking request
     function requestStake(address to, uint256 amount) external payable nonReentrant returns (bytes32 requestId) {
-        if (_isPaused()) revert IsPaused();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (_getPaused($)) revert IsPaused();
         if (amount == 0) revert ZeroAmount();
         if ($.kToken.balanceOf(msg.sender) < amount) revert InsufficientBalance();
-        if (amount < $.dustAmount) revert AmountBelowDustThreshold();
 
         bytes32 batchId = $.currentBatchId;
 
@@ -141,11 +145,10 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         nonReentrant
         returns (bytes32 requestId)
     {
-        if (_isPaused()) revert IsPaused();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (_getPaused($)) revert IsPaused();
         if (stkTokenAmount == 0) revert ZeroAmount();
         if (balanceOf(msg.sender) < stkTokenAmount) revert InsufficientBalance();
-        if (stkTokenAmount < $.dustAmount) revert AmountBelowDustThreshold();
 
         bytes32 batchId = $.currentBatchId;
 
@@ -203,8 +206,8 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
     /// @notice Cancels an unstaking request
     /// @param requestId Request ID to cancel
     function cancelUnstakeRequest(bytes32 requestId) external payable nonReentrant {
-        if (_isPaused()) revert IsPaused();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (_getPaused($)) revert IsPaused();
         BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
 
         if (msg.sender != request.user) revert Unauthorized();
@@ -291,54 +294,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         return batchId;
     }
 
-    /// @notice Returns whether the current batch is closed
-    /// @return Whether the current batch is closed
-    function isBatchClosed() external view returns (bool) {
-        return _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isClosed;
-    }
-
-    /// @notice Returns whether the current batch is settled
-    /// @return Whether the current batch is settled
-    function isBatchSettled() external view returns (bool) {
-        return _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isSettled;
-    }
-
-    /// @notice Returns the current batch ID, whether it is closed, and whether it is settled
-    /// @return batchId Current batch ID
-    /// @return batchReceiver Current batch receiver
-    /// @return isClosed Whether the current batch is closed
-    /// @return isSettled Whether the current batch is settled
-    function getBatchIdInfo()
-        external
-        view
-        returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled)
-    {
-        return (
-            _getBaseVaultModuleStorage().currentBatchId,
-            _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].batchReceiver,
-            _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isClosed,
-            _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isSettled
-        );
-    }
-
-    /// @notice Returns the batch receiver for the current batch
-    /// @return Batch receiver
-    function getBatchIdReceiver(bytes32 batchId) external view returns (address) {
-        return _getBaseVaultModuleStorage().batches[batchId].batchReceiver;
-    }
-
-    /// @notice Returns the batch receiver for a given batch (alias for getBatchIdReceiver)
-    /// @return Batch receiver
-    function getBatchReceiver(bytes32 batchId) external view returns (address) {
-        return _getBaseVaultModuleStorage().batches[batchId].batchReceiver;
-    }
-
-    function getSafeBatchReceiver(bytes32 batchId) external view returns (address) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if ($.batches[batchId].isSettled) revert Settled();
-        return $.batches[batchId].batchReceiver;
-    }
-
     /*//////////////////////////////////////////////////////////////
                         UUPS UPGRADE
     //////////////////////////////////////////////////////////////*/
@@ -351,11 +306,14 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
     }
 
     /*//////////////////////////////////////////////////////////////
-                            RECEIVE ETH
+                        FUNCTIONS UPGRADE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Accepts ETH transfers
-    receive() external payable { }
+    /// @notice Authorize function modification
+    /// @dev This allows modifying functions while keeping modules separate
+    function _authorizeModifyFunctions(address sender) internal override {
+        //_checkOwner();
+    }
 
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO

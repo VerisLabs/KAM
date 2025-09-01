@@ -1,8 +1,8 @@
 # kStakingVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/7c4c002fe2cce8e1d11c6bc539e18f776ee440fc/src/kStakingVault/kStakingVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/kStakingVault.sol)
 
 **Inherits:**
-Initializable, UUPSUpgradeable, [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/contract.MultiFacetProxy.md)
+Initializable, UUPSUpgradeable, Ownable, [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.md), [VaultFees](/src/kStakingVault/base/VaultFees.sol/contract.VaultFees.md), [VaultClaims](/src/kStakingVault/base/VaultClaims.sol/contract.VaultClaims.md), [VaultBatches](/src/kStakingVault/base/VaultBatches.sol/contract.VaultBatches.md)
 
 Pure ERC20 vault with dual accounting for minter and user pools
 
@@ -29,15 +29,13 @@ Initializes the kStakingVault contract (stack optimized)
 ```solidity
 function initialize(
     address owner_,
-    address admin_,
     address registry_,
     bool paused_,
     string memory name_,
     string memory symbol_,
     uint8 decimals_,
     uint128 dustAmount_,
-    address asset_,
-    address feeCollector_
+    address asset_
 )
     external
     initializer;
@@ -47,7 +45,6 @@ function initialize(
 |Name|Type|Description|
 |----|----|-----------|
 |`owner_`|`address`||
-|`admin_`|`address`||
 |`registry_`|`address`|The registry address|
 |`paused_`|`bool`|If the vault is paused_|
 |`name_`|`string`|Token name|
@@ -55,7 +52,6 @@ function initialize(
 |`decimals_`|`uint8`|Token decimals|
 |`dustAmount_`|`uint128`|Minimum amount threshold|
 |`asset_`|`address`|Underlying asset address|
-|`feeCollector_`|`address`|feeCollector address|
 
 
 ### requestStake
@@ -251,94 +247,6 @@ function getSafeBatchId() external view returns (bytes32);
 |`<none>`|`bytes32`|Batch|
 
 
-### isBatchClosed
-
-Returns whether the current batch is closed
-
-
-```solidity
-function isBatchClosed() external view returns (bool);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|Whether the current batch is closed|
-
-
-### isBatchSettled
-
-Returns whether the current batch is settled
-
-
-```solidity
-function isBatchSettled() external view returns (bool);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|Whether the current batch is settled|
-
-
-### getBatchIdInfo
-
-Returns the current batch ID, whether it is closed, and whether it is settled
-
-
-```solidity
-function getBatchIdInfo()
-    external
-    view
-    returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`batchId`|`bytes32`|Current batch ID|
-|`batchReceiver`|`address`|Current batch receiver|
-|`isClosed`|`bool`|Whether the current batch is closed|
-|`isSettled`|`bool`|Whether the current batch is settled|
-
-
-### getBatchIdReceiver
-
-Returns the batch receiver for the current batch
-
-
-```solidity
-function getBatchIdReceiver(bytes32 batchId) external view returns (address);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|Batch receiver|
-
-
-### getBatchReceiver
-
-Returns the batch receiver for a given batch (alias for getBatchIdReceiver)
-
-
-```solidity
-function getBatchReceiver(bytes32 batchId) external view returns (address);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|Batch receiver|
-
-
-### getSafeBatchReceiver
-
-
-```solidity
-function getSafeBatchReceiver(bytes32 batchId) external view returns (address);
-```
-
 ### _authorizeUpgrade
 
 Authorize upgrade (only owner can upgrade)
@@ -350,13 +258,15 @@ Authorize upgrade (only owner can upgrade)
 function _authorizeUpgrade(address newImplementation) internal view override;
 ```
 
-### receive
+### _authorizeModifyFunctions
 
-Accepts ETH transfers
+Authorize function modification
+
+*This allows modifying functions while keeping modules separate*
 
 
 ```solidity
-receive() external payable;
+function _authorizeModifyFunctions(address sender) internal override;
 ```
 
 ### contractName

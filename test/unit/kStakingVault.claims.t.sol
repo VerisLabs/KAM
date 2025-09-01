@@ -12,8 +12,9 @@ import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+
+import { VaultClaims } from "src/kStakingVault/base/VaultClaims.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-import { ClaimModule } from "src/kStakingVault/modules/ClaimModule.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title kStakingVaultClaimsTest
@@ -99,7 +100,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Try to claim without settling
         vm.prank(users.alice);
-        vm.expectRevert(ClaimModule.BatchNotSettled.selector);
+        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
         vault.claimStakedShares(batchId, requestId);
     }
 
@@ -126,7 +127,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         // Try to claim with wrong batch ID
         bytes32 wrongBatchId = keccak256("wrong");
         vm.prank(users.alice);
-        vm.expectRevert(ClaimModule.BatchNotSettled.selector);
+        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
         vault.claimStakedShares(wrongBatchId, requestId);
     }
 
@@ -156,7 +157,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Try to claim again
         vm.prank(users.alice);
-        vm.expectRevert(ClaimModule.RequestNotPending.selector);
+        vm.expectRevert(VaultClaims.RequestNotPending.selector);
         vault.claimStakedShares(batchId, requestId);
     }
 
@@ -182,7 +183,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Bob tries to claim Alice's request
         vm.prank(users.bob);
-        vm.expectRevert(ClaimModule.NotBeneficiary.selector);
+        vm.expectRevert(VaultClaims.NotBeneficiary.selector);
         vault.claimStakedShares(batchId, requestId);
     }
 
@@ -338,7 +339,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Try to claim without settling
         vm.prank(users.alice);
-        vm.expectRevert(ClaimModule.BatchNotSettled.selector);
+        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
         vault.claimUnstakedAssets(batchId, requestId);
     }
 
@@ -362,7 +363,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         // Try to claim with wrong batch ID
         bytes32 wrongBatchId = keccak256("wrong");
         vm.prank(users.alice);
-        vm.expectRevert(ClaimModule.BatchNotSettled.selector);
+        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
         vault.claimUnstakedAssets(wrongBatchId, requestId);
     }
 
@@ -389,7 +390,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Try to claim again
         vm.prank(users.alice);
-        vm.expectRevert(ClaimModule.RequestNotPending.selector);
+        vm.expectRevert(VaultClaims.RequestNotPending.selector);
         vault.claimUnstakedAssets(batchId, requestId);
     }
 
@@ -412,7 +413,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Bob tries to claim Alice's request
         vm.prank(users.bob);
-        vm.expectRevert(ClaimModule.NotBeneficiary.selector);
+        vm.expectRevert(VaultClaims.NotBeneficiary.selector);
         vault.claimUnstakedAssets(batchId, requestId);
     }
 
@@ -563,7 +564,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Bob cannot claim yet (batch 2 not settled)
         vm.prank(users.bob);
-        vm.expectRevert(ClaimModule.BatchNotSettled.selector);
+        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
         vault.claimUnstakedAssets(batch2Id, request2Id);
 
         // Settle batch 2
@@ -606,25 +607,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Verify user received the small amount
         assertEq(vault.balanceOf(users.alice), 1 * _1_USDC);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        SELECTOR TESTS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @dev Test selectors function returns correct selectors
-    function test_Selectors() public {
-        bytes4[] memory moduleSelectors = claimModule.selectors();
-
-        assertEq(moduleSelectors.length, 2, "Should return 2 selectors");
-        assertEq(
-            moduleSelectors[0], ClaimModule.claimStakedShares.selector, "First selector should be claimStakedShares"
-        );
-        assertEq(
-            moduleSelectors[1],
-            ClaimModule.claimUnstakedAssets.selector,
-            "Second selector should be claimUnstakedAssets"
-        );
     }
 
     /*//////////////////////////////////////////////////////////////

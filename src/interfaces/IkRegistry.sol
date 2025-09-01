@@ -270,6 +270,7 @@ interface IkRegistry {
 
     event SingletonContractSet(bytes32 indexed id, address indexed contractAddress);
     event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
+    event VaultRemoved(address indexed vault);
     event AssetRegistered(address indexed asset, address indexed kToken);
     event AssetSupported(address indexed asset);
     event AdapterRegistered(address indexed vault, address indexed adapter);
@@ -297,7 +298,7 @@ interface IkRegistry {
                               FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function setSingletonContract(bytes32 id, address contractAddress) external;
+    function setSingletonContract(bytes32 id, address contractAddress) external payable;
     function registerAsset(
         string memory name,
         string memory symbol,
@@ -305,13 +306,14 @@ interface IkRegistry {
         bytes32 id
     )
         external
+        payable
         returns (address);
-    function registerVault(address vault, VaultType type_, address asset) external;
-    function registerAdapter(address vault, address adapter) external;
-    function removeAdapter(address vault, address adapter) external;
-    function grantInstitutionRole(address institution_) external;
-    function grantVendorRole(address vendor_) external;
-    function grantRelayerRole(address relayer_) external;
+    function registerVault(address vault, VaultType type_, address asset) external payable;
+    function registerAdapter(address vault, address adapter) external payable;
+    function removeAdapter(address vault, address adapter) external payable;
+    function grantInstitutionRole(address institution_) external payable;
+    function grantVendorRole(address vendor_) external payable;
+    function grantRelayerRole(address relayer_) external payable;
     function getContractById(bytes32 id) external view returns (address);
     function getAssetById(bytes32 id) external view returns (address);
     function getAllAssets() external view returns (address[] memory);

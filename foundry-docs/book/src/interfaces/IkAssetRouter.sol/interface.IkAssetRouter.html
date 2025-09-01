@@ -24,21 +24,18 @@
         <link rel="stylesheet" href="../../../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" id="highlight-css" href="../../../highlight.css">
-        <link rel="stylesheet" id="tomorrow-night-css" href="../../../tomorrow-night.css">
-        <link rel="stylesheet" id="ayu-highlight-css" href="../../../ayu-highlight.css">
+        <link rel="stylesheet" href="../../../highlight.css">
+        <link rel="stylesheet" href="../../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         <link rel="stylesheet" href="../../../book.css">
 
-        <!-- MathJax -->
-        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
-        <!-- Provide site root and default themes to javascript -->
+        <!-- Provide site root to javascript -->
         <script>
-            const path_to_root = "../../../";
-            const default_light_theme = "light";
-            const default_dark_theme = "navy";
+            var path_to_root = "../../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc.js"></script>
@@ -48,8 +45,8 @@
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                let theme = localStorage.getItem('mdbook-theme');
-                let sidebar = localStorage.getItem('mdbook-sidebar');
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -63,8 +60,7 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
-            let theme;
+            var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
@@ -77,8 +73,8 @@
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            let sidebar = null;
-            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -114,7 +110,6 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
@@ -162,7 +157,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="ikassetrouter"><a class="header" href="#ikassetrouter">IkAssetRouter</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/interfaces/IkAssetRouter.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/IkAssetRouter.sol">Git Source</a></p>
 <p>Interface for kAssetRouter for asset routing and settlement</p>
 <h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
 <h3 id="kassetpush"><a class="header" href="#kassetpush">kAssetPush</a></h3>
@@ -264,7 +259,7 @@
 </div>
 <h3 id="executesettlebatch"><a class="header" href="#executesettlebatch">executeSettleBatch</a></h3>
 <p>Execute a settlement proposal after cooldown period</p>
-<pre><code class="language-solidity">function executeSettleBatch(bytes32 proposalId) external;
+<pre><code class="language-solidity">function executeSettleBatch(bytes32 proposalId) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -280,28 +275,6 @@
 <tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>The proposal ID to cancel</td></tr>
 </tbody></table>
 </div>
-<h3 id="updateproposal"><a class="header" href="#updateproposal">updateProposal</a></h3>
-<p>Update a settlement proposal before execution</p>
-<pre><code class="language-solidity">function updateProposal(bytes32 proposalId, uint256 totalAssets, uint256 netted, uint256 yield, bool profit) external;
-</code></pre>
-<p><strong>Parameters</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>The proposal ID to update</td></tr>
-<tr><td><code>totalAssets</code></td><td><code>uint256</code></td><td>New total assets value</td></tr>
-<tr><td><code>netted</code></td><td><code>uint256</code></td><td>New netted amount</td></tr>
-<tr><td><code>yield</code></td><td><code>uint256</code></td><td>New yield amount</td></tr>
-<tr><td><code>profit</code></td><td><code>bool</code></td><td>New profit status</td></tr>
-</tbody></table>
-</div>
-<h3 id="setpaused"><a class="header" href="#setpaused">setPaused</a></h3>
-<p>Set contract pause state</p>
-<pre><code class="language-solidity">function setPaused(bool paused) external;
-</code></pre>
-<p><strong>Parameters</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>paused</code></td><td><code>bool</code></td><td>New pause state</td></tr>
-</tbody></table>
-</div>
 <h3 id="setsettlementcooldown"><a class="header" href="#setsettlementcooldown">setSettlementCooldown</a></h3>
 <p>Set the cooldown period for settlement proposals</p>
 <pre><code class="language-solidity">function setSettlementCooldown(uint256 cooldown) external;
@@ -309,6 +282,15 @@
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>cooldown</code></td><td><code>uint256</code></td><td>New cooldown period in seconds</td></tr>
+</tbody></table>
+</div>
+<h3 id="getpendingproposals"><a class="header" href="#getpendingproposals">getPendingProposals</a></h3>
+<p>Get All the pendingProposals</p>
+<pre><code class="language-solidity">function getPendingProposals(address vault_) external view returns (bytes32[] memory pendingProposals);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>pendingProposals</code></td><td><code>bytes32[]</code></td><td>An array of proposalIds</td></tr>
 </tbody></table>
 </div>
 <h3 id="getdnvaultbyasset"><a class="header" href="#getdnvaultbyasset">getDNVaultByAsset</a></h3>
@@ -428,8 +410,8 @@
 </tbody></table>
 </div>
 <h2 id="events"><a class="header" href="#events">Events</a></h2>
-<h3 id="initialized"><a class="header" href="#initialized">Initialized</a></h3>
-<pre><code class="language-solidity">event Initialized(address indexed registry, address indexed owner, address admin, bool paused);
+<h3 id="contractinitialized"><a class="header" href="#contractinitialized">ContractInitialized</a></h3>
+<pre><code class="language-solidity">event ContractInitialized(address indexed registry);
 </code></pre>
 <h3 id="assetspushed"><a class="header" href="#assetspushed">AssetsPushed</a></h3>
 <pre><code class="language-solidity">event AssetsPushed(address indexed from, uint256 amount);
@@ -491,17 +473,8 @@
 <pre><code class="language-solidity">event SettlementCooldownUpdated(uint256 oldCooldown, uint256 newCooldown);
 </code></pre>
 <h2 id="errors"><a class="header" href="#errors">Errors</a></h2>
-<h3 id="zeroamount"><a class="header" href="#zeroamount">ZeroAmount</a></h3>
-<pre><code class="language-solidity">error ZeroAmount();
-</code></pre>
 <h3 id="insufficientvirtualbalance"><a class="header" href="#insufficientvirtualbalance">InsufficientVirtualBalance</a></h3>
 <pre><code class="language-solidity">error InsufficientVirtualBalance();
-</code></pre>
-<h3 id="contractpaused"><a class="header" href="#contractpaused">ContractPaused</a></h3>
-<pre><code class="language-solidity">error ContractPaused();
-</code></pre>
-<h3 id="onlystakingvault"><a class="header" href="#onlystakingvault">OnlyStakingVault</a></h3>
-<pre><code class="language-solidity">error OnlyStakingVault();
 </code></pre>
 <h3 id="proposalnotfound"><a class="header" href="#proposalnotfound">ProposalNotFound</a></h3>
 <pre><code class="language-solidity">error ProposalNotFound();
@@ -509,8 +482,14 @@
 <h3 id="proposalalreadyexecuted"><a class="header" href="#proposalalreadyexecuted">ProposalAlreadyExecuted</a></h3>
 <pre><code class="language-solidity">error ProposalAlreadyExecuted();
 </code></pre>
-<h3 id="proposalcancelled"><a class="header" href="#proposalcancelled">ProposalCancelled</a></h3>
-<pre><code class="language-solidity">error ProposalCancelled();
+<h3 id="proposalalreadyexists"><a class="header" href="#proposalalreadyexists">ProposalAlreadyExists</a></h3>
+<pre><code class="language-solidity">error ProposalAlreadyExists();
+</code></pre>
+<h3 id="zeroproposals"><a class="header" href="#zeroproposals">ZeroProposals</a></h3>
+<pre><code class="language-solidity">error ZeroProposals();
+</code></pre>
+<h3 id="batchidalreadyproposed"><a class="header" href="#batchidalreadyproposed">BatchIdAlreadyProposed</a></h3>
+<pre><code class="language-solidity">error BatchIdAlreadyProposed();
 </code></pre>
 <h3 id="cooldownnotpassed"><a class="header" href="#cooldownnotpassed">CooldownNotPassed</a></h3>
 <pre><code class="language-solidity">error CooldownNotPassed();
@@ -535,8 +514,6 @@
     uint256 yield;
     bool profit;
     uint256 executeAfter;
-    bool executed;
-    bool cancelled;
 }
 </code></pre>
 

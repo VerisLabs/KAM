@@ -10,10 +10,10 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
-/// @title ClaimModule
+/// @title VaultClaims
 /// @notice Handles claim operations for settled batches
 /// @dev Contains claim functions for staking and unstaking operations
-contract ClaimModule is BaseVaultModule {
+contract VaultClaims is BaseVaultModule {
     using SafeCastLib for uint256;
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
@@ -46,8 +46,8 @@ contract ClaimModule is BaseVaultModule {
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
     function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable nonReentrant {
-        if (_isPaused()) revert IsPaused();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (_getPaused($)) revert IsPaused();
         if (!$.batches[batchId].isSettled) revert BatchNotSettled();
 
         BaseVaultModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
@@ -73,8 +73,8 @@ contract ClaimModule is BaseVaultModule {
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
     function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable nonReentrant {
-        if (_isPaused()) revert IsPaused();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (_getPaused($)) revert IsPaused();
         if (!$.batches[batchId].isSettled) revert BatchNotSettled();
 
         BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
@@ -94,18 +94,5 @@ contract ClaimModule is BaseVaultModule {
         // Transfer kTokens to user
         $.kToken.safeTransfer(request.user, totalKTokensToReturn);
         emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensToReturn);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                          MODULE SELECTOR FUNCTION
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Returns the selectors for functions in this module
-    /// @return selectors Array of function selectors
-    function selectors() external pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](2);
-        moduleSelectors[0] = this.claimStakedShares.selector;
-        moduleSelectors[1] = this.claimUnstakedAssets.selector;
-        return moduleSelectors;
     }
 }

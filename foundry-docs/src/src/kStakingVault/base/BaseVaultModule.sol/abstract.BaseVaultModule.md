@@ -1,8 +1,8 @@
 # BaseVaultModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/7c4c002fe2cce8e1d11c6bc539e18f776ee440fc/src/kStakingVault/base/BaseVaultModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/base/BaseVaultModule.sol)
 
 **Inherits:**
-ERC20, ReentrancyGuardTransient, [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
+ERC20, ReentrancyGuardTransient
 
 Base contract for all modules
 
@@ -10,13 +10,6 @@ Base contract for all modules
 
 
 ## State Variables
-### ONE_HUNDRED_PERCENT
-
-```solidity
-uint256 public constant ONE_HUNDRED_PERCENT = 10_000;
-```
-
-
 ### K_ASSET_ROUTER
 
 ```solidity
@@ -28,6 +21,132 @@ bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
 
 ```solidity
 bytes32 internal constant K_MINTER = keccak256("K_MINTER");
+```
+
+
+### DECIMALS_MASK
+
+```solidity
+uint256 internal constant DECIMALS_MASK = 0xFF;
+```
+
+
+### DECIMALS_SHIFT
+
+```solidity
+uint256 internal constant DECIMALS_SHIFT = 0;
+```
+
+
+### HURDLE_RATE_MASK
+
+```solidity
+uint256 internal constant HURDLE_RATE_MASK = 0xFFFF;
+```
+
+
+### HURDLE_RATE_SHIFT
+
+```solidity
+uint256 internal constant HURDLE_RATE_SHIFT = 8;
+```
+
+
+### PERFORMANCE_FEE_MASK
+
+```solidity
+uint256 internal constant PERFORMANCE_FEE_MASK = 0xFFFF;
+```
+
+
+### PERFORMANCE_FEE_SHIFT
+
+```solidity
+uint256 internal constant PERFORMANCE_FEE_SHIFT = 24;
+```
+
+
+### MANAGEMENT_FEE_MASK
+
+```solidity
+uint256 internal constant MANAGEMENT_FEE_MASK = 0xFFFF;
+```
+
+
+### MANAGEMENT_FEE_SHIFT
+
+```solidity
+uint256 internal constant MANAGEMENT_FEE_SHIFT = 40;
+```
+
+
+### INITIALIZED_MASK
+
+```solidity
+uint256 internal constant INITIALIZED_MASK = 0x1;
+```
+
+
+### INITIALIZED_SHIFT
+
+```solidity
+uint256 internal constant INITIALIZED_SHIFT = 56;
+```
+
+
+### PAUSED_MASK
+
+```solidity
+uint256 internal constant PAUSED_MASK = 0x1;
+```
+
+
+### PAUSED_SHIFT
+
+```solidity
+uint256 internal constant PAUSED_SHIFT = 57;
+```
+
+
+### IS_HARD_HURDLE_RATE_MASK
+
+```solidity
+uint256 internal constant IS_HARD_HURDLE_RATE_MASK = 0x1;
+```
+
+
+### IS_HARD_HURDLE_RATE_SHIFT
+
+```solidity
+uint256 internal constant IS_HARD_HURDLE_RATE_SHIFT = 58;
+```
+
+
+### LAST_FEES_CHARGED_MANAGEMENT_MASK
+
+```solidity
+uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_MASK = 0xFFFFFFFFFFFFFFFF;
+```
+
+
+### LAST_FEES_CHARGED_MANAGEMENT_SHIFT
+
+```solidity
+uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_SHIFT = 59;
+```
+
+
+### LAST_FEES_CHARGED_PERFORMANCE_MASK
+
+```solidity
+uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_MASK = 0xFFFFFFFFFFFFFFFF;
+```
+
+
+### LAST_FEES_CHARGED_PERFORMANCE_SHIFT
+
+```solidity
+uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_SHIFT = 123;
 ```
 
 
@@ -55,6 +174,132 @@ function _getBaseVaultModuleStorage() internal pure returns (BaseVaultModuleStor
 |`$`|`BaseVaultModuleStorage`|Storage reference for base vault state variables|
 
 
+### _getDecimals
+
+
+```solidity
+function _getDecimals(BaseVaultModuleStorage storage $) internal view returns (uint8);
+```
+
+### _setDecimals
+
+
+```solidity
+function _setDecimals(BaseVaultModuleStorage storage $, uint8 value) internal;
+```
+
+### _getHurdleRate
+
+
+```solidity
+function _getHurdleRate(BaseVaultModuleStorage storage $) internal view returns (uint16);
+```
+
+### _setHurdleRate
+
+
+```solidity
+function _setHurdleRate(BaseVaultModuleStorage storage $, uint16 value) internal;
+```
+
+### _getPerformanceFee
+
+
+```solidity
+function _getPerformanceFee(BaseVaultModuleStorage storage $) internal view returns (uint16);
+```
+
+### _setPerformanceFee
+
+
+```solidity
+function _setPerformanceFee(BaseVaultModuleStorage storage $, uint16 value) internal;
+```
+
+### _getManagementFee
+
+
+```solidity
+function _getManagementFee(BaseVaultModuleStorage storage $) internal view returns (uint16);
+```
+
+### _setManagementFee
+
+
+```solidity
+function _setManagementFee(BaseVaultModuleStorage storage $, uint16 value) internal;
+```
+
+### _getInitialized
+
+
+```solidity
+function _getInitialized(BaseVaultModuleStorage storage $) internal view returns (bool);
+```
+
+### _setInitialized
+
+
+```solidity
+function _setInitialized(BaseVaultModuleStorage storage $, bool value) internal;
+```
+
+### _getPaused
+
+
+```solidity
+function _getPaused(BaseVaultModuleStorage storage $) internal view returns (bool);
+```
+
+### _setPaused
+
+
+```solidity
+function _setPaused(BaseVaultModuleStorage storage $, bool value) internal;
+```
+
+### _getIsHardHurdleRate
+
+
+```solidity
+function _getIsHardHurdleRate(BaseVaultModuleStorage storage $) internal view returns (bool);
+```
+
+### _setIsHardHurdleRate
+
+
+```solidity
+function _setIsHardHurdleRate(BaseVaultModuleStorage storage $, bool value) internal;
+```
+
+### _getLastFeesChargedManagement
+
+
+```solidity
+function _getLastFeesChargedManagement(BaseVaultModuleStorage storage $) internal view returns (uint64);
+```
+
+### _setLastFeesChargedManagement
+
+
+```solidity
+function _setLastFeesChargedManagement(BaseVaultModuleStorage storage $, uint64 value) internal;
+```
+
+### _getLastFeesChargedPerformance
+
+
+```solidity
+function _getLastFeesChargedPerformance(BaseVaultModuleStorage storage $) internal view returns (uint64);
+```
+
+### _setLastFeesChargedPerformance
+
+
+```solidity
+function _setLastFeesChargedPerformance(BaseVaultModuleStorage storage $, uint64 value) internal;
+```
+
 ### __BaseVaultModule_init
 
 Initializes the base contract with registry and pause state
@@ -63,32 +308,14 @@ Initializes the base contract with registry and pause state
 
 
 ```solidity
-function __BaseVaultModule_init(address registry_, address feeReceiver_, bool paused_) internal;
+function __BaseVaultModule_init(address registry_, bool paused_) internal;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`registry_`|`address`|Address of the kRegistry contract|
-|`feeReceiver_`|`address`||
 |`paused_`|`bool`|Initial pause state|
-
-
-### registry
-
-Returns the registry contract address
-
-*Reverts if contract not initialized*
-
-
-```solidity
-function registry() external view returns (address);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|The kRegistry contract address|
 
 
 ### _registry
@@ -106,23 +333,6 @@ function _registry() internal view returns (IkRegistry);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`IkRegistry`|IkRegistry interface for registry interaction|
-
-
-### rescueAssets
-
-rescues locked assets (ETH or ERC20) in the contract
-
-
-```solidity
-function rescueAssets(address asset_, address to_, uint256 amount_) external payable;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`asset_`|`address`|the asset to rescue (use address(0) for ETH)|
-|`to_`|`address`|the address that will receive the assets|
-|`amount_`|`uint256`|the amount to rescue|
 
 
 ### _getKMinter
@@ -182,36 +392,6 @@ function _getDNVaultByAsset(address asset_) internal view returns (address vault
 |`vault`|`address`|The corresponding DN vault address|
 
 
-### asset
-
-Returns the underlying asset address (for compatibility)
-
-
-```solidity
-function asset() external view returns (address);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|Asset address|
-
-
-### underlyingAsset
-
-Returns the underlying asset address
-
-
-```solidity
-function underlyingAsset() external view returns (address);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|Asset address|
-
-
 ### name
 
 Returns the vault shares token name
@@ -243,8 +423,6 @@ function symbol() public view override returns (string memory);
 
 
 ### decimals
-
-Returns the vault shares token decimals
 
 
 ```solidity
@@ -526,24 +704,6 @@ event Paused(bool paused);
 event Initialized(address registry, string name, string symbol, uint8 decimals, address asset);
 ```
 
-### TotalAssetsUpdated
-
-```solidity
-event TotalAssetsUpdated(uint256 oldTotalAssets, uint256 newTotalAssets);
-```
-
-### RescuedAssets
-
-```solidity
-event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
-```
-
-### RescuedETH
-
-```solidity
-event RescuedETH(address indexed asset, uint256 amount);
-```
-
 ## Errors
 ### ZeroAddress
 
@@ -655,26 +815,15 @@ storage-location: erc7201.kam.storage.BaseVaultModule
 
 ```solidity
 struct BaseVaultModuleStorage {
+    uint128 sharePriceWatermark;
+    uint128 totalPendingStake;
     uint256 currentBatch;
     bytes32 currentBatchId;
-    uint256 sharePriceWatermark;
-    uint256 requestCounter;
-    uint128 totalPendingStake;
     address registry;
     address receiverImplementation;
     address underlyingAsset;
     address kToken;
-    address feeReceiver;
-    uint96 dustAmount;
-    uint8 decimals;
-    uint16 hurdleRate;
-    uint16 performanceFee;
-    uint16 managementFee;
-    bool initialized;
-    bool paused;
-    bool isHardHurdleRate;
-    uint64 lastFeesChargedManagement;
-    uint64 lastFeesChargedPerformance;
+    uint256 config;
     string name;
     string symbol;
     mapping(bytes32 => BaseVaultModuleTypes.BatchInfo) batches;

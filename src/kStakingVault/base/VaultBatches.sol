@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { EfficientHashLib } from "solady/utils/EfficientHashLib.sol";
 import { LibClone } from "solady/utils/LibClone.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
@@ -8,10 +9,10 @@ import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
-/// @title BatchModule
+/// @title VaultBatches
 /// @notice Handles batch operations for staking and unstaking
 /// @dev Contains batch functions for staking and unstaking operations
-contract BatchModule is BaseVaultModule {
+contract VaultBatches is BaseVaultModule {
     using SafeCastLib for uint256;
     using SafeCastLib for uint64;
     /*//////////////////////////////////////////////////////////////
@@ -37,7 +38,7 @@ contract BatchModule is BaseVaultModule {
         return _createNewBatch();
     }
 
-    // @notice Closes a batch to prevent new requests
+    /// @notice Closes a batch to prevent new requests
     /// @param _batchId The batch ID to close
     /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
     function closeBatch(bytes32 _batchId, bool _create) external {
@@ -89,9 +90,15 @@ contract BatchModule is BaseVaultModule {
 
     function _createNewBatch() internal returns (bytes32) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        $.currentBatch++;
-        bytes32 newBatchId = keccak256(
-            abi.encodePacked(address(this), $.currentBatch, block.chainid, block.timestamp, $.underlyingAsset)
+        unchecked {
+            $.currentBatch++;
+        }
+        bytes32 newBatchId = EfficientHashLib.hash(
+            uint256(uint160(address(this))),
+            $.currentBatch,
+            block.chainid,
+            block.timestamp,
+            uint256(uint160($.underlyingAsset))
         );
 
         $.currentBatchId = newBatchId;
@@ -104,16 +111,5 @@ contract BatchModule is BaseVaultModule {
         emit BatchCreated(newBatchId);
 
         return newBatchId;
-    }
-
-    /// @notice Returns the selectors for functions in this module
-    /// @return selectors Array of function selectors
-    function selectors() external pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](4);
-        moduleSelectors[0] = this.createNewBatch.selector;
-        moduleSelectors[1] = this.closeBatch.selector;
-        moduleSelectors[2] = this.settleBatch.selector;
-        moduleSelectors[3] = this.createBatchReceiver.selector;
-        return moduleSelectors;
     }
 }

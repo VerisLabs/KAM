@@ -1,5 +1,5 @@
 # kAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/7c4c002fe2cce8e1d11c6bc539e18f776ee440fc/src/kAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kAssetRouter.sol)
 
 **Inherits:**
 [IkAssetRouter](/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), Multicallable
@@ -208,7 +208,7 @@ Execute a settlement proposal after cooldown period
 
 
 ```solidity
-function executeSettleBatch(bytes32 proposalId) external nonReentrant;
+function executeSettleBatch(bytes32 proposalId) external payable nonReentrant;
 ```
 **Parameters**
 

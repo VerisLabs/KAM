@@ -24,21 +24,18 @@
         <link rel="stylesheet" href="../../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" id="highlight-css" href="../../highlight.css">
-        <link rel="stylesheet" id="tomorrow-night-css" href="../../tomorrow-night.css">
-        <link rel="stylesheet" id="ayu-highlight-css" href="../../ayu-highlight.css">
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         <link rel="stylesheet" href="../../book.css">
 
-        <!-- MathJax -->
-        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
-        <!-- Provide site root and default themes to javascript -->
+        <!-- Provide site root to javascript -->
         <script>
-            const path_to_root = "../../";
-            const default_light_theme = "light";
-            const default_dark_theme = "navy";
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc.js"></script>
@@ -48,8 +45,8 @@
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                let theme = localStorage.getItem('mdbook-theme');
-                let sidebar = localStorage.getItem('mdbook-sidebar');
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -63,8 +60,7 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
-            let theme;
+            var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
@@ -77,8 +73,8 @@
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            let sidebar = null;
-            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -114,7 +110,6 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
@@ -162,7 +157,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="kassetrouter"><a class="header" href="#kassetrouter">kAssetRouter</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kAssetRouter.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kAssetRouter.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.html">IkAssetRouter</a>, Initializable, UUPSUpgradeable, <a href="/src/base/kBase.sol/contract.kBase.html">kBase</a>, Multicallable</p>
 <h2 id="state-variables"><a class="header" href="#state-variables">State Variables</a></h2>
@@ -180,39 +175,21 @@
 <h3 id="_getkassetrouterstorage"><a class="header" href="#_getkassetrouterstorage">_getkAssetRouterStorage</a></h3>
 <pre><code class="language-solidity">function _getkAssetRouterStorage() private pure returns (kAssetRouterStorage storage $);
 </code></pre>
-<h3 id="whennotpaused"><a class="header" href="#whennotpaused">whenNotPaused</a></h3>
-<pre><code class="language-solidity">modifier whenNotPaused();
-</code></pre>
-<h3 id="onlystakingvault"><a class="header" href="#onlystakingvault">onlyStakingVault</a></h3>
-<pre><code class="language-solidity">modifier onlyStakingVault();
-</code></pre>
 <h3 id="constructor"><a class="header" href="#constructor">constructor</a></h3>
 <pre><code class="language-solidity">constructor();
 </code></pre>
 <h3 id="initialize"><a class="header" href="#initialize">initialize</a></h3>
 <p>Initialize the kAssetRouter with asset and admin configuration</p>
-<pre><code class="language-solidity">function initialize(address registry_, address owner_, address admin_, bool paused_) external initializer;
+<pre><code class="language-solidity">function initialize(address registry_) external initializer;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>registry_</code></td><td><code>address</code></td><td>Address of the kRegistry contract</td></tr>
-<tr><td><code>owner_</code></td><td><code>address</code></td><td>Address of the owner</td></tr>
-<tr><td><code>admin_</code></td><td><code>address</code></td><td>Address of the admin</td></tr>
-<tr><td><code>paused_</code></td><td><code>bool</code></td><td>Initial pause state</td></tr>
 </tbody></table>
 </div>
 <h3 id="kassetpush"><a class="header" href="#kassetpush">kAssetPush</a></h3>
 <p>Push assets from kMinter to designated DN vault</p>
-<pre><code class="language-solidity">function kAssetPush(
-    address _asset,
-    uint256 amount,
-    bytes32 batchId
-)
-    external
-    payable
-    nonReentrant
-    whenNotPaused
-    onlyKMinter;
+<pre><code class="language-solidity">function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable nonReentrant;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -231,9 +208,7 @@
 )
     external
     payable
-    nonReentrant
-    whenNotPaused
-    onlyKMinter;
+    nonReentrant;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -254,9 +229,7 @@
 )
     external
     payable
-    nonReentrant
-    whenNotPaused
-    onlyStakingVault;
+    nonReentrant;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -269,16 +242,7 @@
 </div>
 <h3 id="ksharesrequestpush"><a class="header" href="#ksharesrequestpush">kSharesRequestPush</a></h3>
 <p>Request to pull shares for kStakingVault redemptions</p>
-<pre><code class="language-solidity">function kSharesRequestPush(
-    address sourceVault,
-    uint256 amount,
-    bytes32 batchId
-)
-    external
-    payable
-    nonReentrant
-    whenNotPaused
-    onlyStakingVault;
+<pre><code class="language-solidity">function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -289,16 +253,7 @@
 </div>
 <h3 id="ksharesrequestpull"><a class="header" href="#ksharesrequestpull">kSharesRequestPull</a></h3>
 <p>Request to pull shares for kStakingVault redemptions</p>
-<pre><code class="language-solidity">function kSharesRequestPull(
-    address sourceVault,
-    uint256 amount,
-    bytes32 batchId
-)
-    external
-    payable
-    nonReentrant
-    whenNotPaused
-    onlyStakingVault;
+<pre><code class="language-solidity">function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -321,8 +276,6 @@
     external
     payable
     nonReentrant
-    whenNotPaused
-    onlyRelayer
     returns (bytes32 proposalId);
 </code></pre>
 <p><strong>Parameters</strong></p>
@@ -343,7 +296,7 @@
 </div>
 <h3 id="executesettlebatch"><a class="header" href="#executesettlebatch">executeSettleBatch</a></h3>
 <p>Execute a settlement proposal after cooldown period</p>
-<pre><code class="language-solidity">function executeSettleBatch(bytes32 proposalId) external nonReentrant whenNotPaused;
+<pre><code class="language-solidity">function executeSettleBatch(bytes32 proposalId) external payable nonReentrant;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -352,34 +305,11 @@
 </div>
 <h3 id="cancelproposal"><a class="header" href="#cancelproposal">cancelProposal</a></h3>
 <p>Cancel a settlement proposal before execution</p>
-<pre><code class="language-solidity">function cancelProposal(bytes32 proposalId) external nonReentrant whenNotPaused onlyGuardian;
+<pre><code class="language-solidity">function cancelProposal(bytes32 proposalId) external nonReentrant;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>The proposal ID to cancel</td></tr>
-</tbody></table>
-</div>
-<h3 id="updateproposal"><a class="header" href="#updateproposal">updateProposal</a></h3>
-<p>Update a settlement proposal before execution</p>
-<pre><code class="language-solidity">function updateProposal(
-    bytes32 proposalId,
-    uint256 totalAssets_,
-    uint256 netted,
-    uint256 yield,
-    bool profit
-)
-    external
-    nonReentrant
-    whenNotPaused
-    onlyRelayer;
-</code></pre>
-<p><strong>Parameters</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>The proposal ID to update</td></tr>
-<tr><td><code>totalAssets_</code></td><td><code>uint256</code></td><td>New total assets value</td></tr>
-<tr><td><code>netted</code></td><td><code>uint256</code></td><td>New netted amount</td></tr>
-<tr><td><code>yield</code></td><td><code>uint256</code></td><td>New yield amount</td></tr>
-<tr><td><code>profit</code></td><td><code>bool</code></td><td>New profit status</td></tr>
 </tbody></table>
 </div>
 <h3 id="_executesettlement"><a class="header" href="#_executesettlement">_executeSettlement</a></h3>
@@ -391,22 +321,22 @@
 <tr><td><code>proposal</code></td><td><code>VaultSettlementProposal</code></td><td>The settlement proposal to execute</td></tr>
 </tbody></table>
 </div>
-<h3 id="setpaused"><a class="header" href="#setpaused">setPaused</a></h3>
-<p>Set contract pause state</p>
-<pre><code class="language-solidity">function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE);
-</code></pre>
-<p><strong>Parameters</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>paused</code></td><td><code>bool</code></td><td>New pause state</td></tr>
-</tbody></table>
-</div>
 <h3 id="setsettlementcooldown"><a class="header" href="#setsettlementcooldown">setSettlementCooldown</a></h3>
 <p>Set the cooldown period for settlement proposals</p>
-<pre><code class="language-solidity">function setSettlementCooldown(uint256 cooldown) external onlyRoles(ADMIN_ROLE);
+<pre><code class="language-solidity">function setSettlementCooldown(uint256 cooldown) external;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>cooldown</code></td><td><code>uint256</code></td><td>New cooldown period in seconds</td></tr>
+</tbody></table>
+</div>
+<h3 id="getpendingproposals"><a class="header" href="#getpendingproposals">getPendingProposals</a></h3>
+<p>Get All the pendingProposals</p>
+<pre><code class="language-solidity">function getPendingProposals(address vault) external view returns (bytes32[] memory pendingProposals);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>pendingProposals</code></td><td><code>bytes32[]</code></td><td>An array of proposalIds</td></tr>
 </tbody></table>
 </div>
 <h3 id="getsettlementproposal"><a class="header" href="#getsettlementproposal">getSettlementProposal</a></h3>
@@ -460,6 +390,21 @@
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>balance</code></td><td><code>uint256</code></td><td>the balance of the vault in all adapters.</td></tr>
+</tbody></table>
+</div>
+<h3 id="_ispendingproposal"><a class="header" href="#_ispendingproposal">_isPendingProposal</a></h3>
+<p>verifies if a proposal is pending or not</p>
+<pre><code class="language-solidity">function _isPendingProposal(address vault, bytes32 proposalId) internal view returns (bool);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>the vault address</td></tr>
+<tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>the proposalId to verify</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>bool proposal exists or not</td></tr>
 </tbody></table>
 </div>
 <h3 id="ispaused"><a class="header" href="#ispaused">isPaused</a></h3>
@@ -525,7 +470,7 @@
 </div>
 <h3 id="_authorizeupgrade"><a class="header" href="#_authorizeupgrade">_authorizeUpgrade</a></h3>
 <p>Authorize contract upgrade</p>
-<pre><code class="language-solidity">function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE);
+<pre><code class="language-solidity">function _authorizeUpgrade(address newImplementation) internal view override;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -559,7 +504,11 @@
 <p><strong>Note:</strong>
 storage-location: erc7201:kam.storage.kAssetRouter</p>
 <pre><code class="language-solidity">struct kAssetRouterStorage {
+    uint256 proposalCounter;
     uint256 vaultSettlementCooldown;
+    EnumerableSetLib.Bytes32Set executedProposalIds;
+    EnumerableSetLib.Bytes32Set batchIds;
+    mapping(address vault =&gt; EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;
     mapping(address account =&gt; mapping(bytes32 batchId =&gt; Balances)) vaultBatchBalances;
     mapping(address vault =&gt; mapping(bytes32 batchId =&gt; uint256)) vaultRequestedShares;
     mapping(bytes32 proposalId =&gt; VaultSettlementProposal) settlementProposals;

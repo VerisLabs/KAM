@@ -25,13 +25,7 @@ contract DeployVaultsScript is Script, DeploymentManager {
         );
         require(existing.contracts.kRegistry != address(0), "kRegistry not deployed - run 01_DeployRegistry first");
         require(
-            existing.contracts.batchModule != address(0), "batchModule not deployed - run 06_DeployVaultModules first"
-        );
-        require(
-            existing.contracts.claimModule != address(0), "claimModule not deployed - run 06_DeployVaultModules first"
-        );
-        require(
-            existing.contracts.feesModule != address(0), "feesModule not deployed - run 06_DeployVaultModules first"
+            existing.contracts.readerModule != address(0), "readerModule not deployed - run 06_DeployVaultModules first"
         );
 
         console.log("=== DEPLOYING VAULTS ===");
@@ -72,15 +66,13 @@ contract DeployVaultsScript is Script, DeploymentManager {
             abi.encodeWithSelector(
                 kStakingVault.initialize.selector,
                 config.roles.owner,
-                config.roles.admin,
                 existing.contracts.kRegistry,
                 false,
                 "DN KAM Vault",
                 "dnkUSD",
                 6,
                 DEFAULT_DUST_AMOUNT,
-                config.assets.USDC,
-                config.roles.treasury
+                config.assets.USDC
             )
         );
     }
@@ -93,15 +85,13 @@ contract DeployVaultsScript is Script, DeploymentManager {
             abi.encodeWithSelector(
                 kStakingVault.initialize.selector,
                 config.roles.owner,
-                config.roles.admin,
                 existing.contracts.kRegistry,
                 false,
                 "Alpha KAM Vault",
                 "akUSD",
                 6,
                 DEFAULT_DUST_AMOUNT,
-                config.assets.USDC,
-                config.roles.treasury
+                config.assets.USDC
             )
         );
     }
@@ -114,15 +104,13 @@ contract DeployVaultsScript is Script, DeploymentManager {
             abi.encodeWithSelector(
                 kStakingVault.initialize.selector,
                 config.roles.owner,
-                config.roles.admin,
                 existing.contracts.kRegistry,
                 false,
                 "Beta KAM Vault",
                 "bkUSD",
                 6,
                 DEFAULT_DUST_AMOUNT,
-                config.assets.USDC,
-                config.roles.treasury
+                config.assets.USDC
             )
         );
     }

@@ -1,5 +1,5 @@
 # IVaultFees
-[Git Source](https://github.com/VerisLabs/KAM/blob/7c4c002fe2cce8e1d11c6bc539e18f776ee440fc/src/interfaces/modules/IVaultFees.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/modules/IVaultFees.sol)
 
 
 ## Functions
@@ -228,21 +228,6 @@ function managementFee() external view returns (uint16);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`uint16`|The management fee in basis points (e.g., 100 = 1%)|
-
-
-### feeReceiver
-
-Returns the address that receives collected fees
-
-
-```solidity
-function feeReceiver() external view returns (address);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|The fee receiver address|
 
 
 ### sharePriceWatermark

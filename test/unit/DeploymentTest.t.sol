@@ -35,10 +35,6 @@ contract DeploymentTest is DeploymentBaseTest {
         assertTrue(address(assetRouterImpl) != address(0), "AssetRouter impl not deployed");
         assertTrue(address(minterImpl) != address(0), "Minter impl not deployed");
         assertTrue(address(stakingVaultImpl) != address(0), "StakingVault impl not deployed");
-
-        // Check modules
-        assertTrue(address(claimModule) != address(0), "ClaimModule not deployed");
-        assertTrue(address(batchModule) != address(0), "BatchModule not deployed");
     }
 
     /// @dev Test protocol initialization

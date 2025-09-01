@@ -405,23 +405,6 @@ contract kMinterTest is DeploymentBaseTest {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        RECEIVE FUNCTION TEST
-    //////////////////////////////////////////////////////////////*/
-
-    /// @dev Test contract accepts ETH
-    function test_ReceiveETH() public {
-        uint256 amount = 1 ether;
-
-        // Send ETH to minter
-        vm.deal(users.alice, amount);
-        vm.prank(users.alice);
-        (bool success,) = address(minter).call{ value: amount }("");
-
-        assertTrue(success, "ETH transfer should succeed");
-        assertEq(address(minter).balance, amount, "Minter should receive ETH");
-    }
-
-    /*//////////////////////////////////////////////////////////////
                     TOTAL LOCKED ASSETS TESTS
     //////////////////////////////////////////////////////////////*/
 

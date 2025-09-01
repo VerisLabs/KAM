@@ -24,21 +24,18 @@
         <link rel="stylesheet" href="../../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" id="highlight-css" href="../../highlight.css">
-        <link rel="stylesheet" id="tomorrow-night-css" href="../../tomorrow-night.css">
-        <link rel="stylesheet" id="ayu-highlight-css" href="../../ayu-highlight.css">
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         <link rel="stylesheet" href="../../book.css">
 
-        <!-- MathJax -->
-        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
-        <!-- Provide site root and default themes to javascript -->
+        <!-- Provide site root to javascript -->
         <script>
-            const path_to_root = "../../";
-            const default_light_theme = "light";
-            const default_dark_theme = "navy";
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc.js"></script>
@@ -48,8 +45,8 @@
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                let theme = localStorage.getItem('mdbook-theme');
-                let sidebar = localStorage.getItem('mdbook-sidebar');
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -63,8 +60,7 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
-            let theme;
+            var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
@@ -77,8 +73,8 @@
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            let sidebar = null;
-            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -114,7 +110,6 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
@@ -162,7 +157,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="ktoken"><a class="header" href="#ktoken">kToken</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kToken.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kToken.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 ERC20, OwnableRoles, ReentrancyGuard, Multicallable</p>
 <p>ERC20 token with role-based minting and burning capabilities</p>
@@ -181,13 +176,13 @@ ERC20, OwnableRoles, ReentrancyGuard, Multicallable</p>
 <pre><code class="language-solidity">bool _isPaused;
 </code></pre>
 <h3 id="_name"><a class="header" href="#_name">_name</a></h3>
-<pre><code class="language-solidity">string _name;
+<pre><code class="language-solidity">string private _name;
 </code></pre>
 <h3 id="_symbol"><a class="header" href="#_symbol">_symbol</a></h3>
-<pre><code class="language-solidity">string _symbol;
+<pre><code class="language-solidity">string private _symbol;
 </code></pre>
 <h3 id="_decimals"><a class="header" href="#_decimals">_decimals</a></h3>
-<pre><code class="language-solidity">uint8 _decimals;
+<pre><code class="language-solidity">uint8 private _decimals;
 </code></pre>
 <h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
 <h3 id="whennotpaused"><a class="header" href="#whennotpaused">whenNotPaused</a></h3>
@@ -198,19 +193,16 @@ ERC20, OwnableRoles, ReentrancyGuard, Multicallable</p>
 <h3 id="constructor"><a class="header" href="#constructor">constructor</a></h3>
 <p>Disables initializers to prevent implementation contract from being initialized</p>
 <p><em>Calls _disableInitializers from Solady's Initializable to lock implementation</em></p>
-<pre><code class="language-solidity">constructor(address owner_, address admin_, address emergencyAdmin_, address minter_, uint8 decimals_);
+<pre><code class="language-solidity">constructor(
+    address owner_,
+    address admin_,
+    address emergencyAdmin_,
+    address minter_,
+    string memory name_,
+    string memory symbol_,
+    uint8 decimals_
+);
 </code></pre>
-<h3 id="setupmetadata"><a class="header" href="#setupmetadata">setupMetadata</a></h3>
-<p>Sets token metadata (separate call to avoid stack too deep)</p>
-<p><em>Must be called after initialize, only by admin</em></p>
-<pre><code class="language-solidity">function setupMetadata(string calldata name_, string calldata symbol_) external onlyRoles(ADMIN_ROLE);
-</code></pre>
-<p><strong>Parameters</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>name_</code></td><td><code>string</code></td><td>Token name</td></tr>
-<tr><td><code>symbol_</code></td><td><code>string</code></td><td>Token symbol</td></tr>
-</tbody></table>
-</div>
 <h3 id="mint"><a class="header" href="#mint">mint</a></h3>
 <p>Creates new tokens and assigns them to the specified address</p>
 <p><em>Calls internal _mint function and emits Minted event, restricted to MINTER_ROLE</em></p>
@@ -382,10 +374,7 @@ ERC20, OwnableRoles, ReentrancyGuard, Multicallable</p>
 <pre><code class="language-solidity">event Burned(address indexed from, uint256 amount);
 </code></pre>
 <h3 id="tokencreated"><a class="header" href="#tokencreated">TokenCreated</a></h3>
-<pre><code class="language-solidity">event TokenCreated(address indexed token, address owner);
-</code></pre>
-<h3 id="tokeninitialized"><a class="header" href="#tokeninitialized">TokenInitialized</a></h3>
-<pre><code class="language-solidity">event TokenInitialized(string name, string symbol, uint8 decimals);
+<pre><code class="language-solidity">event TokenCreated(address indexed token, address owner, string name, string symbol, uint8 decimals);
 </code></pre>
 <h3 id="pausestate"><a class="header" href="#pausestate">PauseState</a></h3>
 <pre><code class="language-solidity">event PauseState(bool isPaused);
@@ -395,6 +384,12 @@ ERC20, OwnableRoles, ReentrancyGuard, Multicallable</p>
 </code></pre>
 <h3 id="emergencywithdrawal"><a class="header" href="#emergencywithdrawal">EmergencyWithdrawal</a></h3>
 <pre><code class="language-solidity">event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
+</code></pre>
+<h3 id="rescuedassets"><a class="header" href="#rescuedassets">RescuedAssets</a></h3>
+<pre><code class="language-solidity">event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+</code></pre>
+<h3 id="rescuedeth"><a class="header" href="#rescuedeth">RescuedETH</a></h3>
+<pre><code class="language-solidity">event RescuedETH(address indexed asset, uint256 amount);
 </code></pre>
 <h2 id="errors"><a class="header" href="#errors">Errors</a></h2>
 <h3 id="paused"><a class="header" href="#paused">Paused</a></h3>
@@ -408,6 +403,9 @@ ERC20, OwnableRoles, ReentrancyGuard, Multicallable</p>
 </code></pre>
 <h3 id="contractnotpaused"><a class="header" href="#contractnotpaused">ContractNotPaused</a></h3>
 <pre><code class="language-solidity">error ContractNotPaused();
+</code></pre>
+<h3 id="transferfailed"><a class="header" href="#transferfailed">TransferFailed</a></h3>
+<pre><code class="language-solidity">error TransferFailed();
 </code></pre>
 
                     </main>
