@@ -14,7 +14,6 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-import { BatchModule } from "src/kStakingVault/modules/BatchModule.sol";
 
 /// @title kStakingVaultBatchesTest
 /// @notice Tests for batch management functionality in kStakingVault
@@ -283,25 +282,6 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vm.prank(users.admin);
         vm.expectRevert(BaseVaultModule.WrongRole.selector);
         vault.createBatchReceiver(batchId);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        SELECTOR FUNCTION TESTS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @dev Test selectors function returns correct selectors
-    function test_Selectors() public {
-        bytes4[] memory moduleSelectors = batchModule.selectors();
-
-        assertEq(moduleSelectors.length, 4, "Should return 4 selectors");
-        assertEq(moduleSelectors[0], BatchModule.createNewBatch.selector, "First selector should be createNewBatch");
-        assertEq(moduleSelectors[1], BatchModule.closeBatch.selector, "Second selector should be closeBatch");
-        assertEq(moduleSelectors[2], BatchModule.settleBatch.selector, "Third selector should be settleBatch");
-        assertEq(
-            moduleSelectors[3],
-            BatchModule.createBatchReceiver.selector,
-            "Fourth selector should be createBatchReceiver"
-        );
     }
 
     /*//////////////////////////////////////////////////////////////

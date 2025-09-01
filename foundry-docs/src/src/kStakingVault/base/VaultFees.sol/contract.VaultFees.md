@@ -1,5 +1,5 @@
 # VaultFees
-[Git Source](https://github.com/VerisLabs/KAM/blob/7c4c002fe2cce8e1d11c6bc539e18f776ee440fc/src/kStakingVault/modules/VaultFees.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kStakingVault/base/VaultFees.sol)
 
 **Inherits:**
 [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md)
@@ -10,39 +10,12 @@ Handles batch operations for staking and unstaking
 
 
 ## State Variables
-### MANAGEMENT_FEE_INTERVAL
-Interval for management fee (1 month)
-
-
-```solidity
-uint256 constant MANAGEMENT_FEE_INTERVAL = 657_436;
-```
-
-
-### PERFORMANCE_FEE_INTERVAL
-Interval for performance fee (3 months)
-
-
-```solidity
-uint256 constant PERFORMANCE_FEE_INTERVAL = 7_889_238;
-```
-
-
 ### MAX_BPS
 Maximum basis points
 
 
 ```solidity
 uint256 constant MAX_BPS = 10_000;
-```
-
-
-### SECS_PER_YEAR
-Number of seconds in a year
-
-
-```solidity
-uint256 constant SECS_PER_YEAR = 31_556_952;
 ```
 
 
@@ -149,26 +122,6 @@ function notifyPerformanceFeesCharged(uint64 _timestamp) external;
 |`_timestamp`|`uint64`|The timestamp of the fee charge|
 
 
-### computeLastBatchFees
-
-Computes the last fee batch
-
-
-```solidity
-function computeLastBatchFees()
-    external
-    view
-    returns (uint256 managementFees, uint256 performanceFees, uint256 totalFees);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`managementFees`|`uint256`|The management fees for the last batch|
-|`performanceFees`|`uint256`|The performance fees for the last batch|
-|`totalFees`|`uint256`|The total fees for the last batch|
-
-
 ### _updateGlobalWatermark
 
 Updates the share price watermark
@@ -179,156 +132,6 @@ Updates the share price watermark
 ```solidity
 function _updateGlobalWatermark() private;
 ```
-
-### lastFeesChargedManagement
-
-Returns the last time management fees were charged
-
-
-```solidity
-function lastFeesChargedManagement() public view returns (uint256);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|lastFeesChargedManagement Timestamp of last management fee charge|
-
-
-### lastFeesChargedPerformance
-
-Returns the last time performance fees were charged
-
-
-```solidity
-function lastFeesChargedPerformance() public view returns (uint256);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|lastFeesChargedPerformance Timestamp of last performance fee charge|
-
-
-### hurdleRate
-
-Returns the current hurdle rate used for performance fee calculations
-
-
-```solidity
-function hurdleRate() external view returns (uint16);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint16`|The hurdle rate in basis points (e.g., 500 = 5%)|
-
-
-### performanceFee
-
-Returns the current performance fee percentage
-
-
-```solidity
-function performanceFee() external view returns (uint16);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint16`|The performance fee in basis points (e.g., 2000 = 20%)|
-
-
-### nextPerformanceFeeTimestamp
-
-Returns the next performance fee timestamp so the backend can schedule the fee collection
-
-
-```solidity
-function nextPerformanceFeeTimestamp() external view returns (uint256);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|The next performance fee timestamp|
-
-
-### nextManagementFeeTimestamp
-
-Returns the next management fee timestamp so the backend can schedule the fee collection
-
-
-```solidity
-function nextManagementFeeTimestamp() external view returns (uint256);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|The next management fee timestamp|
-
-
-### managementFee
-
-Returns the current management fee percentage
-
-
-```solidity
-function managementFee() external view returns (uint16);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint16`|The management fee in basis points (e.g., 100 = 1%)|
-
-
-### feeReceiver
-
-Returns the address that receives collected fees
-
-
-```solidity
-function feeReceiver() external view returns (address);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|The fee receiver address|
-
-
-### sharePriceWatermark
-
-Returns the high watermark for share price used in performance fee calculations
-
-
-```solidity
-function sharePriceWatermark() external view returns (uint256);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|The share price watermark value|
-
-
-### selectors
-
-Returns the selectors for functions in this module
-
-
-```solidity
-function selectors() external pure returns (bytes4[] memory);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bytes4[]`|selectors Array of function selectors|
-
 
 ## Events
 ### ManagementFeeUpdated

@@ -41,9 +41,9 @@ The scope of audit involves the complete KAM protocol implementation in `src/`:
 │   │   │   └── BaseVaultModule.sol
 │   │   ├── kStakingVault.sol
 │   │   ├── modules/
-│   │   │   ├── BatchModule.sol
-│   │   │   ├── ClaimModule.sol
-│   │   │   └── FeesModule.sol
+│   │   │   ├── VaultBatches.sol
+│   │   │   ├── VaultClaims.sol
+│   │   │   └── VaultFees.sol
 │   │   └── types/
 │   │       └── BaseVaultModuleTypes.sol
 │   └── kToken.sol

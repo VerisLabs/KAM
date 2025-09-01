@@ -181,11 +181,11 @@ The kStakingVault implements a sophisticated modular architecture using the "dia
 
 **BaseVaultModule**: Provides foundational vault logic including ERC20 token functionality for stkTokens. These tokens represent staked positions and automatically accrue yield. The module uses ERC-7201 namespaced storage for upgrade safety, connects to kRegistry for system-wide configuration, implements role-based permissions, and uses ReentrancyGuardTransient for gas-efficient protection.
 
-**BatchModule**: Handles the complete batch lifecycle for efficient gas usage. It automatically creates new batches when current batches settle, marks batches ready for settlement processing, coordinates with kAssetRouter for atomic settlement, and creates deterministic addresses for redemption distribution.
+**VaultBatches**: Handles the complete batch lifecycle for efficient gas usage. It automatically creates new batches when current batches settle, marks batches ready for settlement processing, coordinates with kAssetRouter for atomic settlement, and creates deterministic addresses for redemption distribution.
 
-**FeesModule**: Manages comprehensive fee collection and distribution. Management fees accrue continuously based on time and total assets under management, while performance fees are charged only on positive yields from external strategies. Fee calculation uses precise math to avoid rounding errors, and collection occurs during settlement operations to minimize gas or over an X period of time.
+**VaultFees**: Manages comprehensive fee collection and distribution. Management fees accrue continuously based on time and total assets under management, while performance fees are charged only on positive yields from external strategies. Fee calculation uses precise math to avoid rounding errors, and collection occurs during settlement operations to minimize gas or over an X period of time.
 
-**ClaimModule**: Processes user claims for completed requests. It converts completed stake requests into stkToken balances, processes unstaking requests and distributes underlying tokens plus yield, ensures claims are only processed for settled batches, and batches multiple claims for efficiency.
+**VaultClaims**: Processes user claims for completed requests. It converts completed stake requests into stkToken balances, processes unstaking requests and distributes underlying tokens plus yield, ensures claims are only processed for settled batches, and batches multiple claims for efficiency.
 
 The MultiFacetProxy pattern enables modular functionality through delegatecall routing, allowing new functionality to be added without contract redeployment, isolating complex logic in specialized modules, maintaining a clean main contract interface, and upgrading individual modules independently.
 

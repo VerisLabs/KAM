@@ -1,8 +1,8 @@
 # BaseVaultModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/7c4c002fe2cce8e1d11c6bc539e18f776ee440fc/src/kStakingVault/base/BaseVaultModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kStakingVault/base/BaseVaultModule.sol)
 
 **Inherits:**
-ERC20, ReentrancyGuardTransient, [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
+ERC20, ReentrancyGuardTransient
 
 Base contract for all modules
 
@@ -10,13 +10,6 @@ Base contract for all modules
 
 
 ## State Variables
-### ONE_HUNDRED_PERCENT
-
-```solidity
-uint256 public constant ONE_HUNDRED_PERCENT = 10_000;
-```
-
-
 ### K_ASSET_ROUTER
 
 ```solidity
@@ -74,23 +67,6 @@ function __BaseVaultModule_init(address registry_, address feeReceiver_, bool pa
 |`paused_`|`bool`|Initial pause state|
 
 
-### registry
-
-Returns the registry contract address
-
-*Reverts if contract not initialized*
-
-
-```solidity
-function registry() external view returns (address);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|The kRegistry contract address|
-
-
 ### _registry
 
 Returns the registry contract interface
@@ -106,23 +82,6 @@ function _registry() internal view returns (IkRegistry);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`IkRegistry`|IkRegistry interface for registry interaction|
-
-
-### rescueAssets
-
-rescues locked assets (ETH or ERC20) in the contract
-
-
-```solidity
-function rescueAssets(address asset_, address to_, uint256 amount_) external payable;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`asset_`|`address`|the asset to rescue (use address(0) for ETH)|
-|`to_`|`address`|the address that will receive the assets|
-|`amount_`|`uint256`|the amount to rescue|
 
 
 ### _getKMinter
@@ -182,36 +141,6 @@ function _getDNVaultByAsset(address asset_) internal view returns (address vault
 |`vault`|`address`|The corresponding DN vault address|
 
 
-### asset
-
-Returns the underlying asset address (for compatibility)
-
-
-```solidity
-function asset() external view returns (address);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|Asset address|
-
-
-### underlyingAsset
-
-Returns the underlying asset address
-
-
-```solidity
-function underlyingAsset() external view returns (address);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|Asset address|
-
-
 ### name
 
 Returns the vault shares token name
@@ -243,8 +172,6 @@ function symbol() public view override returns (string memory);
 
 
 ### decimals
-
-Returns the vault shares token decimals
 
 
 ```solidity
@@ -524,24 +451,6 @@ event Paused(bool paused);
 
 ```solidity
 event Initialized(address registry, string name, string symbol, uint8 decimals, address asset);
-```
-
-### TotalAssetsUpdated
-
-```solidity
-event TotalAssetsUpdated(uint256 oldTotalAssets, uint256 newTotalAssets);
-```
-
-### RescuedAssets
-
-```solidity
-event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
-```
-
-### RescuedETH
-
-```solidity
-event RescuedETH(address indexed asset, uint256 amount);
 ```
 
 ## Errors

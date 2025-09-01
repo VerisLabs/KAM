@@ -24,21 +24,18 @@
         <link rel="stylesheet" href="../../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" id="highlight-css" href="../../highlight.css">
-        <link rel="stylesheet" id="tomorrow-night-css" href="../../tomorrow-night.css">
-        <link rel="stylesheet" id="ayu-highlight-css" href="../../ayu-highlight.css">
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         <link rel="stylesheet" href="../../book.css">
 
-        <!-- MathJax -->
-        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
-        <!-- Provide site root and default themes to javascript -->
+        <!-- Provide site root to javascript -->
         <script>
-            const path_to_root = "../../";
-            const default_light_theme = "light";
-            const default_dark_theme = "navy";
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc.js"></script>
@@ -48,8 +45,8 @@
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                let theme = localStorage.getItem('mdbook-theme');
-                let sidebar = localStorage.getItem('mdbook-sidebar');
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -63,8 +60,7 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
-            let theme;
+            var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
@@ -77,8 +73,8 @@
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            let sidebar = null;
-            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -114,7 +110,6 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
@@ -162,15 +157,12 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="kminter"><a class="header" href="#kminter">kMinter</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kMinter.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kMinter.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="/src/interfaces/IkMinter.sol/interface.IkMinter.html">IkMinter</a>, Initializable, UUPSUpgradeable, <a href="/src/base/kBase.sol/contract.kBase.html">kBase</a>, <a href="/src/abstracts/Extsload.sol/abstract.Extsload.html">Extsload</a></p>
 <p>Institutional minting and redemption manager for kTokens</p>
 <p><em>Manages deposits/redemptions through kStakingVault with batch settlement</em></p>
 <h2 id="state-variables"><a class="header" href="#state-variables">State Variables</a></h2>
-<h3 id="institution_role"><a class="header" href="#institution_role">INSTITUTION_ROLE</a></h3>
-<pre><code class="language-solidity">uint256 internal constant INSTITUTION_ROLE = _ROLE_3;
-</code></pre>
 <h3 id="kminter_storage_location"><a class="header" href="#kminter_storage_location">KMINTER_STORAGE_LOCATION</a></h3>
 <pre><code class="language-solidity">bytes32 private constant KMINTER_STORAGE_LOCATION = 0xd0574379115d2b8497bfd9020aa9e0becaffc59e5509520aa5fe8c763e40d000;
 </code></pre>
@@ -178,44 +170,23 @@
 <h3 id="_getkminterstorage"><a class="header" href="#_getkminterstorage">_getkMinterStorage</a></h3>
 <pre><code class="language-solidity">function _getkMinterStorage() private pure returns (kMinterStorage storage $);
 </code></pre>
-<h3 id="whennotpaused"><a class="header" href="#whennotpaused">whenNotPaused</a></h3>
-<p>Ensures function cannot be called when contract is paused</p>
-<pre><code class="language-solidity">modifier whenNotPaused();
-</code></pre>
-<h3 id="onlyinstitution"><a class="header" href="#onlyinstitution">onlyInstitution</a></h3>
-<p>Ensures function can only be called by an institution</p>
-<pre><code class="language-solidity">modifier onlyInstitution();
-</code></pre>
 <h3 id="constructor"><a class="header" href="#constructor">constructor</a></h3>
 <p>Disables initializers to prevent implementation contract initialization</p>
 <pre><code class="language-solidity">constructor();
 </code></pre>
 <h3 id="initialize"><a class="header" href="#initialize">initialize</a></h3>
 <p>Initializes the kMinter contract</p>
-<pre><code class="language-solidity">function initialize(address registry_, address owner_, address admin_, address emergencyAdmin_) external initializer;
+<pre><code class="language-solidity">function initialize(address registry_) external initializer;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>registry_</code></td><td><code>address</code></td><td>Address of the registry contract</td></tr>
-<tr><td><code>owner_</code></td><td><code>address</code></td><td>Address of the owner</td></tr>
-<tr><td><code>admin_</code></td><td><code>address</code></td><td>Address of the admin</td></tr>
-<tr><td><code>emergencyAdmin_</code></td><td><code>address</code></td><td>Address of the emergency admin</td></tr>
 </tbody></table>
 </div>
 <h3 id="mint"><a class="header" href="#mint">mint</a></h3>
 <p>Creates new kTokens by accepting underlying asset deposits in a 1:1 ratio</p>
 <p><em>Validates request parameters, transfers assets, deposits to vault, and mints tokens</em></p>
-<pre><code class="language-solidity">function mint(
-    address asset_,
-    address to_,
-    uint256 amount_
-)
-    external
-    payable
-    nonReentrant
-    whenNotPaused
-    onlyInstitution
-    onlyRegisteredAsset(asset_);
+<pre><code class="language-solidity">function mint(address asset_, address to_, uint256 amount_) external payable nonReentrant;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -235,9 +206,6 @@
     external
     payable
     nonReentrant
-    whenNotPaused
-    onlyInstitution
-    onlyRegisteredAsset(asset_)
     returns (bytes32 requestId);
 </code></pre>
 <p><strong>Parameters</strong></p>
@@ -254,7 +222,7 @@
 </div>
 <h3 id="redeem"><a class="header" href="#redeem">redeem</a></h3>
 <p>Executes redemption for a request in a settled batch</p>
-<pre><code class="language-solidity">function redeem(bytes32 requestId) external payable nonReentrant whenNotPaused onlyInstitution;
+<pre><code class="language-solidity">function redeem(bytes32 requestId) external payable nonReentrant;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -263,7 +231,7 @@
 </div>
 <h3 id="cancelrequest"><a class="header" href="#cancelrequest">cancelRequest</a></h3>
 <p>Cancels a redemption request before batch settlement</p>
-<pre><code class="language-solidity">function cancelRequest(bytes32 requestId) external payable nonReentrant whenNotPaused onlyInstitution;
+<pre><code class="language-solidity">function cancelRequest(bytes32 requestId) external payable nonReentrant;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -286,15 +254,9 @@
 <tr><td><code>&lt;none&gt;</code></td><td><code>bytes32</code></td><td>Request ID</td></tr>
 </tbody></table>
 </div>
-<h3 id="setpaused"><a class="header" href="#setpaused">setPaused</a></h3>
-<p>Set contract pause state</p>
-<pre><code class="language-solidity">function setPaused(bool paused) external onlyRoles(EMERGENCY_ADMIN_ROLE);
+<h3 id="rescuereceiverassets"><a class="header" href="#rescuereceiverassets">rescueReceiverAssets</a></h3>
+<pre><code class="language-solidity">function rescueReceiverAssets(address batchReceiver, address asset_, address to_, uint256 amount_) external;
 </code></pre>
-<p><strong>Parameters</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>paused</code></td><td><code>bool</code></td><td>New pause state</td></tr>
-</tbody></table>
-</div>
 <h3 id="ispaused"><a class="header" href="#ispaused">isPaused</a></h3>
 <p>Check if contract is paused</p>
 <pre><code class="language-solidity">function isPaused() external view returns (bool);
@@ -358,7 +320,7 @@
 <h3 id="_authorizeupgrade"><a class="header" href="#_authorizeupgrade">_authorizeUpgrade</a></h3>
 <p>Authorizes contract upgrades</p>
 <p><em>Only callable by ADMIN_ROLE</em></p>
-<pre><code class="language-solidity">function _authorizeUpgrade(address newImplementation) internal view override onlyRoles(ADMIN_ROLE);
+<pre><code class="language-solidity">function _authorizeUpgrade(address newImplementation) internal view override;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>

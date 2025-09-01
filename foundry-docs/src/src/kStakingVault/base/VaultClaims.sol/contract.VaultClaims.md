@@ -1,5 +1,5 @@
 # VaultClaims
-[Git Source](https://github.com/VerisLabs/KAM/blob/7c4c002fe2cce8e1d11c6bc539e18f776ee440fc/src/kStakingVault/modules/VaultClaims.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kStakingVault/base/VaultClaims.sol)
 
 **Inherits:**
 [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md)
@@ -40,21 +40,6 @@ function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payabl
 |----|----|-----------|
 |`batchId`|`bytes32`|Batch ID to claim from|
 |`requestId`|`bytes32`|Request ID to claim|
-
-
-### selectors
-
-Returns the selectors for functions in this module
-
-
-```solidity
-function selectors() external pure returns (bytes4[] memory);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bytes4[]`|selectors Array of function selectors|
 
 
 ## Events

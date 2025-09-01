@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
@@ -14,15 +12,26 @@ import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+
+import { VaultBatches } from "src/kStakingVault/base/VaultBatches.sol";
+import { VaultClaims } from "src/kStakingVault/base/VaultClaims.sol";
+import { VaultFees } from "src/kStakingVault/base/VaultFees.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title kStakingVault
 /// @notice Pure ERC20 vault with dual accounting for minter and user pools
 /// @dev Implements automatic yield distribution from minter to user pools with modular architecture
-contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, MultiFacetProxy {
+contract kStakingVault is
+    Initializable,
+    UUPSUpgradeable,
+    BaseVaultModule,
+    MultiFacetProxy,
+    VaultFees,
+    VaultClaims,
+    VaultBatches
+{
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using SafeTransferLib for address;
-    using FixedPointMathLib for uint256;
     using SafeCastLib for uint256;
     using SafeCastLib for uint128;
 
@@ -291,54 +300,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         return batchId;
     }
 
-    /// @notice Returns whether the current batch is closed
-    /// @return Whether the current batch is closed
-    function isBatchClosed() external view returns (bool) {
-        return _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isClosed;
-    }
-
-    /// @notice Returns whether the current batch is settled
-    /// @return Whether the current batch is settled
-    function isBatchSettled() external view returns (bool) {
-        return _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isSettled;
-    }
-
-    /// @notice Returns the current batch ID, whether it is closed, and whether it is settled
-    /// @return batchId Current batch ID
-    /// @return batchReceiver Current batch receiver
-    /// @return isClosed Whether the current batch is closed
-    /// @return isSettled Whether the current batch is settled
-    function getBatchIdInfo()
-        external
-        view
-        returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled)
-    {
-        return (
-            _getBaseVaultModuleStorage().currentBatchId,
-            _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].batchReceiver,
-            _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isClosed,
-            _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isSettled
-        );
-    }
-
-    /// @notice Returns the batch receiver for the current batch
-    /// @return Batch receiver
-    function getBatchIdReceiver(bytes32 batchId) external view returns (address) {
-        return _getBaseVaultModuleStorage().batches[batchId].batchReceiver;
-    }
-
-    /// @notice Returns the batch receiver for a given batch (alias for getBatchIdReceiver)
-    /// @return Batch receiver
-    function getBatchReceiver(bytes32 batchId) external view returns (address) {
-        return _getBaseVaultModuleStorage().batches[batchId].batchReceiver;
-    }
-
-    function getSafeBatchReceiver(bytes32 batchId) external view returns (address) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if ($.batches[batchId].isSettled) revert Settled();
-        return $.batches[batchId].batchReceiver;
-    }
-
     /*//////////////////////////////////////////////////////////////
                         UUPS UPGRADE
     //////////////////////////////////////////////////////////////*/
@@ -349,13 +310,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, BaseVaultModule, Multi
         if (!_isAdmin(msg.sender)) revert WrongRole();
         if (newImplementation == address(0)) revert ZeroAddress();
     }
-
-    /*//////////////////////////////////////////////////////////////
-                            RECEIVE ETH
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Accepts ETH transfers
-    receive() external payable { }
 
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO

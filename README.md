@@ -100,7 +100,7 @@ Retail users can stake kTokens to earn yield from external strategies:
 
 - `kStakingVault.requestStake()` - Request to stake kTokens for yield-bearing stkTokens
 - `kStakingVault.requestUnstake()` - Request to unstake stkTokens back to kTokens
-- Claims processed through vault's ClaimModule after batch settlement
+- Claims processed through vault's VaultClaims after batch settlement
 
 ### Virtual Balance System
 
@@ -127,7 +127,7 @@ Requests are grouped into time-based batches for gas-efficient settlement:
 | EMERGENCY_ADMIN_ROLE | Emergency pause            | All                       |
 | MINTER_ROLE          | Mint/burn tokens           | kToken                    |
 | INSTITUTION_ROLE     | Mint/redeem kTokens        | kMinter                   |
-| RELAYER_ROLE         | Settle batches             | kAssetRouter, BatchModule |
+| RELAYER_ROLE         | Settle batches             | kAssetRouter, VaultBatches |
 | VENDOR_ROLE          | Adds Institutions          | kRegistry                 |
 
 ## Safety
