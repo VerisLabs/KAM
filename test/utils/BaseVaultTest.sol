@@ -130,8 +130,6 @@ contract BaseVaultTest is DeploymentBaseTest {
     )
         internal
     {
-        if (vault == address(minter)) vault = address(dnVault);
-
         vm.prank(users.relayer);
         bytes32 proposalId =
             assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, totalAssets, netted, yield, profit);
