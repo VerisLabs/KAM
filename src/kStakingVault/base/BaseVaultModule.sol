@@ -95,23 +95,23 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     /// @custom:storage-location erc7201.kam.storage.BaseVaultModule
     struct BaseVaultModuleStorage {
         // 1
-        uint128 sharePriceWatermark;
-        uint128 totalPendingStake;
-        // 2
-        uint256 currentBatch;
-        // 3
-        bytes32 currentBatchId;
-        // 4
-        address registry;
-        // 5
-        address receiverImplementation;
-        // 6
-        address underlyingAsset;
-        // 7
-        address kToken;
-        // 8
         uint256 config; // decimals, hurdle rate, performance fee, management fee, initialized, paused,
             // isHardHurdleRate, lastFeesChargedManagement, lastFeesChargedPerformance
+        // 2
+        uint128 sharePriceWatermark;
+        uint128 totalPendingStake;
+        // 3
+        uint256 currentBatch;
+        // 4
+        bytes32 currentBatchId;
+        // 5
+        address registry;
+        // 6
+        address receiverImplementation;
+        // 7
+        address underlyingAsset;
+        // 8
+        address kToken;
         // 9
         string name;
         // 10
