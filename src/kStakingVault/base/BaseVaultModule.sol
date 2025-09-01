@@ -6,7 +6,6 @@ import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { Extsload } from "src/abstracts/Extsload.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 import { IVaultFees } from "src/interfaces/modules/IVaultFees.sol";
@@ -15,7 +14,7 @@ import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTyp
 /// @title BaseVaultModule
 /// @notice Base contract for all modules
 /// @dev Provides shared storage, roles, and common functionality
-abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
+abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     using FixedPointMathLib for uint256;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using SafeTransferLib for address;
@@ -40,15 +39,10 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
     event UnstakeRequestCancelled(bytes32 indexed requestId);
     event Paused(bool paused);
     event Initialized(address registry, string name, string symbol, uint8 decimals, address asset);
-    event TotalAssetsUpdated(uint256 oldTotalAssets, uint256 newTotalAssets);
-    event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
-    event RescuedETH(address indexed asset, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
-
-    uint256 public constant ONE_HUNDRED_PERCENT = 10_000;
 
     bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
     bytes32 internal constant K_MINTER = keccak256("K_MINTER");
@@ -149,15 +143,6 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
                           REGISTRY GETTER
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the registry contract address
-    /// @return The kRegistry contract address
-    /// @dev Reverts if contract not initialized
-    function registry() external view returns (address) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (!$.initialized) revert NotInitialized();
-        return $.registry;
-    }
-
     /// @notice Returns the registry contract interface
     /// @return IkRegistry interface for registry interaction
     /// @dev Internal helper for typed registry access
@@ -167,35 +152,35 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
         return IkRegistry($.registry);
     }
 
-    /*//////////////////////////////////////////////////////////////
-                                RESCUER
-    //////////////////////////////////////////////////////////////*/
+    // /*//////////////////////////////////////////////////////////////
+    //                             RESCUER
+    // //////////////////////////////////////////////////////////////*/
 
-    /// @notice rescues locked assets (ETH or ERC20) in the contract
-    /// @param asset_ the asset to rescue (use address(0) for ETH)
-    /// @param to_ the address that will receive the assets
-    /// @param amount_ the amount to rescue
-    function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
-        if (!_isAdmin(msg.sender)) revert WrongRole();
-        if (to_ == address(0)) revert ZeroAddress();
+    // /// @notice rescues locked assets (ETH or ERC20) in the contract
+    // /// @param asset_ the asset to rescue (use address(0) for ETH)
+    // /// @param to_ the address that will receive the assets
+    // /// @param amount_ the amount to rescue
+    // function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
+    //     if (!_isAdmin(msg.sender)) revert WrongRole();
+    //     if (to_ == address(0)) revert ZeroAddress();
 
-        if (asset_ == address(0)) {
-            // Rescue ETH
-            if (amount_ == 0 || amount_ > address(this).balance) revert ZeroAmount();
+    //     if (asset_ == address(0)) {
+    //         // Rescue ETH
+    //         if (amount_ == 0 || amount_ > address(this).balance) revert ZeroAmount();
 
-            (bool success,) = to_.call{ value: amount_ }("");
-            if (!success) revert TransferFailed();
+    //         (bool success,) = to_.call{ value: amount_ }("");
+    //         if (!success) revert TransferFailed();
 
-            emit RescuedETH(to_, amount_);
-        } else {
-            // Rescue ERC20 tokens
-            if (_isAsset(asset_)) revert WrongAsset();
-            if (amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
+    //         emit RescuedETH(to_, amount_);
+    //     } else {
+    //         // Rescue ERC20 tokens
+    //         if (_isAsset(asset_)) revert WrongAsset();
+    //         if (amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
 
-            asset_.safeTransfer(to_, amount_);
-            emit RescuedAssets(asset_, to_, amount_);
-        }
-    }
+    //         asset_.safeTransfer(to_, amount_);
+    //         emit RescuedAssets(asset_, to_, amount_);
+    //     }
+    // }
 
     /*//////////////////////////////////////////////////////////////
                           GETTERS
@@ -226,18 +211,6 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
         if (vault == address(0)) revert InvalidVault();
     }
 
-    /// @notice Returns the underlying asset address (for compatibility)
-    /// @return Asset address
-    function asset() external view returns (address) {
-        return _getBaseVaultModuleStorage().kToken;
-    }
-
-    /// @notice Returns the underlying asset address
-    /// @return Asset address
-    function underlyingAsset() external view returns (address) {
-        return _getBaseVaultModuleStorage().underlyingAsset;
-    }
-
     /// @notice Returns the vault shares token name
     /// @return Token name
     function name() public view override returns (string memory) {
@@ -250,10 +223,9 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient, Extsload {
         return _getBaseVaultModuleStorage().symbol;
     }
 
-    /// @notice Returns the vault shares token decimals
     /// @return Token decimals
     function decimals() public view override returns (uint8) {
-        return uint8(_getBaseVaultModuleStorage().decimals);
+        return _getBaseVaultModuleStorage().decimals;
     }
 
     /*//////////////////////////////////////////////////////////////

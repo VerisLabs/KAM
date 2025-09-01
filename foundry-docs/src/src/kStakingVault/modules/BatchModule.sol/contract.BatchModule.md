@@ -1,5 +1,5 @@
-# BatchModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/7c4c002fe2cce8e1d11c6bc539e18f776ee440fc/src/kStakingVault/modules/BatchModule.sol)
+# VaultBatches
+[Git Source](https://github.com/VerisLabs/KAM/blob/7c4c002fe2cce8e1d11c6bc539e18f776ee440fc/src/kStakingVault/modules/VaultBatches.sol)
 
 **Inherits:**
 [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md)

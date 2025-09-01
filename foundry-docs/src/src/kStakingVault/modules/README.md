@@ -1,6 +1,6 @@
 
 
 # Contents
-- [BatchModule](BatchModule.sol/contract.BatchModule.md)
-- [ClaimModule](ClaimModule.sol/contract.ClaimModule.md)
-- [FeesModule](FeesModule.sol/contract.FeesModule.md)
+- [VaultBatches](VaultBatches.sol/contract.VaultBatches.md)
+- [VaultClaims](VaultClaims.sol/contract.VaultClaims.md)
+- [VaultFees](VaultFees.sol/contract.VaultFees.md)

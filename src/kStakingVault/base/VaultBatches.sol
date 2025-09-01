@@ -8,10 +8,10 @@ import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
-/// @title BatchModule
+/// @title VaultBatches
 /// @notice Handles batch operations for staking and unstaking
 /// @dev Contains batch functions for staking and unstaking operations
-contract BatchModule is BaseVaultModule {
+contract VaultBatches is BaseVaultModule {
     using SafeCastLib for uint256;
     using SafeCastLib for uint64;
     /*//////////////////////////////////////////////////////////////
@@ -104,16 +104,5 @@ contract BatchModule is BaseVaultModule {
         emit BatchCreated(newBatchId);
 
         return newBatchId;
-    }
-
-    /// @notice Returns the selectors for functions in this module
-    /// @return selectors Array of function selectors
-    function selectors() external pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](4);
-        moduleSelectors[0] = this.createNewBatch.selector;
-        moduleSelectors[1] = this.closeBatch.selector;
-        moduleSelectors[2] = this.settleBatch.selector;
-        moduleSelectors[3] = this.createBatchReceiver.selector;
-        return moduleSelectors;
     }
 }

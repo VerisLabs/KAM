@@ -51,9 +51,7 @@ abstract contract DeploymentManager is Script {
         address kAssetRouter;
         address kUSD;
         address kBTC;
-        address batchModule;
-        address claimModule;
-        address feesModule;
+        address readerModule;
         address kStakingVaultImpl;
         address dnVault;
         address alphaVault;
@@ -160,16 +158,8 @@ abstract contract DeploymentManager is Script {
             output.contracts.kBTC = abi.decode(data, (address));
         } catch { }
 
-        try vm.parseJson(json, ".contracts.batchModule") returns (bytes memory data) {
-            output.contracts.batchModule = abi.decode(data, (address));
-        } catch { }
-
-        try vm.parseJson(json, ".contracts.claimModule") returns (bytes memory data) {
-            output.contracts.claimModule = abi.decode(data, (address));
-        } catch { }
-
-        try vm.parseJson(json, ".contracts.feesModule") returns (bytes memory data) {
-            output.contracts.feesModule = abi.decode(data, (address));
+        try vm.parseJson(json, ".contracts.readerModule") returns (bytes memory data) {
+            output.contracts.readerModule = abi.decode(data, (address));
         } catch { }
 
         try vm.parseJson(json, ".contracts.kStakingVaultImpl") returns (bytes memory data) {
@@ -231,12 +221,8 @@ abstract contract DeploymentManager is Script {
             output.contracts.kUSD = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("kBTC"))) {
             output.contracts.kBTC = contractAddress;
-        } else if (keccak256(bytes(contractName)) == keccak256(bytes("batchModule"))) {
-            output.contracts.batchModule = contractAddress;
-        } else if (keccak256(bytes(contractName)) == keccak256(bytes("claimModule"))) {
-            output.contracts.claimModule = contractAddress;
-        } else if (keccak256(bytes(contractName)) == keccak256(bytes("feesModule"))) {
-            output.contracts.feesModule = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("readerModule"))) {
+            output.contracts.readerModule = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("kStakingVaultImpl"))) {
             output.contracts.kStakingVaultImpl = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("dnVault"))) {
@@ -277,10 +263,8 @@ abstract contract DeploymentManager is Script {
         json = string.concat(json, '"kAssetRouter":"', vm.toString(output.contracts.kAssetRouter), '",');
         json = string.concat(json, '"kUSD":"', vm.toString(output.contracts.kUSD), '",');
         json = string.concat(json, '"kBTC":"', vm.toString(output.contracts.kBTC), '",');
-        json = string.concat(json, '"batchModule":"', vm.toString(output.contracts.batchModule), '",');
-        json = string.concat(json, '"claimModule":"', vm.toString(output.contracts.claimModule), '",');
-        json = string.concat(json, '"feesModule":"', vm.toString(output.contracts.feesModule), '",');
         json = string.concat(json, '"kStakingVaultImpl":"', vm.toString(output.contracts.kStakingVaultImpl), '",');
+        json = string.concat(json, '"readerModule":"', vm.toString(output.contracts.readerModule), '",');
         json = string.concat(json, '"dnVault":"', vm.toString(output.contracts.dnVault), '",');
         json = string.concat(json, '"alphaVault":"', vm.toString(output.contracts.alphaVault), '",');
         json = string.concat(json, '"betaVault":"', vm.toString(output.contracts.betaVault), '",');

@@ -5,9 +5,7 @@ import { Script } from "forge-std/Script.sol";
 import { console } from "forge-std/console.sol";
 
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
-import { BatchModule } from "src/kStakingVault/modules/BatchModule.sol";
-import { ClaimModule } from "src/kStakingVault/modules/ClaimModule.sol";
-import { FeesModule } from "src/kStakingVault/modules/FeesModule.sol";
+import { ReaderModule } from "src/kStakingVault/modules/ReaderModule.sol";
 
 contract DeployVaultModulesScript is Script, DeploymentManager {
     function run() public {
@@ -19,21 +17,15 @@ contract DeployVaultModulesScript is Script, DeploymentManager {
         vm.startBroadcast();
 
         // Deploy modules (these are facet implementations, no proxy needed)
-        BatchModule batchModule = new BatchModule();
-        ClaimModule claimModule = new ClaimModule();
-        FeesModule feesModule = new FeesModule();
+        ReaderModule readerModule = new ReaderModule();
 
         vm.stopBroadcast();
 
         // Write addresses to deployment JSON
-        writeContractAddress("batchModule", address(batchModule));
-        writeContractAddress("claimModule", address(claimModule));
-        writeContractAddress("feesModule", address(feesModule));
+        writeContractAddress("readerModule", address(readerModule));
 
         console.log("=== DEPLOYMENT COMPLETE ===");
-        console.log("BatchModule:", address(batchModule));
-        console.log("ClaimModule:", address(claimModule));
-        console.log("FeesModule:", address(feesModule));
+        console.log("ReaderModule:", address(readerModule));
         console.log("Addresses saved to deployments/output/", config.network, "/addresses.json");
     }
 }
