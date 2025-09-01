@@ -267,7 +267,7 @@ forge test --use $(which solx)
 <li><a href="src/abstracts/Proxy.sol/abstract.Proxy.html">Proxy</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="extsload"><a class="header" href="#extsload">Extsload</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/abstracts/Extsload.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/abstracts/Extsload.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="src/abstracts/Extsload.sol//src/interfaces/IExtsload.sol/interface.IExtsload.html">IExtsload</a></p>
 <p>Enables public storage access for efficient state retrieval by external contracts</p>
@@ -316,7 +316,7 @@ forge test --use $(which solx)
 <tr><td><code>&lt;none&gt;</code></td><td><code>bytes32[]</code></td><td>Value at the storage slot</td></tr>
 </tbody></table>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="proxy"><a class="header" href="#proxy">Proxy</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/abstracts/Proxy.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/abstracts/Proxy.sol">Git Source</a></p>
 <p><em>This abstract contract provides a fallback function that delegates all calls to another contract using the EVM
 instruction <code>delegatecall</code>. We refer to the second contract as the <em>implementation</em> behind the proxy, and it has to
 be specified by overriding the virtual <a href="src/abstracts/Proxy.sol//src/abstracts/Proxy.sol/abstract.Proxy.html#_implementation">_implementation</a> function.
@@ -350,7 +350,7 @@ function in the contract matches the call data.</em></p>
 <li><a href="src/adapters/CustodialAdapter.sol/contract.CustodialAdapter.html">CustodialAdapter</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="baseadapter"><a class="header" href="#baseadapter">BaseAdapter</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/adapters/BaseAdapter.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/adapters/BaseAdapter.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 ReentrancyGuardTransient</p>
 <p>Abstract base contract for all protocol adapters</p>
@@ -506,7 +506,7 @@ storage-location: erc7201:kam.storage.BaseAdapter</p>
 }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="custodialadapter"><a class="header" href="#custodialadapter">CustodialAdapter</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/adapters/CustodialAdapter.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/adapters/CustodialAdapter.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="src/adapters/CustodialAdapter.sol//src/adapters/BaseAdapter.sol/contract.BaseAdapter.html">BaseAdapter</a>, Initializable, UUPSUpgradeable</p>
 <p>Adapter for custodial address integrations (CEX, CEFFU, etc.)</p>
@@ -704,13 +704,13 @@ storage-location: erc7201:kam.storage.CustodialAdapter</p>
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="contents-2"><a class="header" href="#contents-2">Contents</a></h1>
 <ul>
-<li><a href="src/base/MultiFacetProxy.sol/contract.MultiFacetProxy.html">MultiFacetProxy</a></li>
+<li><a href="src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.html">MultiFacetProxy</a></li>
 <li><a href="src/base/kBase.sol/contract.kBase.html">kBase</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="multifacetproxy"><a class="header" href="#multifacetproxy">MultiFacetProxy</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/base/MultiFacetProxy.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/base/MultiFacetProxy.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
-<a href="src/base/MultiFacetProxy.sol//src/abstracts/Proxy.sol/abstract.Proxy.html">Proxy</a>, OwnableRoles</p>
+<a href="src/base/MultiFacetProxy.sol//src/abstracts/Proxy.sol/abstract.Proxy.html">Proxy</a></p>
 <p>A proxy contract that can route function calls to different implementation contracts</p>
 <p><em>Inherits from Base and OpenZeppelin's Proxy contract</em></p>
 <h2 id="state-variables-2"><a class="header" href="#state-variables-2">State Variables</a></h2>
@@ -728,29 +728,10 @@ storage-location: erc7201:kam.storage.CustodialAdapter</p>
 <tr><td><code>$</code></td><td><code>MultiFacetProxyStorage</code></td><td>Storage reference for MultiFacetProxy state variables</td></tr>
 </tbody></table>
 </div>
-<h3 id="__multifacetproxy__init"><a class="header" href="#__multifacetproxy__init">__MultiFacetProxy__init</a></h3>
-<p>Initializes the proxy contract</p>
-<p><em>Can only be called once during initialization</em></p>
-<pre><code class="language-solidity">function __MultiFacetProxy__init(uint256 _proxyAdminRole_) internal;
-</code></pre>
-<p><strong>Parameters</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>_proxyAdminRole_</code></td><td><code>uint256</code></td><td>The proxy admin role</td></tr>
-</tbody></table>
-</div>
-<h3 id="_proxyadminrole"><a class="header" href="#_proxyadminrole">_proxyAdminRole</a></h3>
-<p>Returns the proxy admin role</p>
-<pre><code class="language-solidity">function _proxyAdminRole() internal view returns (uint256 role);
-</code></pre>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>role</code></td><td><code>uint256</code></td><td>The proxy admin role</td></tr>
-</tbody></table>
-</div>
 <h3 id="addfunction"><a class="header" href="#addfunction">addFunction</a></h3>
 <p>Adds a function selector mapping to an implementation address</p>
 <p><em>Only callable by admin role</em></p>
-<pre><code class="language-solidity">function addFunction(bytes4 selector, address implementation, bool forceOverride) public onlyRoles(_proxyAdminRole());
+<pre><code class="language-solidity">function addFunction(bytes4 selector, address implementation, bool forceOverride) public;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -761,6 +742,7 @@ storage-location: erc7201:kam.storage.CustodialAdapter</p>
 </div>
 <h3 id="addfunctions"><a class="header" href="#addfunctions">addFunctions</a></h3>
 <p>Adds multiple function selector mappings to an implementation</p>
+<p><em>Only callable by admin role</em></p>
 <pre><code class="language-solidity">function addFunctions(bytes4[] calldata selectors, address implementation, bool forceOverride) external;
 </code></pre>
 <p><strong>Parameters</strong></p>
@@ -773,7 +755,7 @@ storage-location: erc7201:kam.storage.CustodialAdapter</p>
 <h3 id="removefunction"><a class="header" href="#removefunction">removeFunction</a></h3>
 <p>Removes a function selector mapping</p>
 <p><em>Only callable by admin role</em></p>
-<pre><code class="language-solidity">function removeFunction(bytes4 selector) public onlyRoles(_proxyAdminRole());
+<pre><code class="language-solidity">function removeFunction(bytes4 selector) public;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -789,6 +771,10 @@ storage-location: erc7201:kam.storage.CustodialAdapter</p>
 <tr><td><code>selectors</code></td><td><code>bytes4[]</code></td><td>Array of function selectors to remove</td></tr>
 </tbody></table>
 </div>
+<h3 id="_authorizemodifyfunctions"><a class="header" href="#_authorizemodifyfunctions">_authorizeModifyFunctions</a></h3>
+<p><em>Authorize the sender to modify functions</em></p>
+<pre><code class="language-solidity">function _authorizeModifyFunctions(address sender) internal virtual;
+</code></pre>
 <h3 id="_implementation-1"><a class="header" href="#_implementation-1">_implementation</a></h3>
 <p>Returns the implementation address for a function selector</p>
 <p><em>Required override from OpenZeppelin Proxy contract</em></p>
@@ -803,11 +789,10 @@ storage-location: erc7201:kam.storage.CustodialAdapter</p>
 <h3 id="multifacetproxystorage"><a class="header" href="#multifacetproxystorage">MultiFacetProxyStorage</a></h3>
 <pre><code class="language-solidity">struct MultiFacetProxyStorage {
     mapping(bytes4 =&gt; address) selectorToImplementation;
-    uint256 proxyAdminRole;
 }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="kbase"><a class="header" href="#kbase">kBase</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/base/kBase.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/base/kBase.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 ReentrancyGuardTransient</p>
 <p>Base contract providing common functionality for all KAM protocol contracts</p>
@@ -1153,7 +1138,7 @@ storage-location: erc7201:kam.storage.kBase</p>
 <li><a href="src/interfaces/modules/IVaultFees.sol/interface.IVaultFees.html">IVaultFees</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="ivaultbatch"><a class="header" href="#ivaultbatch">IVaultBatch</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/interfaces/modules/IVaultBatch.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/modules/IVaultBatch.sol">Git Source</a></p>
 <h2 id="functions-6"><a class="header" href="#functions-6">Functions</a></h2>
 <h3 id="createnewbatch"><a class="header" href="#createnewbatch">createNewBatch</a></h3>
 <p>Creates a new batch for processing requests</p>
@@ -1191,7 +1176,7 @@ storage-location: erc7201:kam.storage.kBase</p>
 <tr><td><code>_batchId</code></td><td><code>bytes32</code></td><td>Batch ID to deploy receiver for</td></tr>
 </tbody></table>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="ivaultclaim"><a class="header" href="#ivaultclaim">IVaultClaim</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/interfaces/modules/IVaultClaim.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/modules/IVaultClaim.sol">Git Source</a></p>
 <h2 id="functions-7"><a class="header" href="#functions-7">Functions</a></h2>
 <h3 id="claimstakedshares"><a class="header" href="#claimstakedshares">claimStakedShares</a></h3>
 <p>Claims stkTokens from a settled staking batch</p>
@@ -1213,7 +1198,7 @@ storage-location: erc7201:kam.storage.kBase</p>
 <tr><td><code>requestId</code></td><td><code>bytes32</code></td><td>Request ID to claim</td></tr>
 </tbody></table>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="ivaultfees"><a class="header" href="#ivaultfees">IVaultFees</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/interfaces/modules/IVaultFees.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/modules/IVaultFees.sol">Git Source</a></p>
 <h2 id="functions-8"><a class="header" href="#functions-8">Functions</a></h2>
 <h3 id="sethurdlerate"><a class="header" href="#sethurdlerate">setHurdleRate</a></h3>
 <p>Sets the yearly hurdle rate for the underlying asset</p>
@@ -1352,15 +1337,6 @@ storage-location: erc7201:kam.storage.kBase</p>
 <tr><td><code>&lt;none&gt;</code></td><td><code>uint16</code></td><td>The management fee in basis points (e.g., 100 = 1%)</td></tr>
 </tbody></table>
 </div>
-<h3 id="feereceiver"><a class="header" href="#feereceiver">feeReceiver</a></h3>
-<p>Returns the address that receives collected fees</p>
-<pre><code class="language-solidity">function feeReceiver() external view returns (address);
-</code></pre>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The fee receiver address</td></tr>
-</tbody></table>
-</div>
 <h3 id="sharepricewatermark"><a class="header" href="#sharepricewatermark">sharePriceWatermark</a></h3>
 <p>Returns the high watermark for share price used in performance fee calculations</p>
 <pre><code class="language-solidity">function sharePriceWatermark() external view returns (uint256);
@@ -1370,7 +1346,7 @@ storage-location: erc7201:kam.storage.kBase</p>
 <tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>The share price watermark value</td></tr>
 </tbody></table>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="iadapter"><a class="header" href="#iadapter">IAdapter</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/interfaces/IAdapter.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/IAdapter.sol">Git Source</a></p>
 <p>Interface for protocol adapters that manage external strategy integrations</p>
 <p><em>All adapters must implement this interface for kAssetRouter integration</em></p>
 <h2 id="functions-9"><a class="header" href="#functions-9">Functions</a></h2>
@@ -1522,7 +1498,7 @@ storage-location: erc7201:kam.storage.kBase</p>
 <tr><td><code>&lt;none&gt;</code></td><td><code>string</code></td><td>Version string</td></tr>
 </tbody></table>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="iextsload"><a class="header" href="#iextsload">IExtsload</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/interfaces/IExtsload.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/IExtsload.sol">Git Source</a></p>
 <p>Interface for external storage access</p>
 <h2 id="functions-10"><a class="header" href="#functions-10">Functions</a></h2>
 <h3 id="extsload-4"><a class="header" href="#extsload-4">extsload</a></h3>
@@ -1568,7 +1544,7 @@ storage-location: erc7201:kam.storage.kBase</p>
 <tr><td><code>&lt;none&gt;</code></td><td><code>bytes32[]</code></td><td>Array of values from the storage slots</td></tr>
 </tbody></table>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="ikassetrouter"><a class="header" href="#ikassetrouter">IkAssetRouter</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/interfaces/IkAssetRouter.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/IkAssetRouter.sol">Git Source</a></p>
 <p>Interface for kAssetRouter for asset routing and settlement</p>
 <h2 id="functions-11"><a class="header" href="#functions-11">Functions</a></h2>
 <h3 id="kassetpush"><a class="header" href="#kassetpush">kAssetPush</a></h3>
@@ -1670,7 +1646,7 @@ storage-location: erc7201:kam.storage.kBase</p>
 </div>
 <h3 id="executesettlebatch"><a class="header" href="#executesettlebatch">executeSettleBatch</a></h3>
 <p>Execute a settlement proposal after cooldown period</p>
-<pre><code class="language-solidity">function executeSettleBatch(bytes32 proposalId) external;
+<pre><code class="language-solidity">function executeSettleBatch(bytes32 proposalId) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -1928,7 +1904,7 @@ storage-location: erc7201:kam.storage.kBase</p>
 }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="ikbatchreceiver"><a class="header" href="#ikbatchreceiver">IkBatchReceiver</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/interfaces/IkBatchReceiver.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/IkBatchReceiver.sol">Git Source</a></p>
 <p>Interface for kBatchReceiver</p>
 <h2 id="functions-12"><a class="header" href="#functions-12">Functions</a></h2>
 <h3 id="kminter"><a class="header" href="#kminter">kMinter</a></h3>
@@ -1982,7 +1958,7 @@ storage-location: erc7201:kam.storage.kBase</p>
 <pre><code class="language-solidity">error TransferFailed();
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="ikminter"><a class="header" href="#ikminter">IkMinter</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/interfaces/IkMinter.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/IkMinter.sol">Git Source</a></p>
 <p>Interface for kMinter</p>
 <h2 id="functions-13"><a class="header" href="#functions-13">Functions</a></h2>
 <h3 id="mint"><a class="header" href="#mint">mint</a></h3>
@@ -2075,10 +2051,10 @@ storage-location: erc7201:kam.storage.kBase</p>
 }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="ikregistry"><a class="header" href="#ikregistry">IkRegistry</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/interfaces/IkRegistry.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/IkRegistry.sol">Git Source</a></p>
 <h2 id="functions-14"><a class="header" href="#functions-14">Functions</a></h2>
 <h3 id="setsingletoncontract"><a class="header" href="#setsingletoncontract">setSingletonContract</a></h3>
-<pre><code class="language-solidity">function setSingletonContract(bytes32 id, address contractAddress) external;
+<pre><code class="language-solidity">function setSingletonContract(bytes32 id, address contractAddress) external payable;
 </code></pre>
 <h3 id="registerasset"><a class="header" href="#registerasset">registerAsset</a></h3>
 <pre><code class="language-solidity">function registerAsset(
@@ -2088,25 +2064,26 @@ storage-location: erc7201:kam.storage.kBase</p>
     bytes32 id
 )
     external
+    payable
     returns (address);
 </code></pre>
 <h3 id="registervault"><a class="header" href="#registervault">registerVault</a></h3>
-<pre><code class="language-solidity">function registerVault(address vault, VaultType type_, address asset) external;
+<pre><code class="language-solidity">function registerVault(address vault, VaultType type_, address asset) external payable;
 </code></pre>
 <h3 id="registeradapter"><a class="header" href="#registeradapter">registerAdapter</a></h3>
-<pre><code class="language-solidity">function registerAdapter(address vault, address adapter) external;
+<pre><code class="language-solidity">function registerAdapter(address vault, address adapter) external payable;
 </code></pre>
 <h3 id="removeadapter"><a class="header" href="#removeadapter">removeAdapter</a></h3>
-<pre><code class="language-solidity">function removeAdapter(address vault, address adapter) external;
+<pre><code class="language-solidity">function removeAdapter(address vault, address adapter) external payable;
 </code></pre>
 <h3 id="grantinstitutionrole"><a class="header" href="#grantinstitutionrole">grantInstitutionRole</a></h3>
-<pre><code class="language-solidity">function grantInstitutionRole(address institution_) external;
+<pre><code class="language-solidity">function grantInstitutionRole(address institution_) external payable;
 </code></pre>
 <h3 id="grantvendorrole"><a class="header" href="#grantvendorrole">grantVendorRole</a></h3>
-<pre><code class="language-solidity">function grantVendorRole(address vendor_) external;
+<pre><code class="language-solidity">function grantVendorRole(address vendor_) external payable;
 </code></pre>
 <h3 id="grantrelayerrole"><a class="header" href="#grantrelayerrole">grantRelayerRole</a></h3>
-<pre><code class="language-solidity">function grantRelayerRole(address relayer_) external;
+<pre><code class="language-solidity">function grantRelayerRole(address relayer_) external payable;
 </code></pre>
 <h3 id="getcontractbyid"><a class="header" href="#getcontractbyid">getContractById</a></h3>
 <pre><code class="language-solidity">function getContractById(bytes32 id) external view returns (address);
@@ -2171,6 +2148,9 @@ storage-location: erc7201:kam.storage.kBase</p>
 </code></pre>
 <h3 id="vaultregistered"><a class="header" href="#vaultregistered">VaultRegistered</a></h3>
 <pre><code class="language-solidity">event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
+</code></pre>
+<h3 id="vaultremoved"><a class="header" href="#vaultremoved">VaultRemoved</a></h3>
+<pre><code class="language-solidity">event VaultRemoved(address indexed vault);
 </code></pre>
 <h3 id="assetregistered"><a class="header" href="#assetregistered">AssetRegistered</a></h3>
 <pre><code class="language-solidity">event AssetRegistered(address indexed asset, address indexed kToken);
@@ -2485,7 +2465,7 @@ storage-location: erc7201:kam.storage.kBase</p>
 }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="ikstakingvault"><a class="header" href="#ikstakingvault">IkStakingVault</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/interfaces/IkStakingVault.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/IkStakingVault.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="src/interfaces/IkStakingVault.sol//src/interfaces/modules/IVaultBatch.sol/interface.IVaultBatch.html">IVaultBatch</a>, <a href="src/interfaces/IkStakingVault.sol//src/interfaces/modules/IVaultClaim.sol/interface.IVaultClaim.html">IVaultClaim</a>, <a href="src/interfaces/IkStakingVault.sol//src/interfaces/modules/IVaultFees.sol/interface.IVaultFees.html">IVaultFees</a></p>
 <p>Interface for kStakingVault that manages minter operations and user staking</p>
@@ -2573,7 +2553,7 @@ storage-location: erc7201:kam.storage.kBase</p>
 <pre><code class="language-solidity">function contractVersion() external pure returns (string memory);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="iktoken"><a class="header" href="#iktoken">IkToken</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/interfaces/IkToken.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/IkToken.sol">Git Source</a></p>
 <p>Interface for kToken with role-based minting and burning capabilities</p>
 <p><em>Defines the standard interface for kToken implementations with ERC20 compatibility</em></p>
 <h2 id="functions-16"><a class="header" href="#functions-16">Functions</a></h2>
@@ -2832,7 +2812,7 @@ storage-location: erc7201:kam.storage.kBase</p>
 <li><a href="src/kStakingVault/base/VaultFees.sol/contract.VaultFees.html">VaultFees</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="basevaultmodule"><a class="header" href="#basevaultmodule">BaseVaultModule</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kStakingVault/base/BaseVaultModule.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/base/BaseVaultModule.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 ERC20, ReentrancyGuardTransient</p>
 <p>Base contract for all modules</p>
@@ -2843,6 +2823,60 @@ ERC20, ReentrancyGuardTransient</p>
 </code></pre>
 <h3 id="k_minter-1"><a class="header" href="#k_minter-1">K_MINTER</a></h3>
 <pre><code class="language-solidity">bytes32 internal constant K_MINTER = keccak256("K_MINTER");
+</code></pre>
+<h3 id="decimals_mask"><a class="header" href="#decimals_mask">DECIMALS_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant DECIMALS_MASK = 0xFF;
+</code></pre>
+<h3 id="decimals_shift"><a class="header" href="#decimals_shift">DECIMALS_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant DECIMALS_SHIFT = 0;
+</code></pre>
+<h3 id="hurdle_rate_mask"><a class="header" href="#hurdle_rate_mask">HURDLE_RATE_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant HURDLE_RATE_MASK = 0xFFFF;
+</code></pre>
+<h3 id="hurdle_rate_shift"><a class="header" href="#hurdle_rate_shift">HURDLE_RATE_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant HURDLE_RATE_SHIFT = 8;
+</code></pre>
+<h3 id="performance_fee_mask"><a class="header" href="#performance_fee_mask">PERFORMANCE_FEE_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant PERFORMANCE_FEE_MASK = 0xFFFF;
+</code></pre>
+<h3 id="performance_fee_shift"><a class="header" href="#performance_fee_shift">PERFORMANCE_FEE_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant PERFORMANCE_FEE_SHIFT = 24;
+</code></pre>
+<h3 id="management_fee_mask"><a class="header" href="#management_fee_mask">MANAGEMENT_FEE_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant MANAGEMENT_FEE_MASK = 0xFFFF;
+</code></pre>
+<h3 id="management_fee_shift"><a class="header" href="#management_fee_shift">MANAGEMENT_FEE_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant MANAGEMENT_FEE_SHIFT = 40;
+</code></pre>
+<h3 id="initialized_mask"><a class="header" href="#initialized_mask">INITIALIZED_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant INITIALIZED_MASK = 0x1;
+</code></pre>
+<h3 id="initialized_shift"><a class="header" href="#initialized_shift">INITIALIZED_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant INITIALIZED_SHIFT = 56;
+</code></pre>
+<h3 id="paused_mask"><a class="header" href="#paused_mask">PAUSED_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant PAUSED_MASK = 0x1;
+</code></pre>
+<h3 id="paused_shift"><a class="header" href="#paused_shift">PAUSED_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant PAUSED_SHIFT = 57;
+</code></pre>
+<h3 id="is_hard_hurdle_rate_mask"><a class="header" href="#is_hard_hurdle_rate_mask">IS_HARD_HURDLE_RATE_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant IS_HARD_HURDLE_RATE_MASK = 0x1;
+</code></pre>
+<h3 id="is_hard_hurdle_rate_shift"><a class="header" href="#is_hard_hurdle_rate_shift">IS_HARD_HURDLE_RATE_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant IS_HARD_HURDLE_RATE_SHIFT = 58;
+</code></pre>
+<h3 id="last_fees_charged_management_mask"><a class="header" href="#last_fees_charged_management_mask">LAST_FEES_CHARGED_MANAGEMENT_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_MASK = 0xFFFFFFFFFFFFFFFF;
+</code></pre>
+<h3 id="last_fees_charged_management_shift"><a class="header" href="#last_fees_charged_management_shift">LAST_FEES_CHARGED_MANAGEMENT_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_SHIFT = 59;
+</code></pre>
+<h3 id="last_fees_charged_performance_mask"><a class="header" href="#last_fees_charged_performance_mask">LAST_FEES_CHARGED_PERFORMANCE_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_MASK = 0xFFFFFFFFFFFFFFFF;
+</code></pre>
+<h3 id="last_fees_charged_performance_shift"><a class="header" href="#last_fees_charged_performance_shift">LAST_FEES_CHARGED_PERFORMANCE_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_SHIFT = 123;
 </code></pre>
 <h3 id="module_base_storage_location"><a class="header" href="#module_base_storage_location">MODULE_BASE_STORAGE_LOCATION</a></h3>
 <pre><code class="language-solidity">bytes32 internal constant MODULE_BASE_STORAGE_LOCATION =
@@ -2858,15 +2892,68 @@ ERC20, ReentrancyGuardTransient</p>
 <tr><td><code>$</code></td><td><code>BaseVaultModuleStorage</code></td><td>Storage reference for base vault state variables</td></tr>
 </tbody></table>
 </div>
+<h3 id="_getdecimals"><a class="header" href="#_getdecimals">_getDecimals</a></h3>
+<pre><code class="language-solidity">function _getDecimals(BaseVaultModuleStorage storage $) internal view returns (uint8);
+</code></pre>
+<h3 id="_setdecimals"><a class="header" href="#_setdecimals">_setDecimals</a></h3>
+<pre><code class="language-solidity">function _setDecimals(BaseVaultModuleStorage storage $, uint8 value) internal;
+</code></pre>
+<h3 id="_gethurdlerate"><a class="header" href="#_gethurdlerate">_getHurdleRate</a></h3>
+<pre><code class="language-solidity">function _getHurdleRate(BaseVaultModuleStorage storage $) internal view returns (uint16);
+</code></pre>
+<h3 id="_sethurdlerate"><a class="header" href="#_sethurdlerate">_setHurdleRate</a></h3>
+<pre><code class="language-solidity">function _setHurdleRate(BaseVaultModuleStorage storage $, uint16 value) internal;
+</code></pre>
+<h3 id="_getperformancefee"><a class="header" href="#_getperformancefee">_getPerformanceFee</a></h3>
+<pre><code class="language-solidity">function _getPerformanceFee(BaseVaultModuleStorage storage $) internal view returns (uint16);
+</code></pre>
+<h3 id="_setperformancefee"><a class="header" href="#_setperformancefee">_setPerformanceFee</a></h3>
+<pre><code class="language-solidity">function _setPerformanceFee(BaseVaultModuleStorage storage $, uint16 value) internal;
+</code></pre>
+<h3 id="_getmanagementfee"><a class="header" href="#_getmanagementfee">_getManagementFee</a></h3>
+<pre><code class="language-solidity">function _getManagementFee(BaseVaultModuleStorage storage $) internal view returns (uint16);
+</code></pre>
+<h3 id="_setmanagementfee"><a class="header" href="#_setmanagementfee">_setManagementFee</a></h3>
+<pre><code class="language-solidity">function _setManagementFee(BaseVaultModuleStorage storage $, uint16 value) internal;
+</code></pre>
+<h3 id="_getinitialized"><a class="header" href="#_getinitialized">_getInitialized</a></h3>
+<pre><code class="language-solidity">function _getInitialized(BaseVaultModuleStorage storage $) internal view returns (bool);
+</code></pre>
+<h3 id="_setinitialized"><a class="header" href="#_setinitialized">_setInitialized</a></h3>
+<pre><code class="language-solidity">function _setInitialized(BaseVaultModuleStorage storage $, bool value) internal;
+</code></pre>
+<h3 id="_getpaused"><a class="header" href="#_getpaused">_getPaused</a></h3>
+<pre><code class="language-solidity">function _getPaused(BaseVaultModuleStorage storage $) internal view returns (bool);
+</code></pre>
+<h3 id="_setpaused"><a class="header" href="#_setpaused">_setPaused</a></h3>
+<pre><code class="language-solidity">function _setPaused(BaseVaultModuleStorage storage $, bool value) internal;
+</code></pre>
+<h3 id="_getishardhurdlerate"><a class="header" href="#_getishardhurdlerate">_getIsHardHurdleRate</a></h3>
+<pre><code class="language-solidity">function _getIsHardHurdleRate(BaseVaultModuleStorage storage $) internal view returns (bool);
+</code></pre>
+<h3 id="_setishardhurdlerate"><a class="header" href="#_setishardhurdlerate">_setIsHardHurdleRate</a></h3>
+<pre><code class="language-solidity">function _setIsHardHurdleRate(BaseVaultModuleStorage storage $, bool value) internal;
+</code></pre>
+<h3 id="_getlastfeeschargedmanagement"><a class="header" href="#_getlastfeeschargedmanagement">_getLastFeesChargedManagement</a></h3>
+<pre><code class="language-solidity">function _getLastFeesChargedManagement(BaseVaultModuleStorage storage $) internal view returns (uint64);
+</code></pre>
+<h3 id="_setlastfeeschargedmanagement"><a class="header" href="#_setlastfeeschargedmanagement">_setLastFeesChargedManagement</a></h3>
+<pre><code class="language-solidity">function _setLastFeesChargedManagement(BaseVaultModuleStorage storage $, uint64 value) internal;
+</code></pre>
+<h3 id="_getlastfeeschargedperformance"><a class="header" href="#_getlastfeeschargedperformance">_getLastFeesChargedPerformance</a></h3>
+<pre><code class="language-solidity">function _getLastFeesChargedPerformance(BaseVaultModuleStorage storage $) internal view returns (uint64);
+</code></pre>
+<h3 id="_setlastfeeschargedperformance"><a class="header" href="#_setlastfeeschargedperformance">_setLastFeesChargedPerformance</a></h3>
+<pre><code class="language-solidity">function _setLastFeesChargedPerformance(BaseVaultModuleStorage storage $, uint64 value) internal;
+</code></pre>
 <h3 id="__basevaultmodule_init"><a class="header" href="#__basevaultmodule_init">__BaseVaultModule_init</a></h3>
 <p>Initializes the base contract with registry and pause state</p>
 <p><em>Can only be called once during initialization</em></p>
-<pre><code class="language-solidity">function __BaseVaultModule_init(address registry_, address feeReceiver_, bool paused_) internal;
+<pre><code class="language-solidity">function __BaseVaultModule_init(address registry_, bool paused_) internal;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>registry_</code></td><td><code>address</code></td><td>Address of the kRegistry contract</td></tr>
-<tr><td><code>feeReceiver_</code></td><td><code>address</code></td><td></td></tr>
 <tr><td><code>paused_</code></td><td><code>bool</code></td><td>Initial pause state</td></tr>
 </tbody></table>
 </div>
@@ -2941,7 +3028,7 @@ ERC20, ReentrancyGuardTransient</p>
 <tr><td><code>&lt;none&gt;</code></td><td><code>uint8</code></td><td>Token decimals</td></tr>
 </tbody></table>
 </div>
-<h3 id="_setpaused"><a class="header" href="#_setpaused">_setPaused</a></h3>
+<h3 id="_setpaused-1"><a class="header" href="#_setpaused-1">_setPaused</a></h3>
 <p>Sets the pause state of the contract</p>
 <p><em>Only callable internally by inheriting contracts</em></p>
 <pre><code class="language-solidity">function _setPaused(bool paused_) internal;
@@ -3163,26 +3250,15 @@ ERC20, ReentrancyGuardTransient</p>
 <p><strong>Note:</strong>
 storage-location: erc7201.kam.storage.BaseVaultModule</p>
 <pre><code class="language-solidity">struct BaseVaultModuleStorage {
+    uint128 sharePriceWatermark;
+    uint128 totalPendingStake;
     uint256 currentBatch;
     bytes32 currentBatchId;
-    uint256 sharePriceWatermark;
-    uint256 requestCounter;
-    uint128 totalPendingStake;
     address registry;
     address receiverImplementation;
     address underlyingAsset;
     address kToken;
-    address feeReceiver;
-    uint96 dustAmount;
-    uint8 decimals;
-    uint16 hurdleRate;
-    uint16 performanceFee;
-    uint16 managementFee;
-    bool initialized;
-    bool paused;
-    bool isHardHurdleRate;
-    uint64 lastFeesChargedManagement;
-    uint64 lastFeesChargedPerformance;
+    uint256 config;
     string name;
     string symbol;
     mapping(bytes32 =&gt; BaseVaultModuleTypes.BatchInfo) batches;
@@ -3192,7 +3268,7 @@ storage-location: erc7201.kam.storage.BaseVaultModule</p>
 }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="vaultbatches"><a class="header" href="#vaultbatches">VaultBatches</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kStakingVault/base/VaultBatches.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/base/VaultBatches.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="src/kStakingVault/base/VaultBatches.sol//src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.html">BaseVaultModule</a></p>
 <p>Handles batch operations for staking and unstaking</p>
@@ -3209,6 +3285,7 @@ storage-location: erc7201.kam.storage.BaseVaultModule</p>
 </tbody></table>
 </div>
 <h3 id="closebatch-1"><a class="header" href="#closebatch-1">closeBatch</a></h3>
+<p>Closes a batch to prevent new requests</p>
 <p><em>Only callable by RELAYER_ROLE, typically called at cutoff time</em></p>
 <pre><code class="language-solidity">function closeBatch(bytes32 _batchId, bool _create) external;
 </code></pre>
@@ -3261,7 +3338,7 @@ storage-location: erc7201.kam.storage.BaseVaultModule</p>
 <pre><code class="language-solidity">event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="vaultclaims"><a class="header" href="#vaultclaims">VaultClaims</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kStakingVault/base/VaultClaims.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/base/VaultClaims.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="src/kStakingVault/base/VaultClaims.sol//src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.html">BaseVaultModule</a></p>
 <p>Handles claim operations for settled batches</p>
@@ -3315,7 +3392,7 @@ storage-location: erc7201.kam.storage.BaseVaultModule</p>
 <pre><code class="language-solidity">error NotBeneficiary();
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="vaultfees"><a class="header" href="#vaultfees">VaultFees</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kStakingVault/base/VaultFees.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/base/VaultFees.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="src/kStakingVault/base/VaultFees.sol//src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.html">BaseVaultModule</a></p>
 <p>Handles batch operations for staking and unstaking</p>
@@ -3462,7 +3539,7 @@ storage-location: erc7201.kam.storage.BaseVaultModule</p>
 <li><a href="src/kStakingVault/modules/ReaderModule.sol/contract.ReaderModule.html">ReaderModule</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="readermodule"><a class="header" href="#readermodule">ReaderModule</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kStakingVault/modules/ReaderModule.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/modules/ReaderModule.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="src/kStakingVault/modules/ReaderModule.sol//src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.html">BaseVaultModule</a>, <a href="src/kStakingVault/modules/ReaderModule.sol//src/abstracts/Extsload.sol/abstract.Extsload.html">Extsload</a></p>
 <p>Contains all the public getters for the Staking Vault</p>
@@ -3667,7 +3744,7 @@ storage-location: erc7201.kam.storage.BaseVaultModule</p>
 <li><a href="src/kStakingVault/types/BaseVaultModuleTypes.sol/library.BaseVaultModuleTypes.html">BaseVaultModuleTypes</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="basevaultmoduletypes"><a class="header" href="#basevaultmoduletypes">BaseVaultModuleTypes</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kStakingVault/types/BaseVaultModuleTypes.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/types/BaseVaultModuleTypes.sol">Git Source</a></p>
 <p>Library containing all data structures used in the ModuleBase</p>
 <p><em>Defines standardized data types for cross-contract communication and storage</em></p>
 <h2 id="structs-7"><a class="header" href="#structs-7">Structs</a></h2>
@@ -3708,9 +3785,9 @@ storage-location: erc7201.kam.storage.BaseVaultModule</p>
 }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="kstakingvault"><a class="header" href="#kstakingvault">kStakingVault</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kStakingVault/kStakingVault.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/kStakingVault.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
-Initializable, UUPSUpgradeable, <a href="src/kStakingVault/kStakingVault.sol//src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.html">BaseVaultModule</a>, <a href="src/kStakingVault/kStakingVault.sol//src/base/MultiFacetProxy.sol/contract.MultiFacetProxy.html">MultiFacetProxy</a>, <a href="src/kStakingVault/kStakingVault.sol//src/kStakingVault/base/VaultFees.sol/contract.VaultFees.html">VaultFees</a>, <a href="src/kStakingVault/kStakingVault.sol//src/kStakingVault/base/VaultClaims.sol/contract.VaultClaims.html">VaultClaims</a>, <a href="src/kStakingVault/kStakingVault.sol//src/kStakingVault/base/VaultBatches.sol/contract.VaultBatches.html">VaultBatches</a></p>
+Initializable, UUPSUpgradeable, Ownable, <a href="src/kStakingVault/kStakingVault.sol//src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.html">BaseVaultModule</a>, <a href="src/kStakingVault/kStakingVault.sol//src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.html">MultiFacetProxy</a>, <a href="src/kStakingVault/kStakingVault.sol//src/kStakingVault/base/VaultFees.sol/contract.VaultFees.html">VaultFees</a>, <a href="src/kStakingVault/kStakingVault.sol//src/kStakingVault/base/VaultClaims.sol/contract.VaultClaims.html">VaultClaims</a>, <a href="src/kStakingVault/kStakingVault.sol//src/kStakingVault/base/VaultBatches.sol/contract.VaultBatches.html">VaultBatches</a></p>
 <p>Pure ERC20 vault with dual accounting for minter and user pools</p>
 <p><em>Implements automatic yield distribution from minter to user pools with modular architecture</em></p>
 <h2 id="functions-22"><a class="header" href="#functions-22">Functions</a></h2>
@@ -3723,15 +3800,13 @@ Initializable, UUPSUpgradeable, <a href="src/kStakingVault/kStakingVault.sol//sr
 <p><em>Phase 1: Core initialization without strings to avoid stack too deep</em></p>
 <pre><code class="language-solidity">function initialize(
     address owner_,
-    address admin_,
     address registry_,
     bool paused_,
     string memory name_,
     string memory symbol_,
     uint8 decimals_,
     uint128 dustAmount_,
-    address asset_,
-    address feeCollector_
+    address asset_
 )
     external
     initializer;
@@ -3739,7 +3814,6 @@ Initializable, UUPSUpgradeable, <a href="src/kStakingVault/kStakingVault.sol//sr
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>owner_</code></td><td><code>address</code></td><td></td></tr>
-<tr><td><code>admin_</code></td><td><code>address</code></td><td></td></tr>
 <tr><td><code>registry_</code></td><td><code>address</code></td><td>The registry address</td></tr>
 <tr><td><code>paused_</code></td><td><code>bool</code></td><td>If the vault is paused_</td></tr>
 <tr><td><code>name_</code></td><td><code>string</code></td><td>Token name</td></tr>
@@ -3747,7 +3821,6 @@ Initializable, UUPSUpgradeable, <a href="src/kStakingVault/kStakingVault.sol//sr
 <tr><td><code>decimals_</code></td><td><code>uint8</code></td><td>Token decimals</td></tr>
 <tr><td><code>dustAmount_</code></td><td><code>uint128</code></td><td>Minimum amount threshold</td></tr>
 <tr><td><code>asset_</code></td><td><code>address</code></td><td>Underlying asset address</td></tr>
-<tr><td><code>feeCollector_</code></td><td><code>address</code></td><td>feeCollector address</td></tr>
 </tbody></table>
 </div>
 <h3 id="requeststake-1"><a class="header" href="#requeststake-1">requestStake</a></h3>
@@ -3876,6 +3949,11 @@ Initializable, UUPSUpgradeable, <a href="src/kStakingVault/kStakingVault.sol//sr
 <p><em>This allows upgrading the main contract while keeping modules separate</em></p>
 <pre><code class="language-solidity">function _authorizeUpgrade(address newImplementation) internal view override;
 </code></pre>
+<h3 id="_authorizemodifyfunctions-1"><a class="header" href="#_authorizemodifyfunctions-1">_authorizeModifyFunctions</a></h3>
+<p>Authorize function modification</p>
+<p><em>This allows modifying functions while keeping modules separate</em></p>
+<pre><code class="language-solidity">function _authorizeModifyFunctions(address sender) internal override;
+</code></pre>
 <h3 id="contractname-3"><a class="header" href="#contractname-3">contractName</a></h3>
 <p>Returns the contract name</p>
 <pre><code class="language-solidity">function contractName() external pure returns (string memory);
@@ -3894,7 +3972,7 @@ Initializable, UUPSUpgradeable, <a href="src/kStakingVault/kStakingVault.sol//sr
 <tr><td><code>&lt;none&gt;</code></td><td><code>string</code></td><td>Contract version</td></tr>
 </tbody></table>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="kassetrouter"><a class="header" href="#kassetrouter">kAssetRouter</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kAssetRouter.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kAssetRouter.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="src/kAssetRouter.sol//src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.html">IkAssetRouter</a>, Initializable, UUPSUpgradeable, <a href="src/kAssetRouter.sol//src/base/kBase.sol/contract.kBase.html">kBase</a>, Multicallable</p>
 <h2 id="state-variables-7"><a class="header" href="#state-variables-7">State Variables</a></h2>
@@ -4033,7 +4111,7 @@ Initializable, UUPSUpgradeable, <a href="src/kStakingVault/kStakingVault.sol//sr
 </div>
 <h3 id="executesettlebatch-1"><a class="header" href="#executesettlebatch-1">executeSettleBatch</a></h3>
 <p>Execute a settlement proposal after cooldown period</p>
-<pre><code class="language-solidity">function executeSettleBatch(bytes32 proposalId) external nonReentrant;
+<pre><code class="language-solidity">function executeSettleBatch(bytes32 proposalId) external payable nonReentrant;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -4252,7 +4330,7 @@ storage-location: erc7201:kam.storage.kAssetRouter</p>
 }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="kbatchreceiver"><a class="header" href="#kbatchreceiver">kBatchReceiver</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kBatchReceiver.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kBatchReceiver.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="src/kBatchReceiver.sol//src/interfaces/IkBatchReceiver.sol/interface.IkBatchReceiver.html">IkBatchReceiver</a></p>
 <p>Minimal proxy contract that holds and distributes settled assets for batch redemptions</p>
@@ -4314,7 +4392,7 @@ storage-location: erc7201:kam.storage.kAssetRouter</p>
 <tr><td><code>asset_</code></td><td><code>address</code></td><td>Asset address (use address(0) for ETH)</td></tr>
 </tbody></table>
 </div><div style="break-before: page; page-break-before: always;"></div><h1 id="kminter-2"><a class="header" href="#kminter-2">kMinter</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kMinter.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kMinter.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="src/kMinter.sol//src/interfaces/IkMinter.sol/interface.IkMinter.html">IkMinter</a>, Initializable, UUPSUpgradeable, <a href="src/kMinter.sol//src/base/kBase.sol/contract.kBase.html">kBase</a>, <a href="src/kMinter.sol//src/abstracts/Extsload.sol/abstract.Extsload.html">Extsload</a></p>
 <p>Institutional minting and redemption manager for kTokens</p>
@@ -4412,8 +4490,17 @@ storage-location: erc7201:kam.storage.kAssetRouter</p>
 </tbody></table>
 </div>
 <h3 id="rescuereceiverassets-1"><a class="header" href="#rescuereceiverassets-1">rescueReceiverAssets</a></h3>
+<p>Rescue assets from batch receiver</p>
 <pre><code class="language-solidity">function rescueReceiverAssets(address batchReceiver, address asset_, address to_, uint256 amount_) external;
 </code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>batchReceiver</code></td><td><code>address</code></td><td>Batch receiver address</td></tr>
+<tr><td><code>asset_</code></td><td><code>address</code></td><td>Asset address</td></tr>
+<tr><td><code>to_</code></td><td><code>address</code></td><td>Destination address</td></tr>
+<tr><td><code>amount_</code></td><td><code>uint256</code></td><td>Amount</td></tr>
+</tbody></table>
+</div>
 <h3 id="ispaused-6"><a class="header" href="#ispaused-6">isPaused</a></h3>
 <p>Check if contract is paused</p>
 <pre><code class="language-solidity">function isPaused() external view returns (bool);
@@ -4484,10 +4571,6 @@ storage-location: erc7201:kam.storage.kAssetRouter</p>
 <tr><td><code>newImplementation</code></td><td><code>address</code></td><td>New implementation address</td></tr>
 </tbody></table>
 </div>
-<h3 id="receive-1"><a class="header" href="#receive-1">receive</a></h3>
-<p>Accepts ETH transfers</p>
-<pre><code class="language-solidity">receive() external payable;
-</code></pre>
 <h3 id="contractname-5"><a class="header" href="#contractname-5">contractName</a></h3>
 <p>Returns the contract name</p>
 <pre><code class="language-solidity">function contractName() external pure returns (string memory);
@@ -4518,7 +4601,7 @@ storage-location: erc7201:kam.storage.kMinter</p>
 }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="kregistry"><a class="header" href="#kregistry">kRegistry</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kRegistry.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kRegistry.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="src/kRegistry.sol//src/interfaces/IkRegistry.sol/interface.IkRegistry.html">IkRegistry</a>, Initializable, UUPSUpgradeable, OwnableRoles</p>
 <p>Central registry for KAM protocol contracts</p>
@@ -4600,7 +4683,7 @@ storage-location: erc7201:kam.storage.kMinter</p>
 <h3 id="setsingletoncontract-1"><a class="header" href="#setsingletoncontract-1">setSingletonContract</a></h3>
 <p>Set a singleton contract address</p>
 <p><em>Only callable by ADMIN_ROLE</em></p>
-<pre><code class="language-solidity">function setSingletonContract(bytes32 id, address contractAddress) external;
+<pre><code class="language-solidity">function setSingletonContract(bytes32 id, address contractAddress) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -4611,7 +4694,7 @@ storage-location: erc7201:kam.storage.kMinter</p>
 <h3 id="grantinstitutionrole-1"><a class="header" href="#grantinstitutionrole-1">grantInstitutionRole</a></h3>
 <p>grant the institution role to a given address</p>
 <p><em>Only callable by VENDOR_ROLE</em></p>
-<pre><code class="language-solidity">function grantInstitutionRole(address institution_) external;
+<pre><code class="language-solidity">function grantInstitutionRole(address institution_) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -4621,7 +4704,7 @@ storage-location: erc7201:kam.storage.kMinter</p>
 <h3 id="grantvendorrole-1"><a class="header" href="#grantvendorrole-1">grantVendorRole</a></h3>
 <p>grant the vendor role to a given address</p>
 <p><em>Only callable by ADMIN_ROLE</em></p>
-<pre><code class="language-solidity">function grantVendorRole(address vendor_) external;
+<pre><code class="language-solidity">function grantVendorRole(address vendor_) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -4631,7 +4714,7 @@ storage-location: erc7201:kam.storage.kMinter</p>
 <h3 id="grantrelayerrole-1"><a class="header" href="#grantrelayerrole-1">grantRelayerRole</a></h3>
 <p>grant the relayer role to a given address</p>
 <p><em>Only callable by ADMIN_ROLE</em></p>
-<pre><code class="language-solidity">function grantRelayerRole(address relayer_) external;
+<pre><code class="language-solidity">function grantRelayerRole(address relayer_) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -4648,6 +4731,7 @@ storage-location: erc7201:kam.storage.kMinter</p>
     bytes32 id
 )
     external
+    payable
     returns (address);
 </code></pre>
 <p><strong>Parameters</strong></p>
@@ -4661,7 +4745,7 @@ storage-location: erc7201:kam.storage.kMinter</p>
 <h3 id="registervault-1"><a class="header" href="#registervault-1">registerVault</a></h3>
 <p>Register a new vault in the protocol</p>
 <p><em>Only callable by ADMIN_ROLE, sets as primary if first of its type</em></p>
-<pre><code class="language-solidity">function registerVault(address vault, VaultType type_, address asset) external;
+<pre><code class="language-solidity">function registerVault(address vault, VaultType type_, address asset) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -4670,9 +4754,12 @@ storage-location: erc7201:kam.storage.kMinter</p>
 <tr><td><code>asset</code></td><td><code>address</code></td><td>Underlying asset the vault manages</td></tr>
 </tbody></table>
 </div>
+<h3 id="removevault"><a class="header" href="#removevault">removeVault</a></h3>
+<pre><code class="language-solidity">function removeVault(address vault) external payable;
+</code></pre>
 <h3 id="registeradapter-1"><a class="header" href="#registeradapter-1">registerAdapter</a></h3>
 <p>Registers an adapter for a specific vault</p>
-<pre><code class="language-solidity">function registerAdapter(address vault, address adapter) external;
+<pre><code class="language-solidity">function registerAdapter(address vault, address adapter) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -4682,7 +4769,7 @@ storage-location: erc7201:kam.storage.kMinter</p>
 </div>
 <h3 id="removeadapter-1"><a class="header" href="#removeadapter-1">removeAdapter</a></h3>
 <p>Removes an adapter for a specific vault</p>
-<pre><code class="language-solidity">function removeAdapter(address vault, address adapter) external;
+<pre><code class="language-solidity">function removeAdapter(address vault, address adapter) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -4727,6 +4814,15 @@ storage-location: erc7201:kam.storage.kMinter</p>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Array of supported asset addresses</td></tr>
+</tbody></table>
+</div>
+<h3 id="getallvaults"><a class="header" href="#getallvaults">getAllVaults</a></h3>
+<p>Get all vaults registered in the protocol</p>
+<pre><code class="language-solidity">function getAllVaults() external view returns (address[] memory);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Array of vault addresses</td></tr>
 </tbody></table>
 </div>
 <h3 id="getcorecontracts-1"><a class="header" href="#getcorecontracts-1">getCoreContracts</a></h3>
@@ -4941,7 +5037,7 @@ storage-location: erc7201:kam.storage.kMinter</p>
 <tr><td><code>newImplementation</code></td><td><code>address</code></td><td>New implementation address</td></tr>
 </tbody></table>
 </div>
-<h3 id="receive-2"><a class="header" href="#receive-2">receive</a></h3>
+<h3 id="receive-1"><a class="header" href="#receive-1">receive</a></h3>
 <p>Receive ETH (for gas refunds, etc.)</p>
 <pre><code class="language-solidity">receive() external payable;
 </code></pre>
@@ -4971,7 +5067,6 @@ storage-location: erc7201:kam.storage.kRegistry</p>
     EnumerableSetLib.AddressSet supportedAssets;
     EnumerableSetLib.AddressSet allVaults;
     mapping(bytes32 =&gt; address) singletonContracts;
-    mapping(address =&gt; bool) isVault;
     mapping(address =&gt; uint8 vaultType) vaultType;
     mapping(address =&gt; mapping(uint8 vaultType =&gt; address)) assetToVault;
     mapping(address =&gt; EnumerableSetLib.AddressSet) vaultAsset;
@@ -4983,7 +5078,7 @@ storage-location: erc7201:kam.storage.kRegistry</p>
 }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="ktoken-1"><a class="header" href="#ktoken-1">kToken</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kToken.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kToken.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 ERC20, OwnableRoles, ReentrancyGuard, Multicallable</p>
 <p>ERC20 token with role-based minting and burning capabilities</p>

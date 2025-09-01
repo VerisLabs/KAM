@@ -1,5 +1,5 @@
 # kMinter
-[Git Source](https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kMinter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kMinter.sol)
 
 **Inherits:**
 [IkMinter](/src/interfaces/IkMinter.sol/interface.IkMinter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
@@ -156,10 +156,21 @@ function _createRedeemRequestId(address user, uint256 amount, uint256 timestamp)
 
 ### rescueReceiverAssets
 
+Rescue assets from batch receiver
+
 
 ```solidity
 function rescueReceiverAssets(address batchReceiver, address asset_, address to_, uint256 amount_) external;
 ```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`batchReceiver`|`address`|Batch receiver address|
+|`asset_`|`address`|Asset address|
+|`to_`|`address`|Destination address|
+|`amount_`|`uint256`|Amount|
+
 
 ### isPaused
 
@@ -270,15 +281,6 @@ function _authorizeUpgrade(address newImplementation) internal view override;
 |----|----|-----------|
 |`newImplementation`|`address`|New implementation address|
 
-
-### receive
-
-Accepts ETH transfers
-
-
-```solidity
-receive() external payable;
-```
 
 ### contractName
 

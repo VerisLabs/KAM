@@ -1,5 +1,5 @@
 # IkRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/interfaces/IkRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/IkRegistry.sol)
 
 
 ## Functions
@@ -7,7 +7,7 @@
 
 
 ```solidity
-function setSingletonContract(bytes32 id, address contractAddress) external;
+function setSingletonContract(bytes32 id, address contractAddress) external payable;
 ```
 
 ### registerAsset
@@ -21,6 +21,7 @@ function registerAsset(
     bytes32 id
 )
     external
+    payable
     returns (address);
 ```
 
@@ -28,42 +29,42 @@ function registerAsset(
 
 
 ```solidity
-function registerVault(address vault, VaultType type_, address asset) external;
+function registerVault(address vault, VaultType type_, address asset) external payable;
 ```
 
 ### registerAdapter
 
 
 ```solidity
-function registerAdapter(address vault, address adapter) external;
+function registerAdapter(address vault, address adapter) external payable;
 ```
 
 ### removeAdapter
 
 
 ```solidity
-function removeAdapter(address vault, address adapter) external;
+function removeAdapter(address vault, address adapter) external payable;
 ```
 
 ### grantInstitutionRole
 
 
 ```solidity
-function grantInstitutionRole(address institution_) external;
+function grantInstitutionRole(address institution_) external payable;
 ```
 
 ### grantVendorRole
 
 
 ```solidity
-function grantVendorRole(address vendor_) external;
+function grantVendorRole(address vendor_) external payable;
 ```
 
 ### grantRelayerRole
 
 
 ```solidity
-function grantRelayerRole(address relayer_) external;
+function grantRelayerRole(address relayer_) external payable;
 ```
 
 ### getContractById
@@ -210,6 +211,12 @@ event SingletonContractSet(bytes32 indexed id, address indexed contractAddress);
 
 ```solidity
 event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
+```
+
+### VaultRemoved
+
+```solidity
+event VaultRemoved(address indexed vault);
 ```
 
 ### AssetRegistered
