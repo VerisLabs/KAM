@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { EfficientHashLib } from "solady/utils/EfficientHashLib.sol";
 import { LibClone } from "solady/utils/LibClone.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
@@ -37,7 +38,7 @@ contract VaultBatches is BaseVaultModule {
         return _createNewBatch();
     }
 
-    // @notice Closes a batch to prevent new requests
+    /// @notice Closes a batch to prevent new requests
     /// @param _batchId The batch ID to close
     /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
     function closeBatch(bytes32 _batchId, bool _create) external {
@@ -89,9 +90,15 @@ contract VaultBatches is BaseVaultModule {
 
     function _createNewBatch() internal returns (bytes32) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        $.currentBatch++;
-        bytes32 newBatchId = keccak256(
-            abi.encodePacked(address(this), $.currentBatch, block.chainid, block.timestamp, $.underlyingAsset)
+        unchecked {
+            $.currentBatch++;
+        }
+        bytes32 newBatchId = EfficientHashLib.hash(
+            uint256(uint160(address(this))),
+            $.currentBatch,
+            block.chainid,
+            block.timestamp,
+            uint256(uint160($.underlyingAsset))
         );
 
         $.currentBatchId = newBatchId;

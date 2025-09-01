@@ -69,10 +69,6 @@ interface IVaultFees {
     /// @return The management fee in basis points (e.g., 100 = 1%)
     function managementFee() external view returns (uint16);
 
-    /// @notice Returns the address that receives collected fees
-    /// @return The fee receiver address
-    function feeReceiver() external view returns (address);
-
     /// @notice Returns the high watermark for share price used in performance fee calculations
     /// @return The share price watermark value
     function sharePriceWatermark() external view returns (uint256);

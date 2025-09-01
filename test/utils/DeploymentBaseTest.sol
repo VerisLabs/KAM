@@ -278,8 +278,7 @@ contract DeploymentBaseTest is BaseTest {
             symbol,
             6, // decimals
             DEFAULT_DUST_AMOUNT,
-            asset, // underlying asset (USDC for now)
-            users.treasury // feeCollector
+            asset // underlying asset (USDC for now)
         );
 
         address vaultProxy = factory.deployAndCall(address(stakingVaultImpl), users.admin, initData);

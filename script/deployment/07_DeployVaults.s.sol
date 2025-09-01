@@ -73,8 +73,7 @@ contract DeployVaultsScript is Script, DeploymentManager {
                 "dnkUSD",
                 6,
                 DEFAULT_DUST_AMOUNT,
-                config.assets.USDC,
-                config.roles.treasury
+                config.assets.USDC
             )
         );
     }
@@ -94,8 +93,7 @@ contract DeployVaultsScript is Script, DeploymentManager {
                 "akUSD",
                 6,
                 DEFAULT_DUST_AMOUNT,
-                config.assets.USDC,
-                config.roles.treasury
+                config.assets.USDC
             )
         );
     }
@@ -115,8 +113,7 @@ contract DeployVaultsScript is Script, DeploymentManager {
                 "bkUSD",
                 6,
                 DEFAULT_DUST_AMOUNT,
-                config.assets.USDC,
-                config.roles.treasury
+                config.assets.USDC
             )
         );
     }

@@ -47,6 +47,25 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
     bytes32 internal constant K_MINTER = keccak256("K_MINTER");
 
+    uint256 internal constant DECIMALS_MASK = 0xFF;
+    uint256 internal constant DECIMALS_SHIFT = 0;
+    uint256 internal constant HURDLE_RATE_MASK = 0xFFFF;
+    uint256 internal constant HURDLE_RATE_SHIFT = 8;
+    uint256 internal constant PERFORMANCE_FEE_MASK = 0xFFFF;
+    uint256 internal constant PERFORMANCE_FEE_SHIFT = 24;
+    uint256 internal constant MANAGEMENT_FEE_MASK = 0xFFFF;
+    uint256 internal constant MANAGEMENT_FEE_SHIFT = 40;
+    uint256 internal constant INITIALIZED_MASK = 0x1;
+    uint256 internal constant INITIALIZED_SHIFT = 56;
+    uint256 internal constant PAUSED_MASK = 0x1;
+    uint256 internal constant PAUSED_SHIFT = 57;
+    uint256 internal constant IS_HARD_HURDLE_RATE_MASK = 0x1;
+    uint256 internal constant IS_HARD_HURDLE_RATE_SHIFT = 58;
+    uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_MASK = 0xFFFFFFFFFFFFFFFF;
+    uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_SHIFT = 59;
+    uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_MASK = 0xFFFFFFFFFFFFFFFF;
+    uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_SHIFT = 123;
+
     /*//////////////////////////////////////////////////////////////
                               ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -75,29 +94,27 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
 
     /// @custom:storage-location erc7201.kam.storage.BaseVaultModule
     struct BaseVaultModuleStorage {
-        // 32 bytes slots
-        uint256 currentBatch;
-        bytes32 currentBatchId;
-        uint256 sharePriceWatermark;
-        uint256 requestCounter;
+        // 1
+        uint128 sharePriceWatermark;
         uint128 totalPendingStake;
+        // 2
+        uint256 currentBatch;
+        // 3
+        bytes32 currentBatchId;
+        // 4
         address registry;
+        // 5
         address receiverImplementation;
+        // 6
         address underlyingAsset;
+        // 7
         address kToken;
-        address feeReceiver;
-        // Mixed slot (19 bytes used)
-        uint96 dustAmount;
-        uint8 decimals;
-        uint16 hurdleRate;
-        uint16 performanceFee;
-        uint16 managementFee;
-        bool initialized;
-        bool paused;
-        bool isHardHurdleRate;
-        uint64 lastFeesChargedManagement;
-        uint64 lastFeesChargedPerformance;
+        // 8
+        uint256 config; // decimals, hurdle rate, performance fee, management fee, initialized, paused,
+            // isHardHurdleRate, lastFeesChargedManagement, lastFeesChargedPerformance
+        // 9
         string name;
+        // 10
         string symbol;
         mapping(bytes32 => BaseVaultModuleTypes.BatchInfo) batches;
         mapping(bytes32 => BaseVaultModuleTypes.StakeRequest) stakeRequests;
@@ -118,6 +135,87 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     }
 
     /*//////////////////////////////////////////////////////////////
+                          CONFIG GETTERS/SETTERS
+    //////////////////////////////////////////////////////////////*/
+
+    function _getDecimals(BaseVaultModuleStorage storage $) internal view returns (uint8) {
+        return uint8(($.config >> DECIMALS_SHIFT) & DECIMALS_MASK);
+    }
+
+    function _setDecimals(BaseVaultModuleStorage storage $, uint8 value) internal {
+        $.config = ($.config & ~(DECIMALS_MASK << DECIMALS_SHIFT)) | (uint256(value) << DECIMALS_SHIFT);
+    }
+
+    function _getHurdleRate(BaseVaultModuleStorage storage $) internal view returns (uint16) {
+        return uint16(($.config >> HURDLE_RATE_SHIFT) & HURDLE_RATE_MASK);
+    }
+
+    function _setHurdleRate(BaseVaultModuleStorage storage $, uint16 value) internal {
+        $.config = ($.config & ~(HURDLE_RATE_MASK << HURDLE_RATE_SHIFT)) | (uint256(value) << HURDLE_RATE_SHIFT);
+    }
+
+    function _getPerformanceFee(BaseVaultModuleStorage storage $) internal view returns (uint16) {
+        return uint16(($.config >> PERFORMANCE_FEE_SHIFT) & PERFORMANCE_FEE_MASK);
+    }
+
+    function _setPerformanceFee(BaseVaultModuleStorage storage $, uint16 value) internal {
+        $.config =
+            ($.config & ~(PERFORMANCE_FEE_MASK << PERFORMANCE_FEE_SHIFT)) | (uint256(value) << PERFORMANCE_FEE_SHIFT);
+    }
+
+    function _getManagementFee(BaseVaultModuleStorage storage $) internal view returns (uint16) {
+        return uint16(($.config >> MANAGEMENT_FEE_SHIFT) & MANAGEMENT_FEE_MASK);
+    }
+
+    function _setManagementFee(BaseVaultModuleStorage storage $, uint16 value) internal {
+        $.config =
+            ($.config & ~(MANAGEMENT_FEE_MASK << MANAGEMENT_FEE_SHIFT)) | (uint256(value) << MANAGEMENT_FEE_SHIFT);
+    }
+
+    function _getInitialized(BaseVaultModuleStorage storage $) internal view returns (bool) {
+        return (($.config >> INITIALIZED_SHIFT) & INITIALIZED_MASK) != 0;
+    }
+
+    function _setInitialized(BaseVaultModuleStorage storage $, bool value) internal {
+        $.config = ($.config & ~(INITIALIZED_MASK << INITIALIZED_SHIFT)) | (uint256(value ? 1 : 0) << INITIALIZED_SHIFT);
+    }
+
+    function _getPaused(BaseVaultModuleStorage storage $) internal view returns (bool) {
+        return (($.config >> PAUSED_SHIFT) & PAUSED_MASK) != 0;
+    }
+
+    function _setPaused(BaseVaultModuleStorage storage $, bool value) internal {
+        $.config = ($.config & ~(PAUSED_MASK << PAUSED_SHIFT)) | (uint256(value ? 1 : 0) << PAUSED_SHIFT);
+    }
+
+    function _getIsHardHurdleRate(BaseVaultModuleStorage storage $) internal view returns (bool) {
+        return (($.config >> IS_HARD_HURDLE_RATE_SHIFT) & IS_HARD_HURDLE_RATE_MASK) != 0;
+    }
+
+    function _setIsHardHurdleRate(BaseVaultModuleStorage storage $, bool value) internal {
+        $.config = ($.config & ~(IS_HARD_HURDLE_RATE_MASK << IS_HARD_HURDLE_RATE_SHIFT))
+            | (uint256(value ? 1 : 0) << IS_HARD_HURDLE_RATE_SHIFT);
+    }
+
+    function _getlastFeesChargedManagement(BaseVaultModuleStorage storage $) internal view returns (uint64) {
+        return uint64(($.config >> LAST_FEES_CHARGED_MANAGEMENT_SHIFT) & LAST_FEES_CHARGED_MANAGEMENT_MASK);
+    }
+
+    function _setLastFeesChargedManagement(BaseVaultModuleStorage storage $, uint64 value) internal {
+        $.config = ($.config & ~(LAST_FEES_CHARGED_MANAGEMENT_MASK << LAST_FEES_CHARGED_MANAGEMENT_SHIFT))
+            | (uint256(value) << LAST_FEES_CHARGED_MANAGEMENT_SHIFT);
+    }
+
+    function _getlastFeesChargedPerformance(BaseVaultModuleStorage storage $) internal view returns (uint64) {
+        return uint64(($.config >> LAST_FEES_CHARGED_PERFORMANCE_SHIFT) & LAST_FEES_CHARGED_PERFORMANCE_MASK);
+    }
+
+    function _setLastFeesChargedPerformance(BaseVaultModuleStorage storage $, uint64 value) internal {
+        $.config = ($.config & ~(LAST_FEES_CHARGED_PERFORMANCE_MASK << LAST_FEES_CHARGED_PERFORMANCE_SHIFT))
+            | (uint256(value) << LAST_FEES_CHARGED_PERFORMANCE_SHIFT);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -125,18 +223,17 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     /// @param registry_ Address of the kRegistry contract
     /// @param paused_ Initial pause state
     /// @dev Can only be called once during initialization
-    function __BaseVaultModule_init(address registry_, address feeReceiver_, bool paused_) internal {
+    function __BaseVaultModule_init(address registry_, bool paused_) internal {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
 
-        if ($.initialized) revert AlreadyInit();
+        if (_getInitialized($)) revert AlreadyInit();
         if (registry_ == address(0)) revert InvalidRegistry();
 
         $.registry = registry_;
-        $.paused = paused_;
-        $.feeReceiver = feeReceiver_;
-        $.initialized = true;
-        $.lastFeesChargedManagement = uint64(block.timestamp);
-        $.lastFeesChargedPerformance = uint64(block.timestamp);
+        _setPaused($, paused_);
+        _setInitialized($, true);
+        _setLastFeesChargedManagement($, uint64(block.timestamp));
+        _setLastFeesChargedPerformance($, uint64(block.timestamp));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -148,39 +245,9 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     /// @dev Internal helper for typed registry access
     function _registry() internal view returns (IkRegistry) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (!$.initialized) revert NotInitialized();
+        if (!_getInitialized($)) revert NotInitialized();
         return IkRegistry($.registry);
     }
-
-    // /*//////////////////////////////////////////////////////////////
-    //                             RESCUER
-    // //////////////////////////////////////////////////////////////*/
-
-    // /// @notice rescues locked assets (ETH or ERC20) in the contract
-    // /// @param asset_ the asset to rescue (use address(0) for ETH)
-    // /// @param to_ the address that will receive the assets
-    // /// @param amount_ the amount to rescue
-    // function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
-    //     if (!_isAdmin(msg.sender)) revert WrongRole();
-    //     if (to_ == address(0)) revert ZeroAddress();
-
-    //     if (asset_ == address(0)) {
-    //         // Rescue ETH
-    //         if (amount_ == 0 || amount_ > address(this).balance) revert ZeroAmount();
-
-    //         (bool success,) = to_.call{ value: amount_ }("");
-    //         if (!success) revert TransferFailed();
-
-    //         emit RescuedETH(to_, amount_);
-    //     } else {
-    //         // Rescue ERC20 tokens
-    //         if (_isAsset(asset_)) revert WrongAsset();
-    //         if (amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
-
-    //         asset_.safeTransfer(to_, amount_);
-    //         emit RescuedAssets(asset_, to_, amount_);
-    //     }
-    // }
 
     /*//////////////////////////////////////////////////////////////
                           GETTERS
@@ -225,7 +292,8 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
 
     /// @return Token decimals
     function decimals() public view override returns (uint8) {
-        return _getBaseVaultModuleStorage().decimals;
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        return _getDecimals($);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -237,8 +305,8 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     /// @dev Only callable internally by inheriting contracts
     function _setPaused(bool paused_) internal {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (!$.initialized) revert NotInitialized();
-        $.paused = paused_;
+        if (!_getInitialized($)) revert NotInitialized();
+        _setPaused($, paused_);
         emit Paused(paused_);
     }
 
@@ -266,7 +334,8 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     /// @notice Calculates share price for stkToken
     /// @return sharePrice Price per stkToken in underlying asset terms (18 decimals)
     function _sharePrice() internal view returns (uint256) {
-        return _convertToAssets(10 ** _getBaseVaultModuleStorage().decimals);
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        return _convertToAssets(10 ** _getDecimals($));
     }
 
     /// @notice Returns the total assets in the vault
@@ -315,8 +384,8 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     /// @return Whether the address is a institution
     function _isPaused() internal view returns (bool) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (!$.initialized) revert NotInitialized();
-        return $.paused;
+        if (!_getInitialized($)) revert NotInitialized();
+        return _getPaused($);
     }
 
     /// @notice Gets the kMinter singleton contract address

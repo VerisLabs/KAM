@@ -24,7 +24,7 @@ contract ReaderModule is BaseVaultModule, Extsload {
     /// GENERAL
     function registry() external view returns (address) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (!$.initialized) revert NotInitialized();
+        if (!_getInitialized($)) revert NotInitialized();
         return $.registry;
     }
 
@@ -54,17 +54,18 @@ contract ReaderModule is BaseVaultModule, Extsload {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         uint256 lastSharePrice = $.sharePriceWatermark;
 
-        uint256 lastFeesChargedManagement = $.lastFeesChargedManagement;
-        uint256 lastFeesChargedPerformance = $.lastFeesChargedPerformance;
+        uint256 lastFeesChargedManagement = _getlastFeesChargedManagement($);
+        uint256 lastFeesChargedPerformance = _getlastFeesChargedPerformance($);
 
         uint256 durationManagement = block.timestamp - lastFeesChargedManagement;
         uint256 durationPerformance = block.timestamp - lastFeesChargedPerformance;
         uint256 currentTotalAssets = _totalAssets();
-        uint256 lastTotalAssets = totalSupply().fullMulDiv(lastSharePrice, 10 ** $.decimals);
+        uint256 lastTotalAssets = totalSupply().fullMulDiv(lastSharePrice, 10 ** _getDecimals($));
 
         // Calculate time-based fees (management)
         // These are charged on total assets, prorated for the time period
-        managementFees = (currentTotalAssets * durationManagement).fullMulDiv($.managementFee, SECS_PER_YEAR) / MAX_BPS;
+        managementFees =
+            (currentTotalAssets * durationManagement).fullMulDiv(_getManagementFee($), SECS_PER_YEAR) / MAX_BPS;
         currentTotalAssets -= managementFees;
         totalFees = managementFees;
 
@@ -78,7 +79,7 @@ contract ReaderModule is BaseVaultModule, Extsload {
 
             // Calculate returns relative to hurdle rate
             uint256 hurdleReturn =
-                (lastTotalAssets * $.hurdleRate).fullMulDiv(durationPerformance, SECS_PER_YEAR) / MAX_BPS;
+                (lastTotalAssets * _getHurdleRate($)).fullMulDiv(durationPerformance, SECS_PER_YEAR) / MAX_BPS;
 
             // Calculate returns relative to hurdle rate
             uint256 totalReturn = uint256(assetsDelta);
@@ -92,10 +93,10 @@ contract ReaderModule is BaseVaultModule, Extsload {
 
                 // If its a hard hurdle rate, only charge fees above the hurdle performance
                 // Otherwise, charge fees to all return if its above hurdle return
-                if ($.isHardHurdleRate) {
-                    performanceFees = excessReturn * $.performanceFee / MAX_BPS;
+                if (_getIsHardHurdleRate($)) {
+                    performanceFees = excessReturn * _getPerformanceFee($) / MAX_BPS;
                 } else {
-                    performanceFees = totalReturn * $.performanceFee / MAX_BPS;
+                    performanceFees = totalReturn * _getPerformanceFee($) / MAX_BPS;
                 }
             }
 
@@ -109,25 +110,29 @@ contract ReaderModule is BaseVaultModule, Extsload {
     /// @notice Returns the last time management fees were charged
     /// @return lastFeesChargedManagement Timestamp of last management fee charge
     function lastFeesChargedManagement() public view returns (uint256) {
-        return _getBaseVaultModuleStorage().lastFeesChargedManagement;
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        return _getlastFeesChargedManagement($);
     }
 
     /// @notice Returns the last time performance fees were charged
     /// @return lastFeesChargedPerformance Timestamp of last performance fee charge
     function lastFeesChargedPerformance() public view returns (uint256) {
-        return _getBaseVaultModuleStorage().lastFeesChargedPerformance;
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        return _getlastFeesChargedPerformance($);
     }
 
     /// @notice Returns the current hurdle rate used for performance fee calculations
     /// @return The hurdle rate in basis points (e.g., 500 = 5%)
     function hurdleRate() external view returns (uint16) {
-        return _getBaseVaultModuleStorage().hurdleRate;
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        return _getHurdleRate($);
     }
 
     /// @notice Returns the current performance fee percentage
     /// @return The performance fee in basis points (e.g., 2000 = 20%)
     function performanceFee() external view returns (uint16) {
-        return _getBaseVaultModuleStorage().performanceFee;
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        return _getPerformanceFee($);
     }
 
     /// @notice Returns the next performance fee timestamp so the backend can schedule the fee collection
@@ -145,7 +150,8 @@ contract ReaderModule is BaseVaultModule, Extsload {
     /// @notice Returns the current management fee percentage
     /// @return The management fee in basis points (e.g., 100 = 1%)
     function managementFee() external view returns (uint16) {
-        return _getBaseVaultModuleStorage().managementFee;
+        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        return _getManagementFee($);
     }
 
     /// @notice Returns the high watermark for share price used in performance fee calculations

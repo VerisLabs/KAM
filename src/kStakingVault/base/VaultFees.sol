@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 
 /// @title VaultFees
 /// @notice Handles batch operations for staking and unstaking
 /// @dev Contains batch functions for staking and unstaking operations
 contract VaultFees is BaseVaultModule {
+    using SafeCastLib for uint256;
+
     /// @notice Emitted when the management fee is updated
     /// @param oldFee Previous management fee in basis points
     /// @param newFee New management fee in basis points
@@ -52,7 +55,7 @@ contract VaultFees is BaseVaultModule {
         if (!_isAdmin(msg.sender)) revert WrongRole();
         if (_hurdleRate > MAX_BPS) revert("Fee exceeds maximum");
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        $.hurdleRate = _hurdleRate;
+        _setHurdleRate($, _hurdleRate);
         emit HurdleRateUpdated(_hurdleRate);
     }
 
@@ -62,7 +65,7 @@ contract VaultFees is BaseVaultModule {
     function setHardHurdleRate(bool _isHard) external {
         if (!_isAdmin(msg.sender)) revert WrongRole();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        $.isHardHurdleRate = _isHard;
+        _setIsHardHurdleRate($, _isHard);
         emit HardHurdleRateUpdated(_isHard);
     }
 
@@ -73,8 +76,8 @@ contract VaultFees is BaseVaultModule {
         if (!_isAdmin(msg.sender)) revert WrongRole();
         if (_managementFee > MAX_BPS) revert("Fee exceeds maximum");
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        uint16 oldFee = $.managementFee;
-        $.managementFee = _managementFee;
+        uint16 oldFee = _getManagementFee($);
+        _setManagementFee($, _managementFee);
         emit ManagementFeeUpdated(oldFee, _managementFee);
     }
 
@@ -85,8 +88,8 @@ contract VaultFees is BaseVaultModule {
         if (!_isAdmin(msg.sender)) revert WrongRole();
         if (_performanceFee > MAX_BPS) revert("Fee exceeds maximum");
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        uint16 oldFee = $.performanceFee;
-        $.performanceFee = _performanceFee;
+        uint16 oldFee = _getPerformanceFee($);
+        _setPerformanceFee($, _performanceFee);
         emit PerformanceFeeUpdated(oldFee, _performanceFee);
     }
 
@@ -96,8 +99,8 @@ contract VaultFees is BaseVaultModule {
     function notifyManagementFeesCharged(uint64 _timestamp) external {
         if (!_isAdmin(msg.sender)) revert WrongRole();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (_timestamp < $.lastFeesChargedManagement || _timestamp > block.timestamp) revert("Invalid timestamp");
-        $.lastFeesChargedManagement = _timestamp;
+        if (_timestamp < _getlastFeesChargedManagement($) || _timestamp > block.timestamp) revert("Invalid timestamp");
+        _setLastFeesChargedManagement($, _timestamp);
         _updateGlobalWatermark();
         emit ManagementFeesCharged(_timestamp);
     }
@@ -108,8 +111,8 @@ contract VaultFees is BaseVaultModule {
     function notifyPerformanceFeesCharged(uint64 _timestamp) external {
         if (!_isAdmin(msg.sender)) revert WrongRole();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (_timestamp < $.lastFeesChargedPerformance || _timestamp > block.timestamp) revert("Invalid timestamp");
-        $.lastFeesChargedPerformance = _timestamp;
+        if (_timestamp < _getlastFeesChargedPerformance($) || _timestamp > block.timestamp) revert("Invalid timestamp");
+        _setLastFeesChargedPerformance($, _timestamp);
         _updateGlobalWatermark();
         emit PerformanceFeesCharged(_timestamp);
     }
@@ -119,7 +122,7 @@ contract VaultFees is BaseVaultModule {
     function _updateGlobalWatermark() private {
         uint256 sp = _sharePrice();
         if (sp > _getBaseVaultModuleStorage().sharePriceWatermark) {
-            _getBaseVaultModuleStorage().sharePriceWatermark = sp;
+            _getBaseVaultModuleStorage().sharePriceWatermark = sp.toUint128();
         }
     }
 }

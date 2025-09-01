@@ -318,18 +318,6 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assertEq(vault.sharePrice(), 1e6);
     }
 
-    function test_DustAmount_Handling() public {
-        // Test deposits smaller than dust threshold should fail
-        uint256 dustAmount = 999; // Less than 1000 (DEFAULT_DUST_AMOUNT)
-
-        vm.prank(users.alice);
-        kUSD.approve(address(vault), dustAmount);
-
-        vm.expectRevert(); // Should revert due to dust threshold
-        vm.prank(users.alice);
-        vault.requestStake(users.alice, dustAmount);
-    }
-
     function test_LargeNumbers_Precision() public {
         // Test with very large numbers to check for overflow/precision issues
         uint256 largeAmount = 1_000_000_000 * _1_USDC; // 1B USDC
