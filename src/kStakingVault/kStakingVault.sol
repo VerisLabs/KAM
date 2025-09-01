@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { Ownable } from "solady/auth/Ownable.sol";
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
@@ -24,6 +25,7 @@ import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTyp
 contract kStakingVault is
     Initializable,
     UUPSUpgradeable,
+    Ownable,
     BaseVaultModule,
     MultiFacetProxy,
     VaultFees,
@@ -55,7 +57,6 @@ contract kStakingVault is
     /// @param asset_ Underlying asset address
     function initialize(
         address owner_,
-        address admin_,
         address registry_,
         bool paused_,
         string memory name_,
@@ -71,9 +72,7 @@ contract kStakingVault is
 
         // Initialize ownership and roles
         __BaseVaultModule_init(registry_, paused_);
-        __MultiFacetProxy__init(1);
         _initializeOwner(owner_);
-        _grantRoles(admin_, 1);
 
         // Initialize storage with optimized packing
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
@@ -304,6 +303,16 @@ contract kStakingVault is
     function _authorizeUpgrade(address newImplementation) internal view override {
         if (!_isAdmin(msg.sender)) revert WrongRole();
         if (newImplementation == address(0)) revert ZeroAddress();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        FUNCTIONS UPGRADE
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Authorize function modification
+    /// @dev This allows modifying functions while keeping modules separate
+    function _authorizeModifyFunctions(address sender) internal override {
+        //_checkOwner();
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -66,7 +66,6 @@ contract DeployVaultsScript is Script, DeploymentManager {
             abi.encodeWithSelector(
                 kStakingVault.initialize.selector,
                 config.roles.owner,
-                config.roles.admin,
                 existing.contracts.kRegistry,
                 false,
                 "DN KAM Vault",
@@ -86,7 +85,6 @@ contract DeployVaultsScript is Script, DeploymentManager {
             abi.encodeWithSelector(
                 kStakingVault.initialize.selector,
                 config.roles.owner,
-                config.roles.admin,
                 existing.contracts.kRegistry,
                 false,
                 "Alpha KAM Vault",
@@ -106,7 +104,6 @@ contract DeployVaultsScript is Script, DeploymentManager {
             abi.encodeWithSelector(
                 kStakingVault.initialize.selector,
                 config.roles.owner,
-                config.roles.admin,
                 existing.contracts.kRegistry,
                 false,
                 "Beta KAM Vault",

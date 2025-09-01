@@ -271,7 +271,6 @@ contract DeploymentBaseTest is BaseTest {
         bytes memory initData = abi.encodeWithSelector(
             kStakingVault.initialize.selector,
             users.owner,
-            users.admin,
             address(registry),
             false, // paused
             name,
@@ -371,7 +370,7 @@ contract DeploymentBaseTest is BaseTest {
         bytes4[] memory readerSelectors = readerModule.selectors();
 
         // Register modules as vault admin
-        vm.startPrank(users.admin);
+        vm.startPrank(users.owner);
 
         // Add reader module functions to all vaults
         dnVault.addFunctions(readerSelectors, address(readerModule), true);

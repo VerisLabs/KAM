@@ -99,7 +99,7 @@ contract VaultFees is BaseVaultModule {
     function notifyManagementFeesCharged(uint64 _timestamp) external {
         if (!_isAdmin(msg.sender)) revert WrongRole();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (_timestamp < _getlastFeesChargedManagement($) || _timestamp > block.timestamp) revert("Invalid timestamp");
+        if (_timestamp < _getLastFeesChargedManagement($) || _timestamp > block.timestamp) revert("Invalid timestamp");
         _setLastFeesChargedManagement($, _timestamp);
         _updateGlobalWatermark();
         emit ManagementFeesCharged(_timestamp);
@@ -111,7 +111,7 @@ contract VaultFees is BaseVaultModule {
     function notifyPerformanceFeesCharged(uint64 _timestamp) external {
         if (!_isAdmin(msg.sender)) revert WrongRole();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (_timestamp < _getlastFeesChargedPerformance($) || _timestamp > block.timestamp) revert("Invalid timestamp");
+        if (_timestamp < _getLastFeesChargedPerformance($) || _timestamp > block.timestamp) revert("Invalid timestamp");
         _setLastFeesChargedPerformance($, _timestamp);
         _updateGlobalWatermark();
         emit PerformanceFeesCharged(_timestamp);

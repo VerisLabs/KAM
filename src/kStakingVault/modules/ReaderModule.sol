@@ -54,8 +54,8 @@ contract ReaderModule is BaseVaultModule, Extsload {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         uint256 lastSharePrice = $.sharePriceWatermark;
 
-        uint256 lastFeesChargedManagement = _getlastFeesChargedManagement($);
-        uint256 lastFeesChargedPerformance = _getlastFeesChargedPerformance($);
+        uint256 lastFeesChargedManagement = _getLastFeesChargedManagement($);
+        uint256 lastFeesChargedPerformance = _getLastFeesChargedPerformance($);
 
         uint256 durationManagement = block.timestamp - lastFeesChargedManagement;
         uint256 durationPerformance = block.timestamp - lastFeesChargedPerformance;
@@ -111,14 +111,14 @@ contract ReaderModule is BaseVaultModule, Extsload {
     /// @return lastFeesChargedManagement Timestamp of last management fee charge
     function lastFeesChargedManagement() public view returns (uint256) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        return _getlastFeesChargedManagement($);
+        return _getLastFeesChargedManagement($);
     }
 
     /// @notice Returns the last time performance fees were charged
     /// @return lastFeesChargedPerformance Timestamp of last performance fee charge
     function lastFeesChargedPerformance() public view returns (uint256) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        return _getlastFeesChargedPerformance($);
+        return _getLastFeesChargedPerformance($);
     }
 
     /// @notice Returns the current hurdle rate used for performance fee calculations

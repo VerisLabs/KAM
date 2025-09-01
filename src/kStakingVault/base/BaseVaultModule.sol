@@ -197,7 +197,7 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
             | (uint256(value ? 1 : 0) << IS_HARD_HURDLE_RATE_SHIFT);
     }
 
-    function _getlastFeesChargedManagement(BaseVaultModuleStorage storage $) internal view returns (uint64) {
+    function _getLastFeesChargedManagement(BaseVaultModuleStorage storage $) internal view returns (uint64) {
         return uint64(($.config >> LAST_FEES_CHARGED_MANAGEMENT_SHIFT) & LAST_FEES_CHARGED_MANAGEMENT_MASK);
     }
 
@@ -206,7 +206,7 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
             | (uint256(value) << LAST_FEES_CHARGED_MANAGEMENT_SHIFT);
     }
 
-    function _getlastFeesChargedPerformance(BaseVaultModuleStorage storage $) internal view returns (uint64) {
+    function _getLastFeesChargedPerformance(BaseVaultModuleStorage storage $) internal view returns (uint64) {
         return uint64(($.config >> LAST_FEES_CHARGED_PERFORMANCE_SHIFT) & LAST_FEES_CHARGED_PERFORMANCE_MASK);
     }
 
