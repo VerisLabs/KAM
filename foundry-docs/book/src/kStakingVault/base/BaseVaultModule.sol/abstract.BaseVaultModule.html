@@ -157,7 +157,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="basevaultmodule"><a class="header" href="#basevaultmodule">BaseVaultModule</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kStakingVault/base/BaseVaultModule.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/base/BaseVaultModule.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 ERC20, ReentrancyGuardTransient</p>
 <p>Base contract for all modules</p>
@@ -168,6 +168,60 @@ ERC20, ReentrancyGuardTransient</p>
 </code></pre>
 <h3 id="k_minter"><a class="header" href="#k_minter">K_MINTER</a></h3>
 <pre><code class="language-solidity">bytes32 internal constant K_MINTER = keccak256("K_MINTER");
+</code></pre>
+<h3 id="decimals_mask"><a class="header" href="#decimals_mask">DECIMALS_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant DECIMALS_MASK = 0xFF;
+</code></pre>
+<h3 id="decimals_shift"><a class="header" href="#decimals_shift">DECIMALS_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant DECIMALS_SHIFT = 0;
+</code></pre>
+<h3 id="hurdle_rate_mask"><a class="header" href="#hurdle_rate_mask">HURDLE_RATE_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant HURDLE_RATE_MASK = 0xFFFF;
+</code></pre>
+<h3 id="hurdle_rate_shift"><a class="header" href="#hurdle_rate_shift">HURDLE_RATE_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant HURDLE_RATE_SHIFT = 8;
+</code></pre>
+<h3 id="performance_fee_mask"><a class="header" href="#performance_fee_mask">PERFORMANCE_FEE_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant PERFORMANCE_FEE_MASK = 0xFFFF;
+</code></pre>
+<h3 id="performance_fee_shift"><a class="header" href="#performance_fee_shift">PERFORMANCE_FEE_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant PERFORMANCE_FEE_SHIFT = 24;
+</code></pre>
+<h3 id="management_fee_mask"><a class="header" href="#management_fee_mask">MANAGEMENT_FEE_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant MANAGEMENT_FEE_MASK = 0xFFFF;
+</code></pre>
+<h3 id="management_fee_shift"><a class="header" href="#management_fee_shift">MANAGEMENT_FEE_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant MANAGEMENT_FEE_SHIFT = 40;
+</code></pre>
+<h3 id="initialized_mask"><a class="header" href="#initialized_mask">INITIALIZED_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant INITIALIZED_MASK = 0x1;
+</code></pre>
+<h3 id="initialized_shift"><a class="header" href="#initialized_shift">INITIALIZED_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant INITIALIZED_SHIFT = 56;
+</code></pre>
+<h3 id="paused_mask"><a class="header" href="#paused_mask">PAUSED_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant PAUSED_MASK = 0x1;
+</code></pre>
+<h3 id="paused_shift"><a class="header" href="#paused_shift">PAUSED_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant PAUSED_SHIFT = 57;
+</code></pre>
+<h3 id="is_hard_hurdle_rate_mask"><a class="header" href="#is_hard_hurdle_rate_mask">IS_HARD_HURDLE_RATE_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant IS_HARD_HURDLE_RATE_MASK = 0x1;
+</code></pre>
+<h3 id="is_hard_hurdle_rate_shift"><a class="header" href="#is_hard_hurdle_rate_shift">IS_HARD_HURDLE_RATE_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant IS_HARD_HURDLE_RATE_SHIFT = 58;
+</code></pre>
+<h3 id="last_fees_charged_management_mask"><a class="header" href="#last_fees_charged_management_mask">LAST_FEES_CHARGED_MANAGEMENT_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_MASK = 0xFFFFFFFFFFFFFFFF;
+</code></pre>
+<h3 id="last_fees_charged_management_shift"><a class="header" href="#last_fees_charged_management_shift">LAST_FEES_CHARGED_MANAGEMENT_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_SHIFT = 59;
+</code></pre>
+<h3 id="last_fees_charged_performance_mask"><a class="header" href="#last_fees_charged_performance_mask">LAST_FEES_CHARGED_PERFORMANCE_MASK</a></h3>
+<pre><code class="language-solidity">uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_MASK = 0xFFFFFFFFFFFFFFFF;
+</code></pre>
+<h3 id="last_fees_charged_performance_shift"><a class="header" href="#last_fees_charged_performance_shift">LAST_FEES_CHARGED_PERFORMANCE_SHIFT</a></h3>
+<pre><code class="language-solidity">uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_SHIFT = 123;
 </code></pre>
 <h3 id="module_base_storage_location"><a class="header" href="#module_base_storage_location">MODULE_BASE_STORAGE_LOCATION</a></h3>
 <pre><code class="language-solidity">bytes32 internal constant MODULE_BASE_STORAGE_LOCATION =
@@ -183,15 +237,68 @@ ERC20, ReentrancyGuardTransient</p>
 <tr><td><code>$</code></td><td><code>BaseVaultModuleStorage</code></td><td>Storage reference for base vault state variables</td></tr>
 </tbody></table>
 </div>
+<h3 id="_getdecimals"><a class="header" href="#_getdecimals">_getDecimals</a></h3>
+<pre><code class="language-solidity">function _getDecimals(BaseVaultModuleStorage storage $) internal view returns (uint8);
+</code></pre>
+<h3 id="_setdecimals"><a class="header" href="#_setdecimals">_setDecimals</a></h3>
+<pre><code class="language-solidity">function _setDecimals(BaseVaultModuleStorage storage $, uint8 value) internal;
+</code></pre>
+<h3 id="_gethurdlerate"><a class="header" href="#_gethurdlerate">_getHurdleRate</a></h3>
+<pre><code class="language-solidity">function _getHurdleRate(BaseVaultModuleStorage storage $) internal view returns (uint16);
+</code></pre>
+<h3 id="_sethurdlerate"><a class="header" href="#_sethurdlerate">_setHurdleRate</a></h3>
+<pre><code class="language-solidity">function _setHurdleRate(BaseVaultModuleStorage storage $, uint16 value) internal;
+</code></pre>
+<h3 id="_getperformancefee"><a class="header" href="#_getperformancefee">_getPerformanceFee</a></h3>
+<pre><code class="language-solidity">function _getPerformanceFee(BaseVaultModuleStorage storage $) internal view returns (uint16);
+</code></pre>
+<h3 id="_setperformancefee"><a class="header" href="#_setperformancefee">_setPerformanceFee</a></h3>
+<pre><code class="language-solidity">function _setPerformanceFee(BaseVaultModuleStorage storage $, uint16 value) internal;
+</code></pre>
+<h3 id="_getmanagementfee"><a class="header" href="#_getmanagementfee">_getManagementFee</a></h3>
+<pre><code class="language-solidity">function _getManagementFee(BaseVaultModuleStorage storage $) internal view returns (uint16);
+</code></pre>
+<h3 id="_setmanagementfee"><a class="header" href="#_setmanagementfee">_setManagementFee</a></h3>
+<pre><code class="language-solidity">function _setManagementFee(BaseVaultModuleStorage storage $, uint16 value) internal;
+</code></pre>
+<h3 id="_getinitialized"><a class="header" href="#_getinitialized">_getInitialized</a></h3>
+<pre><code class="language-solidity">function _getInitialized(BaseVaultModuleStorage storage $) internal view returns (bool);
+</code></pre>
+<h3 id="_setinitialized"><a class="header" href="#_setinitialized">_setInitialized</a></h3>
+<pre><code class="language-solidity">function _setInitialized(BaseVaultModuleStorage storage $, bool value) internal;
+</code></pre>
+<h3 id="_getpaused"><a class="header" href="#_getpaused">_getPaused</a></h3>
+<pre><code class="language-solidity">function _getPaused(BaseVaultModuleStorage storage $) internal view returns (bool);
+</code></pre>
+<h3 id="_setpaused"><a class="header" href="#_setpaused">_setPaused</a></h3>
+<pre><code class="language-solidity">function _setPaused(BaseVaultModuleStorage storage $, bool value) internal;
+</code></pre>
+<h3 id="_getishardhurdlerate"><a class="header" href="#_getishardhurdlerate">_getIsHardHurdleRate</a></h3>
+<pre><code class="language-solidity">function _getIsHardHurdleRate(BaseVaultModuleStorage storage $) internal view returns (bool);
+</code></pre>
+<h3 id="_setishardhurdlerate"><a class="header" href="#_setishardhurdlerate">_setIsHardHurdleRate</a></h3>
+<pre><code class="language-solidity">function _setIsHardHurdleRate(BaseVaultModuleStorage storage $, bool value) internal;
+</code></pre>
+<h3 id="_getlastfeeschargedmanagement"><a class="header" href="#_getlastfeeschargedmanagement">_getLastFeesChargedManagement</a></h3>
+<pre><code class="language-solidity">function _getLastFeesChargedManagement(BaseVaultModuleStorage storage $) internal view returns (uint64);
+</code></pre>
+<h3 id="_setlastfeeschargedmanagement"><a class="header" href="#_setlastfeeschargedmanagement">_setLastFeesChargedManagement</a></h3>
+<pre><code class="language-solidity">function _setLastFeesChargedManagement(BaseVaultModuleStorage storage $, uint64 value) internal;
+</code></pre>
+<h3 id="_getlastfeeschargedperformance"><a class="header" href="#_getlastfeeschargedperformance">_getLastFeesChargedPerformance</a></h3>
+<pre><code class="language-solidity">function _getLastFeesChargedPerformance(BaseVaultModuleStorage storage $) internal view returns (uint64);
+</code></pre>
+<h3 id="_setlastfeeschargedperformance"><a class="header" href="#_setlastfeeschargedperformance">_setLastFeesChargedPerformance</a></h3>
+<pre><code class="language-solidity">function _setLastFeesChargedPerformance(BaseVaultModuleStorage storage $, uint64 value) internal;
+</code></pre>
 <h3 id="__basevaultmodule_init"><a class="header" href="#__basevaultmodule_init">__BaseVaultModule_init</a></h3>
 <p>Initializes the base contract with registry and pause state</p>
 <p><em>Can only be called once during initialization</em></p>
-<pre><code class="language-solidity">function __BaseVaultModule_init(address registry_, address feeReceiver_, bool paused_) internal;
+<pre><code class="language-solidity">function __BaseVaultModule_init(address registry_, bool paused_) internal;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>registry_</code></td><td><code>address</code></td><td>Address of the kRegistry contract</td></tr>
-<tr><td><code>feeReceiver_</code></td><td><code>address</code></td><td></td></tr>
 <tr><td><code>paused_</code></td><td><code>bool</code></td><td>Initial pause state</td></tr>
 </tbody></table>
 </div>
@@ -266,7 +373,7 @@ ERC20, ReentrancyGuardTransient</p>
 <tr><td><code>&lt;none&gt;</code></td><td><code>uint8</code></td><td>Token decimals</td></tr>
 </tbody></table>
 </div>
-<h3 id="_setpaused"><a class="header" href="#_setpaused">_setPaused</a></h3>
+<h3 id="_setpaused-1"><a class="header" href="#_setpaused-1">_setPaused</a></h3>
 <p>Sets the pause state of the contract</p>
 <p><em>Only callable internally by inheriting contracts</em></p>
 <pre><code class="language-solidity">function _setPaused(bool paused_) internal;
@@ -488,26 +595,15 @@ ERC20, ReentrancyGuardTransient</p>
 <p><strong>Note:</strong>
 storage-location: erc7201.kam.storage.BaseVaultModule</p>
 <pre><code class="language-solidity">struct BaseVaultModuleStorage {
+    uint128 sharePriceWatermark;
+    uint128 totalPendingStake;
     uint256 currentBatch;
     bytes32 currentBatchId;
-    uint256 sharePriceWatermark;
-    uint256 requestCounter;
-    uint128 totalPendingStake;
     address registry;
     address receiverImplementation;
     address underlyingAsset;
     address kToken;
-    address feeReceiver;
-    uint96 dustAmount;
-    uint8 decimals;
-    uint16 hurdleRate;
-    uint16 performanceFee;
-    uint16 managementFee;
-    bool initialized;
-    bool paused;
-    bool isHardHurdleRate;
-    uint64 lastFeesChargedManagement;
-    uint64 lastFeesChargedPerformance;
+    uint256 config;
     string name;
     string symbol;
     mapping(bytes32 =&gt; BaseVaultModuleTypes.BatchInfo) batches;

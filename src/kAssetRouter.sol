@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { EfficientHashLib } from "solady/utils/EfficientHashLib.sol";
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
@@ -241,15 +242,21 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         $.batchIds.add(batchId);
 
         // Generate unique proposal ID
-        $.proposalCounter++;
-        proposalId = keccak256(abi.encodePacked(vault, batchId, block.timestamp, $.proposalCounter));
+        unchecked {
+            $.proposalCounter++;
+        }
+        proposalId =
+            EfficientHashLib.hash(uint256(uint160(vault)), uint256(batchId), block.timestamp, $.proposalCounter);
 
         // Check if proposal already exists
         if ($.executedProposalIds.contains(proposalId)) revert ProposalAlreadyExecuted();
         if (_isPendingProposal(vault, proposalId)) revert ProposalAlreadyExists();
         $.vaultPendingProposalIds[vault].add(proposalId);
 
-        uint256 executeAfter = block.timestamp + $.vaultSettlementCooldown;
+        uint256 executeAfter;
+        unchecked {
+            executeAfter = block.timestamp + $.vaultSettlementCooldown;
+        }
 
         // Store the proposal
         $.settlementProposals[proposalId] = VaultSettlementProposal({
@@ -268,7 +275,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @notice Execute a settlement proposal after cooldown period
     /// @param proposalId The proposal ID to execute
-    function executeSettleBatch(bytes32 proposalId) external nonReentrant {
+    function executeSettleBatch(bytes32 proposalId) external payable nonReentrant {
         if (_isPaused()) revert IsPaused();
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
@@ -456,14 +463,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         address[] memory assets = _getVaultAssets(vault);
         address[] memory adapters = _registry().getAdapters(vault);
         uint256 length = adapters.length;
-        for (uint256 i; i < length;) {
+        for (uint256 i; i < length; ++i) {
             IAdapter adapter = IAdapter(adapters[i]);
             // For now, assume single asset per vault (use first asset)
             balance += adapter.totalAssets(vault, assets[0]);
-
-            unchecked {
-                ++i;
-            }
         }
     }
 

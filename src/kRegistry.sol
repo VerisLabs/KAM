@@ -51,7 +51,6 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         EnumerableSetLib.AddressSet supportedAssets;
         EnumerableSetLib.AddressSet allVaults;
         mapping(bytes32 => address) singletonContracts;
-        mapping(address => bool) isVault;
         mapping(address => uint8 vaultType) vaultType;
         mapping(address => mapping(uint8 vaultType => address)) assetToVault;
         mapping(address => EnumerableSetLib.AddressSet) vaultAsset; // kMinter will have > 1 assets
@@ -147,7 +146,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param id Contract identifier (e.g., K_MINTER, K_BATCH)
     /// @param contractAddress Address of the singleton contract
     /// @dev Only callable by ADMIN_ROLE
-    function setSingletonContract(bytes32 id, address contractAddress) external {
+    function setSingletonContract(bytes32 id, address contractAddress) external payable {
         if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
         if (contractAddress == address(0)) revert ZeroAddress();
         kRegistryStorage storage $ = _getkRegistryStorage();
@@ -163,7 +162,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice grant the institution role to a given address
     /// @param institution_ the institution address
     /// @dev Only callable by VENDOR_ROLE
-    function grantInstitutionRole(address institution_) external {
+    function grantInstitutionRole(address institution_) external payable {
         if (!_hasRole(msg.sender, VENDOR_ROLE)) revert WrongRole();
         _grantRoles(institution_, INSTITUTION_ROLE);
     }
@@ -171,7 +170,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice grant the vendor role to a given address
     /// @param vendor_ the vendor address
     /// @dev Only callable by ADMIN_ROLE
-    function grantVendorRole(address vendor_) external {
+    function grantVendorRole(address vendor_) external payable {
         if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
         _grantRoles(vendor_, VENDOR_ROLE);
     }
@@ -179,7 +178,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice grant the relayer role to a given address
     /// @param relayer_ the relayer address
     /// @dev Only callable by ADMIN_ROLE
-    function grantRelayerRole(address relayer_) external {
+    function grantRelayerRole(address relayer_) external payable {
         if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
         _grantRoles(relayer_, RELAYER_ROLE);
     }
@@ -198,6 +197,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         bytes32 id
     )
         external
+        payable
         returns (address)
     {
         if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
@@ -250,15 +250,14 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param type_ Type of vault (MINTER, DN, ALPHA, BETA)
     /// @param asset Underlying asset the vault manages
     /// @dev Only callable by ADMIN_ROLE, sets as primary if first of its type
-    function registerVault(address vault, VaultType type_, address asset) external {
+    function registerVault(address vault, VaultType type_, address asset) external payable {
         if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
         if (vault == address(0)) revert ZeroAddress();
         kRegistryStorage storage $ = _getkRegistryStorage();
-        if ($.isVault[vault]) revert AlreadyRegistered();
+        if ($.allVaults.contains(vault)) revert AlreadyRegistered();
         if (!$.supportedAssets.contains(asset)) revert AssetNotSupported();
 
         // Register vault
-        $.isVault[vault] = true;
         $.vaultType[vault] = uint8(type_);
         $.vaultAsset[vault].add(asset);
         $.allVaults.add(vault);
@@ -270,6 +269,14 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         emit VaultRegistered(vault, asset, type_);
     }
 
+    function removeVault(address vault) external payable {
+        if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        if (!$.allVaults.contains(vault)) revert AssetNotSupported();
+        $.allVaults.remove(vault);
+        emit VaultRemoved(vault);
+    }
+
     /*//////////////////////////////////////////////////////////////
                           ADAPTER MANAGEMENT
     //////////////////////////////////////////////////////////////*/
@@ -277,7 +284,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Registers an adapter for a specific vault
     /// @param vault The vault address
     /// @param adapter The adapter address
-    function registerAdapter(address vault, address adapter) external {
+    function registerAdapter(address vault, address adapter) external payable {
         if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
         if (vault == address(0) || adapter == address(0)) {
             revert InvalidAdapter();
@@ -286,7 +293,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         kRegistryStorage storage $ = _getkRegistryStorage();
 
         // Validate vault is registered
-        if (!$.isVault[vault]) revert AssetNotSupported(); // Reuse error
+        if (!$.allVaults.contains(vault)) revert AssetNotSupported(); // Reuse error
 
         // Check if adapter is already set for this vault
         if ($.vaultAdapters[vault].contains(address(0))) {
@@ -300,7 +307,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
 
     /// @notice Removes an adapter for a specific vault
     /// @param vault The vault address
-    function removeAdapter(address vault, address adapter) external {
+    function removeAdapter(address vault, address adapter) external payable {
         if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
         kRegistryStorage storage $ = _getkRegistryStorage();
 
@@ -341,13 +348,15 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     function getAllAssets() external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         if ($.supportedAssets.length() == 0) revert ZeroAddress();
-        address[] memory assets = new address[]($.supportedAssets.length());
-        uint256 length = $.supportedAssets.length();
-        if (length == 0) revert ZeroAmount();
-        for (uint256 i; i < length; i++) {
-            assets[i] = $.supportedAssets.at(i);
-        }
-        return assets;
+        return $.supportedAssets.values();
+    }
+
+    /// @notice Get all vaults registered in the protocol
+    /// @return Array of vault addresses
+    function getAllVaults() external view returns (address[] memory) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        if ($.allVaults.length() == 0) revert ZeroAddress();
+        return $.allVaults.values();
     }
 
     /// @notice Get all core singleton contracts at once
@@ -441,7 +450,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @return Whether the vault is registered
     function isVault(address vault) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        return $.isVault[vault];
+        return $.allVaults.contains(vault);
     }
 
     /// @notice Get the adapter for a specific vault

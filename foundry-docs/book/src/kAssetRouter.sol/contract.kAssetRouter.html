@@ -157,7 +157,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="kassetrouter"><a class="header" href="#kassetrouter">kAssetRouter</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kAssetRouter.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kAssetRouter.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.html">IkAssetRouter</a>, Initializable, UUPSUpgradeable, <a href="/src/base/kBase.sol/contract.kBase.html">kBase</a>, Multicallable</p>
 <h2 id="state-variables"><a class="header" href="#state-variables">State Variables</a></h2>
@@ -296,7 +296,7 @@
 </div>
 <h3 id="executesettlebatch"><a class="header" href="#executesettlebatch">executeSettleBatch</a></h3>
 <p>Execute a settlement proposal after cooldown period</p>
-<pre><code class="language-solidity">function executeSettleBatch(bytes32 proposalId) external nonReentrant;
+<pre><code class="language-solidity">function executeSettleBatch(bytes32 proposalId) external payable nonReentrant;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>

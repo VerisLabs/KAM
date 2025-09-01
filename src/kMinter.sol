@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { EfficientHashLib } from "solady/utils/EfficientHashLib.sol";
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
@@ -234,13 +235,20 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     function _createRedeemRequestId(address user, uint256 amount, uint256 timestamp) internal returns (bytes32) {
         kMinterStorage storage $ = _getkMinterStorage();
         $.requestCounter = (uint256($.requestCounter) + 1).toUint64();
-        return keccak256(abi.encode(address(this), user, amount, timestamp, $.requestCounter));
+        return EfficientHashLib.hash(
+            uint256(uint160(address(this))), uint256(uint160(user)), amount, timestamp, $.requestCounter
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
                           ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Rescue assets from batch receiver
+    /// @param batchReceiver Batch receiver address
+    /// @param asset_ Asset address
+    /// @param to_ Destination address
+    /// @param amount_ Amount
     function rescueReceiverAssets(address batchReceiver, address asset_, address to_, uint256 amount_) external {
         if (batchReceiver == address(0) || asset_ == address(0) || to_ == address(0)) revert ZeroAddress();
         IkBatchReceiver(batchReceiver).rescueAssets(asset_);
@@ -299,13 +307,6 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         if (!_isAdmin(msg.sender)) revert WrongRole();
         if (newImplementation == address(0)) revert ZeroAddress();
     }
-
-    /*//////////////////////////////////////////////////////////////
-                            RECEIVE ETH
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Accepts ETH transfers
-    receive() external payable { }
 
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO

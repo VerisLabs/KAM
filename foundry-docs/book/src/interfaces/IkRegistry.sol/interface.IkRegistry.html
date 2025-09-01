@@ -157,10 +157,10 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="ikregistry"><a class="header" href="#ikregistry">IkRegistry</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/interfaces/IkRegistry.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/IkRegistry.sol">Git Source</a></p>
 <h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
 <h3 id="setsingletoncontract"><a class="header" href="#setsingletoncontract">setSingletonContract</a></h3>
-<pre><code class="language-solidity">function setSingletonContract(bytes32 id, address contractAddress) external;
+<pre><code class="language-solidity">function setSingletonContract(bytes32 id, address contractAddress) external payable;
 </code></pre>
 <h3 id="registerasset"><a class="header" href="#registerasset">registerAsset</a></h3>
 <pre><code class="language-solidity">function registerAsset(
@@ -170,25 +170,26 @@
     bytes32 id
 )
     external
+    payable
     returns (address);
 </code></pre>
 <h3 id="registervault"><a class="header" href="#registervault">registerVault</a></h3>
-<pre><code class="language-solidity">function registerVault(address vault, VaultType type_, address asset) external;
+<pre><code class="language-solidity">function registerVault(address vault, VaultType type_, address asset) external payable;
 </code></pre>
 <h3 id="registeradapter"><a class="header" href="#registeradapter">registerAdapter</a></h3>
-<pre><code class="language-solidity">function registerAdapter(address vault, address adapter) external;
+<pre><code class="language-solidity">function registerAdapter(address vault, address adapter) external payable;
 </code></pre>
 <h3 id="removeadapter"><a class="header" href="#removeadapter">removeAdapter</a></h3>
-<pre><code class="language-solidity">function removeAdapter(address vault, address adapter) external;
+<pre><code class="language-solidity">function removeAdapter(address vault, address adapter) external payable;
 </code></pre>
 <h3 id="grantinstitutionrole"><a class="header" href="#grantinstitutionrole">grantInstitutionRole</a></h3>
-<pre><code class="language-solidity">function grantInstitutionRole(address institution_) external;
+<pre><code class="language-solidity">function grantInstitutionRole(address institution_) external payable;
 </code></pre>
 <h3 id="grantvendorrole"><a class="header" href="#grantvendorrole">grantVendorRole</a></h3>
-<pre><code class="language-solidity">function grantVendorRole(address vendor_) external;
+<pre><code class="language-solidity">function grantVendorRole(address vendor_) external payable;
 </code></pre>
 <h3 id="grantrelayerrole"><a class="header" href="#grantrelayerrole">grantRelayerRole</a></h3>
-<pre><code class="language-solidity">function grantRelayerRole(address relayer_) external;
+<pre><code class="language-solidity">function grantRelayerRole(address relayer_) external payable;
 </code></pre>
 <h3 id="getcontractbyid"><a class="header" href="#getcontractbyid">getContractById</a></h3>
 <pre><code class="language-solidity">function getContractById(bytes32 id) external view returns (address);
@@ -253,6 +254,9 @@
 </code></pre>
 <h3 id="vaultregistered"><a class="header" href="#vaultregistered">VaultRegistered</a></h3>
 <pre><code class="language-solidity">event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
+</code></pre>
+<h3 id="vaultremoved"><a class="header" href="#vaultremoved">VaultRemoved</a></h3>
+<pre><code class="language-solidity">event VaultRemoved(address indexed vault);
 </code></pre>
 <h3 id="assetregistered"><a class="header" href="#assetregistered">AssetRegistered</a></h3>
 <pre><code class="language-solidity">event AssetRegistered(address indexed asset, address indexed kToken);

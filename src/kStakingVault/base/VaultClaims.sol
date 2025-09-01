@@ -46,8 +46,8 @@ contract VaultClaims is BaseVaultModule {
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
     function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable nonReentrant {
-        if (_isPaused()) revert IsPaused();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (_getPaused($)) revert IsPaused();
         if (!$.batches[batchId].isSettled) revert BatchNotSettled();
 
         BaseVaultModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
@@ -73,8 +73,8 @@ contract VaultClaims is BaseVaultModule {
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
     function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable nonReentrant {
-        if (_isPaused()) revert IsPaused();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (_getPaused($)) revert IsPaused();
         if (!$.batches[batchId].isSettled) revert BatchNotSettled();
 
         BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];

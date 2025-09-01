@@ -271,15 +271,13 @@ contract DeploymentBaseTest is BaseTest {
         bytes memory initData = abi.encodeWithSelector(
             kStakingVault.initialize.selector,
             users.owner,
-            users.admin,
             address(registry),
             false, // paused
             name,
             symbol,
             6, // decimals
             DEFAULT_DUST_AMOUNT,
-            asset, // underlying asset (USDC for now)
-            users.treasury // feeCollector
+            asset // underlying asset (USDC for now)
         );
 
         address vaultProxy = factory.deployAndCall(address(stakingVaultImpl), users.admin, initData);
@@ -372,7 +370,7 @@ contract DeploymentBaseTest is BaseTest {
         bytes4[] memory readerSelectors = readerModule.selectors();
 
         // Register modules as vault admin
-        vm.startPrank(users.admin);
+        vm.startPrank(users.owner);
 
         // Add reader module functions to all vaults
         dnVault.addFunctions(readerSelectors, address(readerModule), true);

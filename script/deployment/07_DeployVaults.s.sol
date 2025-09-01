@@ -66,15 +66,13 @@ contract DeployVaultsScript is Script, DeploymentManager {
             abi.encodeWithSelector(
                 kStakingVault.initialize.selector,
                 config.roles.owner,
-                config.roles.admin,
                 existing.contracts.kRegistry,
                 false,
                 "DN KAM Vault",
                 "dnkUSD",
                 6,
                 DEFAULT_DUST_AMOUNT,
-                config.assets.USDC,
-                config.roles.treasury
+                config.assets.USDC
             )
         );
     }
@@ -87,15 +85,13 @@ contract DeployVaultsScript is Script, DeploymentManager {
             abi.encodeWithSelector(
                 kStakingVault.initialize.selector,
                 config.roles.owner,
-                config.roles.admin,
                 existing.contracts.kRegistry,
                 false,
                 "Alpha KAM Vault",
                 "akUSD",
                 6,
                 DEFAULT_DUST_AMOUNT,
-                config.assets.USDC,
-                config.roles.treasury
+                config.assets.USDC
             )
         );
     }
@@ -108,15 +104,13 @@ contract DeployVaultsScript is Script, DeploymentManager {
             abi.encodeWithSelector(
                 kStakingVault.initialize.selector,
                 config.roles.owner,
-                config.roles.admin,
                 existing.contracts.kRegistry,
                 false,
                 "Beta KAM Vault",
                 "bkUSD",
                 6,
                 DEFAULT_DUST_AMOUNT,
-                config.assets.USDC,
-                config.roles.treasury
+                config.assets.USDC
             )
         );
     }

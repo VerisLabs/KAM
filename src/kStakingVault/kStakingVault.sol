@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { Ownable } from "solady/auth/Ownable.sol";
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
@@ -24,6 +25,7 @@ import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTyp
 contract kStakingVault is
     Initializable,
     UUPSUpgradeable,
+    Ownable,
     BaseVaultModule,
     MultiFacetProxy,
     VaultFees,
@@ -53,18 +55,15 @@ contract kStakingVault is
     /// @param decimals_ Token decimals
     /// @param dustAmount_ Minimum amount threshold
     /// @param asset_ Underlying asset address
-    /// @param feeCollector_ feeCollector address
     function initialize(
         address owner_,
-        address admin_,
         address registry_,
         bool paused_,
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
         uint128 dustAmount_,
-        address asset_,
-        address feeCollector_
+        address asset_
     )
         external
         initializer
@@ -72,19 +71,16 @@ contract kStakingVault is
         if (asset_ == address(0)) revert ZeroAddress();
 
         // Initialize ownership and roles
-        __BaseVaultModule_init(registry_, feeCollector_, paused_);
-        __MultiFacetProxy__init(1);
+        __BaseVaultModule_init(registry_, paused_);
         _initializeOwner(owner_);
-        _grantRoles(admin_, 1);
 
         // Initialize storage with optimized packing
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         $.name = name_;
         $.symbol = symbol_;
-        $.decimals = decimals_;
+        _setDecimals($, decimals_);
         $.underlyingAsset = asset_;
-        $.dustAmount = dustAmount_.toUint96();
-        $.sharePriceWatermark = 10 ** decimals_;
+        $.sharePriceWatermark = (10 ** decimals_).toUint128();
         $.kToken = _registry().assetToKToken(asset_);
         $.receiverImplementation = address(new kBatchReceiver(_registry().getContractById(K_MINTER)));
 
@@ -100,11 +96,10 @@ contract kStakingVault is
     /// @param amount Amount of kTokens to stake
     /// @return requestId Request ID for this staking request
     function requestStake(address to, uint256 amount) external payable nonReentrant returns (bytes32 requestId) {
-        if (_isPaused()) revert IsPaused();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (_getPaused($)) revert IsPaused();
         if (amount == 0) revert ZeroAmount();
         if ($.kToken.balanceOf(msg.sender) < amount) revert InsufficientBalance();
-        if (amount < $.dustAmount) revert AmountBelowDustThreshold();
 
         bytes32 batchId = $.currentBatchId;
 
@@ -150,11 +145,10 @@ contract kStakingVault is
         nonReentrant
         returns (bytes32 requestId)
     {
-        if (_isPaused()) revert IsPaused();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (_getPaused($)) revert IsPaused();
         if (stkTokenAmount == 0) revert ZeroAmount();
         if (balanceOf(msg.sender) < stkTokenAmount) revert InsufficientBalance();
-        if (stkTokenAmount < $.dustAmount) revert AmountBelowDustThreshold();
 
         bytes32 batchId = $.currentBatchId;
 
@@ -212,8 +206,8 @@ contract kStakingVault is
     /// @notice Cancels an unstaking request
     /// @param requestId Request ID to cancel
     function cancelUnstakeRequest(bytes32 requestId) external payable nonReentrant {
-        if (_isPaused()) revert IsPaused();
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        if (_getPaused($)) revert IsPaused();
         BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
 
         if (msg.sender != request.user) revert Unauthorized();
@@ -309,6 +303,16 @@ contract kStakingVault is
     function _authorizeUpgrade(address newImplementation) internal view override {
         if (!_isAdmin(msg.sender)) revert WrongRole();
         if (newImplementation == address(0)) revert ZeroAddress();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        FUNCTIONS UPGRADE
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Authorize function modification
+    /// @dev This allows modifying functions while keeping modules separate
+    function _authorizeModifyFunctions(address sender) internal override {
+        //_checkOwner();
     }
 
     /*//////////////////////////////////////////////////////////////

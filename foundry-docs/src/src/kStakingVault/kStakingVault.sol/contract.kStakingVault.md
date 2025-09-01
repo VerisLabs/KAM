@@ -1,8 +1,8 @@
 # kStakingVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kStakingVault/kStakingVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/kStakingVault.sol)
 
 **Inherits:**
-Initializable, UUPSUpgradeable, [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/contract.MultiFacetProxy.md), [VaultFees](/src/kStakingVault/base/VaultFees.sol/contract.VaultFees.md), [VaultClaims](/src/kStakingVault/base/VaultClaims.sol/contract.VaultClaims.md), [VaultBatches](/src/kStakingVault/base/VaultBatches.sol/contract.VaultBatches.md)
+Initializable, UUPSUpgradeable, Ownable, [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.md), [VaultFees](/src/kStakingVault/base/VaultFees.sol/contract.VaultFees.md), [VaultClaims](/src/kStakingVault/base/VaultClaims.sol/contract.VaultClaims.md), [VaultBatches](/src/kStakingVault/base/VaultBatches.sol/contract.VaultBatches.md)
 
 Pure ERC20 vault with dual accounting for minter and user pools
 
@@ -29,15 +29,13 @@ Initializes the kStakingVault contract (stack optimized)
 ```solidity
 function initialize(
     address owner_,
-    address admin_,
     address registry_,
     bool paused_,
     string memory name_,
     string memory symbol_,
     uint8 decimals_,
     uint128 dustAmount_,
-    address asset_,
-    address feeCollector_
+    address asset_
 )
     external
     initializer;
@@ -47,7 +45,6 @@ function initialize(
 |Name|Type|Description|
 |----|----|-----------|
 |`owner_`|`address`||
-|`admin_`|`address`||
 |`registry_`|`address`|The registry address|
 |`paused_`|`bool`|If the vault is paused_|
 |`name_`|`string`|Token name|
@@ -55,7 +52,6 @@ function initialize(
 |`decimals_`|`uint8`|Token decimals|
 |`dustAmount_`|`uint128`|Minimum amount threshold|
 |`asset_`|`address`|Underlying asset address|
-|`feeCollector_`|`address`|feeCollector address|
 
 
 ### requestStake
@@ -260,6 +256,17 @@ Authorize upgrade (only owner can upgrade)
 
 ```solidity
 function _authorizeUpgrade(address newImplementation) internal view override;
+```
+
+### _authorizeModifyFunctions
+
+Authorize function modification
+
+*This allows modifying functions while keeping modules separate*
+
+
+```solidity
+function _authorizeModifyFunctions(address sender) internal override;
 ```
 
 ### contractName

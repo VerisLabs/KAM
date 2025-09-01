@@ -160,7 +160,7 @@ interface IkAssetRouter {
 
     /// @notice Execute a settlement proposal after cooldown period
     /// @param proposalId The proposal ID to execute
-    function executeSettleBatch(bytes32 proposalId) external;
+    function executeSettleBatch(bytes32 proposalId) external payable;
 
     /// @notice Cancel a settlement proposal before execution
     /// @param proposalId The proposal ID to cancel
