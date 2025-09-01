@@ -1,5 +1,5 @@
 # BaseVaultModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/base/BaseVaultModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/786bfc5b94e4c849db94b9fb47f71818d5cce1ab/src/kStakingVault/base/BaseVaultModule.sol)
 
 **Inherits:**
 ERC20, ReentrancyGuardTransient
@@ -815,6 +815,7 @@ storage-location: erc7201.kam.storage.BaseVaultModule
 
 ```solidity
 struct BaseVaultModuleStorage {
+    uint256 config;
     uint128 sharePriceWatermark;
     uint128 totalPendingStake;
     uint256 currentBatch;
@@ -823,7 +824,6 @@ struct BaseVaultModuleStorage {
     address receiverImplementation;
     address underlyingAsset;
     address kToken;
-    uint256 config;
     string name;
     string symbol;
     mapping(bytes32 => BaseVaultModuleTypes.BatchInfo) batches;

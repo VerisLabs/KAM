@@ -276,7 +276,6 @@ contract DeploymentBaseTest is BaseTest {
             name,
             symbol,
             6, // decimals
-            DEFAULT_DUST_AMOUNT,
             asset // underlying asset (USDC for now)
         );
 

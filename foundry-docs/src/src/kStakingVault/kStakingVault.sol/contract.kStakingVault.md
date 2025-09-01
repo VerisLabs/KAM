@@ -1,5 +1,5 @@
 # kStakingVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/kStakingVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/786bfc5b94e4c849db94b9fb47f71818d5cce1ab/src/kStakingVault/kStakingVault.sol)
 
 **Inherits:**
 Initializable, UUPSUpgradeable, Ownable, [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.md), [VaultFees](/src/kStakingVault/base/VaultFees.sol/contract.VaultFees.md), [VaultClaims](/src/kStakingVault/base/VaultClaims.sol/contract.VaultClaims.md), [VaultBatches](/src/kStakingVault/base/VaultBatches.sol/contract.VaultBatches.md)
@@ -34,7 +34,6 @@ function initialize(
     string memory name_,
     string memory symbol_,
     uint8 decimals_,
-    uint128 dustAmount_,
     address asset_
 )
     external
@@ -50,7 +49,6 @@ function initialize(
 |`name_`|`string`|Token name|
 |`symbol_`|`string`|Token symbol|
 |`decimals_`|`uint8`|Token decimals|
-|`dustAmount_`|`uint128`|Minimum amount threshold|
 |`asset_`|`address`|Underlying asset address|
 
 

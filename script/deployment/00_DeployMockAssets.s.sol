@@ -18,13 +18,16 @@ contract DeployMockAssetsScript is Script, DeploymentManager {
             "This script is only for localhost and sepolia networks"
         );
 
-        // Check if assets are already deployed (non-zero, non-placeholder addresses)
-        if (_assetsAlreadyDeployed(config)) {
-            console.log("=== MOCK ASSETS ALREADY DEPLOYED ===");
-            console.log("USDC:", config.assets.USDC);
-            console.log("WBTC:", config.assets.WBTC);
-            console.log("Skipping mock asset deployment");
-            return;
+        // For localhost, always deploy fresh mock assets
+        // For other networks, check if assets are already deployed
+        if (keccak256(bytes(config.network)) != keccak256(bytes("localhost"))) {
+            if (_assetsAlreadyDeployed(config)) {
+                console.log("=== MOCK ASSETS ALREADY DEPLOYED ===");
+                console.log("USDC:", config.assets.USDC);
+                console.log("WBTC:", config.assets.WBTC);
+                console.log("Skipping mock asset deployment");
+                return;
+            }
         }
 
         console.log("=== DEPLOYING MOCK ASSETS ===");
