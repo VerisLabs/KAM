@@ -24,21 +24,18 @@
         <link rel="stylesheet" href="../../../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" id="highlight-css" href="../../../highlight.css">
-        <link rel="stylesheet" id="tomorrow-night-css" href="../../../tomorrow-night.css">
-        <link rel="stylesheet" id="ayu-highlight-css" href="../../../ayu-highlight.css">
+        <link rel="stylesheet" href="../../../highlight.css">
+        <link rel="stylesheet" href="../../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         <link rel="stylesheet" href="../../../book.css">
 
-        <!-- MathJax -->
-        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
-        <!-- Provide site root and default themes to javascript -->
+        <!-- Provide site root to javascript -->
         <script>
-            const path_to_root = "../../../";
-            const default_light_theme = "light";
-            const default_dark_theme = "navy";
+            var path_to_root = "../../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc.js"></script>
@@ -48,8 +45,8 @@
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                let theme = localStorage.getItem('mdbook-theme');
-                let sidebar = localStorage.getItem('mdbook-sidebar');
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -63,8 +60,7 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
-            let theme;
+            var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
@@ -77,8 +73,8 @@
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            let sidebar = null;
-            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -114,7 +110,6 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
@@ -162,21 +157,12 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="baseadapter"><a class="header" href="#baseadapter">BaseAdapter</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/adapters/BaseAdapter.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/adapters/BaseAdapter.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
-OwnableRoles, ReentrancyGuardTransient</p>
+ReentrancyGuardTransient</p>
 <p>Abstract base contract for all protocol adapters</p>
 <p><em>Provides common functionality and virtual balance tracking for external strategy integrations</em></p>
 <h2 id="state-variables"><a class="header" href="#state-variables">State Variables</a></h2>
-<h3 id="admin_role"><a class="header" href="#admin_role">ADMIN_ROLE</a></h3>
-<pre><code class="language-solidity">uint256 internal constant ADMIN_ROLE = _ROLE_0;
-</code></pre>
-<h3 id="emergency_admin_role"><a class="header" href="#emergency_admin_role">EMERGENCY_ADMIN_ROLE</a></h3>
-<pre><code class="language-solidity">uint256 internal constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
-</code></pre>
-<h3 id="k_minter"><a class="header" href="#k_minter">K_MINTER</a></h3>
-<pre><code class="language-solidity">bytes32 internal constant K_MINTER = keccak256("K_MINTER");
-</code></pre>
 <h3 id="k_asset_router"><a class="header" href="#k_asset_router">K_ASSET_ROUTER</a></h3>
 <pre><code class="language-solidity">bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
 </code></pre>
@@ -190,22 +176,23 @@ OwnableRoles, ReentrancyGuardTransient</p>
 </code></pre>
 <h3 id="__baseadapter_init"><a class="header" href="#__baseadapter_init">__BaseAdapter_init</a></h3>
 <p>Initializes the base adapter</p>
-<pre><code class="language-solidity">function __BaseAdapter_init(
-    address registry_,
-    address owner_,
-    address admin_,
-    string memory name_,
-    string memory version_
-)
-    internal;
+<pre><code class="language-solidity">function __BaseAdapter_init(address registry_, string memory name_, string memory version_) internal;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>registry_</code></td><td><code>address</code></td><td>Address of the kRegistry contract</td></tr>
-<tr><td><code>owner_</code></td><td><code>address</code></td><td>Address of the owner</td></tr>
-<tr><td><code>admin_</code></td><td><code>address</code></td><td>Address of the admin</td></tr>
 <tr><td><code>name_</code></td><td><code>string</code></td><td>Human readable name for this adapter</td></tr>
 <tr><td><code>version_</code></td><td><code>string</code></td><td>Version string for this adapter</td></tr>
+</tbody></table>
+</div>
+<h3 id="registry"><a class="header" href="#registry">registry</a></h3>
+<p>Returns the registry contract address</p>
+<p><em>Reverts if contract not initialized</em></p>
+<pre><code class="language-solidity">function registry() external view returns (address);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The kRegistry contract address</td></tr>
 </tbody></table>
 </div>
 <h3 id="_registry"><a class="header" href="#_registry">_registry</a></h3>
@@ -217,61 +204,15 @@ OwnableRoles, ReentrancyGuardTransient</p>
 <tr><td><code>&lt;none&gt;</code></td><td><code>IkRegistry</code></td><td>IkRegistry interface for registry interaction</td></tr>
 </tbody></table>
 </div>
-<h3 id="_getkassetrouter"><a class="header" href="#_getkassetrouter">_getKAssetRouter</a></h3>
-<p>Gets the kAssetRouter singleton contract address</p>
-<pre><code class="language-solidity">function _getKAssetRouter() internal view returns (address router);
-</code></pre>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>router</code></td><td><code>address</code></td><td>The kAssetRouter contract address</td></tr>
-</tbody></table>
-</div>
-<h3 id="_getrelayer"><a class="header" href="#_getrelayer">_getRelayer</a></h3>
-<p>Checks if an address is a relayer</p>
-<pre><code class="language-solidity">function _getRelayer() internal view returns (bool);
-</code></pre>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the address is a relayer</td></tr>
-</tbody></table>
-</div>
-<h3 id="_getktokenforasset"><a class="header" href="#_getktokenforasset">_getKTokenForAsset</a></h3>
-<p>Gets the kToken address for a given asset</p>
-<p><em>Reverts if asset not supported</em></p>
-<pre><code class="language-solidity">function _getKTokenForAsset(address asset) internal view returns (address kToken);
+<h3 id="rescueassets"><a class="header" href="#rescueassets">rescueAssets</a></h3>
+<p>rescues locked assets (ETH or ERC20) in the contract</p>
+<pre><code class="language-solidity">function rescueAssets(address asset_, address to_, uint256 amount_) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>asset</code></td><td><code>address</code></td><td>The underlying asset address</td></tr>
-</tbody></table>
-</div>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>kToken</code></td><td><code>address</code></td><td>The corresponding kToken address</td></tr>
-</tbody></table>
-</div>
-<h3 id="_getvaultassets"><a class="header" href="#_getvaultassets">_getVaultAssets</a></h3>
-<p>Gets the asset managed by a vault</p>
-<p><em>Reverts if vault not registered</em></p>
-<pre><code class="language-solidity">function _getVaultAssets(address vault) internal view returns (address[] memory assets);
-</code></pre>
-<p><strong>Parameters</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address</td></tr>
-</tbody></table>
-</div>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>assets</code></td><td><code>address[]</code></td><td>The asset address managed by the vault</td></tr>
-</tbody></table>
-</div>
-<h3 id="registered"><a class="header" href="#registered">registered</a></h3>
-<p>Returns whether this adapter is registered</p>
-<pre><code class="language-solidity">function registered() public view returns (bool);
-</code></pre>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if adapter is registered and active</td></tr>
+<tr><td><code>asset_</code></td><td><code>address</code></td><td>the asset to rescue (use address(0) for ETH)</td></tr>
+<tr><td><code>to_</code></td><td><code>address</code></td><td>the address that will receive the assets</td></tr>
+<tr><td><code>amount_</code></td><td><code>uint256</code></td><td>the amount to rescue</td></tr>
 </tbody></table>
 </div>
 <h3 id="name"><a class="header" href="#name">name</a></h3>
@@ -292,33 +233,64 @@ OwnableRoles, ReentrancyGuardTransient</p>
 <tr><td><code>&lt;none&gt;</code></td><td><code>string</code></td><td>Version string</td></tr>
 </tbody></table>
 </div>
-<h3 id="onlykassetrouter"><a class="header" href="#onlykassetrouter">onlyKAssetRouter</a></h3>
-<p>Restricts function access to kAssetRouter only</p>
-<pre><code class="language-solidity">modifier onlyKAssetRouter();
+<h3 id="_isadmin"><a class="header" href="#_isadmin">_isAdmin</a></h3>
+<p>Checks if an address is a admin</p>
+<pre><code class="language-solidity">function _isAdmin(address user) internal view returns (bool);
 </code></pre>
-<h3 id="onlyrelayer"><a class="header" href="#onlyrelayer">onlyRelayer</a></h3>
-<p>Restricts function access to the relayer</p>
-<pre><code class="language-solidity">modifier onlyRelayer();
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the address is a admin</td></tr>
+</tbody></table>
+</div>
+<h3 id="_iskassetrouter"><a class="header" href="#_iskassetrouter">_isKAssetRouter</a></h3>
+<p>Gets the kMinter singleton contract address</p>
+<p><em>Reverts if kMinter not set in registry</em></p>
+<pre><code class="language-solidity">function _isKAssetRouter(address user) internal view returns (bool);
 </code></pre>
-<h3 id="whenregistered"><a class="header" href="#whenregistered">whenRegistered</a></h3>
-<p>Ensures the adapter is registered and active</p>
-<pre><code class="language-solidity">modifier whenRegistered();
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>minter The kMinter contract address</td></tr>
+</tbody></table>
+</div>
+<h3 id="_isasset"><a class="header" href="#_isasset">_isAsset</a></h3>
+<p>Checks if an asset is registered</p>
+<pre><code class="language-solidity">function _isAsset(address asset) internal view returns (bool);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The asset address to check</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the asset is registered</td></tr>
+</tbody></table>
+</div>
+<h2 id="events"><a class="header" href="#events">Events</a></h2>
+<h3 id="rescuedassets"><a class="header" href="#rescuedassets">RescuedAssets</a></h3>
+<pre><code class="language-solidity">event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+</code></pre>
+<h3 id="rescuedeth"><a class="header" href="#rescuedeth">RescuedETH</a></h3>
+<pre><code class="language-solidity">event RescuedETH(address indexed asset, uint256 amount);
 </code></pre>
 <h2 id="errors"><a class="header" href="#errors">Errors</a></h2>
-<h3 id="onlykassetrouter-1"><a class="header" href="#onlykassetrouter-1">OnlyKAssetRouter</a></h3>
-<pre><code class="language-solidity">error OnlyKAssetRouter();
-</code></pre>
-<h3 id="contractnotfound"><a class="header" href="#contractnotfound">ContractNotFound</a></h3>
-<pre><code class="language-solidity">error ContractNotFound(bytes32 identifier);
-</code></pre>
 <h3 id="zeroaddress"><a class="header" href="#zeroaddress">ZeroAddress</a></h3>
 <pre><code class="language-solidity">error ZeroAddress();
 </code></pre>
+<h3 id="zeroamount"><a class="header" href="#zeroamount">ZeroAmount</a></h3>
+<pre><code class="language-solidity">error ZeroAmount();
+</code></pre>
+<h3 id="wrongrole"><a class="header" href="#wrongrole">WrongRole</a></h3>
+<pre><code class="language-solidity">error WrongRole();
+</code></pre>
+<h3 id="wrongasset"><a class="header" href="#wrongasset">WrongAsset</a></h3>
+<pre><code class="language-solidity">error WrongAsset();
+</code></pre>
+<h3 id="transferfailed"><a class="header" href="#transferfailed">TransferFailed</a></h3>
+<pre><code class="language-solidity">error TransferFailed();
+</code></pre>
 <h3 id="invalidregistry"><a class="header" href="#invalidregistry">InvalidRegistry</a></h3>
 <pre><code class="language-solidity">error InvalidRegistry();
-</code></pre>
-<h3 id="assetnotsupported"><a class="header" href="#assetnotsupported">AssetNotSupported</a></h3>
-<pre><code class="language-solidity">error AssetNotSupported(address asset);
 </code></pre>
 <h3 id="invalidamount"><a class="header" href="#invalidamount">InvalidAmount</a></h3>
 <pre><code class="language-solidity">error InvalidAmount();
@@ -326,13 +298,15 @@ OwnableRoles, ReentrancyGuardTransient</p>
 <h3 id="invalidasset"><a class="header" href="#invalidasset">InvalidAsset</a></h3>
 <pre><code class="language-solidity">error InvalidAsset();
 </code></pre>
+<h3 id="alreadyinitialized"><a class="header" href="#alreadyinitialized">AlreadyInitialized</a></h3>
+<pre><code class="language-solidity">error AlreadyInitialized();
+</code></pre>
 <h2 id="structs"><a class="header" href="#structs">Structs</a></h2>
 <h3 id="baseadapterstorage"><a class="header" href="#baseadapterstorage">BaseAdapterStorage</a></h3>
 <p><strong>Note:</strong>
 storage-location: erc7201:kam.storage.BaseAdapter</p>
 <pre><code class="language-solidity">struct BaseAdapterStorage {
     address registry;
-    bool registered;
     bool initialized;
     string name;
     string version;

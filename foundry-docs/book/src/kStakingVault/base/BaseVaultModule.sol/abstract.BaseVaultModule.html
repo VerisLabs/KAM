@@ -24,21 +24,18 @@
         <link rel="stylesheet" href="../../../../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" id="highlight-css" href="../../../../highlight.css">
-        <link rel="stylesheet" id="tomorrow-night-css" href="../../../../tomorrow-night.css">
-        <link rel="stylesheet" id="ayu-highlight-css" href="../../../../ayu-highlight.css">
+        <link rel="stylesheet" href="../../../../highlight.css">
+        <link rel="stylesheet" href="../../../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../../../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         <link rel="stylesheet" href="../../../../book.css">
 
-        <!-- MathJax -->
-        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
-        <!-- Provide site root and default themes to javascript -->
+        <!-- Provide site root to javascript -->
         <script>
-            const path_to_root = "../../../../";
-            const default_light_theme = "light";
-            const default_dark_theme = "navy";
+            var path_to_root = "../../../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../../toc.js"></script>
@@ -48,8 +45,8 @@
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                let theme = localStorage.getItem('mdbook-theme');
-                let sidebar = localStorage.getItem('mdbook-sidebar');
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -63,8 +60,7 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
-            let theme;
+            var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
@@ -77,8 +73,8 @@
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            let sidebar = null;
-            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -114,7 +110,6 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
@@ -162,21 +157,12 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="basevaultmodule"><a class="header" href="#basevaultmodule">BaseVaultModule</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/d9f3bcfb40b15ca7c34b1d780c519322be4b7590/src/kStakingVault/base/BaseVaultModule.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/kStakingVault/base/BaseVaultModule.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
-OwnableRoles, ERC20, ReentrancyGuardTransient, <a href="/src/abstracts/Extsload.sol/abstract.Extsload.html">Extsload</a></p>
+ERC20, ReentrancyGuardTransient</p>
 <p>Base contract for all modules</p>
 <p><em>Provides shared storage, roles, and common functionality</em></p>
 <h2 id="state-variables"><a class="header" href="#state-variables">State Variables</a></h2>
-<h3 id="admin_role"><a class="header" href="#admin_role">ADMIN_ROLE</a></h3>
-<pre><code class="language-solidity">uint256 public constant ADMIN_ROLE = _ROLE_0;
-</code></pre>
-<h3 id="emergency_admin_role"><a class="header" href="#emergency_admin_role">EMERGENCY_ADMIN_ROLE</a></h3>
-<pre><code class="language-solidity">uint256 public constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
-</code></pre>
-<h3 id="one_hundred_percent"><a class="header" href="#one_hundred_percent">ONE_HUNDRED_PERCENT</a></h3>
-<pre><code class="language-solidity">uint256 public constant ONE_HUNDRED_PERCENT = 10_000;
-</code></pre>
 <h3 id="k_asset_router"><a class="header" href="#k_asset_router">K_ASSET_ROUTER</a></h3>
 <pre><code class="language-solidity">bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
 </code></pre>
@@ -200,32 +186,13 @@ OwnableRoles, ERC20, ReentrancyGuardTransient, <a href="/src/abstracts/Extsload.
 <h3 id="__basevaultmodule_init"><a class="header" href="#__basevaultmodule_init">__BaseVaultModule_init</a></h3>
 <p>Initializes the base contract with registry and pause state</p>
 <p><em>Can only be called once during initialization</em></p>
-<pre><code class="language-solidity">function __BaseVaultModule_init(
-    address registry_,
-    address owner_,
-    address admin_,
-    address feeReceiver_,
-    bool paused_
-)
-    internal;
+<pre><code class="language-solidity">function __BaseVaultModule_init(address registry_, address feeReceiver_, bool paused_) internal;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>registry_</code></td><td><code>address</code></td><td>Address of the kRegistry contract</td></tr>
-<tr><td><code>owner_</code></td><td><code>address</code></td><td></td></tr>
-<tr><td><code>admin_</code></td><td><code>address</code></td><td></td></tr>
 <tr><td><code>feeReceiver_</code></td><td><code>address</code></td><td></td></tr>
 <tr><td><code>paused_</code></td><td><code>bool</code></td><td>Initial pause state</td></tr>
-</tbody></table>
-</div>
-<h3 id="registry"><a class="header" href="#registry">registry</a></h3>
-<p>Returns the registry contract address</p>
-<p><em>Reverts if contract not initialized</em></p>
-<pre><code class="language-solidity">function registry() external view returns (address);
-</code></pre>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The kRegistry contract address</td></tr>
 </tbody></table>
 </div>
 <h3 id="_registry"><a class="header" href="#_registry">_registry</a></h3>
@@ -273,38 +240,6 @@ OwnableRoles, ERC20, ReentrancyGuardTransient, <a href="/src/abstracts/Extsload.
 <tr><td><code>vault</code></td><td><code>address</code></td><td>The corresponding DN vault address</td></tr>
 </tbody></table>
 </div>
-<h3 id="_getrelayer"><a class="header" href="#_getrelayer">_getRelayer</a></h3>
-<p>Checks if an account has relayer role</p>
-<pre><code class="language-solidity">function _getRelayer(address account) internal view returns (bool);
-</code></pre>
-<p><strong>Parameters</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>account</code></td><td><code>address</code></td><td>The account to check</td></tr>
-</tbody></table>
-</div>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the account has relayer role</td></tr>
-</tbody></table>
-</div>
-<h3 id="asset"><a class="header" href="#asset">asset</a></h3>
-<p>Returns the underlying asset address (for compatibility)</p>
-<pre><code class="language-solidity">function asset() external view returns (address);
-</code></pre>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>Asset address</td></tr>
-</tbody></table>
-</div>
-<h3 id="underlyingasset"><a class="header" href="#underlyingasset">underlyingAsset</a></h3>
-<p>Returns the underlying asset address</p>
-<pre><code class="language-solidity">function underlyingAsset() external view returns (address);
-</code></pre>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>Asset address</td></tr>
-</tbody></table>
-</div>
 <h3 id="name"><a class="header" href="#name">name</a></h3>
 <p>Returns the vault shares token name</p>
 <pre><code class="language-solidity">function name() public view override returns (string memory);
@@ -324,7 +259,6 @@ OwnableRoles, ERC20, ReentrancyGuardTransient, <a href="/src/abstracts/Extsload.
 </tbody></table>
 </div>
 <h3 id="decimals"><a class="header" href="#decimals">decimals</a></h3>
-<p>Returns the vault shares token decimals</p>
 <pre><code class="language-solidity">function decimals() public view override returns (uint8);
 </code></pre>
 <p><strong>Returns</strong></p>
@@ -406,20 +340,66 @@ OwnableRoles, ERC20, ReentrancyGuardTransient, <a href="/src/abstracts/Extsload.
 <tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>accumulatedFees Accumulated fees</td></tr>
 </tbody></table>
 </div>
-<h3 id="whennotpaused"><a class="header" href="#whennotpaused">whenNotPaused</a></h3>
-<p>Modifier to restrict function execution when contract is paused</p>
-<p><em>Reverts with Paused() if isPaused is true</em></p>
-<pre><code class="language-solidity">modifier whenNotPaused() virtual;
+<h3 id="_isadmin"><a class="header" href="#_isadmin">_isAdmin</a></h3>
+<p>Checks if an address is a admin</p>
+<pre><code class="language-solidity">function _isAdmin(address user) internal view returns (bool);
 </code></pre>
-<h3 id="onlykassetrouter"><a class="header" href="#onlykassetrouter">onlyKAssetRouter</a></h3>
-<p>Restricts function access to the kAssetRouter contract</p>
-<pre><code class="language-solidity">modifier onlyKAssetRouter();
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the address is a admin</td></tr>
+</tbody></table>
+</div>
+<h3 id="_isemergencyadmin"><a class="header" href="#_isemergencyadmin">_isEmergencyAdmin</a></h3>
+<p>Checks if an address is a emergencyAdmin</p>
+<pre><code class="language-solidity">function _isEmergencyAdmin(address user) internal view returns (bool);
 </code></pre>
-<h3 id="onlyrelayer"><a class="header" href="#onlyrelayer">onlyRelayer</a></h3>
-<p>Restricts function access to the relayer</p>
-<p><em>Only callable internally by inheriting contracts</em></p>
-<pre><code class="language-solidity">modifier onlyRelayer();
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the address is a emergencyAdmin</td></tr>
+</tbody></table>
+</div>
+<h3 id="_isrelayer"><a class="header" href="#_isrelayer">_isRelayer</a></h3>
+<p>Checks if an address is a relayer</p>
+<pre><code class="language-solidity">function _isRelayer(address user) internal view returns (bool);
 </code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the address is a relayer</td></tr>
+</tbody></table>
+</div>
+<h3 id="_ispaused"><a class="header" href="#_ispaused">_isPaused</a></h3>
+<p>Checks if an address is a institution</p>
+<pre><code class="language-solidity">function _isPaused() internal view returns (bool);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the address is a institution</td></tr>
+</tbody></table>
+</div>
+<h3 id="_iskassetrouter"><a class="header" href="#_iskassetrouter">_isKAssetRouter</a></h3>
+<p>Gets the kMinter singleton contract address</p>
+<p><em>Reverts if kMinter not set in registry</em></p>
+<pre><code class="language-solidity">function _isKAssetRouter(address kAssetRouter_) internal view returns (bool);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>minter The kMinter contract address</td></tr>
+</tbody></table>
+</div>
+<h3 id="_isasset"><a class="header" href="#_isasset">_isAsset</a></h3>
+<p>Checks if an asset is registered</p>
+<pre><code class="language-solidity">function _isAsset(address asset) internal view returns (bool);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The asset address to check</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the asset is registered</td></tr>
+</tbody></table>
+</div>
 <h2 id="events"><a class="header" href="#events">Events</a></h2>
 <h3 id="stakerequestcreated"><a class="header" href="#stakerequestcreated">StakeRequestCreated</a></h3>
 <pre><code class="language-solidity">event StakeRequestCreated(
@@ -449,10 +429,7 @@ OwnableRoles, ERC20, ReentrancyGuardTransient, <a href="/src/abstracts/Extsload.
 <pre><code class="language-solidity">event Paused(bool paused);
 </code></pre>
 <h3 id="initialized"><a class="header" href="#initialized">Initialized</a></h3>
-<pre><code class="language-solidity">event Initialized(address registry, address owner, address admin);
-</code></pre>
-<h3 id="totalassetsupdated"><a class="header" href="#totalassetsupdated">TotalAssetsUpdated</a></h3>
-<pre><code class="language-solidity">event TotalAssetsUpdated(uint256 oldTotalAssets, uint256 newTotalAssets);
+<pre><code class="language-solidity">event Initialized(address registry, string name, string symbol, uint8 decimals, address asset);
 </code></pre>
 <h2 id="errors"><a class="header" href="#errors">Errors</a></h2>
 <h3 id="zeroaddress"><a class="header" href="#zeroaddress">ZeroAddress</a></h3>
@@ -467,20 +444,11 @@ OwnableRoles, ERC20, ReentrancyGuardTransient, <a href="/src/abstracts/Extsload.
 <h3 id="contractnotfound"><a class="header" href="#contractnotfound">ContractNotFound</a></h3>
 <pre><code class="language-solidity">error ContractNotFound(bytes32 identifier);
 </code></pre>
-<h3 id="onlykassetrouter-1"><a class="header" href="#onlykassetrouter-1">OnlyKAssetRouter</a></h3>
-<pre><code class="language-solidity">error OnlyKAssetRouter();
-</code></pre>
-<h3 id="onlyrelayer-1"><a class="header" href="#onlyrelayer-1">OnlyRelayer</a></h3>
-<pre><code class="language-solidity">error OnlyRelayer();
-</code></pre>
 <h3 id="zeroamount"><a class="header" href="#zeroamount">ZeroAmount</a></h3>
 <pre><code class="language-solidity">error ZeroAmount();
 </code></pre>
 <h3 id="amountbelowdustthreshold"><a class="header" href="#amountbelowdustthreshold">AmountBelowDustThreshold</a></h3>
 <pre><code class="language-solidity">error AmountBelowDustThreshold();
-</code></pre>
-<h3 id="contractpaused"><a class="header" href="#contractpaused">ContractPaused</a></h3>
-<pre><code class="language-solidity">error ContractPaused();
 </code></pre>
 <h3 id="closed"><a class="header" href="#closed">Closed</a></h3>
 <pre><code class="language-solidity">error Closed();
@@ -496,6 +464,24 @@ OwnableRoles, ERC20, ReentrancyGuardTransient, <a href="/src/abstracts/Extsload.
 </code></pre>
 <h3 id="invalidvault"><a class="header" href="#invalidvault">InvalidVault</a></h3>
 <pre><code class="language-solidity">error InvalidVault();
+</code></pre>
+<h3 id="ispaused"><a class="header" href="#ispaused">IsPaused</a></h3>
+<pre><code class="language-solidity">error IsPaused();
+</code></pre>
+<h3 id="alreadyinit"><a class="header" href="#alreadyinit">AlreadyInit</a></h3>
+<pre><code class="language-solidity">error AlreadyInit();
+</code></pre>
+<h3 id="wrongrole"><a class="header" href="#wrongrole">WrongRole</a></h3>
+<pre><code class="language-solidity">error WrongRole();
+</code></pre>
+<h3 id="wrongasset"><a class="header" href="#wrongasset">WrongAsset</a></h3>
+<pre><code class="language-solidity">error WrongAsset();
+</code></pre>
+<h3 id="transferfailed"><a class="header" href="#transferfailed">TransferFailed</a></h3>
+<pre><code class="language-solidity">error TransferFailed();
+</code></pre>
+<h3 id="notclosed"><a class="header" href="#notclosed">NotClosed</a></h3>
+<pre><code class="language-solidity">error NotClosed();
 </code></pre>
 <h2 id="structs"><a class="header" href="#structs">Structs</a></h2>
 <h3 id="basevaultmodulestorage"><a class="header" href="#basevaultmodulestorage">BaseVaultModuleStorage</a></h3>
@@ -535,11 +521,11 @@ storage-location: erc7201.kam.storage.BaseVaultModule</p>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../../../src/kStakingVault/base/BaseVaultModule.sol/interface.IFeesModule.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../../../src/kStakingVault/base/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../../../src/kStakingVault/modules/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../../../src/kStakingVault/base/VaultBatches.sol/contract.VaultBatches.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -549,11 +535,11 @@ storage-location: erc7201.kam.storage.BaseVaultModule</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../../../src/kStakingVault/base/BaseVaultModule.sol/interface.IFeesModule.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../../../src/kStakingVault/base/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../../../src/kStakingVault/modules/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../../../src/kStakingVault/base/VaultBatches.sol/contract.VaultBatches.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
