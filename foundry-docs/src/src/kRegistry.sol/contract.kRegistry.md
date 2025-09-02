@@ -1,5 +1,5 @@
 # kRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/786bfc5b94e4c849db94b9fb47f71818d5cce1ab/src/kRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/b791d077a3cd28e980c0943d5d7b30be3d8c14e2/src/kRegistry.sol)
 
 **Inherits:**
 [IkRegistry](/src/interfaces/IkRegistry.sol/interface.IkRegistry.md), Initializable, UUPSUpgradeable, OwnableRoles

@@ -13,6 +13,7 @@ import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+import { BaseVaultErrors } from "src/kStakingVault/errors/BaseVaultErrors.sol";
 
 import { VaultBatches } from "src/kStakingVault/base/VaultBatches.sol";
 import { VaultClaims } from "src/kStakingVault/base/VaultClaims.sol";
@@ -66,7 +67,7 @@ contract kStakingVault is
         external
         initializer
     {
-        if (asset_ == address(0)) revert ZeroAddress();
+        require(asset_ != address(0), BaseVaultErrors.ZERO_ADDRESS);
 
         // Initialize ownership and roles
         __BaseVaultModule_init(registry_, paused_);
@@ -95,11 +96,9 @@ contract kStakingVault is
     /// @return requestId Request ID for this staking request
     function requestStake(address to, uint256 amount) external payable nonReentrant returns (bytes32 requestId) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (_getPaused($)) revert IsPaused();
-        if (amount == 0) revert ZeroAmount();
-        if ($.kToken.balanceOf(msg.sender) < amount) {
-            revert InsufficientBalance();
-        }
+        require(!_getPaused($), BaseVaultErrors.IS_PAUSED);
+        require(amount != 0, BaseVaultErrors.ZERO_AMOUNT);
+        require($.kToken.balanceOf(msg.sender) >= amount, BaseVaultErrors.INSUFFICIENT_BALANCE);
 
         bytes32 batchId = $.currentBatchId;
 
@@ -146,11 +145,9 @@ contract kStakingVault is
         returns (bytes32 requestId)
     {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (_getPaused($)) revert IsPaused();
-        if (stkTokenAmount == 0) revert ZeroAmount();
-        if (balanceOf(msg.sender) < stkTokenAmount) {
-            revert InsufficientBalance();
-        }
+        require(!_getPaused($), BaseVaultErrors.IS_PAUSED);
+        require(stkTokenAmount != 0, BaseVaultErrors.ZERO_AMOUNT);
+        require(balanceOf(msg.sender) >= stkTokenAmount, BaseVaultErrors.INSUFFICIENT_BALANCE);
 
         bytes32 batchId = $.currentBatchId;
 
@@ -185,20 +182,16 @@ contract kStakingVault is
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         BaseVaultModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
 
-        if (!$.userRequests[msg.sender].contains(requestId)) {
-            revert RequestNotFound();
-        }
-        if (msg.sender != request.user) revert Unauthorized();
-        if (request.status != BaseVaultModuleTypes.RequestStatus.PENDING) {
-            revert RequestNotEligible();
-        }
+        require($.userRequests[msg.sender].contains(requestId), BaseVaultErrors.REQUEST_NOT_FOUND);
+        require(msg.sender == request.user, BaseVaultErrors.UNAUTHORIZED);
+        require(request.status == BaseVaultModuleTypes.RequestStatus.PENDING, BaseVaultErrors.REQUEST_NOT_ELIGIBLE);
 
         request.status = BaseVaultModuleTypes.RequestStatus.CANCELLED;
         $.userRequests[msg.sender].remove(requestId);
 
         $.totalPendingStake -= request.kTokenAmount;
-        if ($.batches[request.batchId].isClosed) revert Closed();
-        if ($.batches[request.batchId].isSettled) revert Settled();
+        require(!$.batches[request.batchId].isClosed, BaseVaultErrors.VAULT_CLOSED);
+        require(!$.batches[request.batchId].isSettled, BaseVaultErrors.VAULT_SETTLED);
 
         IkAssetRouter(_getKAssetRouter()).kAssetTransfer(
             address(this), _getKMinter(), $.underlyingAsset, request.kTokenAmount, request.batchId
@@ -213,22 +206,18 @@ contract kStakingVault is
     /// @param requestId Request ID to cancel
     function cancelUnstakeRequest(bytes32 requestId) external payable nonReentrant {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (_getPaused($)) revert IsPaused();
+        require(!_getPaused($), BaseVaultErrors.IS_PAUSED);
         BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
 
-        if (msg.sender != request.user) revert Unauthorized();
-        if (!$.userRequests[msg.sender].contains(requestId)) {
-            revert RequestNotFound();
-        }
-        if (request.status != BaseVaultModuleTypes.RequestStatus.PENDING) {
-            revert RequestNotEligible();
-        }
+        require(msg.sender == request.user, BaseVaultErrors.UNAUTHORIZED);
+        require($.userRequests[msg.sender].contains(requestId), BaseVaultErrors.REQUEST_NOT_FOUND);
+        require(request.status == BaseVaultModuleTypes.RequestStatus.PENDING, BaseVaultErrors.REQUEST_NOT_ELIGIBLE);
 
         request.status = BaseVaultModuleTypes.RequestStatus.CANCELLED;
         $.userRequests[msg.sender].remove(requestId);
 
-        if ($.batches[request.batchId].isClosed) revert Closed();
-        if ($.batches[request.batchId].isSettled) revert Settled();
+        require(!$.batches[request.batchId].isClosed, BaseVaultErrors.VAULT_CLOSED);
+        require(!$.batches[request.batchId].isSettled, BaseVaultErrors.VAULT_SETTLED);
 
         IkAssetRouter(_getKAssetRouter()).kSharesRequestPull(address(this), request.stkTokenAmount, request.batchId);
 
@@ -260,7 +249,7 @@ contract kStakingVault is
     /// @param paused_ New pause state
     /// @dev Only callable internally by inheriting contracts
     function setPaused(bool paused_) external {
-        if (!_isEmergencyAdmin(msg.sender)) revert WrongRole();
+        require(_isEmergencyAdmin(msg.sender), BaseVaultErrors.WRONG_ROLE);
         _setPaused(paused_);
     }
 
@@ -298,8 +287,8 @@ contract kStakingVault is
     function getSafeBatchId() external view returns (bytes32) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         bytes32 batchId = getBatchId();
-        if ($.batches[batchId].isClosed) revert Closed();
-        if ($.batches[batchId].isSettled) revert Settled();
+        require(!$.batches[batchId].isClosed, BaseVaultErrors.VAULT_CLOSED);
+        require(!$.batches[batchId].isSettled, BaseVaultErrors.VAULT_SETTLED);
         return batchId;
     }
 
@@ -310,8 +299,8 @@ contract kStakingVault is
     /// @notice Authorize upgrade (only owner can upgrade)
     /// @dev This allows upgrading the main contract while keeping modules separate
     function _authorizeUpgrade(address newImplementation) internal view override {
-        if (!_isAdmin(msg.sender)) revert WrongRole();
-        if (newImplementation == address(0)) revert ZeroAddress();
+        require(_isAdmin(msg.sender), BaseVaultErrors.WRONG_ROLE);
+        require(newImplementation != address(0), BaseVaultErrors.ZERO_ADDRESS);
     }
 
     /*//////////////////////////////////////////////////////////////

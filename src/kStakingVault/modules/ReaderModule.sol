@@ -4,6 +4,8 @@ pragma solidity 0.8.30;
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Extsload } from "src/abstracts/Extsload.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+
+import { BaseVaultErrors } from "src/kStakingVault/errors/BaseVaultErrors.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title ReaderModule
@@ -24,7 +26,7 @@ contract ReaderModule is BaseVaultModule, Extsload {
     /// GENERAL
     function registry() external view returns (address) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (!_getInitialized($)) revert NotInitialized();
+        require(_getInitialized($), BaseVaultErrors.NOT_INITIALIZED);
         return $.registry;
     }
 
@@ -207,7 +209,7 @@ contract ReaderModule is BaseVaultModule, Extsload {
     /// @dev Throws if the batch is settled
     function getSafeBatchReceiver(bytes32 batchId) external view returns (address) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if ($.batches[batchId].isSettled) revert Settled();
+        require(!$.batches[batchId].isSettled, BaseVaultErrors.VAULT_SETTLED);
         return $.batches[batchId].batchReceiver;
     }
 

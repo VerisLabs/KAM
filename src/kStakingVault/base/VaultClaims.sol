@@ -8,6 +8,8 @@ import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+
+import { BaseVaultErrors } from "src/kStakingVault/errors/BaseVaultErrors.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title VaultClaims
@@ -19,14 +21,7 @@ contract VaultClaims is BaseVaultModule {
     using FixedPointMathLib for uint256;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
 
-    /*//////////////////////////////////////////////////////////////
-                              ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error BatchNotSettled();
-    error InvalidBatchId();
-    error RequestNotPending();
-    error NotBeneficiary();
+    // Error declarations removed - using library errors instead
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
@@ -47,13 +42,13 @@ contract VaultClaims is BaseVaultModule {
     /// @param requestId Request ID to claim
     function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable nonReentrant {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (_getPaused($)) revert IsPaused();
-        if (!$.batches[batchId].isSettled) revert BatchNotSettled();
+        require(!_getPaused($), BaseVaultErrors.IS_PAUSED);
+        require($.batches[batchId].isSettled, BaseVaultErrors.BATCH_NOT_SETTLED);
 
         BaseVaultModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
-        if (request.batchId != batchId) revert InvalidBatchId();
-        if (request.status != BaseVaultModuleTypes.RequestStatus.PENDING) revert RequestNotPending();
-        if (msg.sender != request.user) revert NotBeneficiary();
+        require(request.batchId == batchId, BaseVaultErrors.INVALID_BATCH_ID);
+        require(request.status == BaseVaultModuleTypes.RequestStatus.PENDING, BaseVaultErrors.REQUEST_NOT_PENDING);
+        require(msg.sender == request.user, BaseVaultErrors.NOT_BENEFICIARY);
 
         request.status = BaseVaultModuleTypes.RequestStatus.CLAIMED;
 
@@ -74,13 +69,13 @@ contract VaultClaims is BaseVaultModule {
     /// @param requestId Request ID to claim
     function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable nonReentrant {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (_getPaused($)) revert IsPaused();
-        if (!$.batches[batchId].isSettled) revert BatchNotSettled();
+        require(!_getPaused($), BaseVaultErrors.IS_PAUSED);
+        require($.batches[batchId].isSettled, BaseVaultErrors.BATCH_NOT_SETTLED);
 
         BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
-        if (request.batchId != batchId) revert InvalidBatchId();
-        if (request.status != BaseVaultModuleTypes.RequestStatus.PENDING) revert RequestNotPending();
-        if (msg.sender != request.user) revert NotBeneficiary();
+        require(request.batchId == batchId, BaseVaultErrors.INVALID_BATCH_ID);
+        require(request.status == BaseVaultModuleTypes.RequestStatus.PENDING, BaseVaultErrors.REQUEST_NOT_PENDING);
+        require(msg.sender == request.user, BaseVaultErrors.NOT_BENEFICIARY);
 
         request.status = BaseVaultModuleTypes.RequestStatus.CLAIMED;
 

@@ -1,5 +1,5 @@
 # kAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/786bfc5b94e4c849db94b9fb47f71818d5cce1ab/src/kAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/b791d077a3cd28e980c0943d5d7b30be3d8c14e2/src/kAssetRouter.sol)
 
 **Inherits:**
 [IkAssetRouter](/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), Multicallable

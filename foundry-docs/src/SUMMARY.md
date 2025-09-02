@@ -29,6 +29,8 @@
       - [VaultBatches](src/kStakingVault/base/VaultBatches.sol/contract.VaultBatches.md)
       - [VaultClaims](src/kStakingVault/base/VaultClaims.sol/contract.VaultClaims.md)
       - [VaultFees](src/kStakingVault/base/VaultFees.sol/contract.VaultFees.md)
+    - [❱ errors](src/kStakingVault/errors/README.md)
+      - [BaseVaultErrors](src/kStakingVault/errors/BaseVaultErrors.sol/library.BaseVaultErrors.md)
     - [❱ modules](src/kStakingVault/modules/README.md)
       - [ReaderModule](src/kStakingVault/modules/ReaderModule.sol/contract.ReaderModule.md)
     - [❱ types](src/kStakingVault/types/README.md)

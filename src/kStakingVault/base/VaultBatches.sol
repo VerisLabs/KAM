@@ -7,6 +7,8 @@ import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+
+import { BaseVaultErrors } from "src/kStakingVault/errors/BaseVaultErrors.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title VaultBatches
@@ -34,7 +36,7 @@ contract VaultBatches is BaseVaultModule {
     /// @return The new batch ID
     /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
     function createNewBatch() external returns (bytes32) {
-        if (!_isRelayer(msg.sender)) revert WrongRole();
+        require(_isRelayer(msg.sender), BaseVaultErrors.WRONG_ROLE);
         return _createNewBatch();
     }
 
@@ -42,9 +44,9 @@ contract VaultBatches is BaseVaultModule {
     /// @param _batchId The batch ID to close
     /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
     function closeBatch(bytes32 _batchId, bool _create) external {
-        if (!_isRelayer(msg.sender)) revert WrongRole();
+        require(_isRelayer(msg.sender), BaseVaultErrors.WRONG_ROLE);
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if ($.batches[_batchId].isClosed) revert Closed();
+        require(!$.batches[_batchId].isClosed, BaseVaultErrors.VAULT_CLOSED);
         $.batches[_batchId].isClosed = true;
 
         if (_create) {
@@ -57,10 +59,10 @@ contract VaultBatches is BaseVaultModule {
     /// @param _batchId The batch ID to settle
     /// @dev Only callable by kMinter, indicates assets have been distributed
     function settleBatch(bytes32 _batchId) external {
-        if (!_isKAssetRouter(msg.sender)) revert WrongRole();
+        require(_isKAssetRouter(msg.sender), BaseVaultErrors.WRONG_ROLE);
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        if (!$.batches[_batchId].isClosed) revert NotClosed();
-        if ($.batches[_batchId].isSettled) revert Settled();
+        require($.batches[_batchId].isClosed, BaseVaultErrors.NOT_CLOSED);
+        require(!$.batches[_batchId].isSettled, BaseVaultErrors.VAULT_SETTLED);
         $.batches[_batchId].isSettled = true;
 
         emit BatchSettled(_batchId);
@@ -70,7 +72,7 @@ contract VaultBatches is BaseVaultModule {
     /// @param _batchId Batch ID to deploy receiver for
     /// @dev Only callable by kAssetRouter
     function createBatchReceiver(bytes32 _batchId) external nonReentrant returns (address) {
-        if (!_isKAssetRouter(msg.sender)) revert WrongRole();
+        require(_isKAssetRouter(msg.sender), BaseVaultErrors.WRONG_ROLE);
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         address receiver = $.batches[_batchId].batchReceiver;
         if (receiver != address(0)) return receiver;

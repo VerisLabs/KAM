@@ -1,5 +1,5 @@
 # VaultClaims
-[Git Source](https://github.com/VerisLabs/KAM/blob/786bfc5b94e4c849db94b9fb47f71818d5cce1ab/src/kStakingVault/base/VaultClaims.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/b791d077a3cd28e980c0943d5d7b30be3d8c14e2/src/kStakingVault/base/VaultClaims.sol)
 
 **Inherits:**
 [BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md)
@@ -67,30 +67,5 @@ event StkTokensIssued(address indexed user, uint256 stkTokenAmount);
 
 ```solidity
 event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
-```
-
-## Errors
-### BatchNotSettled
-
-```solidity
-error BatchNotSettled();
-```
-
-### InvalidBatchId
-
-```solidity
-error InvalidBatchId();
-```
-
-### RequestNotPending
-
-```solidity
-error RequestNotPending();
-```
-
-### NotBeneficiary
-
-```solidity
-error NotBeneficiary();
 ```
 
