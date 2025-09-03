@@ -87,7 +87,7 @@ contract VaultBatches is BaseVaultModule {
     /*//////////////////////////////////////////////////////////////
                           INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-    
+
     /// @notice Creates a new batch for processing requests
     /// @return The new batch ID
     /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
