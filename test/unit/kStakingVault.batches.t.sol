@@ -13,10 +13,7 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
-import {
-    WRONG_ROLE,
-    VAULT_CLOSED
-} from "src/kStakingVault/errors/BaseVaultErrors.sol";
+import { VAULT_CLOSED, WRONG_ROLE } from "src/kStakingVault/errors/BaseVaultErrors.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 
 /// @title kStakingVaultBatchesTest
