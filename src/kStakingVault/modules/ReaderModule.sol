@@ -5,7 +5,7 @@ import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Extsload } from "src/abstracts/Extsload.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 
-import { BaseVaultErrors } from "src/kStakingVault/errors/BaseVaultErrors.sol";
+import { NOT_INITIALIZED, VAULT_SETTLED } from "src/kStakingVault/errors/BaseVaultErrors.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title ReaderModule
@@ -26,7 +26,7 @@ contract ReaderModule is BaseVaultModule, Extsload {
     /// GENERAL
     function registry() external view returns (address) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        require(_getInitialized($), BaseVaultErrors.NOT_INITIALIZED);
+        require(_getInitialized($), NOT_INITIALIZED);
         return $.registry;
     }
 
@@ -209,7 +209,7 @@ contract ReaderModule is BaseVaultModule, Extsload {
     /// @dev Throws if the batch is settled
     function getSafeBatchReceiver(bytes32 batchId) external view returns (address) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        require(!$.batches[batchId].isSettled, BaseVaultErrors.VAULT_SETTLED);
+        require(!$.batches[batchId].isSettled, VAULT_SETTLED);
         return $.batches[batchId].batchReceiver;
     }
 

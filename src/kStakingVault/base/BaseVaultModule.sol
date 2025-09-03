@@ -10,7 +10,13 @@ import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 import { IVaultFees } from "src/interfaces/modules/IVaultFees.sol";
 
-import { BaseVaultErrors } from "src/kStakingVault/errors/BaseVaultErrors.sol";
+import {
+    ALREADY_INITIALIZED,
+    CONTRACT_NOT_FOUND,
+    INVALID_REGISTRY,
+    INVALID_VAULT,
+    NOT_INITIALIZED
+} from "src/kStakingVault/errors/BaseVaultErrors.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title BaseVaultModule
@@ -206,8 +212,8 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     function __BaseVaultModule_init(address registry_, bool paused_) internal {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
 
-        require(!_getInitialized($), BaseVaultErrors.ALREADY_INITIALIZED);
-        require(registry_ != address(0), BaseVaultErrors.INVALID_REGISTRY);
+        require(!_getInitialized($), ALREADY_INITIALIZED);
+        require(registry_ != address(0), INVALID_REGISTRY);
 
         $.registry = registry_;
         _setPaused($, paused_);
@@ -225,7 +231,7 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     /// @dev Internal helper for typed registry access
     function _registry() internal view returns (IkRegistry) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        require(_getInitialized($), BaseVaultErrors.NOT_INITIALIZED);
+        require(_getInitialized($), NOT_INITIALIZED);
         return IkRegistry($.registry);
     }
 
@@ -238,7 +244,7 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     /// @dev Reverts if kMinter not set in registry
     function _getKMinter() internal view returns (address minter) {
         minter = _registry().getContractById(K_MINTER);
-        require(minter != address(0), BaseVaultErrors.CONTRACT_NOT_FOUND);
+        require(minter != address(0), CONTRACT_NOT_FOUND);
     }
 
     /// @notice Gets the kAssetRouter singleton contract address
@@ -246,7 +252,7 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     /// @dev Reverts if kAssetRouter not set in registry
     function _getKAssetRouter() internal view returns (address router) {
         router = _registry().getContractById(K_ASSET_ROUTER);
-        require(router != address(0), BaseVaultErrors.CONTRACT_NOT_FOUND);
+        require(router != address(0), CONTRACT_NOT_FOUND);
     }
 
     /// @notice Gets the DN vault address for a given asset
@@ -255,7 +261,7 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     /// @dev Reverts if asset not supported
     function _getDNVaultByAsset(address asset_) internal view returns (address vault) {
         vault = _registry().getVaultByAssetAndType(asset_, uint8(IkRegistry.VaultType.DN));
-        require(vault != address(0), BaseVaultErrors.INVALID_VAULT);
+        require(vault != address(0), INVALID_VAULT);
     }
 
     /// @notice Returns the vault shares token name
@@ -285,7 +291,7 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     /// @dev Only callable internally by inheriting contracts
     function _setPaused(bool paused_) internal {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        require(_getInitialized($), BaseVaultErrors.NOT_INITIALIZED);
+        require(_getInitialized($), NOT_INITIALIZED);
         _setPaused($, paused_);
         emit Paused(paused_);
     }
@@ -364,7 +370,7 @@ abstract contract BaseVaultModule is ERC20, ReentrancyGuardTransient {
     /// @return Whether the address is a institution
     function _isPaused() internal view returns (bool) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        require(_getInitialized($), BaseVaultErrors.NOT_INITIALIZED);
+        require(_getInitialized($), NOT_INITIALIZED);
         return _getPaused($);
     }
 

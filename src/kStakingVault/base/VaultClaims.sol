@@ -9,7 +9,13 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 
-import { BaseVaultErrors } from "src/kStakingVault/errors/BaseVaultErrors.sol";
+import {
+    BATCH_NOT_SETTLED,
+    INVALID_BATCH_ID,
+    IS_PAUSED,
+    NOT_BENEFICIARY,
+    REQUEST_NOT_PENDING
+} from "src/kStakingVault/errors/BaseVaultErrors.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title VaultClaims
@@ -42,13 +48,13 @@ contract VaultClaims is BaseVaultModule {
     /// @param requestId Request ID to claim
     function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable nonReentrant {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        require(!_getPaused($), BaseVaultErrors.IS_PAUSED);
-        require($.batches[batchId].isSettled, BaseVaultErrors.BATCH_NOT_SETTLED);
+        require(!_getPaused($), IS_PAUSED);
+        require($.batches[batchId].isSettled, BATCH_NOT_SETTLED);
 
         BaseVaultModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
-        require(request.batchId == batchId, BaseVaultErrors.INVALID_BATCH_ID);
-        require(request.status == BaseVaultModuleTypes.RequestStatus.PENDING, BaseVaultErrors.REQUEST_NOT_PENDING);
-        require(msg.sender == request.user, BaseVaultErrors.NOT_BENEFICIARY);
+        require(request.batchId == batchId, INVALID_BATCH_ID);
+        require(request.status == BaseVaultModuleTypes.RequestStatus.PENDING, REQUEST_NOT_PENDING);
+        require(msg.sender == request.user, NOT_BENEFICIARY);
 
         request.status = BaseVaultModuleTypes.RequestStatus.CLAIMED;
 
@@ -69,13 +75,13 @@ contract VaultClaims is BaseVaultModule {
     /// @param requestId Request ID to claim
     function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable nonReentrant {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        require(!_getPaused($), BaseVaultErrors.IS_PAUSED);
-        require($.batches[batchId].isSettled, BaseVaultErrors.BATCH_NOT_SETTLED);
+        require(!_getPaused($), IS_PAUSED);
+        require($.batches[batchId].isSettled, BATCH_NOT_SETTLED);
 
         BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
-        require(request.batchId == batchId, BaseVaultErrors.INVALID_BATCH_ID);
-        require(request.status == BaseVaultModuleTypes.RequestStatus.PENDING, BaseVaultErrors.REQUEST_NOT_PENDING);
-        require(msg.sender == request.user, BaseVaultErrors.NOT_BENEFICIARY);
+        require(request.batchId == batchId, INVALID_BATCH_ID);
+        require(request.status == BaseVaultModuleTypes.RequestStatus.PENDING, REQUEST_NOT_PENDING);
+        require(msg.sender == request.user, NOT_BENEFICIARY);
 
         request.status = BaseVaultModuleTypes.RequestStatus.CLAIMED;
 

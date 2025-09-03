@@ -11,7 +11,11 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
-import { BaseVaultErrors } from "src/kStakingVault/errors/BaseVaultErrors.sol";
+import {
+    FEE_EXCEEDS_MAXIMUM,
+    WRONG_ROLE,
+    INVALID_TIMESTAMP
+} from "src/kStakingVault/errors/BaseVaultErrors.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
@@ -70,13 +74,13 @@ contract kStakingVaultFeesTest is BaseVaultTest {
     }
 
     function test_SetManagementFee_ExceedsMaximum() public {
-        vm.expectRevert(bytes(BaseVaultErrors.FEE_EXCEEDS_MAXIMUM));
+        vm.expectRevert(bytes(FEE_EXCEEDS_MAXIMUM));
         vm.prank(users.admin);
         vault.setManagementFee(uint16(MAX_BPS + 1));
     }
 
     function test_SetManagementFee_OnlyAdmin() public {
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vm.prank(users.alice);
         vault.setManagementFee(TEST_MANAGEMENT_FEE);
     }
@@ -89,7 +93,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
     }
 
     function test_SetPerformanceFee_ExceedsMaximum() public {
-        vm.expectRevert(bytes(BaseVaultErrors.FEE_EXCEEDS_MAXIMUM));
+        vm.expectRevert(bytes(FEE_EXCEEDS_MAXIMUM));
         vm.prank(users.admin);
         vault.setPerformanceFee(uint16(MAX_BPS + 1));
     }
@@ -102,7 +106,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
     }
 
     function test_SetHurdleRate_ExceedsMaximum() public {
-        vm.expectRevert(bytes(BaseVaultErrors.FEE_EXCEEDS_MAXIMUM));
+        vm.expectRevert(bytes(FEE_EXCEEDS_MAXIMUM));
         vm.prank(users.admin);
         vault.setHurdleRate(uint16(MAX_BPS + 1));
     }
@@ -362,7 +366,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         // Try to set timestamp in the past
         uint64 pastTimestamp = uint64(block.timestamp - 1000);
 
-        vm.expectRevert(bytes(BaseVaultErrors.INVALID_TIMESTAMP));
+        vm.expectRevert(bytes(INVALID_TIMESTAMP));
         vm.prank(users.admin);
         vault.notifyManagementFeesCharged(pastTimestamp);
     }
@@ -371,7 +375,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         // Try to set timestamp in the future
         uint64 futureTimestamp = uint64(block.timestamp + 1000);
 
-        vm.expectRevert(bytes(BaseVaultErrors.INVALID_TIMESTAMP));
+        vm.expectRevert(bytes(INVALID_TIMESTAMP));
         vm.prank(users.admin);
         vault.notifyManagementFeesCharged(futureTimestamp);
     }
@@ -389,7 +393,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
     }
 
     function test_NotifyPerformanceFeesCharged_OnlyAdmin() public {
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vm.prank(users.alice);
         vault.notifyPerformanceFeesCharged(uint64(block.timestamp));
     }

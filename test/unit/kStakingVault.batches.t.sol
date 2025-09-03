@@ -13,7 +13,10 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
-import { BaseVaultErrors } from "src/kStakingVault/errors/BaseVaultErrors.sol";
+import {
+    WRONG_ROLE,
+    VAULT_CLOSED
+} from "src/kStakingVault/errors/BaseVaultErrors.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 
 /// @title kStakingVaultBatchesTest
@@ -54,11 +57,11 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
     function test_CreateNewBatch_RequiresRelayerRole() public {
         vm.prank(users.alice);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.createNewBatch();
 
         vm.prank(users.admin);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.createNewBatch();
     }
 
@@ -93,7 +96,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         // Try to close again should revert
         vm.prank(users.relayer);
-        vm.expectRevert(bytes(BaseVaultErrors.VAULT_CLOSED));
+        vm.expectRevert(bytes(VAULT_CLOSED));
         vault.closeBatch(batchId, false);
     }
 
@@ -115,11 +118,11 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         // Non-relayer should fail
         vm.prank(users.alice);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.closeBatch(batchId, false);
 
         vm.prank(users.admin);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.closeBatch(batchId, false);
     }
 
@@ -133,7 +136,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         // Try to close again
         vm.prank(users.relayer);
-        vm.expectRevert(bytes(BaseVaultErrors.VAULT_CLOSED));
+        vm.expectRevert(bytes(VAULT_CLOSED));
         vault.closeBatch(batchId, false);
     }
 
@@ -178,15 +181,15 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         // Direct call should fail
         vm.prank(users.alice);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.settleBatch(batchId);
 
         vm.prank(users.relayer);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.settleBatch(batchId);
 
         vm.prank(users.admin);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.settleBatch(batchId);
     }
 
@@ -273,15 +276,15 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         // Non-kAssetRouter should fail
         vm.prank(users.alice);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.createBatchReceiver(batchId);
 
         vm.prank(users.relayer);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.createBatchReceiver(batchId);
 
         vm.prank(users.admin);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.createBatchReceiver(batchId);
     }
 
@@ -362,17 +365,17 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
     function test_BatchOperations_ZeroBatchId() public {
         // Close batch with zero ID should still check role
         vm.prank(users.alice);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.closeBatch(bytes32(0), false);
 
         // Settle batch with zero ID
         vm.prank(users.alice);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.settleBatch(bytes32(0));
 
         // Create receiver for zero ID
         vm.prank(users.alice);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.createBatchReceiver(bytes32(0));
     }
 
@@ -382,15 +385,15 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         // These should check role first before any other validation
         vm.prank(users.alice);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.closeBatch(maxBatchId, false);
 
         vm.prank(users.alice);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.settleBatch(maxBatchId);
 
         vm.prank(users.alice);
-        vm.expectRevert(bytes(BaseVaultErrors.WRONG_ROLE));
+        vm.expectRevert(bytes(WRONG_ROLE));
         vault.createBatchReceiver(maxBatchId);
     }
 }

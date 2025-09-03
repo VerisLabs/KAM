@@ -3,7 +3,7 @@ pragma solidity 0.8.30;
 
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
-import { BaseVaultErrors } from "src/kStakingVault/errors/BaseVaultErrors.sol";
+import { FEE_EXCEEDS_MAXIMUM, INVALID_TIMESTAMP, WRONG_ROLE } from "src/kStakingVault/errors/BaseVaultErrors.sol";
 
 /// @title VaultFees
 /// @notice Handles batch operations for staking and unstaking
@@ -53,8 +53,8 @@ contract VaultFees is BaseVaultModule {
     /// @param _hurdleRate The new yearly hurdle rate
     /// @dev Fee is a basis point (1% = 100)
     function setHurdleRate(uint16 _hurdleRate) external {
-        require(_isAdmin(msg.sender), BaseVaultErrors.WRONG_ROLE);
-        require(_hurdleRate <= MAX_BPS, BaseVaultErrors.FEE_EXCEEDS_MAXIMUM);
+        require(_isAdmin(msg.sender), WRONG_ROLE);
+        require(_hurdleRate <= MAX_BPS, FEE_EXCEEDS_MAXIMUM);
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         _setHurdleRate($, _hurdleRate);
         emit HurdleRateUpdated(_hurdleRate);
@@ -64,7 +64,7 @@ contract VaultFees is BaseVaultModule {
     /// @param _isHard Whether the hard hurdle rate is enabled
     /// @dev If true, performance fees will only be charged to the excess return
     function setHardHurdleRate(bool _isHard) external {
-        require(_isAdmin(msg.sender), BaseVaultErrors.WRONG_ROLE);
+        require(_isAdmin(msg.sender), WRONG_ROLE);
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         _setIsHardHurdleRate($, _isHard);
         emit HardHurdleRateUpdated(_isHard);
@@ -74,8 +74,8 @@ contract VaultFees is BaseVaultModule {
     /// @param _managementFee The new management fee
     /// @dev Fee is a basis point (1% = 100)
     function setManagementFee(uint16 _managementFee) external {
-        require(_isAdmin(msg.sender), BaseVaultErrors.WRONG_ROLE);
-        require(_managementFee <= MAX_BPS, BaseVaultErrors.FEE_EXCEEDS_MAXIMUM);
+        require(_isAdmin(msg.sender), WRONG_ROLE);
+        require(_managementFee <= MAX_BPS, FEE_EXCEEDS_MAXIMUM);
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         uint16 oldFee = _getManagementFee($);
         _setManagementFee($, _managementFee);
@@ -86,8 +86,8 @@ contract VaultFees is BaseVaultModule {
     /// @param _performanceFee The new performance fee
     /// @dev Fee is a basis point (1% = 100)
     function setPerformanceFee(uint16 _performanceFee) external {
-        require(_isAdmin(msg.sender), BaseVaultErrors.WRONG_ROLE);
-        require(_performanceFee <= MAX_BPS, BaseVaultErrors.FEE_EXCEEDS_MAXIMUM);
+        require(_isAdmin(msg.sender), WRONG_ROLE);
+        require(_performanceFee <= MAX_BPS, FEE_EXCEEDS_MAXIMUM);
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         uint16 oldFee = _getPerformanceFee($);
         _setPerformanceFee($, _performanceFee);
@@ -98,12 +98,9 @@ contract VaultFees is BaseVaultModule {
     /// @param _timestamp The timestamp of the fee charge
     /// @dev Should only be called by the vault
     function notifyManagementFeesCharged(uint64 _timestamp) external {
-        require(_isAdmin(msg.sender), BaseVaultErrors.WRONG_ROLE);
+        require(_isAdmin(msg.sender), WRONG_ROLE);
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        require(
-            _timestamp >= _getLastFeesChargedManagement($) && _timestamp <= block.timestamp,
-            BaseVaultErrors.INVALID_TIMESTAMP
-        );
+        require(_timestamp >= _getLastFeesChargedManagement($) && _timestamp <= block.timestamp, INVALID_TIMESTAMP);
         _setLastFeesChargedManagement($, _timestamp);
         _updateGlobalWatermark();
         emit ManagementFeesCharged(_timestamp);
@@ -113,12 +110,9 @@ contract VaultFees is BaseVaultModule {
     /// @param _timestamp The timestamp of the fee charge
     /// @dev Should only be called by the vault
     function notifyPerformanceFeesCharged(uint64 _timestamp) external {
-        require(_isAdmin(msg.sender), BaseVaultErrors.WRONG_ROLE);
+        require(_isAdmin(msg.sender), WRONG_ROLE);
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        require(
-            _timestamp >= _getLastFeesChargedPerformance($) && _timestamp <= block.timestamp,
-            BaseVaultErrors.INVALID_TIMESTAMP
-        );
+        require(_timestamp >= _getLastFeesChargedPerformance($) && _timestamp <= block.timestamp, INVALID_TIMESTAMP);
         _setLastFeesChargedPerformance($, _timestamp);
         _updateGlobalWatermark();
         emit PerformanceFeesCharged(_timestamp);
