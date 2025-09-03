@@ -87,7 +87,10 @@ contract VaultBatches is BaseVaultModule {
     /*//////////////////////////////////////////////////////////////
                           INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
+    
+    /// @notice Creates a new batch for processing requests
+    /// @return The new batch ID
+    /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
     function _createNewBatch() internal returns (bytes32) {
         BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
         unchecked {
