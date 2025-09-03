@@ -13,6 +13,8 @@ import {
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+
+import { IS_PAUSED, ZERO_ADDRESS as ZERO_ADDRESS_ERROR, ZERO_AMOUNT } from "src/errors/Errors.sol";
 import { kToken } from "src/kToken.sol";
 
 /// @title kTokenTest
@@ -85,7 +87,7 @@ contract kTokenTest is DeploymentBaseTest {
         kUSD.setPaused(true);
 
         vm.prank(address(minter));
-        vm.expectRevert(kToken.Paused.selector);
+        vm.expectRevert(bytes(IS_PAUSED));
         kUSD.mint(users.alice, TEST_AMOUNT);
     }
 
@@ -141,7 +143,7 @@ contract kTokenTest is DeploymentBaseTest {
         kUSD.setPaused(true);
 
         vm.prank(address(minter));
-        vm.expectRevert(kToken.Paused.selector);
+        vm.expectRevert(bytes(IS_PAUSED));
         kUSD.burn(users.alice, TEST_AMOUNT);
     }
 
@@ -329,7 +331,7 @@ contract kTokenTest is DeploymentBaseTest {
 
         // Try to transfer
         vm.prank(users.alice);
-        vm.expectRevert(kToken.Paused.selector);
+        vm.expectRevert(bytes(IS_PAUSED));
         kUSD.transfer(users.bob, TEST_AMOUNT);
     }
 
@@ -396,14 +398,6 @@ contract kTokenTest is DeploymentBaseTest {
         kUSD.emergencyWithdraw(ZERO_ADDRESS, users.treasury, 1 ether);
     }
 
-    /// @dev Test emergency withdrawal requires paused state
-    function test_EmergencyWithdraw_RequiresPaused() public {
-        // Should revert when not paused
-        vm.prank(users.emergencyAdmin);
-        vm.expectRevert(kToken.ContractNotPaused.selector);
-        kUSD.emergencyWithdraw(ZERO_ADDRESS, users.treasury, 1 ether);
-    }
-
     /// @dev Test emergency withdrawal reverts with zero address recipient
     function test_EmergencyWithdraw_RevertZeroAddress() public {
         // Pause contract
@@ -411,7 +405,7 @@ contract kTokenTest is DeploymentBaseTest {
         kUSD.setPaused(true);
 
         vm.prank(users.emergencyAdmin);
-        vm.expectRevert(kToken.ZeroAddress.selector);
+        vm.expectRevert(bytes(ZERO_ADDRESS_ERROR));
         kUSD.emergencyWithdraw(ZERO_ADDRESS, ZERO_ADDRESS, 1 ether);
     }
 
@@ -422,7 +416,7 @@ contract kTokenTest is DeploymentBaseTest {
         kUSD.setPaused(true);
 
         vm.prank(users.emergencyAdmin);
-        vm.expectRevert(kToken.ZeroAmount.selector);
+        vm.expectRevert(bytes(ZERO_AMOUNT));
         kUSD.emergencyWithdraw(ZERO_ADDRESS, users.treasury, 0);
     }
 

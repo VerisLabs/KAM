@@ -2,8 +2,9 @@
 pragma solidity 0.8.30;
 
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+
+import { FEE_EXCEEDS_MAXIMUM, INVALID_TIMESTAMP, WRONG_ROLE } from "src/errors/Errors.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
-import { FEE_EXCEEDS_MAXIMUM, INVALID_TIMESTAMP, WRONG_ROLE } from "src/kStakingVault/errors/BaseVaultErrors.sol";
 
 /// @title VaultFees
 /// @notice Handles batch operations for staking and unstaking

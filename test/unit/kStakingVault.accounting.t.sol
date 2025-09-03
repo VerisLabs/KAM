@@ -11,7 +11,7 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
-import { INSUFFICIENT_BALANCE, ZERO_AMOUNT } from "src/kStakingVault/errors/BaseVaultErrors.sol";
+import { INSUFFICIENT_BALANCE, ZERO_AMOUNT } from "src/errors/Errors.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 

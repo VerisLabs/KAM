@@ -1,5 +1,5 @@
 # kToken
-[Git Source](https://github.com/VerisLabs/KAM/blob/b791d077a3cd28e980c0943d5d7b30be3d8c14e2/src/kToken.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kToken.sol)
 
 **Inherits:**
 ERC20, OwnableRoles, ReentrancyGuard, Multicallable
@@ -60,17 +60,6 @@ uint8 private _decimals;
 
 
 ## Functions
-### whenNotPaused
-
-Prevents function execution when contract is in paused state
-
-*Checks isPaused flag in storage and reverts with Paused error if true*
-
-
-```solidity
-modifier whenNotPaused();
-```
-
 ### constructor
 
 Disables initializers to prevent implementation contract from being initialized
@@ -98,7 +87,7 @@ Creates new tokens and assigns them to the specified address
 
 
 ```solidity
-function mint(address _to, uint256 _amount) external nonReentrant whenNotPaused onlyRoles(MINTER_ROLE);
+function mint(address _to, uint256 _amount) external nonReentrant onlyRoles(MINTER_ROLE);
 ```
 **Parameters**
 
@@ -116,7 +105,7 @@ Destroys tokens from the specified address
 
 
 ```solidity
-function burn(address _from, uint256 _amount) external nonReentrant whenNotPaused onlyRoles(MINTER_ROLE);
+function burn(address _from, uint256 _amount) external nonReentrant onlyRoles(MINTER_ROLE);
 ```
 **Parameters**
 
@@ -134,7 +123,7 @@ Destroys tokens from specified address using allowance mechanism
 
 
 ```solidity
-function burnFrom(address _from, uint256 _amount) external nonReentrant whenNotPaused onlyRoles(MINTER_ROLE);
+function burnFrom(address _from, uint256 _amount) external nonReentrant onlyRoles(MINTER_ROLE);
 ```
 **Parameters**
 
@@ -350,7 +339,7 @@ Internal hook that executes before any token transfer
 
 
 ```solidity
-function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override whenNotPaused;
+function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override;
 ```
 **Parameters**
 
@@ -408,36 +397,5 @@ event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
 
 ```solidity
 event RescuedETH(address indexed asset, uint256 amount);
-```
-
-## Errors
-### Paused
-
-```solidity
-error Paused();
-```
-
-### ZeroAddress
-
-```solidity
-error ZeroAddress();
-```
-
-### ZeroAmount
-
-```solidity
-error ZeroAmount();
-```
-
-### ContractNotPaused
-
-```solidity
-error ContractNotPaused();
-```
-
-### TransferFailed
-
-```solidity
-error TransferFailed();
 ```
 

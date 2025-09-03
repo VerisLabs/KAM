@@ -1,5 +1,5 @@
 # BaseAdapter
-[Git Source](https://github.com/VerisLabs/KAM/blob/b791d077a3cd28e980c0943d5d7b30be3d8c14e2/src/adapters/BaseAdapter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/adapters/BaseAdapter.sol)
 
 **Inherits:**
 ReentrancyGuardTransient
@@ -193,61 +193,6 @@ event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
 
 ```solidity
 event RescuedETH(address indexed asset, uint256 amount);
-```
-
-## Errors
-### ZeroAddress
-
-```solidity
-error ZeroAddress();
-```
-
-### ZeroAmount
-
-```solidity
-error ZeroAmount();
-```
-
-### WrongRole
-
-```solidity
-error WrongRole();
-```
-
-### WrongAsset
-
-```solidity
-error WrongAsset();
-```
-
-### TransferFailed
-
-```solidity
-error TransferFailed();
-```
-
-### InvalidRegistry
-
-```solidity
-error InvalidRegistry();
-```
-
-### InvalidAmount
-
-```solidity
-error InvalidAmount();
-```
-
-### InvalidAsset
-
-```solidity
-error InvalidAsset();
-```
-
-### AlreadyInitialized
-
-```solidity
-error AlreadyInitialized();
 ```
 
 ## Structs

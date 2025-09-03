@@ -13,6 +13,19 @@ import { kBase } from "src/base/kBase.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkBatchReceiver } from "src/interfaces/IkBatchReceiver.sol";
 
+import {
+    BATCH_CLOSED,
+    BATCH_SETTLED,
+    INSUFFICIENT_BALANCE,
+    IS_PAUSED,
+    REQUEST_NOT_ELIGIBLE,
+    REQUEST_NOT_FOUND,
+    REQUEST_PROCESSED,
+    WRONG_ASSET,
+    WRONG_ROLE,
+    ZERO_ADDRESS,
+    ZERO_AMOUNT
+} from "src/errors/Errors.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
@@ -60,7 +73,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @notice Initializes the kMinter contract
     /// @param registry_ Address of the registry contract
     function initialize(address registry_) external initializer {
-        if (registry_ == address(0)) revert ZeroAddress();
+        require(registry_ != address(0), ZERO_ADDRESS);
         __kBase_init(registry_);
         emit ContractInitialized(registry_);
     }
@@ -75,12 +88,12 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @param to_ Address of the recipient
     /// @param amount_ Amount of the asset to mint
     function mint(address asset_, address to_, uint256 amount_) external payable nonReentrant {
-        if (_isPaused()) revert IsPaused();
-        if (!_isInstitution(msg.sender)) revert WrongRole();
-        if (!_isAsset(asset_)) revert WrongAsset();
+        require(!_isPaused(), IS_PAUSED);
+        require(_isInstitution(msg.sender), WRONG_ROLE);
+        require(_isAsset(asset_), WRONG_ASSET);
 
-        if (amount_ == 0) revert ZeroAmount();
-        if (to_ == address(0)) revert ZeroAddress();
+        require(amount_ != 0, ZERO_AMOUNT);
+        require(to_ != address(0), ZERO_ADDRESS);
 
         address kToken = _getKTokenForAsset(asset_);
         address dnVault = _getDNVaultByAsset(asset_);
@@ -117,15 +130,15 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         nonReentrant
         returns (bytes32 requestId)
     {
-        if (_isPaused()) revert IsPaused();
-        if (!_isInstitution(msg.sender)) revert WrongRole();
-        if (!_isAsset(asset_)) revert WrongAsset();
+        require(!_isPaused(), IS_PAUSED);
+        require(_isInstitution(msg.sender), WRONG_ROLE);
+        require(_isAsset(asset_), WRONG_ASSET);
 
-        if (amount_ == 0) revert ZeroAmount();
-        if (to_ == address(0)) revert ZeroAddress();
+        require(amount_ != 0, ZERO_AMOUNT);
+        require(to_ != address(0), ZERO_ADDRESS);
 
         address kToken = _getKTokenForAsset(asset_);
-        if (kToken.balanceOf(msg.sender) < amount_) revert InsufficientBalance();
+        require(kToken.balanceOf(msg.sender) >= amount_, INSUFFICIENT_BALANCE);
 
         // Generate request ID
         requestId = _createRedeemRequestId(to_, amount_, block.timestamp);
@@ -161,17 +174,17 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @notice Executes redemption for a request in a settled batch
     /// @param requestId Request ID to execute
     function redeem(bytes32 requestId) external payable nonReentrant {
-        if (_isPaused()) revert IsPaused();
-        if (!_isInstitution(msg.sender)) revert WrongRole();
+        require(!_isPaused(), IS_PAUSED);
+        require(_isInstitution(msg.sender), WRONG_ROLE);
 
         kMinterStorage storage $ = _getkMinterStorage();
         RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
 
         // Validate request
-        if (!$.userRequests[redeemRequest.user].contains(requestId)) revert RequestNotFound();
-        if (redeemRequest.status != RequestStatus.PENDING) revert RequestNotEligible();
-        if (redeemRequest.status == RequestStatus.REDEEMED) revert RequestAlreadyProcessed();
-        if (redeemRequest.status == RequestStatus.CANCELLED) revert RequestNotEligible();
+        require($.userRequests[redeemRequest.user].contains(requestId), REQUEST_NOT_FOUND);
+        require(redeemRequest.status == RequestStatus.PENDING, REQUEST_NOT_ELIGIBLE);
+        require(redeemRequest.status != RequestStatus.REDEEMED, REQUEST_PROCESSED);
+        require(redeemRequest.status != RequestStatus.CANCELLED, REQUEST_NOT_ELIGIBLE);
 
         // Update state
         redeemRequest.status = RequestStatus.REDEEMED;
@@ -182,7 +195,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         address vault = _getDNVaultByAsset(redeemRequest.asset);
         address batchReceiver = _getBatchReceiver(vault, redeemRequest.batchId);
-        if (batchReceiver == address(0)) revert ZeroAddress();
+        require(batchReceiver != address(0), ZERO_ADDRESS);
 
         // Burn kTokens
         address kToken = _getKTokenForAsset(redeemRequest.asset);
@@ -197,23 +210,23 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @notice Cancels a redemption request before batch settlement
     /// @param requestId Request ID to cancel
     function cancelRequest(bytes32 requestId) external payable nonReentrant {
-        if (_isPaused()) revert IsPaused();
-        if (!_isInstitution(msg.sender)) revert WrongRole();
+        require(!_isPaused(), IS_PAUSED);
+        require(_isInstitution(msg.sender), WRONG_ROLE);
 
         kMinterStorage storage $ = _getkMinterStorage();
         RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
 
         // Validate request
-        if (!$.userRequests[redeemRequest.user].contains(requestId)) revert RequestNotFound();
-        if (redeemRequest.status != RequestStatus.PENDING) revert RequestNotEligible();
+        require($.userRequests[redeemRequest.user].contains(requestId), REQUEST_NOT_FOUND);
+        require(redeemRequest.status == RequestStatus.PENDING, REQUEST_NOT_ELIGIBLE);
         // Update state
         redeemRequest.status = RequestStatus.CANCELLED;
         // Remove request from user's requests
         $.userRequests[redeemRequest.user].remove(requestId);
 
         address vault = _getDNVaultByAsset(redeemRequest.asset);
-        if (IkStakingVault(vault).isBatchClosed()) revert BatchClosed();
-        if (IkStakingVault(vault).isBatchSettled()) revert BatchSettled();
+        require(!IkStakingVault(vault).isBatchClosed(), BATCH_CLOSED);
+        require(!IkStakingVault(vault).isBatchSettled(), BATCH_SETTLED);
 
         address kToken = _getKTokenForAsset(redeemRequest.asset);
 
@@ -250,7 +263,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @param to_ Destination address
     /// @param amount_ Amount
     function rescueReceiverAssets(address batchReceiver, address asset_, address to_, uint256 amount_) external {
-        if (batchReceiver == address(0) || asset_ == address(0) || to_ == address(0)) revert ZeroAddress();
+        require(batchReceiver != address(0) && asset_ != address(0) && to_ != address(0), ZERO_ADDRESS);
         IkBatchReceiver(batchReceiver).rescueAssets(asset_);
         this.rescueAssets(asset_, to_, amount_);
     }
@@ -304,8 +317,8 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @dev Only callable by ADMIN_ROLE
     /// @param newImplementation New implementation address
     function _authorizeUpgrade(address newImplementation) internal view override {
-        if (!_isAdmin(msg.sender)) revert WrongRole();
-        if (newImplementation == address(0)) revert ZeroAddress();
+        require(_isAdmin(msg.sender), WRONG_ROLE);
+        require(newImplementation != address(0), ZERO_ADDRESS);
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -4,6 +4,15 @@ pragma solidity 0.8.30;
 import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import {
+    ALREADY_INITIALIZED,
+    INVALID_REGISTRY,
+    TRANSFER_FAILED,
+    WRONG_ASSET,
+    WRONG_ROLE,
+    ZERO_ADDRESS,
+    ZERO_AMOUNT
+} from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 /// @title BaseAdapter
@@ -24,20 +33,6 @@ contract BaseAdapter is ReentrancyGuardTransient {
     //////////////////////////////////////////////////////////////*/
 
     bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
-
-    /*//////////////////////////////////////////////////////////////
-                              ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error ZeroAddress();
-    error ZeroAmount();
-    error WrongRole();
-    error WrongAsset();
-    error TransferFailed();
-    error InvalidRegistry();
-    error InvalidAmount();
-    error InvalidAsset();
-    error AlreadyInitialized();
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -73,8 +68,8 @@ contract BaseAdapter is ReentrancyGuardTransient {
         // Initialize adapter storage
         BaseAdapterStorage storage $ = _getBaseAdapterStorage();
 
-        if ($.initialized) revert AlreadyInitialized();
-        if (registry_ == address(0)) revert InvalidRegistry();
+        require(!$.initialized, ALREADY_INITIALIZED);
+        require(registry_ != address(0), INVALID_REGISTRY);
 
         $.registry = registry_;
         $.initialized = true;
@@ -109,21 +104,21 @@ contract BaseAdapter is ReentrancyGuardTransient {
     /// @param to_ the address that will receive the assets
     /// @param amount_ the amount to rescue
     function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
-        if (!_isAdmin(msg.sender)) revert WrongRole();
-        if (to_ == address(0)) revert ZeroAddress();
+        require(_isAdmin(msg.sender), WRONG_ROLE);
+        require(to_ != address(0), ZERO_ADDRESS);
 
         if (asset_ == address(0)) {
             // Rescue ETH
-            if (amount_ == 0 || amount_ > address(this).balance) revert ZeroAmount();
+            require(amount_ > 0 && amount_ <= address(this).balance, ZERO_AMOUNT);
 
             (bool success,) = to_.call{ value: amount_ }("");
-            if (!success) revert TransferFailed();
+            require(success, TRANSFER_FAILED);
 
             emit RescuedETH(to_, amount_);
         } else {
             // Rescue ERC20 tokens
-            if (_isAsset(asset_)) revert WrongAsset();
-            if (amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
+            require(!_isAsset(asset_), WRONG_ASSET);
+            require(amount_ > 0 && amount_ <= asset_.balanceOf(address(this)), ZERO_AMOUNT);
 
             asset_.safeTransfer(to_, amount_);
             emit RescuedAssets(asset_, to_, amount_);

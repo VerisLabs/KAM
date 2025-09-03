@@ -15,6 +15,17 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 import { kBase } from "src/base/kBase.sol";
+
+import {
+    INSUFFICIENT_BALANCE,
+    IS_PAUSED,
+    REQUEST_NOT_ELIGIBLE,
+    REQUEST_NOT_FOUND,
+    WRONG_ASSET,
+    WRONG_ROLE,
+    ZERO_ADDRESS as ZERO_ADDRESS_ERROR,
+    ZERO_AMOUNT
+} from "src/errors/Errors.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { kMinter } from "src/kMinter.sol";
 
@@ -73,7 +84,7 @@ contract kMinterTest is DeploymentBaseTest {
         bytes memory initData = abi.encodeWithSelector(kMinter.initialize.selector, address(0));
 
         ERC1967Factory factory = new ERC1967Factory();
-        vm.expectRevert(kBase.ZeroAddress.selector);
+        vm.expectRevert(bytes(ZERO_ADDRESS_ERROR));
         factory.deployAndCall(address(newMinterImpl), users.admin, initData);
     }
 
@@ -124,21 +135,21 @@ contract kMinterTest is DeploymentBaseTest {
         uint256 amount = TEST_AMOUNT;
 
         vm.prank(users.alice);
-        vm.expectRevert(kBase.WrongRole.selector);
+        vm.expectRevert(bytes(WRONG_ROLE));
         minter.mint(USDC_MAINNET, users.alice, amount);
     }
 
     /// @dev Test mint reverts with zero amount
     function test_Mint_RevertZeroAmount() public {
         vm.prank(users.institution);
-        vm.expectRevert(kBase.ZeroAmount.selector);
+        vm.expectRevert(bytes(ZERO_AMOUNT));
         minter.mint(USDC_MAINNET, users.alice, 0);
     }
 
     /// @dev Test mint reverts with zero recipient
     function test_Mint_RevertZeroRecipient() public {
         vm.prank(users.institution);
-        vm.expectRevert(kBase.ZeroAddress.selector);
+        vm.expectRevert(bytes(ZERO_ADDRESS_ERROR));
         minter.mint(USDC_MAINNET, ZERO_ADDRESS, TEST_AMOUNT);
     }
 
@@ -147,7 +158,7 @@ contract kMinterTest is DeploymentBaseTest {
         address invalidAsset = address(0x1234567890123456789012345678901234567890);
 
         vm.prank(users.institution);
-        vm.expectRevert(kBase.WrongAsset.selector);
+        vm.expectRevert(bytes(WRONG_ASSET));
         minter.mint(invalidAsset, users.alice, TEST_AMOUNT);
     }
 
@@ -158,7 +169,7 @@ contract kMinterTest is DeploymentBaseTest {
         minter.setPaused(true);
 
         vm.prank(users.institution);
-        vm.expectRevert(kBase.IsPaused.selector);
+        vm.expectRevert(bytes(IS_PAUSED));
         minter.mint(USDC_MAINNET, users.alice, TEST_AMOUNT);
     }
 
@@ -195,21 +206,21 @@ contract kMinterTest is DeploymentBaseTest {
     /// @dev Test redemption request requires institution role
     function test_RequestRedeem_WrongRole() public {
         vm.prank(users.alice);
-        vm.expectRevert(kBase.WrongRole.selector);
+        vm.expectRevert(bytes(WRONG_ROLE));
         minter.requestRedeem(USDC_MAINNET, users.alice, TEST_AMOUNT);
     }
 
     /// @dev Test redemption request reverts with zero amount
     function test_RequestRedeem_RevertZeroAmount() public {
         vm.prank(users.institution);
-        vm.expectRevert(kBase.ZeroAmount.selector);
+        vm.expectRevert(bytes(ZERO_AMOUNT));
         minter.requestRedeem(USDC_MAINNET, users.institution, 0);
     }
 
     /// @dev Test redemption request reverts with zero recipient
     function test_RequestRedeem_RevertZeroRecipient() public {
         vm.prank(users.institution);
-        vm.expectRevert(kBase.ZeroAddress.selector);
+        vm.expectRevert(bytes(ZERO_ADDRESS_ERROR));
         minter.requestRedeem(USDC_MAINNET, ZERO_ADDRESS, TEST_AMOUNT);
     }
 
@@ -218,7 +229,7 @@ contract kMinterTest is DeploymentBaseTest {
         address invalidAsset = address(0x1234567890123456789012345678901234567890);
 
         vm.prank(users.institution);
-        vm.expectRevert(kBase.WrongAsset.selector);
+        vm.expectRevert(bytes(WRONG_ASSET));
         minter.requestRedeem(invalidAsset, users.institution, TEST_AMOUNT);
     }
 
@@ -226,7 +237,7 @@ contract kMinterTest is DeploymentBaseTest {
     function test_RequestRedeem_RevertInsufficientBalance() public {
         // Institution has no kTokens
         vm.prank(users.institution);
-        vm.expectRevert(IkMinter.InsufficientBalance.selector);
+        vm.expectRevert(bytes(INSUFFICIENT_BALANCE));
         minter.requestRedeem(USDC_MAINNET, users.institution, TEST_AMOUNT);
     }
 
@@ -237,7 +248,7 @@ contract kMinterTest is DeploymentBaseTest {
         minter.setPaused(true);
 
         vm.prank(users.institution);
-        vm.expectRevert(kBase.IsPaused.selector);
+        vm.expectRevert(bytes(IS_PAUSED));
         minter.requestRedeem(USDC_MAINNET, users.institution, TEST_AMOUNT);
     }
 
@@ -250,7 +261,7 @@ contract kMinterTest is DeploymentBaseTest {
         bytes32 invalidRequestId = keccak256("invalid");
 
         vm.prank(users.institution);
-        vm.expectRevert(IkMinter.RequestNotFound.selector);
+        vm.expectRevert(bytes(REQUEST_NOT_FOUND));
         minter.redeem(invalidRequestId);
     }
 
@@ -259,7 +270,7 @@ contract kMinterTest is DeploymentBaseTest {
         bytes32 requestId = keccak256("test");
 
         vm.prank(users.alice);
-        vm.expectRevert(kBase.WrongRole.selector);
+        vm.expectRevert(bytes(WRONG_ROLE));
         minter.redeem(requestId);
     }
 
@@ -272,7 +283,7 @@ contract kMinterTest is DeploymentBaseTest {
         bytes32 requestId = keccak256("test");
 
         vm.prank(users.institution);
-        vm.expectRevert(kBase.IsPaused.selector);
+        vm.expectRevert(bytes(IS_PAUSED));
         minter.redeem(requestId);
     }
 
@@ -285,7 +296,7 @@ contract kMinterTest is DeploymentBaseTest {
         bytes32 invalidRequestId = keccak256("invalid");
 
         vm.prank(users.institution);
-        vm.expectRevert(IkMinter.RequestNotFound.selector);
+        vm.expectRevert(bytes(REQUEST_NOT_FOUND));
         minter.cancelRequest(invalidRequestId);
     }
 
@@ -294,7 +305,7 @@ contract kMinterTest is DeploymentBaseTest {
         bytes32 requestId = keccak256("test");
 
         vm.prank(users.alice);
-        vm.expectRevert(kBase.WrongRole.selector);
+        vm.expectRevert(bytes(WRONG_ROLE));
         minter.cancelRequest(requestId);
     }
 
@@ -307,7 +318,7 @@ contract kMinterTest is DeploymentBaseTest {
         bytes32 requestId = keccak256("test");
 
         vm.prank(users.institution);
-        vm.expectRevert(kBase.IsPaused.selector);
+        vm.expectRevert(bytes(IS_PAUSED));
         minter.cancelRequest(requestId);
     }
 
@@ -333,7 +344,7 @@ contract kMinterTest is DeploymentBaseTest {
     /// @dev Test pause requires emergency admin role
     function test_SetPaused_OnlyEmergencyAdmin() public {
         vm.prank(users.alice);
-        vm.expectRevert(kBase.WrongRole.selector);
+        vm.expectRevert(bytes(WRONG_ROLE));
         minter.setPaused(true);
     }
 
@@ -393,14 +404,14 @@ contract kMinterTest is DeploymentBaseTest {
 
         // Non-admin should fail
         vm.prank(users.alice);
-        vm.expectRevert(kBase.WrongRole.selector);
+        vm.expectRevert(bytes(WRONG_ROLE));
         minter.upgradeToAndCall(newImpl, "");
     }
 
     /// @dev Test upgrade authorization reverts with zero address
     function test_AuthorizeUpgrade_RevertZeroAddress() public {
         vm.prank(users.admin);
-        vm.expectRevert(kBase.ZeroAddress.selector);
+        vm.expectRevert(bytes(ZERO_ADDRESS_ERROR));
         minter.upgradeToAndCall(ZERO_ADDRESS, "");
     }
 

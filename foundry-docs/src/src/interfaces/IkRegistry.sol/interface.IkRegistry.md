@@ -1,5 +1,5 @@
 # IkRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/b791d077a3cd28e980c0943d5d7b30be3d8c14e2/src/interfaces/IkRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/interfaces/IkRegistry.sol)
 
 
 ## Functions
@@ -265,61 +265,6 @@ event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
 
 ```solidity
 event RescuedETH(address indexed asset, uint256 amount);
-```
-
-## Errors
-### ZeroAddress
-
-```solidity
-error ZeroAddress();
-```
-
-### ZeroAmount
-
-```solidity
-error ZeroAmount();
-```
-
-### AlreadyRegistered
-
-```solidity
-error AlreadyRegistered();
-```
-
-### AssetNotSupported
-
-```solidity
-error AssetNotSupported();
-```
-
-### InvalidAdapter
-
-```solidity
-error InvalidAdapter();
-```
-
-### AdapterAlreadySet
-
-```solidity
-error AdapterAlreadySet();
-```
-
-### WrongRole
-
-```solidity
-error WrongRole();
-```
-
-### WrongAsset
-
-```solidity
-error WrongAsset();
-```
-
-### TransferFailed
-
-```solidity
-error TransferFailed();
 ```
 
 ## Enums

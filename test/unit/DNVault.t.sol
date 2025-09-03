@@ -13,14 +13,8 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 
+import { BATCH_NOT_SETTLED, IS_PAUSED, NOT_BENEFICIARY, REQUEST_NOT_PENDING } from "src/errors/Errors.sol";
 import { VaultClaims } from "src/kStakingVault/base/VaultClaims.sol";
-
-import {
-    BATCH_NOT_SETTLED,
-    IS_PAUSED,
-    NOT_BENEFICIARY,
-    REQUEST_NOT_PENDING
-} from "src/kStakingVault/errors/BaseVaultErrors.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 

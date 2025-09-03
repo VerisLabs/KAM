@@ -11,8 +11,7 @@ import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
-import { kBatchReceiver } from "src/kBatchReceiver.sol";
-import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+
 import {
     INSUFFICIENT_BALANCE,
     IS_PAUSED,
@@ -24,7 +23,9 @@ import {
     WRONG_ROLE,
     ZERO_ADDRESS,
     ZERO_AMOUNT
-} from "src/kStakingVault/errors/BaseVaultErrors.sol";
+} from "src/errors/Errors.sol";
+import { kBatchReceiver } from "src/kBatchReceiver.sol";
+import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 
 import { VaultBatches } from "src/kStakingVault/base/VaultBatches.sol";
 import { VaultClaims } from "src/kStakingVault/base/VaultClaims.sol";

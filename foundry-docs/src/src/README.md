@@ -4,6 +4,7 @@
 - [abstracts](/src/abstracts)
 - [adapters](/src/adapters)
 - [base](/src/base)
+- [errors](/src/errors)
 - [interfaces](/src/interfaces)
 - [kStakingVault](/src/kStakingVault)
 - [kAssetRouter](kAssetRouter.sol/contract.kAssetRouter.md)

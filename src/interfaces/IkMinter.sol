@@ -43,17 +43,6 @@ interface IkMinter {
     event Cancelled(bytes32 indexed requestId);
 
     /*//////////////////////////////////////////////////////////////
-                              ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error InsufficientBalance();
-    error RequestNotFound();
-    error RequestNotEligible();
-    error RequestAlreadyProcessed();
-    error BatchClosed();
-    error BatchSettled();
-
-    /*//////////////////////////////////////////////////////////////
                               FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 

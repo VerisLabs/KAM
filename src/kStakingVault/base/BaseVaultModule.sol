@@ -16,7 +16,7 @@ import {
     INVALID_REGISTRY,
     INVALID_VAULT,
     NOT_INITIALIZED
-} from "src/kStakingVault/errors/BaseVaultErrors.sol";
+} from "src/errors/Errors.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title BaseVaultModule

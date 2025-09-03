@@ -5,7 +5,7 @@ import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Extsload } from "src/abstracts/Extsload.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 
-import { NOT_INITIALIZED, VAULT_SETTLED } from "src/kStakingVault/errors/BaseVaultErrors.sol";
+import { NOT_INITIALIZED, VAULT_SETTLED } from "src/errors/Errors.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title ReaderModule

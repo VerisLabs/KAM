@@ -4,6 +4,8 @@ pragma solidity 0.8.30;
 import { ADMIN_ROLE, RELAYER_ROLE, USDC_MAINNET, WBTC_MAINNET, _1_USDC, _1_WBTC } from "../utils/Constants.sol";
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+
+import { ALREADY_REGISTERED, ASSET_NOT_SUPPORTED, INVALID_ADAPTER, ZERO_ADDRESS } from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { kRegistry } from "src/kRegistry.sol";
 
@@ -69,7 +71,7 @@ contract kRegistryTest is DeploymentBaseTest {
     /// @dev Test singleton contract registration reverts with zero address
     function test_SetSingletonContract_RevertZeroAddress() public {
         vm.prank(users.admin);
-        vm.expectRevert(IkRegistry.ZeroAddress.selector);
+        vm.expectRevert(bytes(ZERO_ADDRESS));
         registry.setSingletonContract(TEST_CONTRACT_ID, address(0));
     }
 
@@ -81,13 +83,13 @@ contract kRegistryTest is DeploymentBaseTest {
 
         // Second registration should fail
         vm.prank(users.admin);
-        vm.expectRevert(IkRegistry.AlreadyRegistered.selector);
+        vm.expectRevert(bytes(ALREADY_REGISTERED));
         registry.setSingletonContract(TEST_CONTRACT_ID, address(0x01));
     }
 
     /// @dev Test getContractById reverts when contract not set
     function test_GetContractById_RevertZeroAddress() public {
-        vm.expectRevert(IkRegistry.ZeroAddress.selector);
+        vm.expectRevert(bytes(ZERO_ADDRESS));
         registry.getContractById(keccak256("NONEXISTENT"));
     }
 
@@ -132,7 +134,7 @@ contract kRegistryTest is DeploymentBaseTest {
 
         // Second registration
         vm.prank(users.admin);
-        vm.expectRevert(IkRegistry.AlreadyRegistered.selector);
+        vm.expectRevert(bytes(ALREADY_REGISTERED));
         newKToken = registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
     }
 
@@ -148,11 +150,11 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.startPrank(users.admin);
 
         // Zero asset address
-        vm.expectRevert(IkRegistry.ZeroAddress.selector);
+        vm.expectRevert(bytes(ZERO_ADDRESS));
         registry.registerAsset(TEST_NAME, TEST_SYMBOL, address(0), TEST_ASSET_ID);
 
         // Zero ID
-        vm.expectRevert(IkRegistry.ZeroAddress.selector);
+        vm.expectRevert(bytes(ZERO_ADDRESS));
         registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, bytes32(0));
 
         vm.stopPrank();
@@ -160,7 +162,7 @@ contract kRegistryTest is DeploymentBaseTest {
 
     /// @dev Test getAssetById reverts when asset not set
     function test_GetAssetById_RevertZeroAddress() public {
-        vm.expectRevert(IkRegistry.ZeroAddress.selector);
+        vm.expectRevert(bytes(ZERO_ADDRESS));
         registry.getAssetById(keccak256("NONEXISTENT"));
     }
 
@@ -222,7 +224,7 @@ contract kRegistryTest is DeploymentBaseTest {
         registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
 
         vm.prank(users.admin);
-        vm.expectRevert(IkRegistry.ZeroAddress.selector);
+        vm.expectRevert(bytes(ZERO_ADDRESS));
         registry.registerVault(address(0), IkRegistry.VaultType.ALPHA, TEST_ASSET);
     }
 
@@ -238,7 +240,7 @@ contract kRegistryTest is DeploymentBaseTest {
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
 
         // Second registration should fail
-        vm.expectRevert(IkRegistry.AlreadyRegistered.selector);
+        vm.expectRevert(bytes(ALREADY_REGISTERED));
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.BETA, TEST_ASSET);
 
         vm.stopPrank();
@@ -247,7 +249,7 @@ contract kRegistryTest is DeploymentBaseTest {
     /// @dev Test vault registration reverts with unsupported asset
     function test_RegisterVault_RevertAssetNotSupported() public {
         vm.prank(users.admin);
-        vm.expectRevert(IkRegistry.AssetNotSupported.selector);
+        vm.expectRevert(bytes(ASSET_NOT_SUPPORTED));
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
     }
 
@@ -305,7 +307,7 @@ contract kRegistryTest is DeploymentBaseTest {
     /// @dev Test adapter registration with zero address
     function test_RegisterAdapter_RevertZeroAddress() public {
         vm.prank(users.admin);
-        vm.expectRevert(IkRegistry.InvalidAdapter.selector);
+        vm.expectRevert(bytes(INVALID_ADAPTER));
         registry.registerAdapter(TEST_VAULT, address(0));
     }
 
@@ -319,7 +321,7 @@ contract kRegistryTest is DeploymentBaseTest {
     /// @dev Test getAdapter returns zero for non-existent adapter
     function test_GetAdapter_RevertZeroAddress() public {
         vm.prank(users.admin);
-        vm.expectRevert(IkRegistry.ZeroAddress.selector);
+        vm.expectRevert(bytes(ZERO_ADDRESS));
         registry.getAdapters(TEST_VAULT);
     }
 
@@ -395,7 +397,7 @@ contract kRegistryTest is DeploymentBaseTest {
 
     /// @dev Test empty getVaultsByAsset
     function test_GetVaultsByAsset_ZeroAddress() public {
-        vm.expectRevert(IkRegistry.ZeroAddress.selector);
+        vm.expectRevert(bytes(ZERO_ADDRESS));
         address[] memory vaults = registry.getVaultsByAsset(TEST_ASSET);
     }
 

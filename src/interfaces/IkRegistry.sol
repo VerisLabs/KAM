@@ -281,20 +281,6 @@ interface IkRegistry {
     event RescuedETH(address indexed asset, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
-                              ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error ZeroAddress();
-    error ZeroAmount();
-    error AlreadyRegistered();
-    error AssetNotSupported();
-    error InvalidAdapter();
-    error AdapterAlreadySet();
-    error WrongRole();
-    error WrongAsset();
-    error TransferFailed();
-
-    /*//////////////////////////////////////////////////////////////
                               FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 

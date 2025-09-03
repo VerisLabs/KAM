@@ -6,6 +6,8 @@ import { USDC_MAINNET, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
+
+import { INSUFFICIENT_BALANCE, ZERO_ADDRESS as ZERO_ADDRESS_ERROR } from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 contract BaseAdapterTest is BaseTest {
@@ -40,7 +42,7 @@ contract BaseAdapterTest is BaseTest {
 
     /// @dev Test constructor with zero registry reverts
     function test_Constructor_RevertZeroRegistry() public {
-        vm.expectRevert("ZeroAddress");
+        vm.expectRevert(bytes(ZERO_ADDRESS_ERROR));
         new MockAdapter(address(0));
     }
 
@@ -124,7 +126,7 @@ contract BaseAdapterTest is BaseTest {
         uint256 withdrawAmount = _100_USDC;
 
         // Try to withdraw without depositing
-        vm.expectRevert("Insufficient balance");
+        vm.expectRevert(bytes(INSUFFICIENT_BALANCE));
         adapter.withdraw(USDC_MAINNET, withdrawAmount, testVault);
     }
 
@@ -259,7 +261,7 @@ contract BaseAdapterTest is BaseTest {
     /// @dev Test multiple zero address scenarios
     function test_MultipleZeroAddressScenarios() public {
         // Test constructor with zero address (should revert)
-        vm.expectRevert("ZeroAddress");
+        vm.expectRevert(bytes(ZERO_ADDRESS_ERROR));
         new MockAdapter(address(0));
 
         // Test deposit with zero vault address - MockAdapter allows this
@@ -428,14 +430,14 @@ contract BaseAdapterTest is BaseTest {
         adapter.deposit(USDC_MAINNET, depositAmount, testVault);
 
         // Try to withdraw more than deposited
-        vm.expectRevert("Insufficient balance");
+        vm.expectRevert(bytes(INSUFFICIENT_BALANCE));
         adapter.withdraw(USDC_MAINNET, depositAmount + 1, testVault);
 
         // Try to withdraw exactly what was deposited (should work)
         adapter.withdraw(USDC_MAINNET, depositAmount, testVault);
 
         // Try to withdraw from empty balance
-        vm.expectRevert("Insufficient balance");
+        vm.expectRevert(bytes(INSUFFICIENT_BALANCE));
         adapter.withdraw(USDC_MAINNET, 1, testVault);
     }
 
@@ -637,7 +639,7 @@ contract MockAdapter {
     address public registry;
 
     constructor(address registry_) {
-        if (registry_ == address(0)) revert("ZeroAddress");
+        require(registry_ != address(0), ZERO_ADDRESS_ERROR);
         registry = registry_;
     }
 
@@ -647,7 +649,7 @@ contract MockAdapter {
     }
 
     function withdraw(address asset, uint256 amount, address vault) external {
-        require(_vaultAssetBalances[vault][asset] >= amount, "Insufficient balance");
+        require(_vaultAssetBalances[vault][asset] >= amount, INSUFFICIENT_BALANCE);
         _vaultAssetBalances[vault][asset] -= amount;
         IERC20(asset).transfer(vault, amount);
     }

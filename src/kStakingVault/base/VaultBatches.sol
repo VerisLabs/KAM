@@ -8,7 +8,7 @@ import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 
-import { NOT_CLOSED, VAULT_CLOSED, VAULT_SETTLED, WRONG_ROLE } from "src/kStakingVault/errors/BaseVaultErrors.sol";
+import { NOT_CLOSED, VAULT_CLOSED, VAULT_SETTLED, WRONG_ROLE } from "src/errors/Errors.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title VaultBatches

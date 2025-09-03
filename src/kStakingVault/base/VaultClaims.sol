@@ -10,12 +10,8 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
 
 import {
-    BATCH_NOT_SETTLED,
-    INVALID_BATCH_ID,
-    IS_PAUSED,
-    NOT_BENEFICIARY,
-    REQUEST_NOT_PENDING
-} from "src/kStakingVault/errors/BaseVaultErrors.sol";
+    BATCH_NOT_SETTLED, INVALID_BATCH_ID, IS_PAUSED, NOT_BENEFICIARY, REQUEST_NOT_PENDING
+} from "src/errors/Errors.sol";
 import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
 
 /// @title VaultClaims
