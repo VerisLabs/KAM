@@ -367,7 +367,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         if (netted > 0) {
             address dnVault = _getDNVaultByAsset(asset);
-            if (vault == dnVault) {
+            if (vault == dnVault && isKMinter) {
                 // at some point we will have multiple adapters for a vault
                 // for now we just use the first one
                 if (adapters[0] == address(0)) revert ZeroAddress();
