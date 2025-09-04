@@ -2,11 +2,12 @@
 pragma solidity 0.8.30;
 
 import { ERC20 } from "solady/tokens/ERC20.sol";
-import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
+
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
 
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
@@ -18,7 +19,7 @@ contract VaultClaims is BaseVault {
     using SafeCastLib for uint256;
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
-    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+    using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS

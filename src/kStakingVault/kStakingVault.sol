@@ -2,11 +2,12 @@
 pragma solidity 0.8.30;
 
 import { Ownable } from "solady/auth/Ownable.sol";
-import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
+
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
+import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
 
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 
@@ -32,7 +33,7 @@ contract kStakingVault is
     VaultClaims,
     VaultBatches
 {
-    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+    using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
     using SafeCastLib for uint128;
@@ -247,7 +248,7 @@ contract kStakingVault is
     /// @param amount Amount of underlying assets
     /// @param timestamp Timestamp
     /// @return Request ID
-    function _createStakeRequestId(address user, uint256 amount, uint256 timestamp) internal returns (bytes32) {
+    function _createStakeRequestId(address user, uint256 amount, uint256 timestamp) private returns (bytes32) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         $.currentBatch++;
         return keccak256(abi.encode(address(this), user, amount, timestamp, $.currentBatch));
@@ -263,45 +264,6 @@ contract kStakingVault is
     function setPaused(bool paused_) external {
         if (!_isEmergencyAdmin(msg.sender)) revert WrongRole();
         _setPaused(paused_);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                            VIEW FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Calculates the price of stkTokens in underlying asset terms
-    /// @dev Uses the last total assets and total supply to calculate the price
-    /// @return price Price per stkToken in underlying asset terms
-    function sharePrice() external view returns (uint256) {
-        return _netSharePrice();
-    }
-
-    /// @notice Returns the current total assets
-    /// @return Total assets currently deployed in strategies
-    function totalAssets() external view returns (uint256) {
-        return _totalAssets();
-    }
-
-    /// @notice Returns the current total assets after fees
-    /// @return Total net assets currently deployed in strategies
-    function totalNetAssets() external view returns (uint256) {
-        return _totalNetAssets();
-    }
-
-    /// @notice Returns the current batch
-    /// @return Batch
-    function getBatchId() public view returns (bytes32) {
-        return _getBaseVaultStorage().currentBatchId;
-    }
-
-    /// @notice Returns the safe batch
-    /// @return Batch
-    function getSafeBatchId() external view returns (bytes32) {
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        bytes32 batchId = getBatchId();
-        if ($.batches[batchId].isClosed) revert Closed();
-        if ($.batches[batchId].isSettled) revert Settled();
-        return batchId;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -322,22 +284,6 @@ contract kStakingVault is
     /// @notice Authorize function modification
     /// @dev This allows modifying functions while keeping modules separate
     function _authorizeModifyFunctions(address sender) internal override {
-        //_checkOwner();
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        CONTRACT INFO
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Returns the contract name
-    /// @return Contract name
-    function contractName() external pure returns (string memory) {
-        return "kStakingVault";
-    }
-
-    /// @notice Returns the contract version
-    /// @return Contract version
-    function contractVersion() external pure returns (string memory) {
-        return "1.0.0";
+        _checkOwner();
     }
 }

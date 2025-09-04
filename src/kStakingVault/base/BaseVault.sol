@@ -2,9 +2,10 @@
 pragma solidity 0.8.30;
 
 import { ERC20 } from "solady/tokens/ERC20.sol";
-import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
+
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
 
 import { OptimizedReentrancyGuardTransient } from "src/abstracts/OptimizedReentrancyGuardTransient.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
@@ -16,7 +17,7 @@ import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 /// @dev Provides shared storage, roles, and common functionality
 abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     using FixedPointMathLib for uint256;
-    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+    using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
@@ -119,7 +120,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
         mapping(bytes32 => BaseVaultTypes.BatchInfo) batches;
         mapping(bytes32 => BaseVaultTypes.StakeRequest) stakeRequests;
         mapping(bytes32 => BaseVaultTypes.UnstakeRequest) unstakeRequests;
-        mapping(address => EnumerableSetLib.Bytes32Set) userRequests;
+        mapping(address => OptimizedBytes32EnumerableSetLib.Bytes32Set) userRequests;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.BaseVault")) - 1)) & ~bytes32(uint256(0xff))

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { EfficientHashLib } from "solady/utils/EfficientHashLib.sol";
 import { LibClone } from "solady/utils/LibClone.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
@@ -98,13 +97,13 @@ contract VaultBatches is BaseVault {
         unchecked {
             $.currentBatch++;
         }
-        bytes32 newBatchId = EfficientHashLib.hash(
+        bytes32 newBatchId = keccak256(abi.encode(
             uint256(uint160(address(this))),
             $.currentBatch,
             block.chainid,
             block.timestamp,
             uint256(uint160($.underlyingAsset))
-        );
+        ));
 
         $.currentBatchId = newBatchId;
         BaseVaultTypes.BatchInfo storage batch = $.batches[newBatchId];

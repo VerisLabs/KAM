@@ -22,6 +22,7 @@ interface IkStakingVault is IVaultBatch, IVaultClaim, IVaultFees {
     //////////////////////////////////////////////////////////////*/
 
     function asset() external view returns (address);
+    function owner() external view returns (address);
     function totalSupply() external view returns (uint256);
     function underlyingAsset() external view returns (address);
     function name() external view returns (string memory);

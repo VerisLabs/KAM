@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import { EfficientHashLib } from "solady/utils/EfficientHashLib.sol";
-import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { Multicallable } from "solady/utils/Multicallable.sol";
@@ -11,6 +10,8 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { kBase } from "src/base/kBase.sol";
+
+import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
 
 import { IAdapter } from "src/interfaces/IAdapter.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
@@ -24,7 +25,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
     using SafeCastLib for uint128;
-    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+    using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
     /*//////////////////////////////////////////////////////////////
                                CONSTANTS
@@ -41,9 +42,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     struct kAssetRouterStorage {
         uint256 proposalCounter;
         uint256 vaultSettlementCooldown;
-        EnumerableSetLib.Bytes32Set executedProposalIds;
-        EnumerableSetLib.Bytes32Set batchIds;
-        mapping(address vault => EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;
+        OptimizedBytes32EnumerableSetLib.Bytes32Set executedProposalIds;
+        OptimizedBytes32EnumerableSetLib.Bytes32Set batchIds;
+        mapping(address vault => OptimizedBytes32EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;
         mapping(address account => mapping(bytes32 batchId => Balances)) vaultBatchBalances;
         mapping(address vault => mapping(bytes32 batchId => uint256)) vaultRequestedShares;
         mapping(bytes32 proposalId => VaultSettlementProposal) settlementProposals;

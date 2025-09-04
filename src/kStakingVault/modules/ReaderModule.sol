@@ -190,12 +190,6 @@ contract ReaderModule is BaseVault, Extsload {
         );
     }
 
-    /// @notice Returns the batch receiver for the current batch
-    /// @return Batch receiver
-    function getBatchIdReceiver(bytes32 batchId) external view returns (address) {
-        return _getBaseVaultStorage().batches[batchId].batchReceiver;
-    }
-
     /// @notice Returns the batch receiver for a given batch (alias for getBatchIdReceiver)
     /// @return Batch receiver
     function getBatchReceiver(bytes32 batchId) external view returns (address) {
@@ -211,30 +205,85 @@ contract ReaderModule is BaseVault, Extsload {
         return $.batches[batchId].batchReceiver;
     }
 
+    /// @notice Calculates the price of stkTokens in underlying asset terms
+    /// @dev Uses the last total assets and total supply to calculate the price
+    /// @return price Price per stkToken in underlying asset terms
+    function sharePrice() external view returns (uint256) {
+        return _netSharePrice();
+    }
+
+    /// @notice Returns the current total assets
+    /// @return Total assets currently deployed in strategies
+    function totalAssets() external view returns (uint256) {
+        return _totalAssets();
+    }
+
+    /// @notice Returns the current total assets after fees
+    /// @return Total net assets currently deployed in strategies
+    function totalNetAssets() external view returns (uint256) {
+        return _totalNetAssets();
+    }
+
+    /// @notice Returns the current batch
+    /// @return Batch
+    function getBatchId() public view returns (bytes32) {
+        return _getBaseVaultStorage().currentBatchId;
+    }
+
+    /// @notice Returns the safe batch
+    /// @return Batch
+    function getSafeBatchId() external view returns (bytes32) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        bytes32 batchId = getBatchId();
+        if ($.batches[batchId].isClosed) revert Closed();
+        if ($.batches[batchId].isSettled) revert Settled();
+        return batchId;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        CONTRACT INFO
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Returns the contract name
+    /// @return Contract name
+    function contractName() external pure returns (string memory) {
+        return "kStakingVault";
+    }
+
+    /// @notice Returns the contract version
+    /// @return Contract version
+    function contractVersion() external pure returns (string memory) {
+        return "1.0.0";
+    }
+
     /// @notice Returns the selectors for functions in this module
     /// @return selectors Array of function selectors
     function selectors() public pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](20);
+        bytes4[] memory moduleSelectors = new bytes4[](24);
         moduleSelectors[0] = this.registry.selector;
         moduleSelectors[1] = this.asset.selector;
         moduleSelectors[2] = this.underlyingAsset.selector;
-        moduleSelectors[3] = this.name.selector;
-        moduleSelectors[4] = this.symbol.selector;
-        moduleSelectors[5] = this.computeLastBatchFees.selector;
-        moduleSelectors[6] = this.lastFeesChargedManagement.selector;
-        moduleSelectors[7] = this.lastFeesChargedPerformance.selector;
-        moduleSelectors[8] = this.hurdleRate.selector;
-        moduleSelectors[9] = this.performanceFee.selector;
-        moduleSelectors[10] = this.managementFee.selector;
-        moduleSelectors[11] = this.sharePriceWatermark.selector;
-        moduleSelectors[12] = this.nextPerformanceFeeTimestamp.selector;
-        moduleSelectors[13] = this.nextManagementFeeTimestamp.selector;
-        moduleSelectors[14] = this.isBatchClosed.selector;
-        moduleSelectors[15] = this.isBatchSettled.selector;
-        moduleSelectors[16] = this.getBatchIdInfo.selector;
-        moduleSelectors[17] = this.getBatchIdReceiver.selector;
-        moduleSelectors[18] = this.getBatchReceiver.selector;
-        moduleSelectors[19] = this.getSafeBatchReceiver.selector;
+        moduleSelectors[3] = this.computeLastBatchFees.selector;
+        moduleSelectors[4] = this.lastFeesChargedManagement.selector;
+        moduleSelectors[5] = this.lastFeesChargedPerformance.selector;
+        moduleSelectors[6] = this.hurdleRate.selector;
+        moduleSelectors[7] = this.performanceFee.selector;
+        moduleSelectors[8] = this.managementFee.selector;
+        moduleSelectors[9] = this.sharePriceWatermark.selector;
+        moduleSelectors[10] = this.nextPerformanceFeeTimestamp.selector;
+        moduleSelectors[11] = this.nextManagementFeeTimestamp.selector;
+        moduleSelectors[12] = this.isBatchClosed.selector;
+        moduleSelectors[13] = this.isBatchSettled.selector;
+        moduleSelectors[14] = this.getBatchIdInfo.selector;
+        moduleSelectors[15] = this.getBatchReceiver.selector;
+        moduleSelectors[16] = this.getSafeBatchReceiver.selector;
+        moduleSelectors[17] = this.sharePrice.selector;
+        moduleSelectors[18] = this.totalAssets.selector;
+        moduleSelectors[19] = this.totalNetAssets.selector;
+        moduleSelectors[20] = this.getBatchId.selector;
+        moduleSelectors[21] = this.getSafeBatchId.selector;
+        moduleSelectors[22] = this.contractName.selector;
+        moduleSelectors[23] = this.contractVersion.selector;
         return moduleSelectors;
     }
 }
