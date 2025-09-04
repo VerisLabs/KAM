@@ -24,23 +24,38 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
                               ROLES
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Admin role for authorized operations
     uint256 internal constant ADMIN_ROLE = _ROLE_0;
+
+    /// @notice Emergency admin role for emergency operations
     uint256 internal constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
+
+    /// @notice Guardian role as a circuit breaker for settlement proposals
     uint256 internal constant GUARDIAN_ROLE = _ROLE_2;
+
+    /// @notice Relayer role for external vaults
     uint256 internal constant RELAYER_ROLE = _ROLE_3;
+
+    /// @notice Reserved role for special whitelisted addresses
     uint256 internal constant INSTITUTION_ROLE = _ROLE_4;
+
+    /// @notice Vendor role for vendor vaults
     uint256 internal constant VENDOR_ROLE = _ROLE_5;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    // Singleton contracts (only one instance in the protocol)
+    /// @notice kMinter key
     bytes32 public constant K_MINTER = keccak256("K_MINTER");
+
+    /// @notice kAssetRouter key
     bytes32 public constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
 
-    // Singleton Assets - We might add more following the same pattern
+    /// @notice USDC key
     bytes32 public constant USDC = keccak256("USDC");
+
+    /// @notice WBTC key
     bytes32 public constant WBTC = keccak256("WBTC");
 
     /*//////////////////////////////////////////////////////////////
@@ -67,6 +82,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     bytes32 private constant KREGISTRY_STORAGE_LOCATION =
         0x164f5345d77b48816cdb20100c950b74361454722dab40c51ecf007b721fa800;
 
+    /// @dev Returns the kRegistry storage pointer
     function _getkRegistryStorage() private pure returns (kRegistryStorage storage $) {
         assembly {
             $.slot := KREGISTRY_STORAGE_LOCATION

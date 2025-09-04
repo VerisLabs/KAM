@@ -17,12 +17,42 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Emitted when a vault's custodial address is updated
+    /// @param vault The vault address
+    /// @param oldAddress The old custodial address
+    /// @param newAddress The new custodial address
     event VaultDestinationUpdated(address indexed vault, address indexed oldAddress, address indexed newAddress);
+
+    /// @notice Emitted when a vault's total assets are updated
+    /// @param vault The vault address
+    /// @param totalAssets The new total assets
     event TotalAssetsUpdated(address indexed vault, uint256 totalAssets);
+
+    /// @notice Emitted when assets are deposited
+    /// @param asset The asset address
+    /// @param amount The amount deposited
+    /// @param onBehalfOf The vault address this deposit is for
     event Deposited(address indexed asset, uint256 amount, address indexed onBehalfOf);
+
+    /// @notice Emitted when a redemption is requested
+    /// @param asset The asset address
+    /// @param amount The amount requested
+    /// @param onBehalfOf The vault address this redemption is for
     event RedemptionRequested(address indexed asset, uint256 amount, address indexed onBehalfOf);
+
+    /// @notice Emitted when a redemption is processed
+    /// @param requestId The request ID
+    /// @param assets The amount of assets processed
     event RedemptionProcessed(uint256 indexed requestId, uint256 assets);
+
+    /// @notice Emitted when the adapter balance is updated
+    /// @param vault The vault address
+    /// @param asset The asset address
+    /// @param newBalance The new balance
     event AdapterBalanceUpdated(address indexed vault, address indexed asset, uint256 newBalance);
+
+    /// @notice Emitted when the adapter is initialized
+    /// @param registry The registry address
     event Initialised(address indexed registry);
 
     /*//////////////////////////////////////////////////////////////
@@ -49,6 +79,7 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     bytes32 private constant CUSTODIAL_ADAPTER_STORAGE_LOCATION =
         0x6096605776f37a069e5fb3b2282c592b4e41a8f7c82e8665fde33e5acbdbaf00;
 
+    /// @dev Returns the custodial adapter storage pointer
     function _getCustodialAdapterStorage() internal pure returns (CustodialAdapterStorage storage $) {
         assembly {
             $.slot := CUSTODIAL_ADAPTER_STORAGE_LOCATION
