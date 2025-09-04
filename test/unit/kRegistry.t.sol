@@ -8,6 +8,7 @@ import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import {
     KREGISTRY_ALREADY_REGISTERED,
     KREGISTRY_ASSET_NOT_SUPPORTED,
+    KREGISTRY_FEE_EXCEEDS_MAXIMUM,
     KREGISTRY_INVALID_ADAPTER,
     KREGISTRY_ZERO_ADDRESS
 } from "src/errors/Errors.sol";
@@ -28,6 +29,9 @@ contract kRegistryTest is DeploymentBaseTest {
     string TEST_SYMBOL = "TTK";
     bytes32 internal constant TEST_CONTRACT_ID = keccak256("TEST_CONTRACT");
     bytes32 internal constant TEST_ASSET_ID = keccak256("TEST_ASSET");
+
+    uint256 constant MAX_BPS = 10_000;
+    uint16 constant TEST_HURDLE_RATE = 500; // 5%
 
     /*//////////////////////////////////////////////////////////////
                         INITIALIZATION TESTS
@@ -930,5 +934,59 @@ contract kRegistryTest is DeploymentBaseTest {
         assertTrue(assets.length >= 1, "Asset should be in getAllAssets");
         assertEq(vaults.length, 1, "Should have 1 vault for test asset");
         assertEq(vaults[0], TEST_VAULT, "Vault should match");
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        HURDLE RATE MANAGEMENT TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev Test successful hurdle rate setting
+    function test_SetHurdleRate_Success() public {
+        vm.prank(users.relayer);
+
+        // Expect event emission
+        vm.expectEmit(true, false, false, true);
+        emit IkRegistry.HurdleRateSet(USDC_MAINNET, TEST_HURDLE_RATE);
+
+        registry.setHurdleRate(USDC_MAINNET, TEST_HURDLE_RATE);
+
+        // Verify hurdle rate is set
+        assertEq(registry.getHurdleRate(USDC_MAINNET), TEST_HURDLE_RATE, "Hurdle rate not set correctly");
+    }
+
+    /// @dev Test setting hurdle rate requires relayer role
+    function test_SetHurdleRate_OnlyRelayer() public {
+        vm.prank(users.alice);
+        vm.expectRevert();
+        registry.setHurdleRate(USDC_MAINNET, TEST_HURDLE_RATE);
+    }
+
+    /// @dev Test hurdle rate exceeds maximum
+    function test_SetHurdleRate_ExceedsMaximum() public {
+        vm.expectRevert(bytes(KREGISTRY_FEE_EXCEEDS_MAXIMUM));
+        vm.prank(users.relayer);
+        registry.setHurdleRate(USDC_MAINNET, uint16(MAX_BPS + 1));
+    }
+
+    /// @dev Test setting hurdle rate for unsupported asset
+    function test_SetHurdleRate_AssetNotSupported() public {
+        vm.expectRevert(bytes(KREGISTRY_ASSET_NOT_SUPPORTED));
+        vm.prank(users.relayer);
+        registry.setHurdleRate(TEST_ASSET, TEST_HURDLE_RATE);
+    }
+
+    /// @dev Test setting hurdle rate for different assets
+    function test_SetHurdleRate_MultipleAssets() public {
+        vm.startPrank(users.relayer);
+
+        // Set different rates for different assets
+        registry.setHurdleRate(USDC_MAINNET, TEST_HURDLE_RATE);
+        registry.setHurdleRate(WBTC_MAINNET, 750); // 7.5%
+
+        // Verify each asset has its own rate
+        assertEq(registry.getHurdleRate(USDC_MAINNET), TEST_HURDLE_RATE, "USDC hurdle rate incorrect");
+        assertEq(registry.getHurdleRate(WBTC_MAINNET), 750, "WBTC hurdle rate incorrect");
+
+        vm.stopPrank();
     }
 }

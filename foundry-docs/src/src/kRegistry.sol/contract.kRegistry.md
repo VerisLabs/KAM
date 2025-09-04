@@ -1,5 +1,5 @@
 # kRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/kRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/9902b1ea80f671449ee88e1d19504fe796d0d9a5/src/kRegistry.sol)
 
 **Inherits:**
 [IkRegistry](/src/interfaces/IkRegistry.sol/interface.IkRegistry.md), [Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [OptimizedOwnableRoles](/src/libraries/OptimizedOwnableRoles.sol/abstract.OptimizedOwnableRoles.md)
@@ -97,6 +97,15 @@ WBTC key
 
 ```solidity
 bytes32 public constant WBTC = keccak256("WBTC");
+```
+
+
+### MAX_BPS
+Maximum basis points (100%)
+
+
+```solidity
+uint256 constant MAX_BPS = 10_000;
 ```
 
 
@@ -340,6 +349,43 @@ function removeAdapter(address vault, address adapter) external payable;
 |----|----|-----------|
 |`vault`|`address`|The vault address|
 |`adapter`|`address`||
+
+
+### setHurdleRate
+
+Sets the hurdle rate for a specific asset
+
+
+```solidity
+function setHurdleRate(address asset, uint16 hurdleRate) external payable;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The asset address|
+|`hurdleRate`|`uint16`|The hurdle rate in basis points|
+
+
+### getHurdleRate
+
+Gets the hurdle rate for a specific asset
+
+
+```solidity
+function getHurdleRate(address asset) external view returns (uint16);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The asset address|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint16`|The hurdle rate in basis points|
 
 
 ### getContractById
@@ -840,6 +886,7 @@ struct kRegistryStorage {
     mapping(address => address) assetToKToken;
     mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultAdapters;
     mapping(address => bool) registeredAdapters;
+    mapping(address => uint16) assetHurdleRate;
 }
 ```
 

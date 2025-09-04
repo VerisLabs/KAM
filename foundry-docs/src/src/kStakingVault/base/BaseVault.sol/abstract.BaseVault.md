@@ -1,5 +1,5 @@
 # BaseVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/kStakingVault/base/BaseVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/9902b1ea80f671449ee88e1d19504fe796d0d9a5/src/kStakingVault/base/BaseVault.sol)
 
 **Inherits:**
 [ERC20](/src/vendor/ERC20.sol/abstract.ERC20.md), [OptimizedReentrancyGuardTransient](/src/abstracts/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)
@@ -44,20 +44,6 @@ uint256 internal constant DECIMALS_SHIFT = 0;
 ```
 
 
-### HURDLE_RATE_MASK
-
-```solidity
-uint256 internal constant HURDLE_RATE_MASK = 0xFFFF;
-```
-
-
-### HURDLE_RATE_SHIFT
-
-```solidity
-uint256 internal constant HURDLE_RATE_SHIFT = 8;
-```
-
-
 ### PERFORMANCE_FEE_MASK
 
 ```solidity
@@ -68,7 +54,7 @@ uint256 internal constant PERFORMANCE_FEE_MASK = 0xFFFF;
 ### PERFORMANCE_FEE_SHIFT
 
 ```solidity
-uint256 internal constant PERFORMANCE_FEE_SHIFT = 24;
+uint256 internal constant PERFORMANCE_FEE_SHIFT = 8;
 ```
 
 
@@ -82,7 +68,7 @@ uint256 internal constant MANAGEMENT_FEE_MASK = 0xFFFF;
 ### MANAGEMENT_FEE_SHIFT
 
 ```solidity
-uint256 internal constant MANAGEMENT_FEE_SHIFT = 40;
+uint256 internal constant MANAGEMENT_FEE_SHIFT = 24;
 ```
 
 
@@ -96,7 +82,7 @@ uint256 internal constant INITIALIZED_MASK = 0x1;
 ### INITIALIZED_SHIFT
 
 ```solidity
-uint256 internal constant INITIALIZED_SHIFT = 56;
+uint256 internal constant INITIALIZED_SHIFT = 40;
 ```
 
 
@@ -110,7 +96,7 @@ uint256 internal constant PAUSED_MASK = 0x1;
 ### PAUSED_SHIFT
 
 ```solidity
-uint256 internal constant PAUSED_SHIFT = 57;
+uint256 internal constant PAUSED_SHIFT = 41;
 ```
 
 
@@ -124,7 +110,7 @@ uint256 internal constant IS_HARD_HURDLE_RATE_MASK = 0x1;
 ### IS_HARD_HURDLE_RATE_SHIFT
 
 ```solidity
-uint256 internal constant IS_HARD_HURDLE_RATE_SHIFT = 58;
+uint256 internal constant IS_HARD_HURDLE_RATE_SHIFT = 42;
 ```
 
 
@@ -138,7 +124,7 @@ uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_MASK = 0xFFFFFFFFFFFFFFFF
 ### LAST_FEES_CHARGED_MANAGEMENT_SHIFT
 
 ```solidity
-uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_SHIFT = 59;
+uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_SHIFT = 43;
 ```
 
 
@@ -152,7 +138,7 @@ uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_MASK = 0xFFFFFFFFFFFFFFF
 ### LAST_FEES_CHARGED_PERFORMANCE_SHIFT
 
 ```solidity
-uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_SHIFT = 123;
+uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_SHIFT = 107;
 ```
 
 
@@ -199,13 +185,6 @@ function _setDecimals(BaseVaultStorage storage $, uint8 value) internal;
 
 ```solidity
 function _getHurdleRate(BaseVaultStorage storage $) internal view returns (uint16);
-```
-
-### _setHurdleRate
-
-
-```solidity
-function _setHurdleRate(BaseVaultStorage storage $, uint16 value) internal;
 ```
 
 ### _getPerformanceFee

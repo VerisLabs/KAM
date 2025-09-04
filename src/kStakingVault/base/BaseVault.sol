@@ -94,22 +94,20 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @dev Bitmask and shift constants for module configuration
     uint256 internal constant DECIMALS_MASK = 0xFF;
     uint256 internal constant DECIMALS_SHIFT = 0;
-    uint256 internal constant HURDLE_RATE_MASK = 0xFFFF;
-    uint256 internal constant HURDLE_RATE_SHIFT = 8;
     uint256 internal constant PERFORMANCE_FEE_MASK = 0xFFFF;
-    uint256 internal constant PERFORMANCE_FEE_SHIFT = 24;
+    uint256 internal constant PERFORMANCE_FEE_SHIFT = 8;
     uint256 internal constant MANAGEMENT_FEE_MASK = 0xFFFF;
-    uint256 internal constant MANAGEMENT_FEE_SHIFT = 40;
+    uint256 internal constant MANAGEMENT_FEE_SHIFT = 24;
     uint256 internal constant INITIALIZED_MASK = 0x1;
-    uint256 internal constant INITIALIZED_SHIFT = 56;
+    uint256 internal constant INITIALIZED_SHIFT = 40;
     uint256 internal constant PAUSED_MASK = 0x1;
-    uint256 internal constant PAUSED_SHIFT = 57;
+    uint256 internal constant PAUSED_SHIFT = 41;
     uint256 internal constant IS_HARD_HURDLE_RATE_MASK = 0x1;
-    uint256 internal constant IS_HARD_HURDLE_RATE_SHIFT = 58;
+    uint256 internal constant IS_HARD_HURDLE_RATE_SHIFT = 42;
     uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_MASK = 0xFFFFFFFFFFFFFFFF;
-    uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_SHIFT = 59;
+    uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_SHIFT = 43;
     uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_MASK = 0xFFFFFFFFFFFFFFFF;
-    uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_SHIFT = 123;
+    uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_SHIFT = 107;
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -118,7 +116,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @custom:storage-location erc7201.kam.storage.BaseVault
     struct BaseVaultStorage {
         // 1
-        uint256 config; // decimals, hurdle rate, performance fee, management fee, initialized, paused,
+        uint256 config; // decimals, performance fee, management fee, initialized, paused,
         // isHardHurdleRate, lastFeesChargedManagement, lastFeesChargedPerformance
         // 2
         uint128 sharePriceWatermark;
@@ -170,11 +168,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     }
 
     function _getHurdleRate(BaseVaultStorage storage $) internal view returns (uint16) {
-        return uint16(($.config >> HURDLE_RATE_SHIFT) & HURDLE_RATE_MASK);
-    }
-
-    function _setHurdleRate(BaseVaultStorage storage $, uint16 value) internal {
-        $.config = ($.config & ~(HURDLE_RATE_MASK << HURDLE_RATE_SHIFT)) | (uint256(value) << HURDLE_RATE_SHIFT);
+        return _registry().getHurdleRate($.underlyingAsset);
     }
 
     function _getPerformanceFee(BaseVaultStorage storage $) internal view returns (uint16) {

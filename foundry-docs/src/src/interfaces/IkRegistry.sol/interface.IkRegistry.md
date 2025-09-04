@@ -1,5 +1,5 @@
 # IkRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/interfaces/IkRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/9902b1ea80f671449ee88e1d19504fe796d0d9a5/src/interfaces/IkRegistry.sol)
 
 
 ## Functions
@@ -207,6 +207,20 @@ function assetToKToken(address asset) external view returns (address);
 function getTreasury() external view returns (address);
 ```
 
+### setHurdleRate
+
+
+```solidity
+function setHurdleRate(address asset, uint16 hurdleRate) external payable;
+```
+
+### getHurdleRate
+
+
+```solidity
+function getHurdleRate(address asset) external view returns (uint16);
+```
+
 ## Events
 ### SingletonContractSet
 
@@ -278,6 +292,12 @@ event RescuedETH(address indexed asset, uint256 amount);
 
 ```solidity
 event TreasurySet(address indexed treasury);
+```
+
+### HurdleRateSet
+
+```solidity
+event HurdleRateSet(address indexed asset, uint16 hurdleRate);
 ```
 
 ## Enums
