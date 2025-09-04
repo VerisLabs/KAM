@@ -11,7 +11,9 @@ import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
-import { VAULTFEES_FEE_EXCEEDS_MAXIMUM, VAULTFEES_INVALID_TIMESTAMP, VAULTFEES_WRONG_ROLE } from "src/errors/Errors.sol";
+import {
+    KSTAKINGVAULT_WRONG_ROLE, VAULTFEES_FEE_EXCEEDS_MAXIMUM, VAULTFEES_INVALID_TIMESTAMP
+} from "src/errors/Errors.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
@@ -76,7 +78,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
     }
 
     function test_SetManagementFee_OnlyAdmin() public {
-        vm.expectRevert(bytes(VAULTFEES_WRONG_ROLE));
+        vm.expectRevert(bytes(KSTAKINGVAULT_WRONG_ROLE));
         vm.prank(users.alice);
         vault.setManagementFee(TEST_MANAGEMENT_FEE);
     }
@@ -376,7 +378,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
     }
 
     function test_NotifyPerformanceFeesCharged_OnlyAdmin() public {
-        vm.expectRevert(bytes(VAULTFEES_WRONG_ROLE));
+        vm.expectRevert(bytes(KSTAKINGVAULT_WRONG_ROLE));
         vm.prank(users.alice);
         vault.notifyPerformanceFeesCharged(uint64(block.timestamp));
     }

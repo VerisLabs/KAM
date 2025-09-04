@@ -1,5 +1,5 @@
 # BaseVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/9902b1ea80f671449ee88e1d19504fe796d0d9a5/src/kStakingVault/base/BaseVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/670f05acf8766190fcaa1d272341611f065917de/src/kStakingVault/base/BaseVault.sol)
 
 **Inherits:**
 [ERC20](/src/vendor/ERC20.sol/abstract.ERC20.md), [OptimizedReentrancyGuardTransient](/src/abstracts/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)
@@ -354,29 +354,6 @@ function _getKAssetRouter() internal view returns (address router);
 |`router`|`address`|The kAssetRouter contract address|
 
 
-### _getDNVaultByAsset
-
-Gets the DN vault address for a given asset
-
-*Reverts if asset not supported*
-
-
-```solidity
-function _getDNVaultByAsset(address asset_) internal view returns (address vault);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`asset_`|`address`|The asset address|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`vault`|`address`|The corresponding DN vault address|
-
-
 ### name
 
 Returns the vault shares token name
@@ -599,21 +576,6 @@ function _isRelayer(address user) internal view returns (bool);
 |`<none>`|`bool`|Whether the address is a relayer|
 
 
-### _isPaused
-
-Checks if an address is a institution
-
-
-```solidity
-function _isPaused() internal view returns (bool);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|Whether the address is a institution|
-
-
 ### _isKAssetRouter
 
 Gets the kMinter singleton contract address
@@ -629,27 +591,6 @@ function _isKAssetRouter(address kAssetRouter_) internal view returns (bool);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`bool`|minter The kMinter contract address|
-
-
-### _isAsset
-
-Checks if an asset is registered
-
-
-```solidity
-function _isAsset(address asset) internal view returns (bool);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`asset`|`address`|The asset address to check|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|Whether the asset is registered|
 
 
 ## Events
