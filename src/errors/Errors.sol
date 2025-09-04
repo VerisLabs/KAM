@@ -1,6 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+/// @dev All error codes use contract-specific prefixes for easier debugging:
+///      - A*: kAssetRouter errors
+///      - BA*: BaseAdapter errors
+///      - BV*: BaseVault errors
+///      - B*: kBatchReceiver errors
+///      - C*: Custodial adapter errors
+///      - K*: kBase errors
+///      - M*: kMinter errors
+///      - R*: kRegistry errors
+///      - SV*: kStakingVault errors
+///      - T*: kToken errors
+///      - VB*: VaultBatches errors
+///      - VC*: VaultClaims errors
+///      - VF*: VaultFees errors
+
 // kAssetRouter Errors
 string constant KASSETROUTER_ALREADY_REGISTERED = "A1";
 string constant KASSETROUTER_BATCH_CLOSED = "A2";
@@ -111,11 +126,13 @@ string constant KTOKEN_TRANSFER_FAILED = "T2";
 string constant KTOKEN_ZERO_ADDRESS = "T3";
 string constant KTOKEN_ZERO_AMOUNT = "T4";
 
+// VaultBatches Errors
 string constant VAULTBATCHES_NOT_CLOSED = "VB1";
 string constant VAULTBATCHES_VAULT_CLOSED = "VB2";
 string constant VAULTBATCHES_VAULT_SETTLED = "VB3";
 string constant VAULTBATCHES_WRONG_ROLE = "VB4";
 
+// VaultClaims Errors
 string constant VAULTCLAIMS_BATCH_NOT_SETTLED = "VC1";
 string constant VAULTCLAIMS_INVALID_BATCH_ID = "VC2";
 string constant VAULTCLAIMS_IS_PAUSED = "VC3";
