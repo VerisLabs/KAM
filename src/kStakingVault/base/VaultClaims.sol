@@ -46,7 +46,8 @@ contract VaultClaims is BaseVault {
     /// @notice Claims stkTokens from a settled staking batch
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
-    function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable nonReentrant {
+    function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable {
+        _lockReentrant();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_getPaused($)) revert IsPaused();
         if (!$.batches[batchId].isSettled) revert BatchNotSettled();
@@ -70,12 +71,14 @@ contract VaultClaims is BaseVault {
         // Mint stkTokens to user
         _mint(request.user, stkTokensToMint);
         emit StkTokensIssued(request.user, stkTokensToMint);
+        _unlockReentrant();
     }
 
     /// @notice Claims kTokens from a settled unstaking batch (simplified implementation)
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
-    function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable nonReentrant {
+    function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable {
+        _lockReentrant();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_getPaused($)) revert IsPaused();
         if (!$.batches[batchId].isSettled) revert BatchNotSettled();
@@ -101,10 +104,11 @@ contract VaultClaims is BaseVault {
         emit UnstakingAssetsClaimed(batchId, requestId, request.user, totalKTokensNet);
 
         // Transfer fees to treasury
-        $.kToken.safeTransfer(IkRegistry($.registry).getTreasury(), fees);
+        $.kToken.safeTransfer(_registry().getTreasury(), fees);
 
         // Transfer kTokens to user
         $.kToken.safeTransfer(request.user, totalKTokensNet);
         emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensNet);
+        _unlockReentrant();
     }
 }

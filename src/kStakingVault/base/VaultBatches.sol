@@ -71,7 +71,7 @@ contract VaultBatches is BaseVault {
     /// @notice Deploys BatchReceiver for specific batch
     /// @param _batchId Batch ID to deploy receiver for
     /// @dev Only callable by kAssetRouter
-    function createBatchReceiver(bytes32 _batchId) external nonReentrant returns (address) {
+    function createBatchReceiver(bytes32 _batchId) external returns (address) {
         if (!_isKAssetRouter(msg.sender)) revert WrongRole();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         address receiver = $.batches[_batchId].batchReceiver;

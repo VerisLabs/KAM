@@ -93,7 +93,8 @@ contract kStakingVault is
     /// @param to Address to receive the stkTokens
     /// @param amount Amount of kTokens to stake
     /// @return requestId Request ID for this staking request
-    function requestStake(address to, uint256 amount) external payable nonReentrant returns (bytes32 requestId) {
+    function requestStake(address to, uint256 amount) external payable returns (bytes32 requestId) {
+        _lockReentrant();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_getPaused($)) revert IsPaused();
         if (amount == 0) revert ZeroAmount();
@@ -128,6 +129,7 @@ contract kStakingVault is
         );
 
         emit StakeRequestCreated(bytes32(requestId), msg.sender, $.kToken, amount, to, batchId);
+        _unlockReentrant();
 
         return requestId;
     }
@@ -136,15 +138,8 @@ contract kStakingVault is
     /// @dev Works with both claimed and unclaimed stkTokens (can unstake immediately after settlement)
     /// @param stkTokenAmount Amount of stkTokens to unstake
     /// @return requestId Request ID for this unstaking request
-    function requestUnstake(
-        address to,
-        uint256 stkTokenAmount
-    )
-        external
-        payable
-        nonReentrant
-        returns (bytes32 requestId)
-    {
+    function requestUnstake(address to, uint256 stkTokenAmount) external payable returns (bytes32 requestId) {
+        _lockReentrant();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_getPaused($)) revert IsPaused();
         if (stkTokenAmount == 0) revert ZeroAmount();
@@ -176,12 +171,15 @@ contract kStakingVault is
 
         emit UnstakeRequestCreated(bytes32(requestId), msg.sender, stkTokenAmount, to, batchId);
 
+        _unlockReentrant();
+
         return requestId;
     }
 
     /// @notice Cancels a staking request
     /// @param requestId Request ID to cancel
-    function cancelStakeRequest(bytes32 requestId) external payable nonReentrant {
+    function cancelStakeRequest(bytes32 requestId) external payable {
+        _lockReentrant();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         BaseVaultTypes.StakeRequest storage request = $.stakeRequests[requestId];
 
@@ -207,11 +205,13 @@ contract kStakingVault is
         $.kToken.safeTransfer(request.user, request.kTokenAmount);
 
         emit StakeRequestCancelled(bytes32(requestId));
+        _unlockReentrant();
     }
 
     /// @notice Cancels an unstaking request
     /// @param requestId Request ID to cancel
-    function cancelUnstakeRequest(bytes32 requestId) external payable nonReentrant {
+    function cancelUnstakeRequest(bytes32 requestId) external payable {
+        _lockReentrant();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_getPaused($)) revert IsPaused();
         BaseVaultTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
@@ -235,6 +235,7 @@ contract kStakingVault is
         _transfer(address(this), request.user, request.stkTokenAmount);
 
         emit UnstakeRequestCancelled(requestId);
+        _unlockReentrant();
     }
 
     /*//////////////////////////////////////////////////////////////

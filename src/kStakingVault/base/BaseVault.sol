@@ -4,8 +4,9 @@ pragma solidity 0.8.30;
 import { ERC20 } from "solady/tokens/ERC20.sol";
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+
+import { OptimizedReentrancyGuardTransient } from "src/abstracts/OptimizedReentrancyGuardTransient.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 import { IVaultFees } from "src/interfaces/modules/IVaultFees.sol";
@@ -14,7 +15,7 @@ import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 /// @title BaseVault
 /// @notice Base contract for all modules
 /// @dev Provides shared storage, roles, and common functionality
-abstract contract BaseVault is ERC20, ReentrancyGuardTransient {
+abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     using FixedPointMathLib for uint256;
     using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
     using SafeTransferLib for address;
