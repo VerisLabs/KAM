@@ -8,7 +8,6 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { OptimizedReentrancyGuardTransient } from "src/abstracts/OptimizedReentrancyGuardTransient.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { IkToken } from "src/interfaces/IkToken.sol";
 import { IVaultFees } from "src/interfaces/modules/IVaultFees.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
@@ -351,7 +350,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @return totalAssets Total assets in the vault
     function _totalAssets() internal view returns (uint256) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        return IkToken($.kToken).balanceOf(address(this)) - $.totalPendingStake;
+        return $.kToken.balanceOf(address(this)) - $.totalPendingStake;
     }
 
     /// @notice Returns the total net assets in the vault
