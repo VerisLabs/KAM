@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { LibClone } from "solady/utils/LibClone.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+import { OptimizedLibClone } from "src/libraries/OptimizedLibClone.sol";
+import { OptimizedSafeCastLib } from "src/libraries/OptimizedSafeCastLib.sol";
 
+import {
+    VAULTBATCHES_NOT_CLOSED,
+    VAULTBATCHES_VAULT_CLOSED,
+    VAULTBATCHES_VAULT_SETTLED,
+    VAULTBATCHES_WRONG_ROLE
+} from "src/errors/Errors.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
@@ -12,8 +18,8 @@ import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 /// @notice Handles batch operations for staking and unstaking
 /// @dev Contains batch functions for staking and unstaking operations
 contract VaultBatches is BaseVault {
-    using SafeCastLib for uint256;
-    using SafeCastLib for uint64;
+    using OptimizedSafeCastLib for uint256;
+    using OptimizedSafeCastLib for uint64;
     /*//////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -43,7 +49,7 @@ contract VaultBatches is BaseVault {
     /// @return The new batch ID
     /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
     function createNewBatch() external returns (bytes32) {
-        if (!_isRelayer(msg.sender)) revert WrongRole();
+        require(_isRelayer(msg.sender), VAULTBATCHES_WRONG_ROLE);
         return _createNewBatch();
     }
 
@@ -52,9 +58,9 @@ contract VaultBatches is BaseVault {
     /// @param _create Whether to create a new batch after closing
     /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
     function closeBatch(bytes32 _batchId, bool _create) external {
-        if (!_isRelayer(msg.sender)) revert WrongRole();
+        require(_isRelayer(msg.sender), VAULTBATCHES_WRONG_ROLE);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        if ($.batches[_batchId].isClosed) revert Closed();
+        require(!$.batches[_batchId].isClosed, VAULTBATCHES_VAULT_CLOSED);
         $.batches[_batchId].isClosed = true;
 
         if (_create) {
@@ -67,10 +73,10 @@ contract VaultBatches is BaseVault {
     /// @param _batchId The batch ID to settle
     /// @dev Only callable by kMinter, indicates assets have been distributed
     function settleBatch(bytes32 _batchId) external {
-        if (!_isKAssetRouter(msg.sender)) revert WrongRole();
+        require(_isKAssetRouter(msg.sender), VAULTBATCHES_WRONG_ROLE);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        if (!$.batches[_batchId].isClosed) revert NotClosed();
-        if ($.batches[_batchId].isSettled) revert Settled();
+        require($.batches[_batchId].isClosed, VAULTBATCHES_NOT_CLOSED);
+        require(!$.batches[_batchId].isSettled, VAULTBATCHES_VAULT_SETTLED);
         $.batches[_batchId].isSettled = true;
 
         // Snapshot the gross and net share price for this batch
@@ -84,13 +90,14 @@ contract VaultBatches is BaseVault {
     /// @param _batchId Batch ID to deploy receiver for
     /// @dev Only callable by kAssetRouter
     function createBatchReceiver(bytes32 _batchId) external returns (address) {
-        if (!_isKAssetRouter(msg.sender)) revert WrongRole();
+        _lockReentrant();
+        require(_isKAssetRouter(msg.sender), VAULTBATCHES_WRONG_ROLE);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         address receiver = $.batches[_batchId].batchReceiver;
         if (receiver != address(0)) return receiver;
 
-        // Deploy a new BatchReceiver minimal proxy
-        receiver = LibClone.clone($.receiverImplementation);
+        receiver = OptimizedLibClone.clone($.receiverImplementation);
+
         $.batches[_batchId].batchReceiver = receiver;
 
         // Initialize the BatchReceiver
@@ -98,6 +105,7 @@ contract VaultBatches is BaseVault {
 
         emit BatchReceiverCreated(receiver, _batchId);
 
+        _unlockReentrant();
         return receiver;
     }
 

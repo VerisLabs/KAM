@@ -28,7 +28,7 @@ address constant DAI_MAINNET = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 // Mainnet vault address
 address constant METAVAULT_USDC_MAINNET = 0x349c996C4a53208b6EB09c103782D86a3F1BB57E;
 
-// Role constants (matching Solady OwnableRoles pattern)
+// Role constants (matching Solady OptimizedOwnableRoles pattern)
 uint256 constant ADMIN_ROLE = 1; // _ROLE_0
 uint256 constant EMERGENCY_ADMIN_ROLE = 2; // _ROLE_1
 uint256 constant GUARDIAN_ROLE = 4; // _ROLE_2

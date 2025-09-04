@@ -88,7 +88,7 @@ deploy-adapters:
 # Final configuration (09)
 configure:
 	@echo "⚙️  Executing protocol configuration..."
-	forge script script/deployment/09_ConfigureProtocol.s.sol --rpc-url ${RPC_SEPOLIA} --broadcast --account maxDeployer --sender ${DEPLOYER_ADDRESS}
+	forge script script/deployment/09_ConfigureProtocol.s.sol $(FORGE_ARGS)
 
 # Verification
 verify:

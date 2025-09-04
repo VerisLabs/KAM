@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity 0.8.30;
 
 ///@notice Library for managing enumerable sets in storage.
 ///@dev The library size has been reduced to only use bytes32 sets
-///@author Solady(https://github.com/Vectorized/solady/blob/main/src/utils/EnumerableSetLib.sol)
+///@author Solady(https://github.com/Vectorized/solady/blob/main/src/utils/OptimizedBytes32EnumerableSetLib.sol)
 library OptimizedBytes32EnumerableSetLib {
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       CUSTOM ERRORS                        */

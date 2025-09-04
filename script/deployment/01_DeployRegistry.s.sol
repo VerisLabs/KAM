@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import { Script } from "forge-std/Script.sol";
 import { console } from "forge-std/console.sol";
-import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
+import { ERC1967Factory } from "src/vendor/ERC1967Factory.sol";
 
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
 import { kRegistry } from "src/kRegistry.sol";
@@ -30,9 +30,9 @@ contract DeployRegistryScript is Script, DeploymentManager {
             config.roles.admin,
             config.roles.emergencyAdmin,
             config.roles.guardian,
-            config.roles.relayer
+            config.roles.relayer,
+            config.roles.treasury
         );
-        // TODO:add treausury role here
 
         address registryProxy = factory.deployAndCall(address(registryImpl), msg.sender, initData);
 

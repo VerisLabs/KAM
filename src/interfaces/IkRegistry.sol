@@ -282,20 +282,6 @@ interface IkRegistry {
     event TreasurySet(address indexed treasury);
 
     /*//////////////////////////////////////////////////////////////
-                              ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error ZeroAddress();
-    error ZeroAmount();
-    error AlreadyRegistered();
-    error AssetNotSupported();
-    error InvalidAdapter();
-    error AdapterAlreadySet();
-    error WrongRole();
-    error WrongAsset();
-    error TransferFailed();
-
-    /*//////////////////////////////////////////////////////////////
                               FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 

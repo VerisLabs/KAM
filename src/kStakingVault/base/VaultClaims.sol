@@ -1,14 +1,21 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ERC20 } from "solady/tokens/ERC20.sol";
+import { ERC20 } from "src/vendor/ERC20.sol";
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedFixedPointMathLib } from "src/libraries/OptimizedFixedPointMathLib.sol";
+import { OptimizedSafeCastLib } from "src/libraries/OptimizedSafeCastLib.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 
+import {
+    VAULTCLAIMS_BATCH_NOT_SETTLED,
+    VAULTCLAIMS_INVALID_BATCH_ID,
+    VAULTCLAIMS_IS_PAUSED,
+    VAULTCLAIMS_NOT_BENEFICIARY,
+    VAULTCLAIMS_REQUEST_NOT_PENDING
+} from "src/errors/Errors.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
@@ -16,19 +23,12 @@ import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 /// @notice Handles claim operations for settled batches
 /// @dev Contains claim functions for staking and unstaking operations
 contract VaultClaims is BaseVault {
-    using SafeCastLib for uint256;
+    using OptimizedSafeCastLib for uint256;
     using SafeTransferLib for address;
-    using FixedPointMathLib for uint256;
+    using OptimizedFixedPointMathLib for uint256;
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
-    /*//////////////////////////////////////////////////////////////
-                              ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error BatchNotSettled();
-    error InvalidBatchId();
-    error RequestNotPending();
-    error NotBeneficiary();
+    // Error declarations removed - using library errors instead
 
     /*//////////////////////////////////////////////////////////////
                               EVENTS
@@ -57,13 +57,13 @@ contract VaultClaims is BaseVault {
         // Open `nonRentrant`
         _lockReentrant();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        if (_getPaused($)) revert IsPaused();
-        if (!$.batches[batchId].isSettled) revert BatchNotSettled();
+        require(!_getPaused($), VAULTCLAIMS_IS_PAUSED);
+        require($.batches[batchId].isSettled, VAULTCLAIMS_BATCH_NOT_SETTLED);
 
         BaseVaultTypes.StakeRequest storage request = $.stakeRequests[requestId];
-        if (request.batchId != batchId) revert InvalidBatchId();
-        if (request.status != BaseVaultTypes.RequestStatus.PENDING) revert RequestNotPending();
-        if (msg.sender != request.user) revert NotBeneficiary();
+        require(request.batchId == batchId, VAULTCLAIMS_INVALID_BATCH_ID);
+        require(request.status == BaseVaultTypes.RequestStatus.PENDING, VAULTCLAIMS_REQUEST_NOT_PENDING);
+        require(msg.sender == request.user, VAULTCLAIMS_NOT_BENEFICIARY);
 
         request.status = BaseVaultTypes.RequestStatus.CLAIMED;
 
@@ -96,13 +96,13 @@ contract VaultClaims is BaseVault {
         _lockReentrant();
 
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        if (_getPaused($)) revert IsPaused();
-        if (!$.batches[batchId].isSettled) revert BatchNotSettled();
+        require(!_getPaused($), VAULTCLAIMS_IS_PAUSED);
+        require($.batches[batchId].isSettled, VAULTCLAIMS_BATCH_NOT_SETTLED);
 
         BaseVaultTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
-        if (request.batchId != batchId) revert InvalidBatchId();
-        if (request.status != BaseVaultTypes.RequestStatus.PENDING) revert RequestNotPending();
-        if (msg.sender != request.user) revert NotBeneficiary();
+        require(request.batchId == batchId, VAULTCLAIMS_INVALID_BATCH_ID);
+        require(request.status == BaseVaultTypes.RequestStatus.PENDING, VAULTCLAIMS_REQUEST_NOT_PENDING);
+        require(msg.sender == request.user, VAULTCLAIMS_NOT_BENEFICIARY);
 
         request.status = BaseVaultTypes.RequestStatus.CLAIMED;
 

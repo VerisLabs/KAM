@@ -1,5 +1,5 @@
 # kAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/786bfc5b94e4c849db94b9fb47f71818d5cce1ab/src/kAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kAssetRouter.sol)
 
 **Inherits:**
 [IkAssetRouter](/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), Multicallable
@@ -532,9 +532,9 @@ storage-location: erc7201:kam.storage.kAssetRouter
 struct kAssetRouterStorage {
     uint256 proposalCounter;
     uint256 vaultSettlementCooldown;
-    EnumerableSetLib.Bytes32Set executedProposalIds;
-    EnumerableSetLib.Bytes32Set batchIds;
-    mapping(address vault => EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;
+    OptimizedBytes32EnumerableSetLib.Bytes32Set executedProposalIds;
+    OptimizedBytes32EnumerableSetLib.Bytes32Set batchIds;
+    mapping(address vault => OptimizedBytes32EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;
     mapping(address account => mapping(bytes32 batchId => Balances)) vaultBatchBalances;
     mapping(address vault => mapping(bytes32 batchId => uint256)) vaultRequestedShares;
     mapping(bytes32 proposalId => VaultSettlementProposal) settlementProposals;

@@ -6,10 +6,12 @@ import { USDC_MAINNET, _1_USDC } from "../utils/Constants.sol";
 
 import { console } from "forge-std/console.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { OptimizedFixedPointMathLib } from "src/libraries/OptimizedFixedPointMathLib.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
+
+import { KSTAKINGVAULT_INSUFFICIENT_BALANCE, KSTAKINGVAULT_ZERO_AMOUNT } from "src/errors/Errors.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
@@ -17,7 +19,7 @@ import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 /// @notice Tests for core accounting mechanics in kStakingVault
 /// @dev Focuses on share price calculations, asset conversions, and balance tracking
 contract kStakingVaultAccountingTest is BaseVaultTest {
-    using FixedPointMathLib for uint256;
+    using OptimizedFixedPointMathLib for uint256;
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
@@ -375,7 +377,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         vm.prank(users.alice);
         kUSD.approve(address(vault), 0);
 
-        vm.expectRevert(); // Should revert for zero amount
+        vm.expectRevert(bytes(KSTAKINGVAULT_ZERO_AMOUNT)); // Should revert for zero amount
         vm.prank(users.alice);
         vault.requestStake(users.alice, 0);
     }
@@ -386,7 +388,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         vm.prank(users.alice);
         kUSD.approve(address(vault), excessiveAmount);
 
-        vm.expectRevert(); // Should revert for insufficient balance
+        vm.expectRevert(bytes(KSTAKINGVAULT_INSUFFICIENT_BALANCE)); // Should revert for insufficient balance
         vm.prank(users.alice);
         vault.requestStake(users.alice, excessiveAmount);
     }

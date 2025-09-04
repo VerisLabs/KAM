@@ -71,19 +71,6 @@ interface IkAssetRouter {
     event SettlementCooldownUpdated(uint256 oldCooldown, uint256 newCooldown);
 
     /*//////////////////////////////////////////////////////////////
-                                ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error InsufficientVirtualBalance();
-    error ProposalNotFound();
-    error ProposalAlreadyExecuted();
-    error ProposalAlreadyExists();
-    error ZeroProposals();
-    error BatchIdAlreadyProposed();
-    error CooldownNotPassed();
-    error InvalidCooldown();
-
-    /*//////////////////////////////////////////////////////////////
                             KMINTER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 

@@ -12,8 +12,9 @@ import {
 } from "../utils/Constants.sol";
 
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { OptimizedOwnableRoles } from "src/libraries/OptimizedOwnableRoles.sol";
 
 /// @title DeploymentTest
 /// @notice Test contract to verify protocol deployment works correctly
@@ -86,15 +87,15 @@ contract DeploymentTest is DeploymentBaseTest {
         // Staking vaults should NOT have MINTER_ROLE on kTokens
         // They accept existing kTokens from users and mint their own stkTokens
         assertFalse(
-            OwnableRoles(address(kUSD)).hasAnyRole(address(dnVault), MINTER_ROLE),
+            OptimizedOwnableRoles(address(kUSD)).hasAnyRole(address(dnVault), MINTER_ROLE),
             "DN vault should not have kToken MINTER_ROLE"
         );
         assertFalse(
-            OwnableRoles(address(kUSD)).hasAnyRole(address(alphaVault), MINTER_ROLE),
+            OptimizedOwnableRoles(address(kUSD)).hasAnyRole(address(alphaVault), MINTER_ROLE),
             "Alpha vault should not have kToken MINTER_ROLE"
         );
         assertFalse(
-            OwnableRoles(address(kUSD)).hasAnyRole(address(betaVault), MINTER_ROLE),
+            OptimizedOwnableRoles(address(kUSD)).hasAnyRole(address(betaVault), MINTER_ROLE),
             "Beta vault should not have kToken MINTER_ROLE"
         );
     }
