@@ -17,19 +17,56 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Emitted when tokens are minted
+    /// @param to The address to which the tokens are minted
+    /// @param amount The quantity of tokens minted
     event Minted(address indexed to, uint256 amount);
+
+    /// @notice Emitted when tokens are burned
+    /// @param from The address from which tokens are burned
+    /// @param amount The quantity of tokens burned
     event Burned(address indexed from, uint256 amount);
+
+    /// @notice Emitted when a new token is created
+    /// @param token The address of the new token
+    /// @param owner The owner of the new token
+    /// @param name The name of the new token
+    /// @param symbol The symbol of the new token
+    /// @param decimals The decimals of the new token
     event TokenCreated(address indexed token, address owner, string name, string symbol, uint8 decimals);
+
+    /// @notice Emitted when the pause state is changed
+    /// @param isPaused The new pause state
     event PauseState(bool isPaused);
+
+    /// @notice Emitted when an authorized caller is updated
+    /// @param caller The address of the caller
+    /// @param authorized Whether the caller is authorized
     event AuthorizedCallerUpdated(address indexed caller, bool authorized);
+
+    /// @notice Emitted when an emergency withdrawal is requested
+    /// @param token The address of the token
+    /// @param to The address to which the tokens will be sent
+    /// @param amount The amount of tokens to withdraw
+    /// @param admin The address of the admin
     event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
+
+    /// @notice Emitted when assets are rescued
+    /// @param asset The address of the asset
+    /// @param to The address to which the assets will be sent
+    /// @param amount The amount of assets rescued
     event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+
+    /// @notice Emitted when ETH is rescued
+    /// @param asset The address of the asset
+    /// @param amount The amount of ETH rescued
     event RescuedETH(address indexed asset, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                                 ROLES
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Role constants
     uint256 public constant ADMIN_ROLE = _ROLE_0;
     uint256 public constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
     uint256 public constant MINTER_ROLE = _ROLE_2;
@@ -38,9 +75,13 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Pause state
     bool _isPaused;
+    /// @notice Name of the token
     string private _name;
+    /// @notice Symbol of the token
     string private _symbol;
+    /// @notice Decimals of the token
     uint8 private _decimals;
 
     /*//////////////////////////////////////////////////////////////
@@ -68,8 +109,14 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Disables initializers to prevent implementation contract from being initialized
-    /// @dev Calls _disableInitializers from Solady's Initializable to lock implementation
+    /// @notice Initializes the kToken contract
+    /// @param owner_ Contract owner address
+    /// @param admin_ Admin role recipient
+    /// @param emergencyAdmin_ Emergency admin role recipient
+    /// @param minter_ Minter role recipient
+    /// @param name_ Name of the token
+    /// @param symbol_ Symbol of the token
+    /// @param decimals_ Decimals of the token
     constructor(
         address owner_,
         address admin_,
