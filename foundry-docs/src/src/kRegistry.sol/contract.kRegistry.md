@@ -1,8 +1,8 @@
 # kRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/kRegistry.sol)
 
 **Inherits:**
-[IkRegistry](/src/interfaces/IkRegistry.sol/interface.IkRegistry.md), Initializable, UUPSUpgradeable, OptimizedOwnableRoles
+[IkRegistry](/src/interfaces/IkRegistry.sol/interface.IkRegistry.md), [Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [OptimizedOwnableRoles](/src/libraries/OptimizedOwnableRoles.sol/abstract.OptimizedOwnableRoles.md)
 
 Central registry for KAM protocol contracts
 
@@ -11,6 +11,8 @@ Central registry for KAM protocol contracts
 
 ## State Variables
 ### ADMIN_ROLE
+Admin role for authorized operations
+
 
 ```solidity
 uint256 internal constant ADMIN_ROLE = _ROLE_0;
@@ -18,6 +20,8 @@ uint256 internal constant ADMIN_ROLE = _ROLE_0;
 
 
 ### EMERGENCY_ADMIN_ROLE
+Emergency admin role for emergency operations
+
 
 ```solidity
 uint256 internal constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
@@ -25,6 +29,8 @@ uint256 internal constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
 
 
 ### GUARDIAN_ROLE
+Guardian role as a circuit breaker for settlement proposals
+
 
 ```solidity
 uint256 internal constant GUARDIAN_ROLE = _ROLE_2;
@@ -32,6 +38,8 @@ uint256 internal constant GUARDIAN_ROLE = _ROLE_2;
 
 
 ### RELAYER_ROLE
+Relayer role for external vaults
+
 
 ```solidity
 uint256 internal constant RELAYER_ROLE = _ROLE_3;
@@ -39,6 +47,8 @@ uint256 internal constant RELAYER_ROLE = _ROLE_3;
 
 
 ### INSTITUTION_ROLE
+Reserved role for special whitelisted addresses
+
 
 ```solidity
 uint256 internal constant INSTITUTION_ROLE = _ROLE_4;
@@ -46,6 +56,8 @@ uint256 internal constant INSTITUTION_ROLE = _ROLE_4;
 
 
 ### VENDOR_ROLE
+Vendor role for vendor vaults
+
 
 ```solidity
 uint256 internal constant VENDOR_ROLE = _ROLE_5;
@@ -53,6 +65,8 @@ uint256 internal constant VENDOR_ROLE = _ROLE_5;
 
 
 ### K_MINTER
+kMinter key
+
 
 ```solidity
 bytes32 public constant K_MINTER = keccak256("K_MINTER");
@@ -60,6 +74,8 @@ bytes32 public constant K_MINTER = keccak256("K_MINTER");
 
 
 ### K_ASSET_ROUTER
+kAssetRouter key
+
 
 ```solidity
 bytes32 public constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
@@ -67,6 +83,8 @@ bytes32 public constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
 
 
 ### USDC
+USDC key
+
 
 ```solidity
 bytes32 public constant USDC = keccak256("USDC");
@@ -74,6 +92,8 @@ bytes32 public constant USDC = keccak256("USDC");
 
 
 ### WBTC
+WBTC key
+
 
 ```solidity
 bytes32 public constant WBTC = keccak256("WBTC");
@@ -89,6 +109,8 @@ bytes32 private constant KREGISTRY_STORAGE_LOCATION = 0x164f5345d77b48816cdb2010
 
 ## Functions
 ### _getkRegistryStorage
+
+*Returns the kRegistry storage pointer*
 
 
 ```solidity
@@ -115,7 +137,8 @@ function initialize(
     address admin_,
     address emergencyAdmin_,
     address guardian_,
-    address relayer_
+    address relayer_,
+    address treasury_
 )
     external
     initializer;
@@ -126,9 +149,10 @@ function initialize(
 |----|----|-----------|
 |`owner_`|`address`|Contract owner address|
 |`admin_`|`address`|Admin role recipient|
-|`emergencyAdmin_`|`address`||
-|`guardian_`|`address`||
-|`relayer_`|`address`||
+|`emergencyAdmin_`|`address`|Emergency admin role recipient|
+|`guardian_`|`address`|Guardian role recipient|
+|`relayer_`|`address`|Relayer role recipient|
+|`treasury_`|`address`|Treasury address|
 
 
 ### rescueAssets
@@ -271,6 +295,21 @@ function registerVault(address vault, VaultType type_, address asset) external p
 function removeVault(address vault) external payable;
 ```
 
+### setTreasury
+
+Sets the treasury address
+
+
+```solidity
+function setTreasury(address treasury_) external payable;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`treasury_`|`address`|The new treasury address|
+
+
 ### registerAdapter
 
 Registers an adapter for a specific vault
@@ -377,6 +416,21 @@ function getAllVaults() external view returns (address[] memory);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`address[]`|Array of vault addresses|
+
+
+### getTreasury
+
+Get the treasury address
+
+
+```solidity
+function getTreasury() external view returns (address);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`address`|The treasury address|
 
 
 ### getCoreContracts
@@ -693,6 +747,23 @@ function _hasRole(address user, uint256 role_) internal view returns (bool);
 |`<none>`|`bool`|Wether the caller have the given role|
 
 
+### _tryGetAssetDecimals
+
+*Helper function to get the decimals of the underlying asset.
+Useful for setting the return value of `_underlyingDecimals` during initialization.
+If the retrieval succeeds, `success` will be true, and `result` will hold the result.
+Otherwise, `success` will be false, and `result` will be zero.
+Example usage:
+```
+(bool success, uint8 result) = _tryGetAssetDecimals(underlying);
+_decimals = success ? result : _DEFAULT_UNDERLYING_DECIMALS;
+```*
+
+
+```solidity
+function _tryGetAssetDecimals(address underlying) internal view returns (bool success, uint8 result);
+```
+
 ### _authorizeUpgrade
 
 Authorizes contract upgrades
@@ -757,16 +828,17 @@ storage-location: erc7201:kam.storage.kRegistry
 
 ```solidity
 struct kRegistryStorage {
-    OptimizedBytes32EnumerableSetLib.AddressSet supportedAssets;
-    OptimizedBytes32EnumerableSetLib.AddressSet allVaults;
+    OptimizedAddressEnumerableSetLib.AddressSet supportedAssets;
+    OptimizedAddressEnumerableSetLib.AddressSet allVaults;
+    address treasury;
     mapping(bytes32 => address) singletonContracts;
     mapping(address => uint8 vaultType) vaultType;
     mapping(address => mapping(uint8 vaultType => address)) assetToVault;
-    mapping(address => OptimizedBytes32EnumerableSetLib.AddressSet) vaultAsset;
-    mapping(address => OptimizedBytes32EnumerableSetLib.AddressSet) vaultsByAsset;
+    mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultAsset;
+    mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultsByAsset;
     mapping(bytes32 => address) singletonAssets;
     mapping(address => address) assetToKToken;
-    mapping(address => OptimizedBytes32EnumerableSetLib.AddressSet) vaultAdapters;
+    mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultAdapters;
     mapping(address => bool) registeredAdapters;
 }
 ```

@@ -1,5 +1,5 @@
 # VaultFees
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kStakingVault/base/VaultFees.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/kStakingVault/base/VaultFees.sol)
 
 **Inherits:**
 [BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md)

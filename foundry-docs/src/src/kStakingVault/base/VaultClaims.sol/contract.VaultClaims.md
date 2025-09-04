@@ -1,5 +1,5 @@
 # VaultClaims
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kStakingVault/base/VaultClaims.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/kStakingVault/base/VaultClaims.sol)
 
 **Inherits:**
 [BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md)
@@ -16,7 +16,7 @@ Claims stkTokens from a settled staking batch
 
 
 ```solidity
-function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable nonReentrant;
+function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable;
 ```
 **Parameters**
 
@@ -32,7 +32,7 @@ Claims kTokens from a settled unstaking batch (simplified implementation)
 
 
 ```solidity
-function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable nonReentrant;
+function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable;
 ```
 **Parameters**
 
@@ -44,7 +44,7 @@ function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payabl
 
 ## Events
 ### StakingSharesClaimed
-ERC20 Transfer event for stkToken operations
+Emitted when a user claims staking shares
 
 
 ```solidity
@@ -52,18 +52,24 @@ event StakingSharesClaimed(bytes32 indexed batchId, bytes32 requestId, address i
 ```
 
 ### UnstakingAssetsClaimed
+Emitted when a user claims unstaking assets
+
 
 ```solidity
 event UnstakingAssetsClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 assets);
 ```
 
 ### StkTokensIssued
+Emitted when stkTokens are issued
+
 
 ```solidity
 event StkTokensIssued(address indexed user, uint256 stkTokenAmount);
 ```
 
 ### KTokenUnstaked
+Emitted when kTokens are unstaked
+
 
 ```solidity
 event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);

@@ -1,5 +1,5 @@
 # VaultBatches
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kStakingVault/base/VaultBatches.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/kStakingVault/base/VaultBatches.sol)
 
 **Inherits:**
 [BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md)
@@ -42,7 +42,7 @@ function closeBatch(bytes32 _batchId, bool _create) external;
 |Name|Type|Description|
 |----|----|-----------|
 |`_batchId`|`bytes32`|The batch ID to close|
-|`_create`|`bool`||
+|`_create`|`bool`|Whether to create a new batch after closing|
 
 
 ### settleBatch
@@ -70,7 +70,7 @@ Deploys BatchReceiver for specific batch
 
 
 ```solidity
-function createBatchReceiver(bytes32 _batchId) external nonReentrant returns (address);
+function createBatchReceiver(bytes32 _batchId) external returns (address);
 ```
 **Parameters**
 
@@ -98,38 +98,59 @@ function _createNewBatch() internal returns (bytes32);
 
 ## Events
 ### BatchCreated
+Emitted when a new batch is created
+
 
 ```solidity
 event BatchCreated(bytes32 indexed batchId);
 ```
 
-### BatchReceiverDeployed
+**Parameters**
 
-```solidity
-event BatchReceiverDeployed(bytes32 indexed batchId, address indexed receiver);
-```
+|Name|Type|Description|
+|----|----|-----------|
+|`batchId`|`bytes32`|The batch ID of the new batch|
 
 ### BatchSettled
+Emitted when a batch is settled
+
 
 ```solidity
 event BatchSettled(bytes32 indexed batchId);
 ```
 
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`batchId`|`bytes32`|The batch ID of the settled batch|
+
 ### BatchClosed
+Emitted when a batch is closed
+
 
 ```solidity
 event BatchClosed(bytes32 indexed batchId);
 ```
 
-### BatchReceiverSet
+**Parameters**
 
-```solidity
-event BatchReceiverSet(address indexed batchReceiver, bytes32 indexed batchId);
-```
+|Name|Type|Description|
+|----|----|-----------|
+|`batchId`|`bytes32`|The batch ID of the closed batch|
 
 ### BatchReceiverCreated
+Emitted when a BatchReceiver is created
+
 
 ```solidity
 event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
 ```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`receiver`|`address`|The address of the created BatchReceiver|
+|`batchId`|`bytes32`|The batch ID of the BatchReceiver|
 

@@ -1,8 +1,8 @@
 # kToken
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kToken.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/kToken.sol)
 
 **Inherits:**
-ERC20, OptimizedOwnableRoles, ReentrancyGuard, Multicallable
+[ERC20](/src/vendor/ERC20.sol/abstract.ERC20.md), [OptimizedOwnableRoles](/src/libraries/OptimizedOwnableRoles.sol/abstract.OptimizedOwnableRoles.md), [OptimizedReentrancyGuardTransient](/src/abstracts/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md), [Multicallable](/src/vendor/Multicallable.sol/abstract.Multicallable.md)
 
 ERC20 token with role-based minting and burning capabilities
 
@@ -11,6 +11,8 @@ ERC20 token with role-based minting and burning capabilities
 
 ## State Variables
 ### ADMIN_ROLE
+Role constants
+
 
 ```solidity
 uint256 public constant ADMIN_ROLE = _ROLE_0;
@@ -32,6 +34,8 @@ uint256 public constant MINTER_ROLE = _ROLE_2;
 
 
 ### _isPaused
+Pause state
+
 
 ```solidity
 bool _isPaused;
@@ -39,6 +43,8 @@ bool _isPaused;
 
 
 ### _name
+Name of the token
+
 
 ```solidity
 string private _name;
@@ -46,6 +52,8 @@ string private _name;
 
 
 ### _symbol
+Symbol of the token
+
 
 ```solidity
 string private _symbol;
@@ -53,6 +61,8 @@ string private _symbol;
 
 
 ### _decimals
+Decimals of the token
+
 
 ```solidity
 uint8 private _decimals;
@@ -62,9 +72,7 @@ uint8 private _decimals;
 ## Functions
 ### constructor
 
-Disables initializers to prevent implementation contract from being initialized
-
-*Calls _disableInitializers from Solady's Initializable to lock implementation*
+Initializes the kToken contract
 
 
 ```solidity
@@ -78,6 +86,18 @@ constructor(
     uint8 decimals_
 );
 ```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`owner_`|`address`|Contract owner address|
+|`admin_`|`address`|Admin role recipient|
+|`emergencyAdmin_`|`address`|Emergency admin role recipient|
+|`minter_`|`address`|Minter role recipient|
+|`name_`|`string`|Name of the token|
+|`symbol_`|`string`|Symbol of the token|
+|`decimals_`|`uint8`|Decimals of the token|
+
 
 ### mint
 
@@ -87,7 +107,7 @@ Creates new tokens and assigns them to the specified address
 
 
 ```solidity
-function mint(address _to, uint256 _amount) external nonReentrant onlyRoles(MINTER_ROLE);
+function mint(address _to, uint256 _amount) external onlyRoles(MINTER_ROLE);
 ```
 **Parameters**
 
@@ -105,7 +125,7 @@ Destroys tokens from the specified address
 
 
 ```solidity
-function burn(address _from, uint256 _amount) external nonReentrant onlyRoles(MINTER_ROLE);
+function burn(address _from, uint256 _amount) external onlyRoles(MINTER_ROLE);
 ```
 **Parameters**
 
@@ -123,7 +143,7 @@ Destroys tokens from specified address using allowance mechanism
 
 
 ```solidity
-function burnFrom(address _from, uint256 _amount) external nonReentrant onlyRoles(MINTER_ROLE);
+function burnFrom(address _from, uint256 _amount) external onlyRoles(MINTER_ROLE);
 ```
 **Parameters**
 
@@ -352,50 +372,127 @@ function _beforeTokenTransfer(address from, address to, uint256 amount) internal
 
 ## Events
 ### Minted
+Emitted when tokens are minted
+
 
 ```solidity
 event Minted(address indexed to, uint256 amount);
 ```
 
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`to`|`address`|The address to which the tokens are minted|
+|`amount`|`uint256`|The quantity of tokens minted|
+
 ### Burned
+Emitted when tokens are burned
+
 
 ```solidity
 event Burned(address indexed from, uint256 amount);
 ```
 
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`from`|`address`|The address from which tokens are burned|
+|`amount`|`uint256`|The quantity of tokens burned|
+
 ### TokenCreated
+Emitted when a new token is created
+
 
 ```solidity
 event TokenCreated(address indexed token, address owner, string name, string symbol, uint8 decimals);
 ```
 
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`token`|`address`|The address of the new token|
+|`owner`|`address`|The owner of the new token|
+|`name`|`string`|The name of the new token|
+|`symbol`|`string`|The symbol of the new token|
+|`decimals`|`uint8`|The decimals of the new token|
+
 ### PauseState
+Emitted when the pause state is changed
+
 
 ```solidity
 event PauseState(bool isPaused);
 ```
 
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`isPaused`|`bool`|The new pause state|
+
 ### AuthorizedCallerUpdated
+Emitted when an authorized caller is updated
+
 
 ```solidity
 event AuthorizedCallerUpdated(address indexed caller, bool authorized);
 ```
 
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`caller`|`address`|The address of the caller|
+|`authorized`|`bool`|Whether the caller is authorized|
+
 ### EmergencyWithdrawal
+Emitted when an emergency withdrawal is requested
+
 
 ```solidity
 event EmergencyWithdrawal(address indexed token, address indexed to, uint256 amount, address indexed admin);
 ```
 
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`token`|`address`|The address of the token|
+|`to`|`address`|The address to which the tokens will be sent|
+|`amount`|`uint256`|The amount of tokens to withdraw|
+|`admin`|`address`|The address of the admin|
+
 ### RescuedAssets
+Emitted when assets are rescued
+
 
 ```solidity
 event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
 ```
 
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The address of the asset|
+|`to`|`address`|The address to which the assets will be sent|
+|`amount`|`uint256`|The amount of assets rescued|
+
 ### RescuedETH
+Emitted when ETH is rescued
+
 
 ```solidity
 event RescuedETH(address indexed asset, uint256 amount);
 ```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The address of the asset|
+|`amount`|`uint256`|The amount of ETH rescued|
 

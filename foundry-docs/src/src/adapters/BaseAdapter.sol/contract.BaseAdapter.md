@@ -1,8 +1,8 @@
 # BaseAdapter
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/adapters/BaseAdapter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/adapters/BaseAdapter.sol)
 
 **Inherits:**
-ReentrancyGuardTransient
+[OptimizedReentrancyGuardTransient](/src/abstracts/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)
 
 Abstract base contract for all protocol adapters
 
@@ -11,6 +11,8 @@ Abstract base contract for all protocol adapters
 
 ## State Variables
 ### K_ASSET_ROUTER
+The asset router key
+
 
 ```solidity
 bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
@@ -27,6 +29,8 @@ bytes32 private constant BASE_ADAPTER_STORAGE_LOCATION =
 
 ## Functions
 ### _getBaseAdapterStorage
+
+*Returns the base adapter storage pointer*
 
 
 ```solidity
@@ -184,15 +188,19 @@ function _isAsset(address asset) internal view returns (bool);
 
 ## Events
 ### RescuedAssets
+Emitted when assets are rescued from the contract
+
 
 ```solidity
 event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
 ```
 
 ### RescuedETH
+Emitted when ETH is rescued from the contract
+
 
 ```solidity
-event RescuedETH(address indexed asset, uint256 amount);
+event RescuedETH(address indexed to, uint256 amount);
 ```
 
 ## Structs

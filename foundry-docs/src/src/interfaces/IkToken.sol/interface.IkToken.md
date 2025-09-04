@@ -1,5 +1,5 @@
 # IkToken
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/interfaces/IkToken.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/interfaces/IkToken.sol)
 
 Interface for kToken with role-based minting and burning capabilities
 

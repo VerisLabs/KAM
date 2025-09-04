@@ -1,8 +1,8 @@
 # BaseVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/a83c1c8f27c68e09f3c0973bbaca147b539ef93b/src/kStakingVault/base/BaseVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/kStakingVault/base/BaseVault.sol)
 
 **Inherits:**
-ERC20, [OptimizedReentrancyGuardTransient](/src/abstracts/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)
+[ERC20](/src/vendor/ERC20.sol/abstract.ERC20.md), [OptimizedReentrancyGuardTransient](/src/abstracts/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)
 
 Base contract for all modules
 
@@ -793,109 +793,6 @@ event Initialized(address registry, string name, string symbol, uint8 decimals, 
 |`symbol`|`string`|The symbol of the vault|
 |`decimals`|`uint8`|The decimals of the vault|
 |`asset`|`address`|The asset of the vault|
-
-## Errors
-### ZeroAddress
-
-```solidity
-error ZeroAddress();
-```
-
-### InvalidRegistry
-
-```solidity
-error InvalidRegistry();
-```
-
-### NotInitialized
-
-```solidity
-error NotInitialized();
-```
-
-### ContractNotFound
-
-```solidity
-error ContractNotFound(bytes32 identifier);
-```
-
-### ZeroAmount
-
-```solidity
-error ZeroAmount();
-```
-
-### AmountBelowDustThreshold
-
-```solidity
-error AmountBelowDustThreshold();
-```
-
-### Closed
-
-```solidity
-error Closed();
-```
-
-### Settled
-
-```solidity
-error Settled();
-```
-
-### RequestNotFound
-
-```solidity
-error RequestNotFound();
-```
-
-### RequestNotEligible
-
-```solidity
-error RequestNotEligible();
-```
-
-### InvalidVault
-
-```solidity
-error InvalidVault();
-```
-
-### IsPaused
-
-```solidity
-error IsPaused();
-```
-
-### AlreadyInit
-
-```solidity
-error AlreadyInit();
-```
-
-### WrongRole
-
-```solidity
-error WrongRole();
-```
-
-### WrongAsset
-
-```solidity
-error WrongAsset();
-```
-
-### TransferFailed
-
-```solidity
-error TransferFailed();
-```
-
-### NotClosed
-
-```solidity
-error NotClosed();
-```
 
 ## Structs
 ### BaseVaultStorage

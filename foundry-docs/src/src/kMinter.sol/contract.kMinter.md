@@ -1,8 +1,8 @@
 # kMinter
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kMinter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/kMinter.sol)
 
 **Inherits:**
-[IkMinter](/src/interfaces/IkMinter.sol/interface.IkMinter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
+[IkMinter](/src/interfaces/IkMinter.sol/interface.IkMinter.md), [Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [kBase](/src/base/kBase.sol/contract.kBase.md), [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
 
 Institutional minting and redemption manager for kTokens
 
@@ -57,7 +57,7 @@ Creates new kTokens by accepting underlying asset deposits in a 1:1 ratio
 
 
 ```solidity
-function mint(address asset_, address to_, uint256 amount_) external payable nonReentrant;
+function mint(address asset_, address to_, uint256 amount_) external payable;
 ```
 **Parameters**
 
@@ -76,15 +76,7 @@ Initiates redemption process by burning kTokens and creating batch redemption re
 
 
 ```solidity
-function requestRedeem(
-    address asset_,
-    address to_,
-    uint256 amount_
-)
-    external
-    payable
-    nonReentrant
-    returns (bytes32 requestId);
+function requestRedeem(address asset_, address to_, uint256 amount_) external payable returns (bytes32 requestId);
 ```
 **Parameters**
 
@@ -107,7 +99,7 @@ Executes redemption for a request in a settled batch
 
 
 ```solidity
-function redeem(bytes32 requestId) external payable nonReentrant;
+function redeem(bytes32 requestId) external payable;
 ```
 **Parameters**
 
@@ -122,7 +114,7 @@ Cancels a redemption request before batch settlement
 
 
 ```solidity
-function cancelRequest(bytes32 requestId) external payable nonReentrant;
+function cancelRequest(bytes32 requestId) external payable;
 ```
 **Parameters**
 

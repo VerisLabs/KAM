@@ -1,8 +1,8 @@
 # kBase
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/base/kBase.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/base/kBase.sol)
 
 **Inherits:**
-ReentrancyGuardTransient
+[OptimizedReentrancyGuardTransient](/src/abstracts/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)
 
 Base contract providing common functionality for all KAM protocol contracts
 
@@ -11,6 +11,8 @@ Base contract providing common functionality for all KAM protocol contracts
 
 ## State Variables
 ### K_MINTER
+kMinter key
+
 
 ```solidity
 bytes32 internal constant K_MINTER = keccak256("K_MINTER");
@@ -18,6 +20,8 @@ bytes32 internal constant K_MINTER = keccak256("K_MINTER");
 
 
 ### K_ASSET_ROUTER
+kAssetRouter key
+
 
 ```solidity
 bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
@@ -34,18 +38,12 @@ bytes32 private constant KBASE_STORAGE_LOCATION = 0xe91688684975c4d7d54a65dd96da
 ## Functions
 ### _getBaseStorage
 
-Returns the kBase storage
+*Returns the kBase storage pointer*
 
 
 ```solidity
 function _getBaseStorage() internal pure returns (kBaseStorage storage $);
 ```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`$`|`kBaseStorage`|Storage struct containing registry, initialized, and paused states|
-
 
 ### __kBase_init
 
@@ -433,22 +431,49 @@ function _isAsset(address asset) internal view returns (bool);
 
 ## Events
 ### Paused
+Emitted when the pause state is changed
+
 
 ```solidity
-event Paused(bool paused);
+event Paused(bool paused_);
 ```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`paused_`|`bool`|New pause state|
 
 ### RescuedAssets
+Emitted when assets are rescued from the contract
+
 
 ```solidity
-event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+event RescuedAssets(address indexed asset_, address indexed to_, uint256 amount_);
 ```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset_`|`address`|The asset rescued|
+|`to_`|`address`|The recipient of the rescued assets|
+|`amount_`|`uint256`|The amount of assets rescued|
 
 ### RescuedETH
+Emitted when ETH is rescued from the contract
+
 
 ```solidity
-event RescuedETH(address indexed asset, uint256 amount);
+event RescuedETH(address indexed to_, uint256 amount_);
 ```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`to_`|`address`|The recipient of the rescued ETH|
+|`amount_`|`uint256`|The amount of ETH rescued|
 
 ## Structs
 ### kBaseStorage

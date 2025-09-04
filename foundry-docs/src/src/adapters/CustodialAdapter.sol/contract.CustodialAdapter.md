@@ -1,8 +1,8 @@
 # CustodialAdapter
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/adapters/CustodialAdapter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/adapters/CustodialAdapter.sol)
 
 **Inherits:**
-[BaseAdapter](/src/adapters/BaseAdapter.sol/contract.BaseAdapter.md), Initializable, UUPSUpgradeable
+[BaseAdapter](/src/adapters/BaseAdapter.sol/contract.BaseAdapter.md), [Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md)
 
 Adapter for custodial address integrations (CEX, CEFFU, etc.)
 
@@ -20,6 +20,8 @@ bytes32 private constant CUSTODIAL_ADAPTER_STORAGE_LOCATION =
 
 ## Functions
 ### _getCustodialAdapterStorage
+
+*Returns the custodial adapter storage pointer*
 
 
 ```solidity
@@ -56,7 +58,7 @@ Deposits assets to external strategy
 
 
 ```solidity
-function deposit(address asset, uint256 amount, address onBehalfOf) external nonReentrant;
+function deposit(address asset, uint256 amount, address onBehalfOf) external;
 ```
 **Parameters**
 
@@ -73,7 +75,7 @@ Redeems assets from external strategy
 
 
 ```solidity
-function redeem(address asset, uint256 amount, address onBehalfOf) external virtual nonReentrant;
+function redeem(address asset, uint256 amount, address onBehalfOf) external virtual;
 ```
 **Parameters**
 
@@ -243,46 +245,112 @@ function _authorizeUpgrade(address newImplementation) internal view override;
 
 ## Events
 ### VaultDestinationUpdated
+Emitted when a vault's custodial address is updated
+
 
 ```solidity
 event VaultDestinationUpdated(address indexed vault, address indexed oldAddress, address indexed newAddress);
 ```
 
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault`|`address`|The vault address|
+|`oldAddress`|`address`|The old custodial address|
+|`newAddress`|`address`|The new custodial address|
+
 ### TotalAssetsUpdated
+Emitted when a vault's total assets are updated
+
 
 ```solidity
 event TotalAssetsUpdated(address indexed vault, uint256 totalAssets);
 ```
 
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault`|`address`|The vault address|
+|`totalAssets`|`uint256`|The new total assets|
+
 ### Deposited
+Emitted when assets are deposited
+
 
 ```solidity
 event Deposited(address indexed asset, uint256 amount, address indexed onBehalfOf);
 ```
 
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The asset address|
+|`amount`|`uint256`|The amount deposited|
+|`onBehalfOf`|`address`|The vault address this deposit is for|
+
 ### RedemptionRequested
+Emitted when a redemption is requested
+
 
 ```solidity
 event RedemptionRequested(address indexed asset, uint256 amount, address indexed onBehalfOf);
 ```
 
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The asset address|
+|`amount`|`uint256`|The amount requested|
+|`onBehalfOf`|`address`|The vault address this redemption is for|
+
 ### RedemptionProcessed
+Emitted when a redemption is processed
+
 
 ```solidity
 event RedemptionProcessed(uint256 indexed requestId, uint256 assets);
 ```
 
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`requestId`|`uint256`|The request ID|
+|`assets`|`uint256`|The amount of assets processed|
+
 ### AdapterBalanceUpdated
+Emitted when the adapter balance is updated
+
 
 ```solidity
 event AdapterBalanceUpdated(address indexed vault, address indexed asset, uint256 newBalance);
 ```
 
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault`|`address`|The vault address|
+|`asset`|`address`|The asset address|
+|`newBalance`|`uint256`|The new balance|
+
 ### Initialised
+Emitted when the adapter is initialized
+
 
 ```solidity
 event Initialised(address indexed registry);
 ```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`registry`|`address`|The registry address|
 
 ## Structs
 ### CustodialAdapterStorage

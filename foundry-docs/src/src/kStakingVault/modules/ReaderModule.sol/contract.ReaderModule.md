@@ -1,5 +1,5 @@
 # ReaderModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kStakingVault/modules/ReaderModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/kStakingVault/modules/ReaderModule.sol)
 
 **Inherits:**
 [BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md), [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
@@ -277,21 +277,6 @@ function getBatchIdInfo()
 |`isSettled`|`bool`|Whether the current batch is settled|
 
 
-### getBatchIdReceiver
-
-Returns the batch receiver for the current batch
-
-
-```solidity
-function getBatchIdReceiver(bytes32 batchId) external view returns (address);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|Batch receiver|
-
-
 ### getBatchReceiver
 
 Returns the batch receiver for a given batch (alias for getBatchIdReceiver)
@@ -322,6 +307,113 @@ function getSafeBatchReceiver(bytes32 batchId) external view returns (address);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`address`|Batch receiver|
+
+
+### sharePrice
+
+Calculates the price of stkTokens in underlying asset terms
+
+*Uses the last total assets and total supply to calculate the price*
+
+
+```solidity
+function sharePrice() external view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|price Price per stkToken in underlying asset terms|
+
+
+### totalAssets
+
+Returns the current total assets
+
+
+```solidity
+function totalAssets() external view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Total assets currently deployed in strategies|
+
+
+### totalNetAssets
+
+Returns the current total assets after fees
+
+
+```solidity
+function totalNetAssets() external view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Total net assets currently deployed in strategies|
+
+
+### getBatchId
+
+Returns the current batch
+
+
+```solidity
+function getBatchId() public view returns (bytes32);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bytes32`|Batch|
+
+
+### getSafeBatchId
+
+Returns the safe batch
+
+
+```solidity
+function getSafeBatchId() external view returns (bytes32);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bytes32`|Batch|
+
+
+### contractName
+
+Returns the contract name
+
+
+```solidity
+function contractName() external pure returns (string memory);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`string`|Contract name|
+
+
+### contractVersion
+
+Returns the contract version
+
+
+```solidity
+function contractVersion() external pure returns (string memory);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`string`|Contract version|
 
 
 ### selectors

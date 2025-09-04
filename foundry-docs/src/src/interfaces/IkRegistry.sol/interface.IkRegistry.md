@@ -1,5 +1,5 @@
 # IkRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/interfaces/IkRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/interfaces/IkRegistry.sol)
 
 
 ## Functions
@@ -200,6 +200,13 @@ function getVaultAssets(address vault) external view returns (address[] memory);
 function assetToKToken(address asset) external view returns (address);
 ```
 
+### getTreasury
+
+
+```solidity
+function getTreasury() external view returns (address);
+```
+
 ## Events
 ### SingletonContractSet
 
@@ -265,6 +272,12 @@ event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
 
 ```solidity
 event RescuedETH(address indexed asset, uint256 amount);
+```
+
+### TreasurySet
+
+```solidity
+event TreasurySet(address indexed treasury);
 ```
 
 ## Enums

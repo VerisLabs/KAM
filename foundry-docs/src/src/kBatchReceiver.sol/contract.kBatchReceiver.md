@@ -1,5 +1,5 @@
 # kBatchReceiver
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kBatchReceiver.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/kBatchReceiver.sol)
 
 **Inherits:**
 [IkBatchReceiver](/src/interfaces/IkBatchReceiver.sol/interface.IkBatchReceiver.md)
@@ -11,6 +11,8 @@ Minimal proxy contract that holds and distributes settled assets for batch redem
 
 ## State Variables
 ### kMinter
+Address of the kMinter contract (only authorized caller)
+
 
 ```solidity
 address public immutable kMinter;
@@ -18,6 +20,8 @@ address public immutable kMinter;
 
 
 ### asset
+Address of the asset contract
+
 
 ```solidity
 address public asset;
@@ -25,6 +29,8 @@ address public asset;
 
 
 ### batchId
+Batch ID this receiver serves
+
 
 ```solidity
 bytes32 public batchId;
@@ -32,6 +38,8 @@ bytes32 public batchId;
 
 
 ### isInitialised
+Whether this receiver has been initialised
+
 
 ```solidity
 bool public isInitialised;

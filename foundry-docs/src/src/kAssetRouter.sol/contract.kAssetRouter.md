@@ -1,12 +1,18 @@
 # kAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/kAssetRouter.sol)
 
 **Inherits:**
-[IkAssetRouter](/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.md), Initializable, UUPSUpgradeable, [kBase](/src/base/kBase.sol/contract.kBase.md), Multicallable
+[IkAssetRouter](/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.md), [Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [kBase](/src/base/kBase.sol/contract.kBase.md), [Multicallable](/src/vendor/Multicallable.sol/abstract.Multicallable.md)
+
+Router contract for managing all the money flows between protocol actors
+
+*Inherits from kBase and Multicallable*
 
 
 ## State Variables
 ### DEFAULT_VAULT_SETTLEMENT_COOLDOWN
+Default cooldown period for vault settlements
+
 
 ```solidity
 uint256 private constant DEFAULT_VAULT_SETTLEMENT_COOLDOWN = 1 hours;
@@ -14,6 +20,8 @@ uint256 private constant DEFAULT_VAULT_SETTLEMENT_COOLDOWN = 1 hours;
 
 
 ### MAX_VAULT_SETTLEMENT_COOLDOWN
+Maximum cooldown period for vault settlements
+
 
 ```solidity
 uint256 private constant MAX_VAULT_SETTLEMENT_COOLDOWN = 1 days;
@@ -30,6 +38,8 @@ bytes32 private constant KASSETROUTER_STORAGE_LOCATION =
 
 ## Functions
 ### _getkAssetRouterStorage
+
+*Returns the kAssetRouter storage pointer*
 
 
 ```solidity
@@ -64,7 +74,7 @@ Push assets from kMinter to designated DN vault
 
 
 ```solidity
-function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable nonReentrant;
+function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable;
 ```
 **Parameters**
 
@@ -81,15 +91,7 @@ Request to pull assets for kMinter redemptions
 
 
 ```solidity
-function kAssetRequestPull(
-    address _asset,
-    address _vault,
-    uint256 amount,
-    bytes32 batchId
-)
-    external
-    payable
-    nonReentrant;
+function kAssetRequestPull(address _asset, address _vault, uint256 amount, bytes32 batchId) external payable;
 ```
 **Parameters**
 
@@ -105,6 +107,8 @@ function kAssetRequestPull(
 
 Transfer assets between kStakingVaults
 
+It's only a virtual transfer, no assets are moved
+
 
 ```solidity
 function kAssetTransfer(
@@ -115,8 +119,7 @@ function kAssetTransfer(
     bytes32 batchId
 )
     external
-    payable
-    nonReentrant;
+    payable;
 ```
 **Parameters**
 
@@ -135,7 +138,7 @@ Request to pull shares for kStakingVault redemptions
 
 
 ```solidity
-function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant;
+function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable;
 ```
 **Parameters**
 
@@ -152,7 +155,7 @@ Request to pull shares for kStakingVault redemptions
 
 
 ```solidity
-function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant;
+function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable;
 ```
 **Parameters**
 
@@ -165,7 +168,7 @@ function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId
 
 ### proposeSettleBatch
 
-Propose a settlement for a vault's batch
+Propose a settlement for a vault's batch, including all new accounting
 
 
 ```solidity
@@ -180,7 +183,6 @@ function proposeSettleBatch(
 )
     external
     payable
-    nonReentrant
     returns (bytes32 proposalId);
 ```
 **Parameters**
@@ -208,7 +210,7 @@ Execute a settlement proposal after cooldown period
 
 
 ```solidity
-function executeSettleBatch(bytes32 proposalId) external payable nonReentrant;
+function executeSettleBatch(bytes32 proposalId) external payable;
 ```
 **Parameters**
 
@@ -221,9 +223,11 @@ function executeSettleBatch(bytes32 proposalId) external payable nonReentrant;
 
 Cancel a settlement proposal before execution
 
+Guardian can cancel a settlement proposal if some data is wrong
+
 
 ```solidity
-function cancelProposal(bytes32 proposalId) external nonReentrant;
+function cancelProposal(bytes32 proposalId) external;
 ```
 **Parameters**
 

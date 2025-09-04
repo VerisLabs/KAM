@@ -1,5 +1,5 @@
 # IkStakingVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/interfaces/IkStakingVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/interfaces/IkStakingVault.sol)
 
 **Inherits:**
 [IVaultBatch](/src/interfaces/modules/IVaultBatch.sol/interface.IVaultBatch.md), [IVaultClaim](/src/interfaces/modules/IVaultClaim.sol/interface.IVaultClaim.md), [IVaultFees](/src/interfaces/modules/IVaultFees.sol/interface.IVaultFees.md)
@@ -36,6 +36,13 @@ function updateLastTotalAssets(uint256 totalAssets) external;
 
 ```solidity
 function asset() external view returns (address);
+```
+
+### owner
+
+
+```solidity
+function owner() external view returns (address);
 ```
 
 ### totalSupply

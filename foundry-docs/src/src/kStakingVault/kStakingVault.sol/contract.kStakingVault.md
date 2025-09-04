@@ -1,8 +1,8 @@
 # kStakingVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kStakingVault/kStakingVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/kStakingVault/kStakingVault.sol)
 
 **Inherits:**
-Initializable, UUPSUpgradeable, Ownable, [BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.md), [VaultFees](/src/kStakingVault/base/VaultFees.sol/contract.VaultFees.md), [VaultClaims](/src/kStakingVault/base/VaultClaims.sol/contract.VaultClaims.md), [VaultBatches](/src/kStakingVault/base/VaultBatches.sol/contract.VaultBatches.md)
+[Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [Ownable](/src/vendor/Ownable.sol/abstract.Ownable.md), [BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.md), [VaultFees](/src/kStakingVault/base/VaultFees.sol/contract.VaultFees.md), [VaultClaims](/src/kStakingVault/base/VaultClaims.sol/contract.VaultClaims.md), [VaultBatches](/src/kStakingVault/base/VaultBatches.sol/contract.VaultBatches.md)
 
 Pure ERC20 vault with dual accounting for minter and user pools
 
@@ -58,7 +58,7 @@ Request to stake kTokens for stkTokens (rebase token)
 
 
 ```solidity
-function requestStake(address to, uint256 amount) external payable nonReentrant returns (bytes32 requestId);
+function requestStake(address to, uint256 amount) external payable returns (bytes32 requestId);
 ```
 **Parameters**
 
@@ -82,7 +82,7 @@ Request to unstake stkTokens for kTokens + yield
 
 
 ```solidity
-function requestUnstake(address to, uint256 stkTokenAmount) external payable nonReentrant returns (bytes32 requestId);
+function requestUnstake(address to, uint256 stkTokenAmount) external payable returns (bytes32 requestId);
 ```
 **Parameters**
 
@@ -104,7 +104,7 @@ Cancels a staking request
 
 
 ```solidity
-function cancelStakeRequest(bytes32 requestId) external payable nonReentrant;
+function cancelStakeRequest(bytes32 requestId) external payable;
 ```
 **Parameters**
 
@@ -119,7 +119,7 @@ Cancels an unstaking request
 
 
 ```solidity
-function cancelUnstakeRequest(bytes32 requestId) external payable nonReentrant;
+function cancelUnstakeRequest(bytes32 requestId) external payable;
 ```
 **Parameters**
 
@@ -134,7 +134,7 @@ Creates a unique request ID for a staking request
 
 
 ```solidity
-function _createStakeRequestId(address user, uint256 amount, uint256 timestamp) internal returns (bytes32);
+function _createStakeRequestId(address user, uint256 amount, uint256 timestamp) private returns (bytes32);
 ```
 **Parameters**
 
@@ -168,83 +168,6 @@ function setPaused(bool paused_) external;
 |`paused_`|`bool`|New pause state|
 
 
-### sharePrice
-
-Calculates the price of stkTokens in underlying asset terms
-
-*Uses the last total assets and total supply to calculate the price*
-
-
-```solidity
-function sharePrice() external view returns (uint256);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|price Price per stkToken in underlying asset terms|
-
-
-### totalAssets
-
-Returns the current total assets
-
-
-```solidity
-function totalAssets() external view returns (uint256);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|Total assets currently deployed in strategies|
-
-
-### totalNetAssets
-
-Returns the current total assets after fees
-
-
-```solidity
-function totalNetAssets() external view returns (uint256);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|Total net assets currently deployed in strategies|
-
-
-### getBatchId
-
-Returns the current batch
-
-
-```solidity
-function getBatchId() public view returns (bytes32);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bytes32`|Batch|
-
-
-### getSafeBatchId
-
-Returns the safe batch
-
-
-```solidity
-function getSafeBatchId() external view returns (bytes32);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bytes32`|Batch|
-
-
 ### _authorizeUpgrade
 
 Authorize upgrade (only owner can upgrade)
@@ -266,34 +189,4 @@ Authorize function modification
 ```solidity
 function _authorizeModifyFunctions(address sender) internal override;
 ```
-
-### contractName
-
-Returns the contract name
-
-
-```solidity
-function contractName() external pure returns (string memory);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`string`|Contract name|
-
-
-### contractVersion
-
-Returns the contract version
-
-
-```solidity
-function contractVersion() external pure returns (string memory);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`string`|Contract version|
-
 

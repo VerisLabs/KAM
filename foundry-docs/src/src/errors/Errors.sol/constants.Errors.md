@@ -1,267 +1,636 @@
 # Constants
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/errors/Errors.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/errors/Errors.sol)
 
-### ZERO_ADDRESS
+### KASSETROUTER_ALREADY_REGISTERED
+*All error codes use contract-specific prefixes for easier debugging:
+- A*: kAssetRouter errors
+- BA*: BaseAdapter errors
+- BV*: BaseVault errors
+- B*: kBatchReceiver errors
+- C*: Custodial adapter errors
+- K*: kBase errors
+- M*: kMinter errors
+- R*: kRegistry errors
+- SV*: kStakingVault errors
+- T*: kToken errors
+- VB*: VaultBatches errors
+- VC*: VaultClaims errors
+- VF*: VaultFees errors*
+
 
 ```solidity
-string constant ZERO_ADDRESS = "1";
+string constant KASSETROUTER_ALREADY_REGISTERED = "A1";
 ```
 
-### ZERO_AMOUNT
+### KASSETROUTER_BATCH_CLOSED
 
 ```solidity
-string constant ZERO_AMOUNT = "2";
+string constant KASSETROUTER_BATCH_CLOSED = "A2";
 ```
 
-### NOT_INITIALIZED
+### KASSETROUTER_BATCH_ID_PROPOSED
 
 ```solidity
-string constant NOT_INITIALIZED = "3";
+string constant KASSETROUTER_BATCH_ID_PROPOSED = "A3";
 ```
 
-### ALREADY_INITIALIZED
+### KASSETROUTER_BATCH_SETTLED
 
 ```solidity
-string constant ALREADY_INITIALIZED = "4";
+string constant KASSETROUTER_BATCH_SETTLED = "A4";
 ```
 
-### CONTRACT_NOT_FOUND
+### KASSETROUTER_COOLDOOWN_IS_UP
 
 ```solidity
-string constant CONTRACT_NOT_FOUND = "5";
+string constant KASSETROUTER_COOLDOOWN_IS_UP = "A5";
 ```
 
-### REQUEST_NOT_FOUND
+### KASSETROUTER_INSUFFICIENT_VIRTUAL_BALANCE
 
 ```solidity
-string constant REQUEST_NOT_FOUND = "6";
+string constant KASSETROUTER_INSUFFICIENT_VIRTUAL_BALANCE = "A6";
 ```
 
-### REQUEST_NOT_ELIGIBLE
+### KASSETROUTER_INVALID_COOLDOWN
 
 ```solidity
-string constant REQUEST_NOT_ELIGIBLE = "7";
+string constant KASSETROUTER_INVALID_COOLDOWN = "A7";
 ```
 
-### AMOUNT_BELOW_DUST_THRESHOLD
+### KASSETROUTER_INVALID_VAULT
 
 ```solidity
-string constant AMOUNT_BELOW_DUST_THRESHOLD = "8";
+string constant KASSETROUTER_INVALID_VAULT = "A8";
 ```
 
-### NOT_CLOSED
+### KASSETROUTER_IS_PAUSED
 
 ```solidity
-string constant NOT_CLOSED = "9";
+string constant KASSETROUTER_IS_PAUSED = "A9";
 ```
 
-### VAULT_CLOSED
+### KASSETROUTER_NO_PROPOSAL
 
 ```solidity
-string constant VAULT_CLOSED = "10";
+string constant KASSETROUTER_NO_PROPOSAL = "A10";
 ```
 
-### VAULT_SETTLED
+### KASSETROUTER_ONLY_KMINTER
 
 ```solidity
-string constant VAULT_SETTLED = "11";
+string constant KASSETROUTER_ONLY_KMINTER = "A11";
 ```
 
-### IS_PAUSED
+### KASSETROUTER_ONLY_KSTAKING_VAULT
 
 ```solidity
-string constant IS_PAUSED = "12";
+string constant KASSETROUTER_ONLY_KSTAKING_VAULT = "A12";
 ```
 
-### WRONG_ROLE
+### KASSETROUTER_PROPOSAL_EXECUTED
 
 ```solidity
-string constant WRONG_ROLE = "13";
+string constant KASSETROUTER_PROPOSAL_EXECUTED = "A13";
 ```
 
-### WRONG_ASSET
+### KASSETROUTER_PROPOSAL_EXISTS
 
 ```solidity
-string constant WRONG_ASSET = "14";
+string constant KASSETROUTER_PROPOSAL_EXISTS = "A14";
 ```
 
-### TRANSFER_FAILED
+### KASSETROUTER_PROPOSAL_NOT_FOUND
 
 ```solidity
-string constant TRANSFER_FAILED = "15";
+string constant KASSETROUTER_PROPOSAL_NOT_FOUND = "A15";
 ```
 
-### FEE_EXCEEDS_MAXIMUM
+### KASSETROUTER_WRONG_ROLE
 
 ```solidity
-string constant FEE_EXCEEDS_MAXIMUM = "16";
+string constant KASSETROUTER_WRONG_ROLE = "A16";
 ```
 
-### BATCH_NOT_SETTLED
+### KASSETROUTER_ZERO_ADDRESS
 
 ```solidity
-string constant BATCH_NOT_SETTLED = "17";
+string constant KASSETROUTER_ZERO_ADDRESS = "A17";
 ```
 
-### REQUEST_NOT_PENDING
+### KASSETROUTER_ZERO_AMOUNT
 
 ```solidity
-string constant REQUEST_NOT_PENDING = "18";
+string constant KASSETROUTER_ZERO_AMOUNT = "A18";
 ```
 
-### NOT_BENEFICIARY
+### ADAPTER_ALREADY_INITIALIZED
 
 ```solidity
-string constant NOT_BENEFICIARY = "19";
+string constant ADAPTER_ALREADY_INITIALIZED = "BA1";
 ```
 
-### INSUFFICIENT_BALANCE
+### ADAPTER_INVALID_REGISTRY
 
 ```solidity
-string constant INSUFFICIENT_BALANCE = "20";
+string constant ADAPTER_INVALID_REGISTRY = "BA2";
 ```
 
-### UNAUTHORIZED
+### ADAPTER_TRANSFER_FAILED
 
 ```solidity
-string constant UNAUTHORIZED = "21";
+string constant ADAPTER_TRANSFER_FAILED = "BA3";
 ```
 
-### INVALID_VAULT
+### ADAPTER_WRONG_ASSET
 
 ```solidity
-string constant INVALID_VAULT = "22";
+string constant ADAPTER_WRONG_ASSET = "BA4";
 ```
 
-### INVALID_REGISTRY
+### ADAPTER_WRONG_ROLE
 
 ```solidity
-string constant INVALID_REGISTRY = "23";
+string constant ADAPTER_WRONG_ROLE = "BA5";
 ```
 
-### INVALID_TIMESTAMP
+### ADAPTER_ZERO_ADDRESS
 
 ```solidity
-string constant INVALID_TIMESTAMP = "24";
+string constant ADAPTER_ZERO_ADDRESS = "BA6";
 ```
 
-### INVALID_BATCH_ID
+### ADAPTER_ZERO_AMOUNT
 
 ```solidity
-string constant INVALID_BATCH_ID = "25";
+string constant ADAPTER_ZERO_AMOUNT = "BA7";
 ```
 
-### INVALID_ADAPTER
+### ADAPTER_INSUFFICIENT_BALANCE
 
 ```solidity
-string constant INVALID_ADAPTER = "26";
+string constant ADAPTER_INSUFFICIENT_BALANCE = "BA8";
 ```
 
-### ALREADY_REGISTERED
+### BASEVAULT_ALREADY_INITIALIZED
 
 ```solidity
-string constant ALREADY_REGISTERED = "27";
+string constant BASEVAULT_ALREADY_INITIALIZED = "BV1";
 ```
 
-### ASSET_NOT_SUPPORTED
+### BASEVAULT_CONTRACT_NOT_FOUND
 
 ```solidity
-string constant ASSET_NOT_SUPPORTED = "28";
+string constant BASEVAULT_CONTRACT_NOT_FOUND = "BV2";
 ```
 
-### ADAPTER_ALREADY_SET
+### BASEVAULT_INVALID_REGISTRY
 
 ```solidity
-string constant ADAPTER_ALREADY_SET = "29";
+string constant BASEVAULT_INVALID_REGISTRY = "BV3";
 ```
 
-### ONLY_KMINTER
+### BASEVAULT_INVALID_VAULT
 
 ```solidity
-string constant ONLY_KMINTER = "30";
+string constant BASEVAULT_INVALID_VAULT = "BV4";
 ```
 
-### REQUEST_PROCESSED
+### BASEVAULT_NOT_INITIALIZED
 
 ```solidity
-string constant REQUEST_PROCESSED = "31";
+string constant BASEVAULT_NOT_INITIALIZED = "BV5";
 ```
 
-### BATCH_CLOSED
+### KBATCHRECEIVER_ALREADY_INITIALIZED
 
 ```solidity
-string constant BATCH_CLOSED = "32";
+string constant KBATCHRECEIVER_ALREADY_INITIALIZED = "B1";
 ```
 
-### BATCH_SETTLED
+### KBATCHRECEIVER_INVALID_BATCH_ID
 
 ```solidity
-string constant BATCH_SETTLED = "33";
+string constant KBATCHRECEIVER_INVALID_BATCH_ID = "B2";
 ```
 
-### INSUFFICIENT_VIRTUAL_BALANCE
+### KBATCHRECEIVER_ONLY_KMINTER
 
 ```solidity
-string constant INSUFFICIENT_VIRTUAL_BALANCE = "34";
+string constant KBATCHRECEIVER_ONLY_KMINTER = "B3";
 ```
 
-### PROPOSAL_NOT_FOUND
+### KBATCHRECEIVER_TRANSFER_FAILED
 
 ```solidity
-string constant PROPOSAL_NOT_FOUND = "35";
+string constant KBATCHRECEIVER_TRANSFER_FAILED = "B4";
 ```
 
-### PROPOSAL_EXECUTED
+### KBATCHRECEIVER_WRONG_ASSET
 
 ```solidity
-string constant PROPOSAL_EXECUTED = "36";
+string constant KBATCHRECEIVER_WRONG_ASSET = "B5";
 ```
 
-### PROPOSAL_EXISTS
+### KBATCHRECEIVER_ZERO_ADDRESS
 
 ```solidity
-string constant PROPOSAL_EXISTS = "37";
+string constant KBATCHRECEIVER_ZERO_ADDRESS = "B6";
 ```
 
-### NO_PROPOSAL
+### KBATCHRECEIVER_ZERO_AMOUNT
 
 ```solidity
-string constant NO_PROPOSAL = "38";
+string constant KBATCHRECEIVER_ZERO_AMOUNT = "B7";
 ```
 
-### BATCH_ID_PROPOSED
+### CUSTODIAL_INVALID_CUSTODIAL_ADDRESS
 
 ```solidity
-string constant BATCH_ID_PROPOSED = "39";
+string constant CUSTODIAL_INVALID_CUSTODIAL_ADDRESS = "C1";
 ```
 
-### COOLDOOWN_IS_UP
+### CUSTODIAL_TRANSFER_FAILED
 
 ```solidity
-string constant COOLDOOWN_IS_UP = "40";
+string constant CUSTODIAL_TRANSFER_FAILED = "C2";
 ```
 
-### INVALID_COOLDOWN
+### CUSTODIAL_VAULT_DESTINATION_NOT_SET
 
 ```solidity
-string constant INVALID_COOLDOWN = "41";
+string constant CUSTODIAL_VAULT_DESTINATION_NOT_SET = "C3";
 ```
 
-### ONLY_KSTAKING_VAULT
+### CUSTODIAL_WRONG_ASSET
 
 ```solidity
-string constant ONLY_KSTAKING_VAULT = "42";
+string constant CUSTODIAL_WRONG_ASSET = "C4";
 ```
 
-### INVALID_CUSTODIAL_ADDRESS
+### CUSTODIAL_WRONG_ROLE
 
 ```solidity
-string constant INVALID_CUSTODIAL_ADDRESS = "43";
+string constant CUSTODIAL_WRONG_ROLE = "C5";
 ```
 
-### VAULT_DESTINATION_NOT_SET
+### CUSTODIAL_ZERO_ADDRESS
 
 ```solidity
-string constant VAULT_DESTINATION_NOT_SET = "44";
+string constant CUSTODIAL_ZERO_ADDRESS = "C6";
+```
+
+### CUSTODIAL_ZERO_AMOUNT
+
+```solidity
+string constant CUSTODIAL_ZERO_AMOUNT = "C7";
+```
+
+### KBASE_ALREADY_INITIALIZED
+
+```solidity
+string constant KBASE_ALREADY_INITIALIZED = "K1";
+```
+
+### KBASE_INVALID_REGISTRY
+
+```solidity
+string constant KBASE_INVALID_REGISTRY = "K2";
+```
+
+### KBASE_NOT_INITIALIZED
+
+```solidity
+string constant KBASE_NOT_INITIALIZED = "K3";
+```
+
+### KBASE_WRONG_ROLE
+
+```solidity
+string constant KBASE_WRONG_ROLE = "K4";
+```
+
+### KBASE_ZERO_ADDRESS
+
+```solidity
+string constant KBASE_ZERO_ADDRESS = "K5";
+```
+
+### KBASE_ZERO_AMOUNT
+
+```solidity
+string constant KBASE_ZERO_AMOUNT = "K6";
+```
+
+### KBASE_TRANSFER_FAILED
+
+```solidity
+string constant KBASE_TRANSFER_FAILED = "K7";
+```
+
+### KBASE_WRONG_ASSET
+
+```solidity
+string constant KBASE_WRONG_ASSET = "K8";
+```
+
+### KBASE_CONTRACT_NOT_FOUND
+
+```solidity
+string constant KBASE_CONTRACT_NOT_FOUND = "K9";
+```
+
+### KBASE_ASSET_NOT_SUPPORTED
+
+```solidity
+string constant KBASE_ASSET_NOT_SUPPORTED = "K10";
+```
+
+### KBASE_INVALID_VAULT
+
+```solidity
+string constant KBASE_INVALID_VAULT = "K11";
+```
+
+### KMINTER_BATCH_CLOSED
+
+```solidity
+string constant KMINTER_BATCH_CLOSED = "M1";
+```
+
+### KMINTER_BATCH_SETTLED
+
+```solidity
+string constant KMINTER_BATCH_SETTLED = "M2";
+```
+
+### KMINTER_INSUFFICIENT_BALANCE
+
+```solidity
+string constant KMINTER_INSUFFICIENT_BALANCE = "M3";
+```
+
+### KMINTER_IS_PAUSED
+
+```solidity
+string constant KMINTER_IS_PAUSED = "M4";
+```
+
+### KMINTER_REQUEST_NOT_ELIGIBLE
+
+```solidity
+string constant KMINTER_REQUEST_NOT_ELIGIBLE = "M5";
+```
+
+### KMINTER_REQUEST_NOT_FOUND
+
+```solidity
+string constant KMINTER_REQUEST_NOT_FOUND = "M6";
+```
+
+### KMINTER_REQUEST_PROCESSED
+
+```solidity
+string constant KMINTER_REQUEST_PROCESSED = "M7";
+```
+
+### KMINTER_WRONG_ASSET
+
+```solidity
+string constant KMINTER_WRONG_ASSET = "M8";
+```
+
+### KMINTER_WRONG_ROLE
+
+```solidity
+string constant KMINTER_WRONG_ROLE = "M9";
+```
+
+### KMINTER_ZERO_ADDRESS
+
+```solidity
+string constant KMINTER_ZERO_ADDRESS = "M10";
+```
+
+### KMINTER_ZERO_AMOUNT
+
+```solidity
+string constant KMINTER_ZERO_AMOUNT = "M11";
+```
+
+### KREGISTRY_ADAPTER_ALREADY_SET
+
+```solidity
+string constant KREGISTRY_ADAPTER_ALREADY_SET = "R1";
+```
+
+### KREGISTRY_ALREADY_REGISTERED
+
+```solidity
+string constant KREGISTRY_ALREADY_REGISTERED = "R2";
+```
+
+### KREGISTRY_ASSET_NOT_SUPPORTED
+
+```solidity
+string constant KREGISTRY_ASSET_NOT_SUPPORTED = "R3";
+```
+
+### KREGISTRY_INVALID_ADAPTER
+
+```solidity
+string constant KREGISTRY_INVALID_ADAPTER = "R4";
+```
+
+### KREGISTRY_TRANSFER_FAILED
+
+```solidity
+string constant KREGISTRY_TRANSFER_FAILED = "R5";
+```
+
+### KREGISTRY_WRONG_ASSET
+
+```solidity
+string constant KREGISTRY_WRONG_ASSET = "R6";
+```
+
+### KREGISTRY_WRONG_ROLE
+
+```solidity
+string constant KREGISTRY_WRONG_ROLE = "R7";
+```
+
+### KREGISTRY_ZERO_ADDRESS
+
+```solidity
+string constant KREGISTRY_ZERO_ADDRESS = "R8";
+```
+
+### KREGISTRY_ZERO_AMOUNT
+
+```solidity
+string constant KREGISTRY_ZERO_AMOUNT = "R9";
+```
+
+### KSTAKINGVAULT_INSUFFICIENT_BALANCE
+
+```solidity
+string constant KSTAKINGVAULT_INSUFFICIENT_BALANCE = "SV1";
+```
+
+### KSTAKINGVAULT_IS_PAUSED
+
+```solidity
+string constant KSTAKINGVAULT_IS_PAUSED = "SV2";
+```
+
+### KSTAKINGVAULT_NOT_INITIALIZED
+
+```solidity
+string constant KSTAKINGVAULT_NOT_INITIALIZED = "SV3";
+```
+
+### KSTAKINGVAULT_REQUEST_NOT_ELIGIBLE
+
+```solidity
+string constant KSTAKINGVAULT_REQUEST_NOT_ELIGIBLE = "SV4";
+```
+
+### KSTAKINGVAULT_REQUEST_NOT_FOUND
+
+```solidity
+string constant KSTAKINGVAULT_REQUEST_NOT_FOUND = "SV5";
+```
+
+### KSTAKINGVAULT_UNAUTHORIZED
+
+```solidity
+string constant KSTAKINGVAULT_UNAUTHORIZED = "SV6";
+```
+
+### KSTAKINGVAULT_VAULT_CLOSED
+
+```solidity
+string constant KSTAKINGVAULT_VAULT_CLOSED = "SV7";
+```
+
+### KSTAKINGVAULT_VAULT_SETTLED
+
+```solidity
+string constant KSTAKINGVAULT_VAULT_SETTLED = "SV8";
+```
+
+### KSTAKINGVAULT_WRONG_ROLE
+
+```solidity
+string constant KSTAKINGVAULT_WRONG_ROLE = "SV9";
+```
+
+### KSTAKINGVAULT_ZERO_ADDRESS
+
+```solidity
+string constant KSTAKINGVAULT_ZERO_ADDRESS = "SV10";
+```
+
+### KSTAKINGVAULT_ZERO_AMOUNT
+
+```solidity
+string constant KSTAKINGVAULT_ZERO_AMOUNT = "SV11";
+```
+
+### KTOKEN_IS_PAUSED
+
+```solidity
+string constant KTOKEN_IS_PAUSED = "T1";
+```
+
+### KTOKEN_TRANSFER_FAILED
+
+```solidity
+string constant KTOKEN_TRANSFER_FAILED = "T2";
+```
+
+### KTOKEN_ZERO_ADDRESS
+
+```solidity
+string constant KTOKEN_ZERO_ADDRESS = "T3";
+```
+
+### KTOKEN_ZERO_AMOUNT
+
+```solidity
+string constant KTOKEN_ZERO_AMOUNT = "T4";
+```
+
+### VAULTBATCHES_NOT_CLOSED
+
+```solidity
+string constant VAULTBATCHES_NOT_CLOSED = "VB1";
+```
+
+### VAULTBATCHES_VAULT_CLOSED
+
+```solidity
+string constant VAULTBATCHES_VAULT_CLOSED = "VB2";
+```
+
+### VAULTBATCHES_VAULT_SETTLED
+
+```solidity
+string constant VAULTBATCHES_VAULT_SETTLED = "VB3";
+```
+
+### VAULTBATCHES_WRONG_ROLE
+
+```solidity
+string constant VAULTBATCHES_WRONG_ROLE = "VB4";
+```
+
+### VAULTCLAIMS_BATCH_NOT_SETTLED
+
+```solidity
+string constant VAULTCLAIMS_BATCH_NOT_SETTLED = "VC1";
+```
+
+### VAULTCLAIMS_INVALID_BATCH_ID
+
+```solidity
+string constant VAULTCLAIMS_INVALID_BATCH_ID = "VC2";
+```
+
+### VAULTCLAIMS_IS_PAUSED
+
+```solidity
+string constant VAULTCLAIMS_IS_PAUSED = "VC3";
+```
+
+### VAULTCLAIMS_NOT_BENEFICIARY
+
+```solidity
+string constant VAULTCLAIMS_NOT_BENEFICIARY = "VC4";
+```
+
+### VAULTCLAIMS_REQUEST_NOT_PENDING
+
+```solidity
+string constant VAULTCLAIMS_REQUEST_NOT_PENDING = "VC5";
+```
+
+### VAULTFEES_FEE_EXCEEDS_MAXIMUM
+
+```solidity
+string constant VAULTFEES_FEE_EXCEEDS_MAXIMUM = "VF1";
+```
+
+### VAULTFEES_INVALID_TIMESTAMP
+
+```solidity
+string constant VAULTFEES_INVALID_TIMESTAMP = "VF2";
+```
+
+### VAULTFEES_WRONG_ROLE
+
+```solidity
+string constant VAULTFEES_WRONG_ROLE = "VF3";
 ```
 

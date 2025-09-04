@@ -1,5 +1,5 @@
 # MultiFacetProxy
-[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/base/MultiFacetProxy.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/base/MultiFacetProxy.sol)
 
 **Inherits:**
 [Proxy](/src/abstracts/Proxy.sol/abstract.Proxy.md)
@@ -21,18 +21,12 @@ bytes32 internal constant MULTIFACET_PROXY_STORAGE_LOCATION =
 ## Functions
 ### _getMultiFacetProxyStorage
 
-Returns the MultiFacetProxy storage struct using ERC-7201 pattern
+*Returns the MultiFacetProxy storage pointer*
 
 
 ```solidity
 function _getMultiFacetProxyStorage() internal pure returns (MultiFacetProxyStorage storage $);
 ```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`$`|`MultiFacetProxyStorage`|Storage reference for MultiFacetProxy state variables|
-
 
 ### addFunction
 
@@ -132,6 +126,9 @@ function _implementation() internal view override returns (address);
 
 ## Structs
 ### MultiFacetProxyStorage
+**Note:**
+storage-location: erc7201:kam.storage.MultiFacetProxy
+
 
 ```solidity
 struct MultiFacetProxyStorage {
