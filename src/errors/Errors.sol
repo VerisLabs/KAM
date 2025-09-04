@@ -138,6 +138,7 @@ string constant VAULTCLAIMS_INVALID_BATCH_ID = "VC2";
 string constant VAULTCLAIMS_IS_PAUSED = "VC3";
 string constant VAULTCLAIMS_NOT_BENEFICIARY = "VC4";
 string constant VAULTCLAIMS_REQUEST_NOT_PENDING = "VC5";
+string constant VAULTCLAIMS_ZERO_SHARE_PRICE = "VC6";
 
 // VaultFees Errors
 string constant VAULTFEES_FEE_EXCEEDS_MAXIMUM = "VF1";

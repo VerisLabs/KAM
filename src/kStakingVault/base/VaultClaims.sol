@@ -14,7 +14,8 @@ import {
     VAULTCLAIMS_INVALID_BATCH_ID,
     VAULTCLAIMS_IS_PAUSED,
     VAULTCLAIMS_NOT_BENEFICIARY,
-    VAULTCLAIMS_REQUEST_NOT_PENDING
+    VAULTCLAIMS_REQUEST_NOT_PENDING,
+    VAULTCLAIMS_ZERO_SHARE_PRICE
 } from "src/errors/Errors.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
@@ -69,7 +70,7 @@ contract VaultClaims is BaseVault {
 
         // Calculate stkToken amount based on settlement-time share price
         uint256 netSharePrice = $.batches[batchId].netSharePrice;
-        if (netSharePrice == 0) revert();
+        require(netSharePrice != 0, VAULTCLAIMS_ZERO_SHARE_PRICE);
 
         // Divide the deposited assets by the share price of the batch to obtain stkTokens to mint
         uint256 stkTokensToMint = (uint256(request.kTokenAmount)).fullMulDiv(10 ** _getDecimals($), netSharePrice);
@@ -108,7 +109,7 @@ contract VaultClaims is BaseVault {
 
         uint256 sharePrice = $.batches[batchId].sharePrice;
         uint256 netSharePrice = $.batches[batchId].netSharePrice;
-        if (sharePrice == 0) revert();
+        require(sharePrice != 0, VAULTCLAIMS_ZERO_SHARE_PRICE);
 
         // Calculate total kTokens to return based on settlement-time share price
         // Multply redeemed shares for net and gross share price to obtain gross and net amount of assets
