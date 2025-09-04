@@ -138,9 +138,11 @@ contract kStakingVault is
         // Add to user requests tracking
         $.userRequests[msg.sender].add(requestId);
 
-        kToken.transferFrom(msg.sender, address(this), amount);
+        // Deposit ktokens
+        $.kToken.safeTransferFrom(msg.sender, address(this), amount);
 
-        $.totalPendingStake += amount128;
+        // Increase pending stakt
+        $.totalPendingStake += amount.toUint128();
 
         // Notify the router to move underlying assets from DN strategy
         // To the strategy of this vault

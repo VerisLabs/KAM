@@ -4,10 +4,10 @@ pragma solidity 0.8.30;
 import { BaseTest } from "../utils/BaseTest.sol";
 import { USDC_MAINNET, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
 
-import { OptimizedLibClone } from "src/libraries/OptimizedLibClone.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
 import { CustodialAdapter } from "src/adapters/CustodialAdapter.sol";
+import { OptimizedLibClone } from "src/libraries/OptimizedLibClone.sol";
 
 import {
     ADAPTER_INVALID_REGISTRY,
