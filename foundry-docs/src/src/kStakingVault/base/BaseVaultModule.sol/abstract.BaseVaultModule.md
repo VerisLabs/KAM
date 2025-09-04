@@ -1,5 +1,10 @@
+<<<<<<< HEAD
+# BaseVault
+[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kStakingVault/base/BaseVault.sol)
+=======
 # BaseVault
 [Git Source](https://github.com/VerisLabs/KAM/blob/786bfc5b94e4c849db94b9fb47f71818d5cce1ab/src/kStakingVault/base/BaseVault.sol)
+>>>>>>> development
 
 **Inherits:**
 ERC20, ReentrancyGuardTransient
@@ -704,109 +709,6 @@ event Paused(bool paused);
 event Initialized(address registry, string name, string symbol, uint8 decimals, address asset);
 ```
 
-## Errors
-### ZeroAddress
-
-```solidity
-error ZeroAddress();
-```
-
-### InvalidRegistry
-
-```solidity
-error InvalidRegistry();
-```
-
-### NotInitialized
-
-```solidity
-error NotInitialized();
-```
-
-### ContractNotFound
-
-```solidity
-error ContractNotFound(bytes32 identifier);
-```
-
-### ZeroAmount
-
-```solidity
-error ZeroAmount();
-```
-
-### AmountBelowDustThreshold
-
-```solidity
-error AmountBelowDustThreshold();
-```
-
-### Closed
-
-```solidity
-error Closed();
-```
-
-### Settled
-
-```solidity
-error Settled();
-```
-
-### RequestNotFound
-
-```solidity
-error RequestNotFound();
-```
-
-### RequestNotEligible
-
-```solidity
-error RequestNotEligible();
-```
-
-### InvalidVault
-
-```solidity
-error InvalidVault();
-```
-
-### IsPaused
-
-```solidity
-error IsPaused();
-```
-
-### AlreadyInit
-
-```solidity
-error AlreadyInit();
-```
-
-### WrongRole
-
-```solidity
-error WrongRole();
-```
-
-### WrongAsset
-
-```solidity
-error WrongAsset();
-```
-
-### TransferFailed
-
-```solidity
-error TransferFailed();
-```
-
-### NotClosed
-
-```solidity
-error NotClosed();
-```
-
 ## Structs
 ### BaseVaultStorage
 **Note:**
@@ -829,7 +731,7 @@ struct BaseVaultStorage {
     mapping(bytes32 => BaseVaultTypes.BatchInfo) batches;
     mapping(bytes32 => BaseVaultTypes.StakeRequest) stakeRequests;
     mapping(bytes32 => BaseVaultTypes.UnstakeRequest) unstakeRequests;
-    mapping(address => EnumerableSetLib.Bytes32Set) userRequests;
+    mapping(address => OptimizedBytes32EnumerableSetLib.Bytes32Set) userRequests;
 }
 ```
 

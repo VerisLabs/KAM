@@ -13,18 +13,6 @@ interface IkBatchReceiver {
     event RescuedETH(address indexed asset, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
-                              ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error ZeroAddress();
-    error OnlyKMinter();
-    error InvalidBatchId();
-    error ZeroAmount();
-    error AssetCantBeRescue();
-    error IsInitialised();
-    error TransferFailed();
-
-    /*//////////////////////////////////////////////////////////////
                               GETTERS
     //////////////////////////////////////////////////////////////*/
 

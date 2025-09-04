@@ -6,13 +6,19 @@ import { USDC_MAINNET, _1_USDC } from "../utils/Constants.sol";
 
 import { console2 } from "forge-std/console2.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 
+import {
+    VAULTCLAIMS_BATCH_NOT_SETTLED,
+    VAULTCLAIMS_IS_PAUSED,
+    VAULTCLAIMS_NOT_BENEFICIARY,
+    VAULTCLAIMS_REQUEST_NOT_PENDING
+} from "src/errors/Errors.sol";
 import { VaultClaims } from "src/kStakingVault/base/VaultClaims.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
@@ -100,7 +106,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Try to claim without settling
         vm.prank(users.alice);
-        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_BATCH_NOT_SETTLED));
         vault.claimStakedShares(batchId, requestId);
     }
 
@@ -127,7 +133,7 @@ contract DNVaultTest is BaseVaultTest {
         // Try to claim with wrong batch ID
         bytes32 wrongBatchId = keccak256("wrong");
         vm.prank(users.alice);
-        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_BATCH_NOT_SETTLED));
         vault.claimStakedShares(wrongBatchId, requestId);
     }
 
@@ -157,7 +163,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Try to claim again
         vm.prank(users.alice);
-        vm.expectRevert(VaultClaims.RequestNotPending.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_REQUEST_NOT_PENDING));
         vault.claimStakedShares(batchId, requestId);
     }
 
@@ -183,7 +189,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Bob tries to claim Alice's request
         vm.prank(users.bob);
-        vm.expectRevert(VaultClaims.NotBeneficiary.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_NOT_BENEFICIARY));
         vault.claimStakedShares(batchId, requestId);
     }
 
@@ -213,7 +219,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Try to claim while paused
         vm.prank(users.alice);
-        vm.expectRevert(BaseVault.IsPaused.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_IS_PAUSED));
         vault.claimStakedShares(batchId, requestId);
     }
 
@@ -339,7 +345,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Try to claim without settling
         vm.prank(users.alice);
-        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_BATCH_NOT_SETTLED));
         vault.claimUnstakedAssets(batchId, requestId);
     }
 
@@ -363,7 +369,7 @@ contract DNVaultTest is BaseVaultTest {
         // Try to claim with wrong batch ID
         bytes32 wrongBatchId = keccak256("wrong");
         vm.prank(users.alice);
-        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_BATCH_NOT_SETTLED));
         vault.claimUnstakedAssets(wrongBatchId, requestId);
     }
 
@@ -390,7 +396,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Try to claim again
         vm.prank(users.alice);
-        vm.expectRevert(VaultClaims.RequestNotPending.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_REQUEST_NOT_PENDING));
         vault.claimUnstakedAssets(batchId, requestId);
     }
 
@@ -413,7 +419,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Bob tries to claim Alice's request
         vm.prank(users.bob);
-        vm.expectRevert(VaultClaims.NotBeneficiary.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_NOT_BENEFICIARY));
         vault.claimUnstakedAssets(batchId, requestId);
     }
 
@@ -440,7 +446,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Try to claim while paused
         vm.prank(users.alice);
-        vm.expectRevert(BaseVault.IsPaused.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_IS_PAUSED));
         vault.claimUnstakedAssets(batchId, requestId);
     }
 
@@ -564,7 +570,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Bob cannot claim yet (batch 2 not settled)
         vm.prank(users.bob);
-        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_BATCH_NOT_SETTLED));
         vault.claimUnstakedAssets(batch2Id, request2Id);
 
         // Settle batch 2

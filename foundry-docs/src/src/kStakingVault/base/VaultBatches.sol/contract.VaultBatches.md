@@ -1,5 +1,5 @@
 # VaultBatches
-[Git Source](https://github.com/VerisLabs/KAM/blob/786bfc5b94e4c849db94b9fb47f71818d5cce1ab/src/kStakingVault/base/VaultBatches.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kStakingVault/base/VaultBatches.sol)
 
 **Inherits:**
 [BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md)
@@ -81,10 +81,20 @@ function createBatchReceiver(bytes32 _batchId) external nonReentrant returns (ad
 
 ### _createNewBatch
 
+Creates a new batch for processing requests
+
+*Only callable by RELAYER_ROLE, typically called at batch intervals*
+
 
 ```solidity
 function _createNewBatch() internal returns (bytes32);
 ```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bytes32`|The new batch ID|
+
 
 ## Events
 ### BatchCreated

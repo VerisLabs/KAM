@@ -17,8 +17,8 @@ import {
     _1_USDC,
     _1_WBTC
 } from "./Constants.sol";
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
+import { OptimizedOwnableRoles } from "src/libraries/OptimizedOwnableRoles.sol";
+import { ERC1967Factory } from "src/vendor/ERC1967Factory.sol";
 
 // Protocol contracts
 import { kAssetRouter } from "src/kAssetRouter.sol";
@@ -472,7 +472,7 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Assert that contract has correct role
     function assertHasRole(address roleContract, address account, uint256 role) internal {
-        assertTrue(OwnableRoles(roleContract).hasAnyRole(account, role), "Account should have role");
+        assertTrue(OptimizedOwnableRoles(roleContract).hasAnyRole(account, role), "Account should have role");
     }
 
     /// @dev Assert asset balance equals expected

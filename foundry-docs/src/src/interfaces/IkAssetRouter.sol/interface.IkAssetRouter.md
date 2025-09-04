@@ -1,5 +1,5 @@
 # IkAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/786bfc5b94e4c849db94b9fb47f71818d5cce1ab/src/interfaces/IkAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/interfaces/IkAssetRouter.sol)
 
 Interface for kAssetRouter for asset routing and settlement
 
@@ -486,55 +486,6 @@ event SettlementUpdated(bytes32 indexed proposalId, uint256 totalAssets, uint256
 
 ```solidity
 event SettlementCooldownUpdated(uint256 oldCooldown, uint256 newCooldown);
-```
-
-## Errors
-### InsufficientVirtualBalance
-
-```solidity
-error InsufficientVirtualBalance();
-```
-
-### ProposalNotFound
-
-```solidity
-error ProposalNotFound();
-```
-
-### ProposalAlreadyExecuted
-
-```solidity
-error ProposalAlreadyExecuted();
-```
-
-### ProposalAlreadyExists
-
-```solidity
-error ProposalAlreadyExists();
-```
-
-### ZeroProposals
-
-```solidity
-error ZeroProposals();
-```
-
-### BatchIdAlreadyProposed
-
-```solidity
-error BatchIdAlreadyProposed();
-```
-
-### CooldownNotPassed
-
-```solidity
-error CooldownNotPassed();
-```
-
-### InvalidCooldown
-
-```solidity
-error InvalidCooldown();
 ```
 
 ## Structs

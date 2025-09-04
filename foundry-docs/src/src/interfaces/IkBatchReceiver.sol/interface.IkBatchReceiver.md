@@ -1,5 +1,5 @@
 # IkBatchReceiver
-[Git Source](https://github.com/VerisLabs/KAM/blob/786bfc5b94e4c849db94b9fb47f71818d5cce1ab/src/interfaces/IkBatchReceiver.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/interfaces/IkBatchReceiver.sol)
 
 Interface for kBatchReceiver
 
@@ -63,48 +63,5 @@ event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
 
 ```solidity
 event RescuedETH(address indexed asset, uint256 amount);
-```
-
-## Errors
-### ZeroAddress
-
-```solidity
-error ZeroAddress();
-```
-
-### OnlyKMinter
-
-```solidity
-error OnlyKMinter();
-```
-
-### InvalidBatchId
-
-```solidity
-error InvalidBatchId();
-```
-
-### ZeroAmount
-
-```solidity
-error ZeroAmount();
-```
-
-### AssetCantBeRescue
-
-```solidity
-error AssetCantBeRescue();
-```
-
-### IsInitialised
-
-```solidity
-error IsInitialised();
-```
-
-### TransferFailed
-
-```solidity
-error TransferFailed();
 ```
 

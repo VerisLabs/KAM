@@ -1,15 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { OptimizedReentrancyGuardTransient } from "src/abstracts/OptimizedReentrancyGuardTransient.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 
+import {
+    ADAPTER_ALREADY_INITIALIZED,
+    ADAPTER_INVALID_REGISTRY,
+    ADAPTER_TRANSFER_FAILED,
+    ADAPTER_WRONG_ASSET,
+    ADAPTER_WRONG_ROLE,
+    ADAPTER_ZERO_ADDRESS,
+    ADAPTER_ZERO_AMOUNT
+} from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 /// @title BaseAdapter
 /// @notice Abstract base contract for all protocol adapters
 /// @dev Provides common functionality and virtual balance tracking for external strategy integrations
-contract BaseAdapter is ReentrancyGuardTransient {
+contract BaseAdapter is OptimizedReentrancyGuardTransient {
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
@@ -28,20 +37,6 @@ contract BaseAdapter is ReentrancyGuardTransient {
 
     /// @notice The asset router key
     bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
-
-    /*//////////////////////////////////////////////////////////////
-                              ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error ZeroAddress();
-    error ZeroAmount();
-    error WrongRole();
-    error WrongAsset();
-    error TransferFailed();
-    error InvalidRegistry();
-    error InvalidAmount();
-    error InvalidAsset();
-    error AlreadyInitialized();
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -78,8 +73,8 @@ contract BaseAdapter is ReentrancyGuardTransient {
         // Initialize adapter storage
         BaseAdapterStorage storage $ = _getBaseAdapterStorage();
 
-        if ($.initialized) revert AlreadyInitialized();
-        if (registry_ == address(0)) revert InvalidRegistry();
+        require(!$.initialized, ADAPTER_ALREADY_INITIALIZED);
+        require(registry_ != address(0), ADAPTER_INVALID_REGISTRY);
 
         $.registry = registry_;
         $.initialized = true;
@@ -114,21 +109,21 @@ contract BaseAdapter is ReentrancyGuardTransient {
     /// @param to_ the address that will receive the assets
     /// @param amount_ the amount to rescue
     function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
-        if (!_isAdmin(msg.sender)) revert WrongRole();
-        if (to_ == address(0)) revert ZeroAddress();
+        require(_isAdmin(msg.sender), ADAPTER_WRONG_ROLE);
+        require(to_ != address(0), ADAPTER_ZERO_ADDRESS);
 
         if (asset_ == address(0)) {
             // Rescue ETH
-            if (amount_ == 0 || amount_ > address(this).balance) revert ZeroAmount();
+            require(amount_ > 0 && amount_ <= address(this).balance, ADAPTER_ZERO_AMOUNT);
 
             (bool success,) = to_.call{ value: amount_ }("");
-            if (!success) revert TransferFailed();
+            require(success, ADAPTER_TRANSFER_FAILED);
 
             emit RescuedETH(to_, amount_);
         } else {
             // Rescue ERC20 tokens
-            if (_isAsset(asset_)) revert WrongAsset();
-            if (amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
+            require(!_isAsset(asset_), ADAPTER_WRONG_ASSET);
+            require(amount_ > 0 && amount_ <= asset_.balanceOf(address(this)), ADAPTER_ZERO_AMOUNT);
 
             asset_.safeTransfer(to_, amount_);
             emit RescuedAssets(asset_, to_, amount_);

@@ -1,5 +1,5 @@
 # kBase
-[Git Source](https://github.com/VerisLabs/KAM/blob/786bfc5b94e4c849db94b9fb47f71818d5cce1ab/src/base/kBase.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/base/kBase.sol)
 
 **Inherits:**
 ReentrancyGuardTransient
@@ -448,91 +448,6 @@ event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
 
 ```solidity
 event RescuedETH(address indexed asset, uint256 amount);
-```
-
-## Errors
-### ZeroAddress
-
-```solidity
-error ZeroAddress();
-```
-
-### ZeroAmount
-
-```solidity
-error ZeroAmount();
-```
-
-### InvalidRegistry
-
-```solidity
-error InvalidRegistry();
-```
-
-### NotInitialized
-
-```solidity
-error NotInitialized();
-```
-
-### AlreadyInitialized
-
-```solidity
-error AlreadyInitialized();
-```
-
-### ContractNotFound
-
-```solidity
-error ContractNotFound(bytes32 identifier);
-```
-
-### AssetNotSupported
-
-```solidity
-error AssetNotSupported(address asset);
-```
-
-### InvalidVault
-
-```solidity
-error InvalidVault(address vault);
-```
-
-### IsPaused
-
-```solidity
-error IsPaused();
-```
-
-### WrongRole
-
-```solidity
-error WrongRole();
-```
-
-### WrongAsset
-
-```solidity
-error WrongAsset();
-```
-
-### OnlyMinter
-
-```solidity
-error OnlyMinter();
-```
-
-### OnlyStakingVault
-
-```solidity
-error OnlyStakingVault();
-```
-
-### TransferFailed
-
-```solidity
-error TransferFailed();
 ```
 
 ## Structs

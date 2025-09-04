@@ -10,6 +10,8 @@
   - [❱ base](src/base/README.md)
     - [MultiFacetProxy](src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.md)
     - [kBase](src/base/kBase.sol/contract.kBase.md)
+  - [❱ errors](src/errors/README.md)
+    - [Errors constants](src/errors/Errors.sol/constants.Errors.md)
   - [❱ interfaces](src/interfaces/README.md)
     - [❱ modules](src/interfaces/modules/README.md)
       - [IVaultBatch](src/interfaces/modules/IVaultBatch.sol/interface.IVaultBatch.md)

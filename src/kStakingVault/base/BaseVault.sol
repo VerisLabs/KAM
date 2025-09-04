@@ -1,13 +1,21 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ERC20 } from "solady/tokens/ERC20.sol";
+import { ERC20 } from "src/vendor/ERC20.sol";
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedFixedPointMathLib } from "src/libraries/OptimizedFixedPointMathLib.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 
 import { OptimizedReentrancyGuardTransient } from "src/abstracts/OptimizedReentrancyGuardTransient.sol";
+
+import {
+    BASEVAULT_ALREADY_INITIALIZED,
+    BASEVAULT_CONTRACT_NOT_FOUND,
+    BASEVAULT_INVALID_REGISTRY,
+    BASEVAULT_INVALID_VAULT,
+    BASEVAULT_NOT_INITIALIZED
+} from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IVaultFees } from "src/interfaces/modules/IVaultFees.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
@@ -16,7 +24,7 @@ import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 /// @notice Base contract for all modules
 /// @dev Provides shared storage, roles, and common functionality
 abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
-    using FixedPointMathLib for uint256;
+    using OptimizedFixedPointMathLib for uint256;
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
     using SafeTransferLib for address;
 
@@ -104,28 +112,6 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_SHIFT = 123;
 
     /*//////////////////////////////////////////////////////////////
-                              ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error ZeroAddress();
-    error InvalidRegistry();
-    error NotInitialized();
-    error ContractNotFound(bytes32 identifier);
-    error ZeroAmount();
-    error AmountBelowDustThreshold();
-    error Closed();
-    error Settled();
-    error RequestNotFound();
-    error RequestNotEligible();
-    error InvalidVault();
-    error IsPaused();
-    error AlreadyInit();
-    error WrongRole();
-    error WrongAsset();
-    error TransferFailed();
-    error NotClosed();
-
-    /*//////////////////////////////////////////////////////////////
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
@@ -133,7 +119,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     struct BaseVaultStorage {
         // 1
         uint256 config; // decimals, hurdle rate, performance fee, management fee, initialized, paused,
-            // isHardHurdleRate, lastFeesChargedManagement, lastFeesChargedPerformance
+        // isHardHurdleRate, lastFeesChargedManagement, lastFeesChargedPerformance
         // 2
         uint128 sharePriceWatermark;
         uint128 totalPendingStake;
@@ -263,8 +249,8 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     function __BaseVault_init(address registry_, bool paused_) internal {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
 
-        if (_getInitialized($)) revert AlreadyInit();
-        if (registry_ == address(0)) revert InvalidRegistry();
+        require(!_getInitialized($), BASEVAULT_ALREADY_INITIALIZED);
+        require(registry_ != address(0), BASEVAULT_INVALID_REGISTRY);
 
         $.registry = registry_;
         _setPaused($, paused_);
@@ -282,7 +268,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @dev Internal helper for typed registry access
     function _registry() internal view returns (IkRegistry) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        if (!_getInitialized($)) revert NotInitialized();
+        require(_getInitialized($), BASEVAULT_NOT_INITIALIZED);
         return IkRegistry($.registry);
     }
 
@@ -295,7 +281,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @dev Reverts if kMinter not set in registry
     function _getKMinter() internal view returns (address minter) {
         minter = _registry().getContractById(K_MINTER);
-        if (minter == address(0)) revert ContractNotFound(K_MINTER);
+        require(minter != address(0), BASEVAULT_CONTRACT_NOT_FOUND);
     }
 
     /// @notice Gets the kAssetRouter singleton contract address
@@ -303,7 +289,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @dev Reverts if kAssetRouter not set in registry
     function _getKAssetRouter() internal view returns (address router) {
         router = _registry().getContractById(K_ASSET_ROUTER);
-        if (router == address(0)) revert ContractNotFound(K_ASSET_ROUTER);
+        require(router != address(0), BASEVAULT_CONTRACT_NOT_FOUND);
     }
 
     /// @notice Gets the DN vault address for a given asset
@@ -312,7 +298,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @dev Reverts if asset not supported
     function _getDNVaultByAsset(address asset_) internal view returns (address vault) {
         vault = _registry().getVaultByAssetAndType(asset_, uint8(IkRegistry.VaultType.DN));
-        if (vault == address(0)) revert InvalidVault();
+        require(vault != address(0), BASEVAULT_INVALID_VAULT);
     }
 
     /// @notice Returns the vault shares token name
@@ -342,7 +328,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @dev Only callable internally by inheriting contracts
     function _setPaused(bool paused_) internal {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        if (!_getInitialized($)) revert NotInitialized();
+        require(_getInitialized($), BASEVAULT_NOT_INITIALIZED);
         _setPaused($, paused_);
         emit Paused(paused_);
     }
@@ -431,7 +417,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @return Whether the address is a institution
     function _isPaused() internal view returns (bool) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        if (!_getInitialized($)) revert NotInitialized();
+        require(_getInitialized($), BASEVAULT_NOT_INITIALIZED);
         return _getPaused($);
     }
 

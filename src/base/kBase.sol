@@ -1,15 +1,29 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { OptimizedReentrancyGuardTransient } from "src/abstracts/OptimizedReentrancyGuardTransient.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
+
+import {
+    KBASE_ALREADY_INITIALIZED,
+    KBASE_ASSET_NOT_SUPPORTED,
+    KBASE_CONTRACT_NOT_FOUND,
+    KBASE_INVALID_REGISTRY,
+    KBASE_INVALID_VAULT,
+    KBASE_NOT_INITIALIZED,
+    KBASE_TRANSFER_FAILED,
+    KBASE_WRONG_ASSET,
+    KBASE_WRONG_ROLE,
+    KBASE_ZERO_ADDRESS,
+    KBASE_ZERO_AMOUNT
+} from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 /// @title kBase
 /// @notice Base contract providing common functionality for all KAM protocol contracts
 /// @dev Includes registry integration, role management, pause functionality, and helper methods
-contract kBase is ReentrancyGuardTransient {
+contract kBase is OptimizedReentrancyGuardTransient {
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
@@ -37,25 +51,6 @@ contract kBase is ReentrancyGuardTransient {
     bytes32 internal constant K_MINTER = keccak256("K_MINTER");
     /// @notice kAssetRouter key
     bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
-
-    /*//////////////////////////////////////////////////////////////
-                              ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error ZeroAddress();
-    error ZeroAmount();
-    error InvalidRegistry();
-    error NotInitialized();
-    error AlreadyInitialized();
-    error ContractNotFound(bytes32 identifier);
-    error AssetNotSupported(address asset);
-    error InvalidVault(address vault);
-    error IsPaused();
-    error WrongRole();
-    error WrongAsset();
-    error OnlyMinter();
-    error OnlyStakingVault();
-    error TransferFailed();
 
     /*//////////////////////////////////////////////////////////////
                         STORAGE LAYOUT
@@ -92,8 +87,8 @@ contract kBase is ReentrancyGuardTransient {
     function __kBase_init(address registry_) internal {
         kBaseStorage storage $ = _getBaseStorage();
 
-        if ($.initialized) revert AlreadyInitialized();
-        if (registry_ == address(0)) revert InvalidRegistry();
+        require(!$.initialized, KBASE_ALREADY_INITIALIZED);
+        require(registry_ != address(0), KBASE_INVALID_REGISTRY);
 
         $.registry = registry_;
         $.paused = false;
@@ -108,9 +103,9 @@ contract kBase is ReentrancyGuardTransient {
     /// @param paused_ New pause state
     /// @dev Only callable internally by inheriting contracts
     function setPaused(bool paused_) external {
-        if (!_isEmergencyAdmin(msg.sender)) revert WrongRole();
+        require(_isEmergencyAdmin(msg.sender), KBASE_WRONG_ROLE);
         kBaseStorage storage $ = _getBaseStorage();
-        if (!$.initialized) revert NotInitialized();
+        require($.initialized, KBASE_NOT_INITIALIZED);
         $.paused = paused_;
         emit Paused(paused_);
     }
@@ -120,21 +115,21 @@ contract kBase is ReentrancyGuardTransient {
     /// @param to_ the address that will receive the assets
     /// @param amount_ the amount to rescue
     function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
-        if (!_isAdmin(msg.sender)) revert WrongRole();
-        if (to_ == address(0)) revert ZeroAddress();
+        require(_isAdmin(msg.sender), KBASE_WRONG_ROLE);
+        require(to_ != address(0), KBASE_ZERO_ADDRESS);
 
         if (asset_ == address(0)) {
             // Rescue ETH
-            if (amount_ == 0 || amount_ > address(this).balance) revert ZeroAmount();
+            require(amount_ > 0 && amount_ <= address(this).balance, KBASE_ZERO_AMOUNT);
 
             (bool success,) = to_.call{ value: amount_ }("");
-            if (!success) revert TransferFailed();
+            require(success, KBASE_TRANSFER_FAILED);
 
             emit RescuedETH(to_, amount_);
         } else {
             // Rescue ERC20 tokens
-            if (_isAsset(asset_)) revert WrongAsset();
-            if (amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
+            require(!_isAsset(asset_), KBASE_WRONG_ASSET);
+            require(amount_ > 0 && amount_ <= asset_.balanceOf(address(this)), KBASE_ZERO_AMOUNT);
 
             asset_.safeTransfer(to_, amount_);
             emit RescuedAssets(asset_, to_, amount_);
@@ -157,7 +152,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @dev Internal helper for typed registry access
     function _registry() internal view returns (IkRegistry) {
         kBaseStorage storage $ = _getBaseStorage();
-        if (!$.initialized) revert NotInitialized();
+        require($.initialized, KBASE_NOT_INITIALIZED);
         return IkRegistry($.registry);
     }
 
@@ -180,7 +175,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @dev Reverts if vault not registered
     function _getBatchReceiver(address vault_, bytes32 batchId_) internal view returns (address batchReceiver) {
         batchReceiver = IkStakingVault(vault_).getBatchReceiver(batchId_);
-        if (batchReceiver == address(0)) revert ZeroAddress();
+        require(batchReceiver != address(0), KBASE_ZERO_ADDRESS);
     }
 
     /// @notice Gets the kMinter singleton contract address
@@ -188,7 +183,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @dev Reverts if kMinter not set in registry
     function _getKMinter() internal view returns (address minter) {
         minter = _registry().getContractById(K_MINTER);
-        if (minter == address(0)) revert ContractNotFound(K_MINTER);
+        require(minter != address(0), KBASE_CONTRACT_NOT_FOUND);
     }
 
     /// @notice Gets the kAssetRouter singleton contract address
@@ -196,7 +191,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @dev Reverts if kAssetRouter not set in registry
     function _getKAssetRouter() internal view returns (address router) {
         router = _registry().getContractById(K_ASSET_ROUTER);
-        if (router == address(0)) revert ContractNotFound(K_ASSET_ROUTER);
+        require(router != address(0), KBASE_CONTRACT_NOT_FOUND);
     }
 
     /// @notice Gets the kToken address for a given asset
@@ -205,7 +200,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @dev Reverts if asset not supported
     function _getKTokenForAsset(address asset) internal view returns (address kToken) {
         kToken = _registry().assetToKToken(asset);
-        if (kToken == address(0)) revert AssetNotSupported(asset);
+        require(kToken != address(0), KBASE_ASSET_NOT_SUPPORTED);
     }
 
     /// @notice Gets the asset managed by a vault
@@ -214,7 +209,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @dev Reverts if vault not registered
     function _getVaultAssets(address vault) internal view returns (address[] memory assets) {
         assets = _registry().getVaultAssets(vault);
-        if (assets.length == 0) revert InvalidVault(vault);
+        require(assets.length > 0, KBASE_INVALID_VAULT);
     }
 
     /// @notice Gets the DN vault address for a given asset
@@ -223,7 +218,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @dev Reverts if asset not supported
     function _getDNVaultByAsset(address asset) internal view returns (address vault) {
         vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN));
-        if (vault == address(0)) revert InvalidVault(vault);
+        require(vault != address(0), KBASE_INVALID_VAULT);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -264,7 +259,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @return Whether the address is a institution
     function _isPaused() internal view returns (bool) {
         kBaseStorage storage $ = _getBaseStorage();
-        if (!$.initialized) revert NotInitialized();
+        require($.initialized, KBASE_NOT_INITIALIZED);
         return $.paused;
     }
 

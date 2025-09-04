@@ -1,0 +1,925 @@
+# BaseVault
+[Git Source](https://github.com/VerisLabs/KAM/blob/a83c1c8f27c68e09f3c0973bbaca147b539ef93b/src/kStakingVault/base/BaseVault.sol)
+
+**Inherits:**
+ERC20, [OptimizedReentrancyGuardTransient](/src/abstracts/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)
+
+Base contract for all modules
+
+*Provides shared storage, roles, and common functionality*
+
+
+## State Variables
+### K_ASSET_ROUTER
+kAssetRouter key
+
+
+```solidity
+bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
+```
+
+
+### K_MINTER
+kMinter key
+
+
+```solidity
+bytes32 internal constant K_MINTER = keccak256("K_MINTER");
+```
+
+
+### DECIMALS_MASK
+*Bitmask and shift constants for module configuration*
+
+
+```solidity
+uint256 internal constant DECIMALS_MASK = 0xFF;
+```
+
+
+### DECIMALS_SHIFT
+
+```solidity
+uint256 internal constant DECIMALS_SHIFT = 0;
+```
+
+
+### HURDLE_RATE_MASK
+
+```solidity
+uint256 internal constant HURDLE_RATE_MASK = 0xFFFF;
+```
+
+
+### HURDLE_RATE_SHIFT
+
+```solidity
+uint256 internal constant HURDLE_RATE_SHIFT = 8;
+```
+
+
+### PERFORMANCE_FEE_MASK
+
+```solidity
+uint256 internal constant PERFORMANCE_FEE_MASK = 0xFFFF;
+```
+
+
+### PERFORMANCE_FEE_SHIFT
+
+```solidity
+uint256 internal constant PERFORMANCE_FEE_SHIFT = 24;
+```
+
+
+### MANAGEMENT_FEE_MASK
+
+```solidity
+uint256 internal constant MANAGEMENT_FEE_MASK = 0xFFFF;
+```
+
+
+### MANAGEMENT_FEE_SHIFT
+
+```solidity
+uint256 internal constant MANAGEMENT_FEE_SHIFT = 40;
+```
+
+
+### INITIALIZED_MASK
+
+```solidity
+uint256 internal constant INITIALIZED_MASK = 0x1;
+```
+
+
+### INITIALIZED_SHIFT
+
+```solidity
+uint256 internal constant INITIALIZED_SHIFT = 56;
+```
+
+
+### PAUSED_MASK
+
+```solidity
+uint256 internal constant PAUSED_MASK = 0x1;
+```
+
+
+### PAUSED_SHIFT
+
+```solidity
+uint256 internal constant PAUSED_SHIFT = 57;
+```
+
+
+### IS_HARD_HURDLE_RATE_MASK
+
+```solidity
+uint256 internal constant IS_HARD_HURDLE_RATE_MASK = 0x1;
+```
+
+
+### IS_HARD_HURDLE_RATE_SHIFT
+
+```solidity
+uint256 internal constant IS_HARD_HURDLE_RATE_SHIFT = 58;
+```
+
+
+### LAST_FEES_CHARGED_MANAGEMENT_MASK
+
+```solidity
+uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_MASK = 0xFFFFFFFFFFFFFFFF;
+```
+
+
+### LAST_FEES_CHARGED_MANAGEMENT_SHIFT
+
+```solidity
+uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_SHIFT = 59;
+```
+
+
+### LAST_FEES_CHARGED_PERFORMANCE_MASK
+
+```solidity
+uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_MASK = 0xFFFFFFFFFFFFFFFF;
+```
+
+
+### LAST_FEES_CHARGED_PERFORMANCE_SHIFT
+
+```solidity
+uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_SHIFT = 123;
+```
+
+
+### MODULE_BASE_STORAGE_LOCATION
+
+```solidity
+bytes32 internal constant MODULE_BASE_STORAGE_LOCATION =
+    0x50bc60b877273d55cac3903fd4818902e5fd7aa256278ee2dc6b212f256c0b00;
+```
+
+
+## Functions
+### _getBaseVaultStorage
+
+Returns the base vault storage struct using ERC-7201 pattern
+
+
+```solidity
+function _getBaseVaultStorage() internal pure returns (BaseVaultStorage storage $);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`$`|`BaseVaultStorage`|Storage reference for base vault state variables|
+
+
+### _getDecimals
+
+
+```solidity
+function _getDecimals(BaseVaultStorage storage $) internal view returns (uint8);
+```
+
+### _setDecimals
+
+
+```solidity
+function _setDecimals(BaseVaultStorage storage $, uint8 value) internal;
+```
+
+### _getHurdleRate
+
+
+```solidity
+function _getHurdleRate(BaseVaultStorage storage $) internal view returns (uint16);
+```
+
+### _setHurdleRate
+
+
+```solidity
+function _setHurdleRate(BaseVaultStorage storage $, uint16 value) internal;
+```
+
+### _getPerformanceFee
+
+
+```solidity
+function _getPerformanceFee(BaseVaultStorage storage $) internal view returns (uint16);
+```
+
+### _setPerformanceFee
+
+
+```solidity
+function _setPerformanceFee(BaseVaultStorage storage $, uint16 value) internal;
+```
+
+### _getManagementFee
+
+
+```solidity
+function _getManagementFee(BaseVaultStorage storage $) internal view returns (uint16);
+```
+
+### _setManagementFee
+
+
+```solidity
+function _setManagementFee(BaseVaultStorage storage $, uint16 value) internal;
+```
+
+### _getInitialized
+
+
+```solidity
+function _getInitialized(BaseVaultStorage storage $) internal view returns (bool);
+```
+
+### _setInitialized
+
+
+```solidity
+function _setInitialized(BaseVaultStorage storage $, bool value) internal;
+```
+
+### _getPaused
+
+
+```solidity
+function _getPaused(BaseVaultStorage storage $) internal view returns (bool);
+```
+
+### _setPaused
+
+
+```solidity
+function _setPaused(BaseVaultStorage storage $, bool value) internal;
+```
+
+### _getIsHardHurdleRate
+
+
+```solidity
+function _getIsHardHurdleRate(BaseVaultStorage storage $) internal view returns (bool);
+```
+
+### _setIsHardHurdleRate
+
+
+```solidity
+function _setIsHardHurdleRate(BaseVaultStorage storage $, bool value) internal;
+```
+
+### _getLastFeesChargedManagement
+
+
+```solidity
+function _getLastFeesChargedManagement(BaseVaultStorage storage $) internal view returns (uint64);
+```
+
+### _setLastFeesChargedManagement
+
+
+```solidity
+function _setLastFeesChargedManagement(BaseVaultStorage storage $, uint64 value) internal;
+```
+
+### _getLastFeesChargedPerformance
+
+
+```solidity
+function _getLastFeesChargedPerformance(BaseVaultStorage storage $) internal view returns (uint64);
+```
+
+### _setLastFeesChargedPerformance
+
+
+```solidity
+function _setLastFeesChargedPerformance(BaseVaultStorage storage $, uint64 value) internal;
+```
+
+### __BaseVault_init
+
+Initializes the base contract with registry and pause state
+
+*Can only be called once during initialization*
+
+
+```solidity
+function __BaseVault_init(address registry_, bool paused_) internal;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`registry_`|`address`|Address of the kRegistry contract|
+|`paused_`|`bool`|Initial pause state|
+
+
+### _registry
+
+Returns the registry contract interface
+
+*Internal helper for typed registry access*
+
+
+```solidity
+function _registry() internal view returns (IkRegistry);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`IkRegistry`|IkRegistry interface for registry interaction|
+
+
+### _getKMinter
+
+Gets the kMinter singleton contract address
+
+*Reverts if kMinter not set in registry*
+
+
+```solidity
+function _getKMinter() internal view returns (address minter);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`minter`|`address`|The kMinter contract address|
+
+
+### _getKAssetRouter
+
+Gets the kAssetRouter singleton contract address
+
+*Reverts if kAssetRouter not set in registry*
+
+
+```solidity
+function _getKAssetRouter() internal view returns (address router);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`router`|`address`|The kAssetRouter contract address|
+
+
+### _getDNVaultByAsset
+
+Gets the DN vault address for a given asset
+
+*Reverts if asset not supported*
+
+
+```solidity
+function _getDNVaultByAsset(address asset_) internal view returns (address vault);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset_`|`address`|The asset address|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault`|`address`|The corresponding DN vault address|
+
+
+### name
+
+Returns the vault shares token name
+
+
+```solidity
+function name() public view override returns (string memory);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`string`|Token name|
+
+
+### symbol
+
+Returns the vault shares token symbol
+
+
+```solidity
+function symbol() public view override returns (string memory);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`string`|Token symbol|
+
+
+### decimals
+
+
+```solidity
+function decimals() public view override returns (uint8);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint8`|Token decimals|
+
+
+### _setPaused
+
+Sets the pause state of the contract
+
+*Only callable internally by inheriting contracts*
+
+
+```solidity
+function _setPaused(bool paused_) internal;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`paused_`|`bool`|New pause state|
+
+
+### _convertToAssets
+
+Converts shares to assets
+
+
+```solidity
+function _convertToAssets(uint256 shares) internal view returns (uint256 assets);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`shares`|`uint256`|Amount of shares to convert|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`assets`|`uint256`|Amount of assets|
+
+
+### _convertToShares
+
+Converts assets to shares
+
+
+```solidity
+function _convertToShares(uint256 assets) internal view returns (uint256 shares);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`assets`|`uint256`|Amount of assets to convert|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`shares`|`uint256`|Amount of shares|
+
+
+### _netSharePrice
+
+Calculates share price for stkToken
+
+
+```solidity
+function _netSharePrice() internal view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|sharePrice Price per stkToken after fees in underlying asset terms (18 decimals)|
+
+
+### _sharePrice
+
+Calculates share price for stkToken
+
+
+```solidity
+function _sharePrice() internal view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|sharePrice Price per stkToken in underlying asset terms (18 decimals)|
+
+
+### _totalAssets
+
+Returns the total assets in the vault
+
+
+```solidity
+function _totalAssets() internal view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|totalAssets Total assets in the vault|
+
+
+### _totalNetAssets
+
+Returns the total assets after fees in the vault
+
+
+```solidity
+function _totalNetAssets() internal view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|totalNetAssets Total net assets in the vault|
+
+
+### _accumulatedFees
+
+Calculates accumulated fees
+
+
+```solidity
+function _accumulatedFees() internal view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|accumulatedFees Accumulated fees|
+
+
+### _isAdmin
+
+Checks if an address is a admin
+
+
+```solidity
+function _isAdmin(address user) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a admin|
+
+
+### _isEmergencyAdmin
+
+Checks if an address is a emergencyAdmin
+
+
+```solidity
+function _isEmergencyAdmin(address user) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a emergencyAdmin|
+
+
+### _isRelayer
+
+Checks if an address is a relayer
+
+
+```solidity
+function _isRelayer(address user) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a relayer|
+
+
+### _isPaused
+
+Checks if an address is a institution
+
+
+```solidity
+function _isPaused() internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the address is a institution|
+
+
+### _isKAssetRouter
+
+Gets the kMinter singleton contract address
+
+*Reverts if kMinter not set in registry*
+
+
+```solidity
+function _isKAssetRouter(address kAssetRouter_) internal view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|minter The kMinter contract address|
+
+
+### _isAsset
+
+Checks if an asset is registered
+
+
+```solidity
+function _isAsset(address asset) internal view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The asset address to check|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the asset is registered|
+
+
+## Events
+### StakeRequestCreated
+Emitted when a stake request is created
+
+
+```solidity
+event StakeRequestCreated(
+    bytes32 indexed requestId,
+    address indexed user,
+    address indexed kToken,
+    uint256 amount,
+    address recipient,
+    bytes32 batchId
+);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`requestId`|`bytes32`|The unique identifier of the stake request|
+|`user`|`address`|The address of the user who created the request|
+|`kToken`|`address`|The address of the kToken associated with the request|
+|`amount`|`uint256`|The amount of kTokens requested|
+|`recipient`|`address`|The address to which the kTokens will be sent|
+|`batchId`|`bytes32`|The batch ID associated with the request|
+
+### StakeRequestRedeemed
+Emitted when a stake request is redeemed
+
+
+```solidity
+event StakeRequestRedeemed(bytes32 indexed requestId);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`requestId`|`bytes32`|The unique identifier of the stake request|
+
+### StakeRequestCancelled
+Emitted when a stake request is cancelled
+
+
+```solidity
+event StakeRequestCancelled(bytes32 indexed requestId);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`requestId`|`bytes32`|The unique identifier of the stake request|
+
+### UnstakeRequestCreated
+Emitted when an unstake request is created
+
+
+```solidity
+event UnstakeRequestCreated(
+    bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, bytes32 batchId
+);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`requestId`|`bytes32`|The unique identifier of the unstake request|
+|`user`|`address`|The address of the user who created the request|
+|`amount`|`uint256`|The amount of kTokens requested|
+|`recipient`|`address`|The address to which the kTokens will be sent|
+|`batchId`|`bytes32`|The batch ID associated with the request|
+
+### UnstakeRequestCancelled
+Emitted when an unstake request is cancelled
+
+
+```solidity
+event UnstakeRequestCancelled(bytes32 indexed requestId);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`requestId`|`bytes32`|The unique identifier of the unstake request|
+
+### Paused
+Emitted when the vault is paused
+
+
+```solidity
+event Paused(bool paused);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`paused`|`bool`|The new paused state|
+
+### Initialized
+Emitted when the vault is initialized
+
+
+```solidity
+event Initialized(address registry, string name, string symbol, uint8 decimals, address asset);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`registry`|`address`|The registry address|
+|`name`|`string`|The name of the vault|
+|`symbol`|`string`|The symbol of the vault|
+|`decimals`|`uint8`|The decimals of the vault|
+|`asset`|`address`|The asset of the vault|
+
+## Errors
+### ZeroAddress
+
+```solidity
+error ZeroAddress();
+```
+
+### InvalidRegistry
+
+```solidity
+error InvalidRegistry();
+```
+
+### NotInitialized
+
+```solidity
+error NotInitialized();
+```
+
+### ContractNotFound
+
+```solidity
+error ContractNotFound(bytes32 identifier);
+```
+
+### ZeroAmount
+
+```solidity
+error ZeroAmount();
+```
+
+### AmountBelowDustThreshold
+
+```solidity
+error AmountBelowDustThreshold();
+```
+
+### Closed
+
+```solidity
+error Closed();
+```
+
+### Settled
+
+```solidity
+error Settled();
+```
+
+### RequestNotFound
+
+```solidity
+error RequestNotFound();
+```
+
+### RequestNotEligible
+
+```solidity
+error RequestNotEligible();
+```
+
+### InvalidVault
+
+```solidity
+error InvalidVault();
+```
+
+### IsPaused
+
+```solidity
+error IsPaused();
+```
+
+### AlreadyInit
+
+```solidity
+error AlreadyInit();
+```
+
+### WrongRole
+
+```solidity
+error WrongRole();
+```
+
+### WrongAsset
+
+```solidity
+error WrongAsset();
+```
+
+### TransferFailed
+
+```solidity
+error TransferFailed();
+```
+
+### NotClosed
+
+```solidity
+error NotClosed();
+```
+
+## Structs
+### BaseVaultStorage
+**Note:**
+storage-location: erc7201.kam.storage.BaseVault
+
+
+```solidity
+struct BaseVaultStorage {
+    uint256 config;
+    uint128 sharePriceWatermark;
+    uint128 totalPendingStake;
+    uint256 currentBatch;
+    bytes32 currentBatchId;
+    address registry;
+    address receiverImplementation;
+    address underlyingAsset;
+    address kToken;
+    string name;
+    string symbol;
+    mapping(bytes32 => BaseVaultTypes.BatchInfo) batches;
+    mapping(bytes32 => BaseVaultTypes.StakeRequest) stakeRequests;
+    mapping(bytes32 => BaseVaultTypes.UnstakeRequest) unstakeRequests;
+    mapping(address => OptimizedBytes32EnumerableSetLib.Bytes32Set) userRequests;
+}
+```
+

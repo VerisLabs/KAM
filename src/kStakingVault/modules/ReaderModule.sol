@@ -1,15 +1,21 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Extsload } from "src/abstracts/Extsload.sol";
+import { OptimizedFixedPointMathLib } from "src/libraries/OptimizedFixedPointMathLib.sol";
+
+import {
+    KSTAKINGVAULT_NOT_INITIALIZED,
+    KSTAKINGVAULT_VAULT_CLOSED,
+    KSTAKINGVAULT_VAULT_SETTLED
+} from "src/errors/Errors.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title ReaderModule
 /// @notice Contains all the public getters for the Staking Vault
 contract ReaderModule is BaseVault, Extsload {
-    using FixedPointMathLib for uint256;
+    using OptimizedFixedPointMathLib for uint256;
 
     /// @notice Interval for management fee (1 month)
     uint256 constant MANAGEMENT_FEE_INTERVAL = 657_436;
@@ -24,7 +30,7 @@ contract ReaderModule is BaseVault, Extsload {
     /// GENERAL
     function registry() external view returns (address) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        if (!_getInitialized($)) revert NotInitialized();
+        require(_getInitialized($), KSTAKINGVAULT_NOT_INITIALIZED);
         return $.registry;
     }
 
@@ -94,9 +100,9 @@ contract ReaderModule is BaseVault, Extsload {
                 // If its a hard hurdle rate, only charge fees above the hurdle performance
                 // Otherwise, charge fees to all return if its above hurdle return
                 if (_getIsHardHurdleRate($)) {
-                    performanceFees = excessReturn * _getPerformanceFee($) / MAX_BPS;
+                    performanceFees = (excessReturn * _getPerformanceFee($)) / MAX_BPS;
                 } else {
-                    performanceFees = totalReturn * _getPerformanceFee($) / MAX_BPS;
+                    performanceFees = (totalReturn * _getPerformanceFee($)) / MAX_BPS;
                 }
             }
 
@@ -201,7 +207,7 @@ contract ReaderModule is BaseVault, Extsload {
     /// @dev Throws if the batch is settled
     function getSafeBatchReceiver(bytes32 batchId) external view returns (address) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        if ($.batches[batchId].isSettled) revert Settled();
+        require(!$.batches[batchId].isSettled, KSTAKINGVAULT_VAULT_SETTLED);
         return $.batches[batchId].batchReceiver;
     }
 
@@ -235,8 +241,8 @@ contract ReaderModule is BaseVault, Extsload {
     function getSafeBatchId() external view returns (bytes32) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         bytes32 batchId = getBatchId();
-        if ($.batches[batchId].isClosed) revert Closed();
-        if ($.batches[batchId].isSettled) revert Settled();
+        require(!$.batches[batchId].isClosed, KSTAKINGVAULT_VAULT_CLOSED);
+        require(!$.batches[batchId].isSettled, KSTAKINGVAULT_VAULT_SETTLED);
         return batchId;
     }
 
