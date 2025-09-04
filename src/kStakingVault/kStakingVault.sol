@@ -12,12 +12,12 @@ import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
-import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 
 import { VaultBatches } from "src/kStakingVault/base/VaultBatches.sol";
 import { VaultClaims } from "src/kStakingVault/base/VaultClaims.sol";
 import { VaultFees } from "src/kStakingVault/base/VaultFees.sol";
-import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title kStakingVault
 /// @notice Pure ERC20 vault with dual accounting for minter and user pools
@@ -26,7 +26,7 @@ contract kStakingVault is
     Initializable,
     UUPSUpgradeable,
     Ownable,
-    BaseVaultModule,
+    BaseVault,
     MultiFacetProxy,
     VaultFees,
     VaultClaims,
@@ -69,11 +69,11 @@ contract kStakingVault is
         if (asset_ == address(0)) revert ZeroAddress();
 
         // Initialize ownership and roles
-        __BaseVaultModule_init(registry_, paused_);
+        __BaseVault_init(registry_, paused_);
         _initializeOwner(owner_);
 
         // Initialize storage with optimized packing
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         $.name = name_;
         $.symbol = symbol_;
         _setDecimals($, decimals_);
@@ -94,7 +94,7 @@ contract kStakingVault is
     /// @param amount Amount of kTokens to stake
     /// @return requestId Request ID for this staking request
     function requestStake(address to, uint256 amount) external payable nonReentrant returns (bytes32 requestId) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_getPaused($)) revert IsPaused();
         if (amount == 0) revert ZeroAmount();
         if ($.kToken.balanceOf(msg.sender) < amount) {
@@ -107,12 +107,12 @@ contract kStakingVault is
         requestId = _createStakeRequestId(msg.sender, amount, block.timestamp);
 
         // Create staking request
-        $.stakeRequests[requestId] = BaseVaultModuleTypes.StakeRequest({
+        $.stakeRequests[requestId] = BaseVaultTypes.StakeRequest({
             user: msg.sender,
             kTokenAmount: amount.toUint128(),
             recipient: to,
             requestTimestamp: block.timestamp.toUint64(),
-            status: BaseVaultModuleTypes.RequestStatus.PENDING,
+            status: BaseVaultTypes.RequestStatus.PENDING,
             batchId: batchId
         });
 
@@ -145,7 +145,7 @@ contract kStakingVault is
         nonReentrant
         returns (bytes32 requestId)
     {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_getPaused($)) revert IsPaused();
         if (stkTokenAmount == 0) revert ZeroAmount();
         if (balanceOf(msg.sender) < stkTokenAmount) {
@@ -158,12 +158,12 @@ contract kStakingVault is
         requestId = _createStakeRequestId(msg.sender, stkTokenAmount, block.timestamp);
 
         // Create unstaking request
-        $.unstakeRequests[requestId] = BaseVaultModuleTypes.UnstakeRequest({
+        $.unstakeRequests[requestId] = BaseVaultTypes.UnstakeRequest({
             user: msg.sender,
             stkTokenAmount: stkTokenAmount.toUint128(),
             recipient: to,
             requestTimestamp: SafeCastLib.toUint64(block.timestamp),
-            status: BaseVaultModuleTypes.RequestStatus.PENDING,
+            status: BaseVaultTypes.RequestStatus.PENDING,
             batchId: batchId
         });
 
@@ -182,18 +182,18 @@ contract kStakingVault is
     /// @notice Cancels a staking request
     /// @param requestId Request ID to cancel
     function cancelStakeRequest(bytes32 requestId) external payable nonReentrant {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        BaseVaultModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        BaseVaultTypes.StakeRequest storage request = $.stakeRequests[requestId];
 
         if (!$.userRequests[msg.sender].contains(requestId)) {
             revert RequestNotFound();
         }
         if (msg.sender != request.user) revert Unauthorized();
-        if (request.status != BaseVaultModuleTypes.RequestStatus.PENDING) {
+        if (request.status != BaseVaultTypes.RequestStatus.PENDING) {
             revert RequestNotEligible();
         }
 
-        request.status = BaseVaultModuleTypes.RequestStatus.CANCELLED;
+        request.status = BaseVaultTypes.RequestStatus.CANCELLED;
         $.userRequests[msg.sender].remove(requestId);
 
         $.totalPendingStake -= request.kTokenAmount;
@@ -212,19 +212,19 @@ contract kStakingVault is
     /// @notice Cancels an unstaking request
     /// @param requestId Request ID to cancel
     function cancelUnstakeRequest(bytes32 requestId) external payable nonReentrant {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_getPaused($)) revert IsPaused();
-        BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
+        BaseVaultTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
 
         if (msg.sender != request.user) revert Unauthorized();
         if (!$.userRequests[msg.sender].contains(requestId)) {
             revert RequestNotFound();
         }
-        if (request.status != BaseVaultModuleTypes.RequestStatus.PENDING) {
+        if (request.status != BaseVaultTypes.RequestStatus.PENDING) {
             revert RequestNotEligible();
         }
 
-        request.status = BaseVaultModuleTypes.RequestStatus.CANCELLED;
+        request.status = BaseVaultTypes.RequestStatus.CANCELLED;
         $.userRequests[msg.sender].remove(requestId);
 
         if ($.batches[request.batchId].isClosed) revert Closed();
@@ -247,7 +247,7 @@ contract kStakingVault is
     /// @param timestamp Timestamp
     /// @return Request ID
     function _createStakeRequestId(address user, uint256 amount, uint256 timestamp) internal returns (bytes32) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         $.currentBatch++;
         return keccak256(abi.encode(address(this), user, amount, timestamp, $.currentBatch));
     }
@@ -272,7 +272,7 @@ contract kStakingVault is
     /// @dev Uses the last total assets and total supply to calculate the price
     /// @return price Price per stkToken in underlying asset terms
     function sharePrice() external view returns (uint256) {
-        return _sharePrice();
+        return _netSharePrice();
     }
 
     /// @notice Returns the current total assets
@@ -290,13 +290,13 @@ contract kStakingVault is
     /// @notice Returns the current batch
     /// @return Batch
     function getBatchId() public view returns (bytes32) {
-        return _getBaseVaultModuleStorage().currentBatchId;
+        return _getBaseVaultStorage().currentBatchId;
     }
 
     /// @notice Returns the safe batch
     /// @return Batch
     function getSafeBatchId() external view returns (bytes32) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         bytes32 batchId = getBatchId();
         if ($.batches[batchId].isClosed) revert Closed();
         if ($.batches[batchId].isSettled) revert Settled();

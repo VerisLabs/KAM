@@ -11,11 +11,11 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
-import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 
 import { VaultClaims } from "src/kStakingVault/base/VaultClaims.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title DNVaultTest
 /// @notice Tests DNVault
@@ -213,7 +213,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Try to claim while paused
         vm.prank(users.alice);
-        vm.expectRevert(BaseVaultModule.IsPaused.selector);
+        vm.expectRevert(BaseVault.IsPaused.selector);
         vault.claimStakedShares(batchId, requestId);
     }
 
@@ -440,7 +440,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Try to claim while paused
         vm.prank(users.alice);
-        vm.expectRevert(BaseVaultModule.IsPaused.selector);
+        vm.expectRevert(BaseVault.IsPaused.selector);
         vault.claimUnstakedAssets(batchId, requestId);
     }
 

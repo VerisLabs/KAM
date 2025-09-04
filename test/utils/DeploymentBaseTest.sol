@@ -174,7 +174,7 @@ contract DeploymentBaseTest is BaseTest {
 
         // Deploy proxy with initialization
         bytes memory initData = abi.encodeWithSelector(
-            kRegistry.initialize.selector, users.owner, users.admin, users.emergencyAdmin, users.guardian, users.relayer
+            kRegistry.initialize.selector, users.owner, users.admin, users.emergencyAdmin, users.guardian, users.relayer, users.treasury
         );
 
         address registryProxy = factory.deployAndCall(address(registryImpl), users.admin, initData);

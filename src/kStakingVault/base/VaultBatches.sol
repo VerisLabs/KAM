@@ -6,13 +6,13 @@ import { LibClone } from "solady/utils/LibClone.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
-import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
-import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title VaultBatches
 /// @notice Handles batch operations for staking and unstaking
 /// @dev Contains batch functions for staking and unstaking operations
-contract VaultBatches is BaseVaultModule {
+contract VaultBatches is BaseVault {
     using SafeCastLib for uint256;
     using SafeCastLib for uint64;
     /*//////////////////////////////////////////////////////////////
@@ -43,7 +43,7 @@ contract VaultBatches is BaseVaultModule {
     /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
     function closeBatch(bytes32 _batchId, bool _create) external {
         if (!_isRelayer(msg.sender)) revert WrongRole();
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         if ($.batches[_batchId].isClosed) revert Closed();
         $.batches[_batchId].isClosed = true;
 
@@ -58,10 +58,12 @@ contract VaultBatches is BaseVaultModule {
     /// @dev Only callable by kMinter, indicates assets have been distributed
     function settleBatch(bytes32 _batchId) external {
         if (!_isKAssetRouter(msg.sender)) revert WrongRole();
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (!$.batches[_batchId].isClosed) revert NotClosed();
         if ($.batches[_batchId].isSettled) revert Settled();
         $.batches[_batchId].isSettled = true;
+        $.batches[_batchId].sharePrice = _sharePrice().toUint128();
+        $.batches[_batchId].netSharePrice = _netSharePrice().toUint128();
 
         emit BatchSettled(_batchId);
     }
@@ -71,7 +73,7 @@ contract VaultBatches is BaseVaultModule {
     /// @dev Only callable by kAssetRouter
     function createBatchReceiver(bytes32 _batchId) external nonReentrant returns (address) {
         if (!_isKAssetRouter(msg.sender)) revert WrongRole();
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         address receiver = $.batches[_batchId].batchReceiver;
         if (receiver != address(0)) return receiver;
 
@@ -92,7 +94,7 @@ contract VaultBatches is BaseVaultModule {
     /// @return The new batch ID
     /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
     function _createNewBatch() internal returns (bytes32) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         unchecked {
             $.currentBatch++;
         }
@@ -105,7 +107,7 @@ contract VaultBatches is BaseVaultModule {
         );
 
         $.currentBatchId = newBatchId;
-        BaseVaultModuleTypes.BatchInfo storage batch = $.batches[newBatchId];
+        BaseVaultTypes.BatchInfo storage batch = $.batches[newBatchId];
         batch.batchId = newBatchId;
         batch.batchReceiver = address(0);
         batch.isClosed = false;

@@ -179,7 +179,7 @@ Modular vault implementation deployed per asset type, enabling retail users to s
 
 The kStakingVault implements a sophisticated modular architecture using the "diamond pattern" via MultiFacetProxy. This design allows the vault to compose functionality from multiple specialized modules while maintaining a single contract interface.
 
-**BaseVaultModule**: Provides foundational vault logic including ERC20 token functionality for stkTokens. These tokens represent staked positions and automatically accrue yield. The module uses ERC-7201 namespaced storage for upgrade safety, connects to kRegistry for system-wide configuration, implements role-based permissions, and uses ReentrancyGuardTransient for gas-efficient protection.
+**BaseVault**: Provides foundational vault logic including ERC20 token functionality for stkTokens. These tokens represent staked positions and automatically accrue yield. The module uses ERC-7201 namespaced storage for upgrade safety, connects to kRegistry for system-wide configuration, implements role-based permissions, and uses ReentrancyGuardTransient for gas-efficient protection.
 
 **VaultBatches**: Handles the complete batch lifecycle for efficient gas usage. It automatically creates new batches when current batches settle, marks batches ready for settlement processing, coordinates with kAssetRouter for atomic settlement, and creates deterministic addresses for redemption distribution.
 

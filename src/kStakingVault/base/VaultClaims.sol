@@ -6,14 +6,15 @@ import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
-import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
-import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title VaultClaims
 /// @notice Handles claim operations for settled batches
 /// @dev Contains claim functions for staking and unstaking operations
-contract VaultClaims is BaseVaultModule {
+contract VaultClaims is BaseVault {
     using SafeCastLib for uint256;
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
@@ -46,19 +47,21 @@ contract VaultClaims is BaseVaultModule {
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
     function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable nonReentrant {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_getPaused($)) revert IsPaused();
         if (!$.batches[batchId].isSettled) revert BatchNotSettled();
 
-        BaseVaultModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
+        BaseVaultTypes.StakeRequest storage request = $.stakeRequests[requestId];
         if (request.batchId != batchId) revert InvalidBatchId();
-        if (request.status != BaseVaultModuleTypes.RequestStatus.PENDING) revert RequestNotPending();
+        if (request.status != BaseVaultTypes.RequestStatus.PENDING) revert RequestNotPending();
         if (msg.sender != request.user) revert NotBeneficiary();
 
-        request.status = BaseVaultModuleTypes.RequestStatus.CLAIMED;
+        request.status = BaseVaultTypes.RequestStatus.CLAIMED;
 
         // Calculate stkToken amount based on settlement-time share price
-        uint256 stkTokensToMint = _convertToShares(uint256(request.kTokenAmount));
+        uint256 netSharePrice = $.batches[batchId].netSharePrice;
+        if (netSharePrice == 0) revert();
+        uint256 stkTokensToMint = (uint256(request.kTokenAmount)).fullMulDiv(10 ** _getDecimals($), netSharePrice);
 
         emit StakingSharesClaimed(batchId, requestId, request.user, stkTokensToMint);
 
@@ -73,26 +76,35 @@ contract VaultClaims is BaseVaultModule {
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
     function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable nonReentrant {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_getPaused($)) revert IsPaused();
         if (!$.batches[batchId].isSettled) revert BatchNotSettled();
 
-        BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
+        BaseVaultTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
         if (request.batchId != batchId) revert InvalidBatchId();
-        if (request.status != BaseVaultModuleTypes.RequestStatus.PENDING) revert RequestNotPending();
+        if (request.status != BaseVaultTypes.RequestStatus.PENDING) revert RequestNotPending();
         if (msg.sender != request.user) revert NotBeneficiary();
 
-        request.status = BaseVaultModuleTypes.RequestStatus.CLAIMED;
+        request.status = BaseVaultTypes.RequestStatus.CLAIMED;
+
+        uint256 sharePrice = $.batches[batchId].sharePrice;
+        uint256 netSharePrice = $.batches[batchId].netSharePrice;
+        if (sharePrice == 0) revert();
 
         // Calculate total kTokens to return based on settlement-time share price
-        uint256 totalKTokensToReturn = _convertToAssets(uint256(request.stkTokenAmount));
+        uint256 totalKTokensGross = (uint256(request.stkTokenAmount)).fullMulDiv(sharePrice, 10 ** _getDecimals($));
+        uint256 totalKTokensNet = (uint256(request.stkTokenAmount)).fullMulDiv(netSharePrice, 10 ** _getDecimals($));
+        uint256 fees = totalKTokensGross - totalKTokensNet;
 
         // Burn stkTokens from vault (already transferred to vault during request)
         _burn(address(this), request.stkTokenAmount);
-        emit UnstakingAssetsClaimed(batchId, requestId, request.user, totalKTokensToReturn);
+        emit UnstakingAssetsClaimed(batchId, requestId, request.user, totalKTokensNet);
+
+        // Transfer fees to treasury
+        $.kToken.safeTransfer(IkRegistry($.registry).getTreasury(), fees);
 
         // Transfer kTokens to user
-        $.kToken.safeTransfer(request.user, totalKTokensToReturn);
-        emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensToReturn);
+        $.kToken.safeTransfer(request.user, totalKTokensNet);
+        emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensNet);
     }
 }

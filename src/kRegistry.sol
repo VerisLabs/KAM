@@ -50,6 +50,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     struct kRegistryStorage {
         EnumerableSetLib.AddressSet supportedAssets;
         EnumerableSetLib.AddressSet allVaults;
+        address treasury;
         mapping(bytes32 => address) singletonContracts;
         mapping(address => uint8 vaultType) vaultType;
         mapping(address => mapping(uint8 vaultType => address)) assetToVault;
@@ -88,7 +89,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         address admin_,
         address emergencyAdmin_,
         address guardian_,
-        address relayer_
+        address relayer_,
+        address treasury_
     )
         external
         initializer
@@ -98,6 +100,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         if (emergencyAdmin_ == address(0)) revert ZeroAddress();
         if (guardian_ == address(0)) revert ZeroAddress();
         if (relayer_ == address(0)) revert ZeroAddress();
+        if (treasury_ == address(0)) revert ZeroAddress();
 
         _initializeOwner(owner_);
         _grantRoles(admin_, ADMIN_ROLE);
@@ -105,6 +108,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);
         _grantRoles(guardian_, GUARDIAN_ROLE);
         _grantRoles(relayer_, RELAYER_ROLE);
+        _getkRegistryStorage().treasury = treasury_;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -278,6 +282,20 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     }
 
     /*//////////////////////////////////////////////////////////////
+                          ROLES MANAGEMENT
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Sets the treasury address
+    /// @param treasury_ The new treasury address
+    function setTreasury(address treasury_) external payable {
+        if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        if (treasury_ == address(0)) revert ZeroAddress();
+        $.treasury = treasury_;
+        emit TreasurySet(treasury_);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                           ADAPTER MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
@@ -357,6 +375,17 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         kRegistryStorage storage $ = _getkRegistryStorage();
         if ($.allVaults.length() == 0) revert ZeroAddress();
         return $.allVaults.values();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Get the treasury address
+    /// @return The treasury address
+    function getTreasury() external view returns (address) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        return $.treasury;
     }
 
     /// @notice Get all core singleton contracts at once
