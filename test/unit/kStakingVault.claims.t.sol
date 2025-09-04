@@ -326,7 +326,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         assertEq(vault.balanceOf(address(vault)), 0);
     }
 
-
     /// @dev Test successful claim of unstaked assets
     function test_ClaimUnstakedAssets_WithFees_Success() public {
         _setupTestFees();
@@ -380,17 +379,16 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         // Claim unstaked assets
         vm.prank(users.alice);
         vm.expectEmit(true, false, true, true);
-        emit UnstakingAssetsClaimed(unstakeBatchId, unstakeRequestId, users.alice, 999178000);
+        emit UnstakingAssetsClaimed(unstakeBatchId, unstakeRequestId, users.alice, 999_178_000);
         vault.claimUnstakedAssets(unstakeBatchId, unstakeRequestId);
 
         // Verify user received kTokens back
         uint256 kTokenBalanceAfter = kUSD.balanceOf(users.alice);
-        assertEq(kTokenBalanceAfter - kTokenBalanceBefore, 999178000);
+        assertEq(kTokenBalanceAfter - kTokenBalanceBefore, 999_178_000);
 
         // Verify stkTokens were burned from vault
         assertEq(vault.balanceOf(address(vault)), 0);
     }
-
 
     /// @dev Test claiming unstaked assets from non-settled batch
     function test_ClaimUnstakedAssets_BatchNotSettled() public {

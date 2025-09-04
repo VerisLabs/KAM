@@ -31,8 +31,8 @@ contract DeployRegistryScript is Script, DeploymentManager {
             config.roles.emergencyAdmin,
             config.roles.guardian,
             config.roles.relayer
-            // TODO:add treausury role here
         );
+        // TODO:add treausury role here
 
         address registryProxy = factory.deployAndCall(address(registryImpl), msg.sender, initData);
 
