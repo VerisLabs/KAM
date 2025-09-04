@@ -14,8 +14,8 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 
 import {
-    KSTAKINGVAULT_IS_PAUSED,
     VAULTCLAIMS_BATCH_NOT_SETTLED,
+    VAULTCLAIMS_IS_PAUSED,
     VAULTCLAIMS_NOT_BENEFICIARY,
     VAULTCLAIMS_REQUEST_NOT_PENDING
 } from "src/errors/Errors.sol";
@@ -219,7 +219,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Try to claim while paused
         vm.prank(users.alice);
-        vm.expectRevert(bytes(KSTAKINGVAULT_IS_PAUSED));
+        vm.expectRevert(bytes(VAULTCLAIMS_IS_PAUSED));
         vault.claimStakedShares(batchId, requestId);
     }
 
@@ -446,7 +446,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Try to claim while paused
         vm.prank(users.alice);
-        vm.expectRevert(bytes(KSTAKINGVAULT_IS_PAUSED));
+        vm.expectRevert(bytes(VAULTCLAIMS_IS_PAUSED));
         vault.claimUnstakedAssets(batchId, requestId);
     }
 

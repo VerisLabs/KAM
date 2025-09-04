@@ -34,10 +34,16 @@ contract VaultClaims is BaseVault {
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice ERC20 Transfer event for stkToken operations
+    /// @notice Emitted when a user claims staking shares
     event StakingSharesClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 shares);
+
+    /// @notice Emitted when a user claims unstaking assets
     event UnstakingAssetsClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 assets);
+
+    /// @notice Emitted when stkTokens are issued
     event StkTokensIssued(address indexed user, uint256 stkTokenAmount);
+
+    /// @notice Emitted when kTokens are unstaked
     event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
 
     /*//////////////////////////////////////////////////////////////
@@ -48,6 +54,7 @@ contract VaultClaims is BaseVault {
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
     function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable {
+        // Open `nonRentrant`
         _lockReentrant();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         require(!_getPaused($), VAULTCLAIMS_IS_PAUSED);
@@ -63,15 +70,21 @@ contract VaultClaims is BaseVault {
         // Calculate stkToken amount based on settlement-time share price
         uint256 netSharePrice = $.batches[batchId].netSharePrice;
         if (netSharePrice == 0) revert();
+
+        // Divide the deposited assets by the share price of the batch to obtain stkTokens to mint
         uint256 stkTokensToMint = (uint256(request.kTokenAmount)).fullMulDiv(10 ** _getDecimals($), netSharePrice);
 
         emit StakingSharesClaimed(batchId, requestId, request.user, stkTokensToMint);
 
+        // Reduce total pending stake and remove user stake request
         $.userRequests[msg.sender].remove(requestId);
         $.totalPendingStake -= request.kTokenAmount;
+
         // Mint stkTokens to user
         _mint(request.user, stkTokensToMint);
         emit StkTokensIssued(request.user, stkTokensToMint);
+
+        // Close `nonRentrant`
         _unlockReentrant();
     }
 
@@ -79,7 +92,9 @@ contract VaultClaims is BaseVault {
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
     function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable {
+        // Open `nonRentrant`
         _lockReentrant();
+
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         require(!_getPaused($), VAULTCLAIMS_IS_PAUSED);
         require($.batches[batchId].isSettled, VAULTCLAIMS_BATCH_NOT_SETTLED);
@@ -96,8 +111,11 @@ contract VaultClaims is BaseVault {
         if (sharePrice == 0) revert();
 
         // Calculate total kTokens to return based on settlement-time share price
+        // Multply redeemed shares for net and gross share price to obtain gross and net amount of assets
         uint256 totalKTokensGross = (uint256(request.stkTokenAmount)).fullMulDiv(sharePrice, 10 ** _getDecimals($));
         uint256 totalKTokensNet = (uint256(request.stkTokenAmount)).fullMulDiv(netSharePrice, 10 ** _getDecimals($));
+
+        // Calculate fees as the deifference between gross and net amount
         uint256 fees = totalKTokensGross - totalKTokensNet;
 
         // Burn stkTokens from vault (already transferred to vault during request)
@@ -110,6 +128,8 @@ contract VaultClaims is BaseVault {
         // Transfer kTokens to user
         $.kToken.safeTransfer(request.user, totalKTokensNet);
         emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensNet);
+
+        // Close `nonRentrant`
         _unlockReentrant();
     }
 }
