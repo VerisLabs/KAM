@@ -7,7 +7,9 @@ import { Multicallable } from "solady/utils/Multicallable.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IS_PAUSED, TRANSFER_FAILED, ZERO_ADDRESS, ZERO_AMOUNT } from "src/errors/Errors.sol";
+import {
+    KTOKEN_IS_PAUSED, KTOKEN_TRANSFER_FAILED, KTOKEN_ZERO_ADDRESS, KTOKEN_ZERO_AMOUNT
+} from "src/errors/Errors.sol";
 
 /// @title kToken
 /// @notice ERC20 token with role-based minting and burning capabilities
@@ -60,10 +62,10 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
         string memory symbol_,
         uint8 decimals_
     ) {
-        require(owner_ != address(0), ZERO_ADDRESS);
-        require(admin_ != address(0), ZERO_ADDRESS);
-        require(emergencyAdmin_ != address(0), ZERO_ADDRESS);
-        require(minter_ != address(0), ZERO_ADDRESS);
+        require(owner_ != address(0), KTOKEN_ZERO_ADDRESS);
+        require(admin_ != address(0), KTOKEN_ZERO_ADDRESS);
+        require(emergencyAdmin_ != address(0), KTOKEN_ZERO_ADDRESS);
+        require(minter_ != address(0), KTOKEN_ZERO_ADDRESS);
 
         // Initialize ownership and roles
         _initializeOwner(owner_);
@@ -86,7 +88,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @param _to The address that will receive the newly minted tokens
     /// @param _amount The quantity of tokens to create and assign
     function mint(address _to, uint256 _amount) external nonReentrant onlyRoles(MINTER_ROLE) {
-        require(!_isPaused, IS_PAUSED);
+        require(!_isPaused, KTOKEN_IS_PAUSED);
         _mint(_to, _amount);
         emit Minted(_to, _amount);
     }
@@ -96,7 +98,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @param _from The address from which tokens will be destroyed
     /// @param _amount The quantity of tokens to destroy
     function burn(address _from, uint256 _amount) external nonReentrant onlyRoles(MINTER_ROLE) {
-        require(!_isPaused, IS_PAUSED);
+        require(!_isPaused, KTOKEN_IS_PAUSED);
         _burn(_from, _amount);
         emit Burned(_from, _amount);
     }
@@ -106,7 +108,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @param _from The address from which tokens will be destroyed
     /// @param _amount The quantity of tokens to destroy from the allowance
     function burnFrom(address _from, uint256 _amount) external nonReentrant onlyRoles(MINTER_ROLE) {
-        require(!_isPaused, IS_PAUSED);
+        require(!_isPaused, KTOKEN_IS_PAUSED);
         _spendAllowance(_from, msg.sender, _amount);
         _burn(_from, _amount);
         emit Burned(_from, _amount);
@@ -200,13 +202,13 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @param to Recipient address
     /// @param amount Amount to withdraw
     function emergencyWithdraw(address token, address to, uint256 amount) external onlyRoles(EMERGENCY_ADMIN_ROLE) {
-        require(to != address(0), ZERO_ADDRESS);
-        require(amount != 0, ZERO_AMOUNT);
+        require(to != address(0), KTOKEN_ZERO_ADDRESS);
+        require(amount != 0, KTOKEN_ZERO_AMOUNT);
 
         if (token == address(0)) {
             // Withdraw ETH
             (bool success,) = to.call{ value: amount }("");
-            require(success, TRANSFER_FAILED);
+            require(success, KTOKEN_TRANSFER_FAILED);
             emit RescuedETH(to, amount);
         } else {
             // Withdraw ERC20 token
@@ -227,7 +229,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @param to The address tokens are being transferred to
     /// @param amount The quantity of tokens being transferred
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
-        require(!_isPaused, IS_PAUSED);
+        require(!_isPaused, KTOKEN_IS_PAUSED);
         super._beforeTokenTransfer(from, to, amount);
     }
 }

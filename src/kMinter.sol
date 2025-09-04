@@ -15,17 +15,17 @@ import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkBatchReceiver } from "src/interfaces/IkBatchReceiver.sol";
 
 import {
-    BATCH_CLOSED,
-    BATCH_SETTLED,
-    INSUFFICIENT_BALANCE,
-    IS_PAUSED,
-    REQUEST_NOT_ELIGIBLE,
-    REQUEST_NOT_FOUND,
-    REQUEST_PROCESSED,
-    WRONG_ASSET,
-    WRONG_ROLE,
-    ZERO_ADDRESS,
-    ZERO_AMOUNT
+    KMINTER_BATCH_CLOSED,
+    KMINTER_BATCH_SETTLED,
+    KMINTER_INSUFFICIENT_BALANCE,
+    KMINTER_IS_PAUSED,
+    KMINTER_REQUEST_NOT_ELIGIBLE,
+    KMINTER_REQUEST_NOT_FOUND,
+    KMINTER_REQUEST_PROCESSED,
+    KMINTER_WRONG_ASSET,
+    KMINTER_WRONG_ROLE,
+    KMINTER_ZERO_ADDRESS,
+    KMINTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
@@ -74,7 +74,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @notice Initializes the kMinter contract
     /// @param registry_ Address of the registry contract
     function initialize(address registry_) external initializer {
-        require(registry_ != address(0), ZERO_ADDRESS);
+        require(registry_ != address(0), KMINTER_ZERO_ADDRESS);
         __kBase_init(registry_);
         emit ContractInitialized(registry_);
     }
@@ -89,12 +89,12 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @param to_ Address of the recipient
     /// @param amount_ Amount of the asset to mint
     function mint(address asset_, address to_, uint256 amount_) external payable nonReentrant {
-        require(!_isPaused(), IS_PAUSED);
-        require(_isInstitution(msg.sender), WRONG_ROLE);
-        require(_isAsset(asset_), WRONG_ASSET);
+        require(!_isPaused(), KMINTER_IS_PAUSED);
+        require(_isInstitution(msg.sender), KMINTER_WRONG_ROLE);
+        require(_isAsset(asset_), KMINTER_WRONG_ASSET);
 
-        require(amount_ != 0, ZERO_AMOUNT);
-        require(to_ != address(0), ZERO_ADDRESS);
+        require(amount_ != 0, KMINTER_ZERO_AMOUNT);
+        require(to_ != address(0), KMINTER_ZERO_ADDRESS);
 
         address kToken = _getKTokenForAsset(asset_);
         address dnVault = _getDNVaultByAsset(asset_);
@@ -131,15 +131,15 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         nonReentrant
         returns (bytes32 requestId)
     {
-        require(!_isPaused(), IS_PAUSED);
-        require(_isInstitution(msg.sender), WRONG_ROLE);
-        require(_isAsset(asset_), WRONG_ASSET);
+        require(!_isPaused(), KMINTER_IS_PAUSED);
+        require(_isInstitution(msg.sender), KMINTER_WRONG_ROLE);
+        require(_isAsset(asset_), KMINTER_WRONG_ASSET);
 
-        require(amount_ != 0, ZERO_AMOUNT);
-        require(to_ != address(0), ZERO_ADDRESS);
+        require(amount_ != 0, KMINTER_ZERO_AMOUNT);
+        require(to_ != address(0), KMINTER_ZERO_ADDRESS);
 
         address kToken = _getKTokenForAsset(asset_);
-        require(kToken.balanceOf(msg.sender) >= amount_, INSUFFICIENT_BALANCE);
+        require(kToken.balanceOf(msg.sender) >= amount_, KMINTER_INSUFFICIENT_BALANCE);
 
         // Generate request ID
         requestId = _createRedeemRequestId(to_, amount_, block.timestamp);
@@ -175,17 +175,17 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @notice Executes redemption for a request in a settled batch
     /// @param requestId Request ID to execute
     function redeem(bytes32 requestId) external payable nonReentrant {
-        require(!_isPaused(), IS_PAUSED);
-        require(_isInstitution(msg.sender), WRONG_ROLE);
+        require(!_isPaused(), KMINTER_IS_PAUSED);
+        require(_isInstitution(msg.sender), KMINTER_WRONG_ROLE);
 
         kMinterStorage storage $ = _getkMinterStorage();
         RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
 
         // Validate request
-        require($.userRequests[redeemRequest.user].contains(requestId), REQUEST_NOT_FOUND);
-        require(redeemRequest.status == RequestStatus.PENDING, REQUEST_NOT_ELIGIBLE);
-        require(redeemRequest.status != RequestStatus.REDEEMED, REQUEST_PROCESSED);
-        require(redeemRequest.status != RequestStatus.CANCELLED, REQUEST_NOT_ELIGIBLE);
+        require($.userRequests[redeemRequest.user].contains(requestId), KMINTER_REQUEST_NOT_FOUND);
+        require(redeemRequest.status == RequestStatus.PENDING, KMINTER_REQUEST_NOT_ELIGIBLE);
+        require(redeemRequest.status != RequestStatus.REDEEMED, KMINTER_REQUEST_PROCESSED);
+        require(redeemRequest.status != RequestStatus.CANCELLED, KMINTER_REQUEST_NOT_ELIGIBLE);
 
         // Update state
         redeemRequest.status = RequestStatus.REDEEMED;
@@ -196,7 +196,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         address vault = _getDNVaultByAsset(redeemRequest.asset);
         address batchReceiver = _getBatchReceiver(vault, redeemRequest.batchId);
-        require(batchReceiver != address(0), ZERO_ADDRESS);
+        require(batchReceiver != address(0), KMINTER_ZERO_ADDRESS);
 
         // Burn kTokens
         address kToken = _getKTokenForAsset(redeemRequest.asset);
@@ -211,23 +211,23 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @notice Cancels a redemption request before batch settlement
     /// @param requestId Request ID to cancel
     function cancelRequest(bytes32 requestId) external payable nonReentrant {
-        require(!_isPaused(), IS_PAUSED);
-        require(_isInstitution(msg.sender), WRONG_ROLE);
+        require(!_isPaused(), KMINTER_IS_PAUSED);
+        require(_isInstitution(msg.sender), KMINTER_WRONG_ROLE);
 
         kMinterStorage storage $ = _getkMinterStorage();
         RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
 
         // Validate request
-        require($.userRequests[redeemRequest.user].contains(requestId), REQUEST_NOT_FOUND);
-        require(redeemRequest.status == RequestStatus.PENDING, REQUEST_NOT_ELIGIBLE);
+        require($.userRequests[redeemRequest.user].contains(requestId), KMINTER_REQUEST_NOT_FOUND);
+        require(redeemRequest.status == RequestStatus.PENDING, KMINTER_REQUEST_NOT_ELIGIBLE);
         // Update state
         redeemRequest.status = RequestStatus.CANCELLED;
         // Remove request from user's requests
         $.userRequests[redeemRequest.user].remove(requestId);
 
         address vault = _getDNVaultByAsset(redeemRequest.asset);
-        require(!IkStakingVault(vault).isBatchClosed(), BATCH_CLOSED);
-        require(!IkStakingVault(vault).isBatchSettled(), BATCH_SETTLED);
+        require(!IkStakingVault(vault).isBatchClosed(), KMINTER_BATCH_CLOSED);
+        require(!IkStakingVault(vault).isBatchSettled(), KMINTER_BATCH_SETTLED);
 
         address kToken = _getKTokenForAsset(redeemRequest.asset);
 
@@ -264,7 +264,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @param to_ Destination address
     /// @param amount_ Amount
     function rescueReceiverAssets(address batchReceiver, address asset_, address to_, uint256 amount_) external {
-        require(batchReceiver != address(0) && asset_ != address(0) && to_ != address(0), ZERO_ADDRESS);
+        require(batchReceiver != address(0) && asset_ != address(0) && to_ != address(0), KMINTER_ZERO_ADDRESS);
         IkBatchReceiver(batchReceiver).rescueAssets(asset_);
         this.rescueAssets(asset_, to_, amount_);
     }
@@ -318,8 +318,8 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @dev Only callable by ADMIN_ROLE
     /// @param newImplementation New implementation address
     function _authorizeUpgrade(address newImplementation) internal view override {
-        require(_isAdmin(msg.sender), WRONG_ROLE);
-        require(newImplementation != address(0), ZERO_ADDRESS);
+        require(_isAdmin(msg.sender), KMINTER_WRONG_ROLE);
+        require(newImplementation != address(0), KMINTER_ZERO_ADDRESS);
     }
 
     /*//////////////////////////////////////////////////////////////

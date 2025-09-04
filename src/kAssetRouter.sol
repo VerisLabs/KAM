@@ -1,32 +1,42 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {EfficientHashLib} from "solady/utils/EfficientHashLib.sol";
-import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
-import {Initializable} from "solady/utils/Initializable.sol";
-import {Multicallable} from "solady/utils/Multicallable.sol";
-import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
+import { EfficientHashLib } from "solady/utils/EfficientHashLib.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
+import { Multicallable } from "solady/utils/Multicallable.sol";
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import {kBase} from "src/base/kBase.sol";
-import {ALREADY_REGISTERED, BATCH_CLOSED, BATCH_ID_PROPOSED, BATCH_SETTLED, COOLDOOWN_IS_UP, INSUFFICIENT_VIRTUAL_BALANCE, INVALID_COOLDOWN, INVALID_VAULT, IS_PAUSED, NO_PROPOSAL, ONLY_KMINTER, ONLY_KSTAKING_VAULT, PROPOSAL_EXECUTED, PROPOSAL_EXISTS, PROPOSAL_NOT_FOUND, WRONG_ROLE, ZERO_ADDRESS, ZERO_AMOUNT} from "src/errors/Errors.sol";
-import {OptimizedBytes32EnumerableSetLib} from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
+import { kBase } from "src/base/kBase.sol";
+import {
+    KASSETROUTER_BATCH_ID_PROPOSED,
+    KASSETROUTER_COOLDOOWN_IS_UP,
+    KASSETROUTER_INSUFFICIENT_VIRTUAL_BALANCE,
+    KASSETROUTER_INVALID_COOLDOWN,
+    KASSETROUTER_INVALID_VAULT,
+    KASSETROUTER_IS_PAUSED,
+    KASSETROUTER_NO_PROPOSAL,
+    KASSETROUTER_ONLY_KMINTER,
+    KASSETROUTER_ONLY_KSTAKING_VAULT,
+    KASSETROUTER_PROPOSAL_EXECUTED,
+    KASSETROUTER_PROPOSAL_EXISTS,
+    KASSETROUTER_PROPOSAL_NOT_FOUND,
+    KASSETROUTER_WRONG_ROLE,
+    KASSETROUTER_ZERO_ADDRESS,
+    KASSETROUTER_ZERO_AMOUNT
+} from "src/errors/Errors.sol";
+import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
 
-import {IAdapter} from "src/interfaces/IAdapter.sol";
-import {IkAssetRouter} from "src/interfaces/IkAssetRouter.sol";
-import {IkRegistry} from "src/interfaces/IkRegistry.sol";
-import {IkStakingVault} from "src/interfaces/IkStakingVault.sol";
-import {IkToken} from "src/interfaces/IkToken.sol";
+import { IAdapter } from "src/interfaces/IAdapter.sol";
+import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
+import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
+import { IkToken } from "src/interfaces/IkToken.sol";
 
 /// @title kAssetRouter
-contract kAssetRouter is
-    IkAssetRouter,
-    Initializable,
-    UUPSUpgradeable,
-    kBase,
-    Multicallable
-{
+contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, Multicallable {
     using FixedPointMathLib for uint256;
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
@@ -60,11 +70,7 @@ contract kAssetRouter is
     bytes32 private constant KASSETROUTER_STORAGE_LOCATION =
         0x72fdaf6608fcd614cdab8afd23d0b707bfc44e685019cc3a5ace611655fe7f00;
 
-    function _getkAssetRouterStorage()
-        private
-        pure
-        returns (kAssetRouterStorage storage $)
-    {
+    function _getkAssetRouterStorage() private pure returns (kAssetRouterStorage storage $) {
         assembly {
             $.slot := KASSETROUTER_STORAGE_LOCATION
         }
@@ -97,15 +103,11 @@ contract kAssetRouter is
     /// @param _asset The asset being deposited
     /// @param amount Amount of assets being pushed
     /// @param batchId The batch ID from the DN vault
-    function kAssetPush(
-        address _asset,
-        uint256 amount,
-        bytes32 batchId
-    ) external payable nonReentrant {
-        require(!_isPaused(), IS_PAUSED);
+    function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable nonReentrant {
+        require(!_isPaused(), KASSETROUTER_IS_PAUSED);
         address kMinter = msg.sender;
-        require(_isKMinter(kMinter), WRONG_ROLE);
-        require(amount != 0, ZERO_AMOUNT);
+        require(_isKMinter(kMinter), KASSETROUTER_WRONG_ROLE);
+        require(amount != 0, KASSETROUTER_ZERO_AMOUNT);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         $.vaultBatchBalances[kMinter][batchId].deposited += amount.toUint128();
@@ -121,25 +123,24 @@ contract kAssetRouter is
         address _vault,
         uint256 amount,
         bytes32 batchId
-    ) external payable nonReentrant {
-        require(amount != 0, ZERO_AMOUNT);
-        require(!_isPaused(), IS_PAUSED);
+    )
+        external
+        payable
+        nonReentrant
+    {
+        require(amount != 0, KASSETROUTER_ZERO_AMOUNT);
+        require(!_isPaused(), KASSETROUTER_IS_PAUSED);
         address kMinter = msg.sender;
-        require(_isKMinter(kMinter), ONLY_KMINTER);
+        require(_isKMinter(kMinter), KASSETROUTER_ONLY_KMINTER);
         address vault = _getDNVaultByAsset(_asset);
-        require(
-            _virtualBalance(vault, _asset) >= amount,
-            INSUFFICIENT_VIRTUAL_BALANCE
-        );
+        require(_virtualBalance(vault, _asset) >= amount, KASSETROUTER_INSUFFICIENT_VIRTUAL_BALANCE);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         $.vaultBatchBalances[kMinter][batchId].requested += amount.toUint128();
 
         // Set batch receiver for the vault
-        address batchReceiver = IkStakingVault(_vault).createBatchReceiver(
-            batchId
-        );
-        require(batchReceiver != address(0), ZERO_ADDRESS);
+        address batchReceiver = IkStakingVault(_vault).createBatchReceiver(batchId);
+        require(batchReceiver != address(0), KASSETROUTER_ZERO_ADDRESS);
 
         emit AssetsRequestPulled(kMinter, _asset, batchReceiver, amount);
     }
@@ -160,29 +161,28 @@ contract kAssetRouter is
         address _asset,
         uint256 amount,
         bytes32 batchId
-    ) external payable nonReentrant {
-        require(amount != 0, ZERO_AMOUNT);
-        require(!_isPaused(), IS_PAUSED);
-        require(_isVault(msg.sender), ONLY_KSTAKING_VAULT);
+    )
+        external
+        payable
+        nonReentrant
+    {
+        require(amount != 0, KASSETROUTER_ZERO_AMOUNT);
+        require(!_isPaused(), KASSETROUTER_IS_PAUSED);
+        require(_isVault(msg.sender), KASSETROUTER_ONLY_KSTAKING_VAULT);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
         uint256 virtualBalance;
         if (sourceVault == _getKMinter()) {
-            virtualBalance = _virtualBalance(
-                _getDNVaultByAsset(_asset),
-                _asset
-            );
+            virtualBalance = _virtualBalance(_getDNVaultByAsset(_asset), _asset);
         } else {
             virtualBalance = _virtualBalance(sourceVault, _asset);
         }
 
-        require(virtualBalance >= amount, INSUFFICIENT_VIRTUAL_BALANCE);
+        require(virtualBalance >= amount, KASSETROUTER_INSUFFICIENT_VIRTUAL_BALANCE);
         // Update batch tracking for settlement
-        $.vaultBatchBalances[sourceVault][batchId].requested += amount
-            .toUint128();
-        $.vaultBatchBalances[targetVault][batchId].deposited += amount
-            .toUint128();
+        $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
+        $.vaultBatchBalances[targetVault][batchId].deposited += amount.toUint128();
 
         emit AssetsTransfered(sourceVault, targetVault, _asset, amount);
     }
@@ -191,14 +191,10 @@ contract kAssetRouter is
     /// @param sourceVault The vault to redeem shares from
     /// @param amount Amount requested for redemption
     /// @param batchId The batch ID for this redemption
-    function kSharesRequestPush(
-        address sourceVault,
-        uint256 amount,
-        bytes32 batchId
-    ) external payable nonReentrant {
-        require(amount != 0, ZERO_AMOUNT);
-        require(!_isPaused(), IS_PAUSED);
-        require(_isVault(msg.sender), ONLY_KSTAKING_VAULT);
+    function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant {
+        require(amount != 0, KASSETROUTER_ZERO_AMOUNT);
+        require(!_isPaused(), KASSETROUTER_IS_PAUSED);
+        require(_isVault(msg.sender), KASSETROUTER_ONLY_KSTAKING_VAULT);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
@@ -211,14 +207,10 @@ contract kAssetRouter is
     /// @param sourceVault The vault to redeem shares from
     /// @param amount Amount requested for redemption
     /// @param batchId The batch ID for this redemption
-    function kSharesRequestPull(
-        address sourceVault,
-        uint256 amount,
-        bytes32 batchId
-    ) external payable nonReentrant {
-        require(amount != 0, ZERO_AMOUNT);
-        require(!_isPaused(), IS_PAUSED);
-        require(_isVault(msg.sender), ONLY_KSTAKING_VAULT);
+    function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant {
+        require(amount != 0, KASSETROUTER_ZERO_AMOUNT);
+        require(!_isPaused(), KASSETROUTER_IS_PAUSED);
+        require(_isVault(msg.sender), KASSETROUTER_ONLY_KSTAKING_VAULT);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
@@ -248,29 +240,30 @@ contract kAssetRouter is
         uint256 netted,
         uint256 yield,
         bool profit
-    ) external payable nonReentrant returns (bytes32 proposalId) {
-        require(!_isPaused(), IS_PAUSED);
-        require(_isRelayer(msg.sender), WRONG_ROLE);
+    )
+        external
+        payable
+        nonReentrant
+        returns (bytes32 proposalId)
+    {
+        require(!_isPaused(), KASSETROUTER_IS_PAUSED);
+        require(_isRelayer(msg.sender), KASSETROUTER_WRONG_ROLE);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
-        require(!$.batchIds.contains(batchId), BATCH_ID_PROPOSED);
+        require(!$.batchIds.contains(batchId), KASSETROUTER_BATCH_ID_PROPOSED);
         $.batchIds.add(batchId);
 
         // Generate unique proposal ID
         unchecked {
             $.proposalCounter++;
         }
-        proposalId = EfficientHashLib.hash(
-            uint256(uint160(vault)),
-            uint256(batchId),
-            block.timestamp,
-            $.proposalCounter
-        );
+        proposalId =
+            EfficientHashLib.hash(uint256(uint160(vault)), uint256(batchId), block.timestamp, $.proposalCounter);
 
         // Check if proposal already exists
-        require(!$.executedProposalIds.contains(proposalId), PROPOSAL_EXECUTED);
-        require(!_isPendingProposal(vault, proposalId), PROPOSAL_EXISTS);
+        require(!$.executedProposalIds.contains(proposalId), KASSETROUTER_PROPOSAL_EXECUTED);
+        require(!_isPendingProposal(vault, proposalId), KASSETROUTER_PROPOSAL_EXISTS);
         $.vaultPendingProposalIds[vault].add(proposalId);
 
         uint256 executeAfter;
@@ -290,34 +283,21 @@ contract kAssetRouter is
             executeAfter: executeAfter
         });
 
-        emit SettlementProposed(
-            proposalId,
-            vault,
-            batchId,
-            totalAssets_,
-            netted,
-            yield,
-            profit,
-            executeAfter
-        );
+        emit SettlementProposed(proposalId, vault, batchId, totalAssets_, netted, yield, profit, executeAfter);
     }
 
     /// @notice Execute a settlement proposal after cooldown period
     /// @param proposalId The proposal ID to execute
-    function executeSettleBatch(
-        bytes32 proposalId
-    ) external payable nonReentrant {
-        require(!_isPaused(), IS_PAUSED);
+    function executeSettleBatch(bytes32 proposalId) external payable nonReentrant {
+        require(!_isPaused(), KASSETROUTER_IS_PAUSED);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-        VaultSettlementProposal storage proposal = $.settlementProposals[
-            proposalId
-        ];
+        VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
         // Validations
         address vault = proposal.vault;
-        require(_isPendingProposal(vault, proposalId), PROPOSAL_NOT_FOUND);
-        require(block.timestamp >= proposal.executeAfter, COOLDOOWN_IS_UP);
+        require(_isPendingProposal(vault, proposalId), KASSETROUTER_PROPOSAL_NOT_FOUND);
+        require(block.timestamp >= proposal.executeAfter, KASSETROUTER_COOLDOOWN_IS_UP);
 
         $.executedProposalIds.add(proposalId);
         $.vaultPendingProposalIds[vault].remove(proposalId);
@@ -325,27 +305,20 @@ contract kAssetRouter is
         // Execute the settlement logic
         _executeSettlement(proposal);
 
-        emit SettlementExecuted(
-            proposalId,
-            vault,
-            proposal.batchId,
-            msg.sender
-        );
+        emit SettlementExecuted(proposalId, vault, proposal.batchId, msg.sender);
     }
 
     /// @notice Cancel a settlement proposal before execution
     /// @param proposalId The proposal ID to cancel
     function cancelProposal(bytes32 proposalId) external nonReentrant {
-        require(!_isPaused(), IS_PAUSED);
-        require(_isGuardian(msg.sender), WRONG_ROLE);
+        require(!_isPaused(), KASSETROUTER_IS_PAUSED);
+        require(_isGuardian(msg.sender), KASSETROUTER_WRONG_ROLE);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-        VaultSettlementProposal storage proposal = $.settlementProposals[
-            proposalId
-        ];
+        VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
         address vault = proposal.vault;
-        require(_isPendingProposal(vault, proposalId), PROPOSAL_NOT_FOUND);
+        require(_isPendingProposal(vault, proposalId), KASSETROUTER_PROPOSAL_NOT_FOUND);
 
         $.vaultPendingProposalIds[vault].remove(proposalId);
         $.batchIds.remove(proposal.batchId);
@@ -355,9 +328,7 @@ contract kAssetRouter is
 
     /// @notice Internal function to execute settlement logic
     /// @param proposal The settlement proposal to execute
-    function _executeSettlement(
-        VaultSettlementProposal storage proposal
-    ) private {
+    function _executeSettlement(VaultSettlementProposal storage proposal) private {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
         address asset = proposal.asset;
@@ -385,10 +356,8 @@ contract kAssetRouter is
 
             if (requested > 0) {
                 // Transfer assets to batch receiver for redemptions
-                address receiver = IkStakingVault(vault).getSafeBatchReceiver(
-                    batchId
-                );
-                require(receiver != address(0), ZERO_ADDRESS);
+                address receiver = IkStakingVault(vault).getSafeBatchReceiver(batchId);
+                require(receiver != address(0), KASSETROUTER_ZERO_ADDRESS);
                 asset.safeTransfer(receiver, requested);
             }
         } else {
@@ -412,7 +381,7 @@ contract kAssetRouter is
             if (vault == dnVault && isKMinter) {
                 // at some point we will have multiple adapters for a vault
                 // for now we just use the first one
-                require(adapters[0] != address(0), ZERO_ADDRESS);
+                require(adapters[0] != address(0), KASSETROUTER_ZERO_ADDRESS);
                 asset.safeTransfer(address(adapter), netted);
                 adapter.deposit(asset, netted, vault);
             }
@@ -438,8 +407,8 @@ contract kAssetRouter is
     /// @notice Set the cooldown period for settlement proposals
     /// @param cooldown New cooldown period in seconds
     function setSettlementCooldown(uint256 cooldown) external {
-        require(_isAdmin(msg.sender), WRONG_ROLE);
-        require(cooldown <= MAX_VAULT_SETTLEMENT_COOLDOWN, INVALID_COOLDOWN);
+        require(_isAdmin(msg.sender), KASSETROUTER_WRONG_ROLE);
+        require(cooldown <= MAX_VAULT_SETTLEMENT_COOLDOWN, KASSETROUTER_INVALID_COOLDOWN);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         uint256 oldCooldown = $.vaultSettlementCooldown;
@@ -454,20 +423,20 @@ contract kAssetRouter is
 
     /// @notice Get All the pendingProposals
     /// @return pendingProposals An array of proposalIds
-    function getPendingProposals(
-        address vault
-    ) external view returns (bytes32[] memory pendingProposals) {
+    function getPendingProposals(address vault) external view returns (bytes32[] memory pendingProposals) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         pendingProposals = $.vaultPendingProposalIds[vault].values();
-        require(pendingProposals.length > 0, NO_PROPOSAL);
+        require(pendingProposals.length > 0, KASSETROUTER_NO_PROPOSAL);
     }
 
     /// @notice Get details of a settlement proposal
     /// @param proposalId The proposal ID
     /// @return proposal The settlement proposal details
-    function getSettlementProposal(
-        bytes32 proposalId
-    ) external view returns (VaultSettlementProposal memory proposal) {
+    function getSettlementProposal(bytes32 proposalId)
+        external
+        view
+        returns (VaultSettlementProposal memory proposal)
+    {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         proposal = $.settlementProposals[proposalId];
     }
@@ -476,13 +445,9 @@ contract kAssetRouter is
     /// @param proposalId The proposal ID
     /// @return canExecute Whether the proposal can be executed
     /// @return reason Reason if cannot execute
-    function canExecuteProposal(
-        bytes32 proposalId
-    ) external view returns (bool canExecute, string memory reason) {
+    function canExecuteProposal(bytes32 proposalId) external view returns (bool canExecute, string memory reason) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-        VaultSettlementProposal storage proposal = $.settlementProposals[
-            proposalId
-        ];
+        VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
         if (proposal.executeAfter == 0) {
             return (false, "Proposal not found");
@@ -505,10 +470,7 @@ contract kAssetRouter is
     /// @param vault the vault address
     /// @param asset the asset address
     /// @return balance the balance of the vault in all adapters.
-    function _virtualBalance(
-        address vault,
-        address asset
-    ) internal view returns (uint256 balance) {
+    function _virtualBalance(address vault, address asset) internal view returns (uint256 balance) {
         address[] memory assets = _getVaultAssets(vault);
         address[] memory adapters = _registry().getAdapters(vault);
         uint256 length = adapters.length;
@@ -523,14 +485,8 @@ contract kAssetRouter is
     /// @param vault the vault address
     /// @param proposalId the proposalId to verify
     /// @return bool proposal exists or not
-    function _isPendingProposal(
-        address vault,
-        bytes32 proposalId
-    ) internal view returns (bool) {
-        return
-            _getkAssetRouterStorage().vaultPendingProposalIds[vault].contains(
-                proposalId
-            );
+    function _isPendingProposal(address vault, bytes32 proposalId) internal view returns (bool) {
+        return _getkAssetRouterStorage().vaultPendingProposalIds[vault].contains(proposalId);
     }
 
     /// @notice Check if contract is paused
@@ -543,14 +499,9 @@ contract kAssetRouter is
     /// @param asset The asset address
     /// @return vault The corresponding DN vault address
     /// @dev Reverts if asset not supported
-    function getDNVaultByAsset(
-        address asset
-    ) external view returns (address vault) {
-        vault = _registry().getVaultByAssetAndType(
-            asset,
-            uint8(IkRegistry.VaultType.DN)
-        );
-        require(vault != address(0), INVALID_VAULT);
+    function getDNVaultByAsset(address asset) external view returns (address vault) {
+        vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN));
+        require(vault != address(0), KASSETROUTER_INVALID_VAULT);
     }
 
     /// @notice Get batch balances for a vault
@@ -561,7 +512,11 @@ contract kAssetRouter is
     function getBatchIdBalances(
         address vault,
         bytes32 batchId
-    ) external view returns (uint256 deposited, uint256 requested) {
+    )
+        external
+        view
+        returns (uint256 deposited, uint256 requested)
+    {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         Balances memory balances = $.vaultBatchBalances[vault][batchId];
         return (balances.deposited, balances.requested);
@@ -571,10 +526,7 @@ contract kAssetRouter is
     /// @param vault Vault address
     /// @param batchId Batch ID
     /// @return Requested shares amount
-    function getRequestedShares(
-        address vault,
-        bytes32 batchId
-    ) external view returns (uint256) {
+    function getRequestedShares(address vault, bytes32 batchId) external view returns (uint256) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         return $.vaultRequestedShares[vault][batchId];
     }
@@ -585,11 +537,9 @@ contract kAssetRouter is
 
     /// @notice Authorize contract upgrade
     /// @param newImplementation New implementation address
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal view override {
-        require(_isAdmin(msg.sender), WRONG_ROLE);
-        require(newImplementation != address(0), ZERO_ADDRESS);
+    function _authorizeUpgrade(address newImplementation) internal view override {
+        require(_isAdmin(msg.sender), KASSETROUTER_WRONG_ROLE);
+        require(newImplementation != address(0), KASSETROUTER_ZERO_ADDRESS);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -597,7 +547,7 @@ contract kAssetRouter is
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Receive ETH (for gas refunds, etc.)
-    receive() external payable {}
+    receive() external payable { }
 
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO

@@ -11,7 +11,7 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
-import { INSUFFICIENT_BALANCE, ZERO_AMOUNT } from "src/errors/Errors.sol";
+import { KSTAKINGVAULT_INSUFFICIENT_BALANCE, KSTAKINGVAULT_ZERO_AMOUNT } from "src/errors/Errors.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
@@ -377,7 +377,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         vm.prank(users.alice);
         kUSD.approve(address(vault), 0);
 
-        vm.expectRevert(bytes(ZERO_AMOUNT)); // Should revert for zero amount
+        vm.expectRevert(bytes(KSTAKINGVAULT_ZERO_AMOUNT)); // Should revert for zero amount
         vm.prank(users.alice);
         vault.requestStake(users.alice, 0);
     }
@@ -388,7 +388,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         vm.prank(users.alice);
         kUSD.approve(address(vault), excessiveAmount);
 
-        vm.expectRevert(bytes(INSUFFICIENT_BALANCE)); // Should revert for insufficient balance
+        vm.expectRevert(bytes(KSTAKINGVAULT_INSUFFICIENT_BALANCE)); // Should revert for insufficient balance
         vm.prank(users.alice);
         vault.requestStake(users.alice, excessiveAmount);
     }

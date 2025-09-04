@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {LibClone} from "solady/utils/LibClone.sol";
-import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import { LibClone } from "solady/utils/LibClone.sol";
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
-import {kBatchReceiver} from "src/kBatchReceiver.sol";
-import {BaseVault} from "src/kStakingVault/base/BaseVault.sol";
-import {BaseVaultTypes} from "src/kStakingVault/types/BaseVaultTypes.sol";
-import {NOT_CLOSED, VAULT_CLOSED, VAULT_SETTLED, WRONG_ROLE} from "src/errors/Errors.sol";
+import {
+    VAULTBATCHES_NOT_CLOSED,
+    VAULTBATCHES_VAULT_CLOSED,
+    VAULTBATCHES_VAULT_SETTLED,
+    VAULTBATCHES_WRONG_ROLE
+} from "src/errors/Errors.sol";
+import { kBatchReceiver } from "src/kBatchReceiver.sol";
+import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title VaultBatches
 /// @notice Handles batch operations for staking and unstaking
@@ -20,20 +25,11 @@ contract VaultBatches is BaseVault {
     //////////////////////////////////////////////////////////////*/
 
     event BatchCreated(bytes32 indexed batchId);
-    event BatchReceiverDeployed(
-        bytes32 indexed batchId,
-        address indexed receiver
-    );
+    event BatchReceiverDeployed(bytes32 indexed batchId, address indexed receiver);
     event BatchSettled(bytes32 indexed batchId);
     event BatchClosed(bytes32 indexed batchId);
-    event BatchReceiverSet(
-        address indexed batchReceiver,
-        bytes32 indexed batchId
-    );
-    event BatchReceiverCreated(
-        address indexed receiver,
-        bytes32 indexed batchId
-    );
+    event BatchReceiverSet(address indexed batchReceiver, bytes32 indexed batchId);
+    event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
 
     /*//////////////////////////////////////////////////////////////
                             CORE OPERATIONS
@@ -43,7 +39,7 @@ contract VaultBatches is BaseVault {
     /// @return The new batch ID
     /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
     function createNewBatch() external returns (bytes32) {
-        require(_isRelayer(msg.sender), WRONG_ROLE);
+        require(_isRelayer(msg.sender), VAULTBATCHES_WRONG_ROLE);
         return _createNewBatch();
     }
 
@@ -51,9 +47,9 @@ contract VaultBatches is BaseVault {
     /// @param _batchId The batch ID to close
     /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
     function closeBatch(bytes32 _batchId, bool _create) external {
-        require(_isRelayer(msg.sender), WRONG_ROLE);
+        require(_isRelayer(msg.sender), VAULTBATCHES_WRONG_ROLE);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(!$.batches[_batchId].isClosed, VAULT_CLOSED);
+        require(!$.batches[_batchId].isClosed, VAULTBATCHES_VAULT_CLOSED);
         $.batches[_batchId].isClosed = true;
 
         if (_create) {
@@ -66,10 +62,10 @@ contract VaultBatches is BaseVault {
     /// @param _batchId The batch ID to settle
     /// @dev Only callable by kMinter, indicates assets have been distributed
     function settleBatch(bytes32 _batchId) external {
-        require(_isKAssetRouter(msg.sender), WRONG_ROLE);
+        require(_isKAssetRouter(msg.sender), VAULTBATCHES_WRONG_ROLE);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require($.batches[_batchId].isClosed, NOT_CLOSED);
-        require(!$.batches[_batchId].isSettled, VAULT_SETTLED);
+        require($.batches[_batchId].isClosed, VAULTBATCHES_NOT_CLOSED);
+        require(!$.batches[_batchId].isSettled, VAULTBATCHES_VAULT_SETTLED);
         $.batches[_batchId].isSettled = true;
         $.batches[_batchId].sharePrice = _sharePrice().toUint128();
         $.batches[_batchId].netSharePrice = _netSharePrice().toUint128();
@@ -82,7 +78,7 @@ contract VaultBatches is BaseVault {
     /// @dev Only callable by kAssetRouter
     function createBatchReceiver(bytes32 _batchId) external returns (address) {
         _lockReentrant();
-        require(_isKAssetRouter(msg.sender), WRONG_ROLE);
+        require(_isKAssetRouter(msg.sender), VAULTBATCHES_WRONG_ROLE);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         address receiver = $.batches[_batchId].batchReceiver;
         if (receiver != address(0)) return receiver;

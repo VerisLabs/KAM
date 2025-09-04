@@ -11,7 +11,7 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IkAssetRouter} from "src/interfaces/IkAssetRouter.sol";
 import {IkStakingVault} from "src/interfaces/IkStakingVault.sol";
 
-import {BATCH_ID_PROPOSED, PROPOSAL_NOT_FOUND, VAULT_CLOSED, WRONG_ROLE} from "src/errors/Errors.sol";
+import {KASSETROUTER_BATCH_ID_PROPOSED, KASSETROUTER_PROPOSAL_NOT_FOUND, VAULTBATCHES_VAULT_CLOSED, VAULTBATCHES_WRONG_ROLE} from "src/errors/Errors.sol";
 import {kBatchReceiver} from "src/kBatchReceiver.sol";
 import {BaseVault} from "src/kStakingVault/base/BaseVault.sol";
 import {kStakingVault} from "src/kStakingVault/kStakingVault.sol";
@@ -228,7 +228,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         // Try to settle again through assetRouter
         vm.prank(users.relayer);
-        vm.expectRevert(bytes(BATCH_ID_PROPOSED));
+        vm.expectRevert(bytes(KASSETROUTER_BATCH_ID_PROPOSED));
         bytes32 proposalId = assetRouter.proposeSettleBatch(
             USDC_MAINNET,
             address(vault),
@@ -240,7 +240,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         );
 
         // Should revert with Settled error
-        vm.expectRevert(bytes(PROPOSAL_NOT_FOUND));
+        vm.expectRevert(bytes(KASSETROUTER_PROPOSAL_NOT_FOUND));
         assetRouter.executeSettleBatch(proposalId);
     }
 

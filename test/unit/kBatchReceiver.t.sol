@@ -7,7 +7,13 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { LibClone } from "solady/utils/LibClone.sol";
 
-import { ALREADY_INITIALIZED, INVALID_BATCH_ID, ONLY_KMINTER, ZERO_ADDRESS, ZERO_AMOUNT } from "src/errors/Errors.sol";
+import {
+    KBATCHRECEIVER_ALREADY_INITIALIZED,
+    KBATCHRECEIVER_INVALID_BATCH_ID,
+    KBATCHRECEIVER_ONLY_KMINTER,
+    KBATCHRECEIVER_ZERO_ADDRESS,
+    KBATCHRECEIVER_ZERO_AMOUNT
+} from "src/errors/Errors.sol";
 import { IkBatchReceiver } from "src/interfaces/IkBatchReceiver.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 
@@ -94,28 +100,28 @@ contract kBatchReceiverTest is DeploymentBaseTest {
     /// @dev Test pull assets reverts when not called by kMinter
     function test_PullAssets_RevertNotKMinter() public {
         vm.prank(users.alice);
-        vm.expectRevert(bytes(ONLY_KMINTER));
+        vm.expectRevert(bytes(KBATCHRECEIVER_ONLY_KMINTER));
         batchReceiver.pullAssets(TEST_RECEIVER, TEST_AMOUNT, TEST_BATCH_ID);
     }
 
     /// @dev Test pull assets reverts with invalid batch ID
     function test_PullAssets_RevertInvalidBatchId() public {
         vm.prank(address(minter));
-        vm.expectRevert(bytes(INVALID_BATCH_ID));
+        vm.expectRevert(bytes(KBATCHRECEIVER_INVALID_BATCH_ID));
         batchReceiver.pullAssets(TEST_RECEIVER, TEST_AMOUNT, bytes32(uint256(TEST_BATCH_ID) + 1));
     }
 
     /// @dev Test pull assets reverts with zero amount
     function test_PullAssets_RevertZeroAmount() public {
         vm.prank(address(minter));
-        vm.expectRevert(bytes(ZERO_AMOUNT));
+        vm.expectRevert(bytes(KBATCHRECEIVER_ZERO_AMOUNT));
         batchReceiver.pullAssets(TEST_RECEIVER, 0, TEST_BATCH_ID);
     }
 
     /// @dev Test pull assets reverts with zero address
     function test_PullAssets_RevertZeroAddress() public {
         vm.prank(address(minter));
-        vm.expectRevert(bytes(ZERO_ADDRESS));
+        vm.expectRevert(bytes(KBATCHRECEIVER_ZERO_ADDRESS));
         batchReceiver.pullAssets(address(0), TEST_AMOUNT, TEST_BATCH_ID);
     }
 
@@ -192,7 +198,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
         // Second initialization should fail
         bytes32 secondBatchId = bytes32(uint256(222));
-        vm.expectRevert(bytes(ALREADY_INITIALIZED));
+        vm.expectRevert(bytes(KBATCHRECEIVER_ALREADY_INITIALIZED));
         newReceiver.initialize(secondBatchId, USDC_MAINNET);
 
         // Verify first initialization values persist
@@ -219,7 +225,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
         bytes32 batchId = bytes32(uint256(444));
 
-        vm.expectRevert(bytes(ZERO_ADDRESS));
+        vm.expectRevert(bytes(KBATCHRECEIVER_ZERO_ADDRESS));
         newReceiver.initialize(batchId, address(0));
 
         // Verify not initialized
@@ -228,7 +234,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
     /// @dev Test constructor with zero kMinter address
     function test_Initialization_ZeroKMinterInConstructor() public {
-        vm.expectRevert(bytes(ZERO_ADDRESS));
+        vm.expectRevert(bytes(KBATCHRECEIVER_ZERO_ADDRESS));
         new kBatchReceiver(address(0));
     }
 
@@ -417,7 +423,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
     function test_AssetManagement_RescueAssets() public {
         // Only kMinter should be able to rescue assets
         vm.prank(users.alice);
-        vm.expectRevert(bytes(ONLY_KMINTER));
+        vm.expectRevert(bytes(KBATCHRECEIVER_ONLY_KMINTER));
         batchReceiver.rescueAssets(USDC_MAINNET);
 
         // kMinter access control works - the actual rescue may not work due to asset restrictions
@@ -435,7 +441,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
     function test_AssetManagement_EmergencyRecovery() public {
         // Test access control for emergency scenarios
         vm.prank(users.alice);
-        vm.expectRevert(bytes(ONLY_KMINTER));
+        vm.expectRevert(bytes(KBATCHRECEIVER_ONLY_KMINTER));
         batchReceiver.rescueAssets(USDC_MAINNET);
 
         // kMinter should have access (even if rescue fails due to implementation)
@@ -455,7 +461,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         bytes32 wrongBatchId = bytes32(uint256(TEST_BATCH_ID) + 999);
 
         vm.prank(address(minter));
-        vm.expectRevert(bytes(INVALID_BATCH_ID));
+        vm.expectRevert(bytes(KBATCHRECEIVER_INVALID_BATCH_ID));
         batchReceiver.pullAssets(TEST_RECEIVER, TEST_AMOUNT, wrongBatchId);
 
         // Test with correct batch ID
@@ -480,11 +486,11 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
         for (uint256 i = 0; i < unauthorizedUsers.length; i++) {
             vm.prank(unauthorizedUsers[i]);
-            vm.expectRevert(bytes(ONLY_KMINTER));
+            vm.expectRevert(bytes(KBATCHRECEIVER_ONLY_KMINTER));
             batchReceiver.pullAssets(TEST_RECEIVER, TEST_AMOUNT, TEST_BATCH_ID);
 
             vm.prank(unauthorizedUsers[i]);
-            vm.expectRevert(bytes(ONLY_KMINTER));
+            vm.expectRevert(bytes(KBATCHRECEIVER_ONLY_KMINTER));
             batchReceiver.rescueAssets(USDC_MAINNET);
         }
 
@@ -532,7 +538,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         receiver1.pullAssets(TEST_RECEIVER, TEST_AMOUNT / 2, bytes32(uint256(777)));
 
         vm.prank(users.admin);
-        vm.expectRevert(bytes(ONLY_KMINTER));
+        vm.expectRevert(bytes(KBATCHRECEIVER_ONLY_KMINTER));
         receiver1.pullAssets(TEST_RECEIVER, TEST_AMOUNT / 2, bytes32(uint256(777)));
 
         // receiver2 should only accept calls from admin
@@ -540,7 +546,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         receiver2.pullAssets(TEST_RECEIVER, TEST_AMOUNT / 2, bytes32(uint256(888)));
 
         vm.prank(address(minter));
-        vm.expectRevert(bytes(ONLY_KMINTER));
+        vm.expectRevert(bytes(KBATCHRECEIVER_ONLY_KMINTER));
         receiver2.pullAssets(TEST_RECEIVER, TEST_AMOUNT / 2, bytes32(uint256(888)));
     }
 
@@ -667,7 +673,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
         // Invalid batch ID should fail
         vm.prank(address(minter));
-        vm.expectRevert(bytes(INVALID_BATCH_ID));
+        vm.expectRevert(bytes(KBATCHRECEIVER_INVALID_BATCH_ID));
         fuzzReceiver.pullAssets(TEST_RECEIVER, TEST_AMOUNT / 2, invalidBatchId);
     }
 }

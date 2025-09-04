@@ -5,17 +5,17 @@ import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import {
-    ALREADY_INITIALIZED,
-    ASSET_NOT_SUPPORTED,
-    CONTRACT_NOT_FOUND,
-    INVALID_REGISTRY,
-    INVALID_VAULT,
-    NOT_INITIALIZED,
-    TRANSFER_FAILED,
-    WRONG_ASSET,
-    WRONG_ROLE,
-    ZERO_ADDRESS,
-    ZERO_AMOUNT
+    KBASE_ALREADY_INITIALIZED,
+    KBASE_ASSET_NOT_SUPPORTED,
+    KBASE_CONTRACT_NOT_FOUND,
+    KBASE_INVALID_REGISTRY,
+    KBASE_INVALID_VAULT,
+    KBASE_NOT_INITIALIZED,
+    KBASE_TRANSFER_FAILED,
+    KBASE_WRONG_ASSET,
+    KBASE_WRONG_ROLE,
+    KBASE_ZERO_ADDRESS,
+    KBASE_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
@@ -77,8 +77,8 @@ contract kBase is ReentrancyGuardTransient {
     function __kBase_init(address registry_) internal {
         kBaseStorage storage $ = _getBaseStorage();
 
-        require(!$.initialized, ALREADY_INITIALIZED);
-        require(registry_ != address(0), INVALID_REGISTRY);
+        require(!$.initialized, KBASE_ALREADY_INITIALIZED);
+        require(registry_ != address(0), KBASE_INVALID_REGISTRY);
 
         $.registry = registry_;
         $.paused = false;
@@ -93,9 +93,9 @@ contract kBase is ReentrancyGuardTransient {
     /// @param paused_ New pause state
     /// @dev Only callable internally by inheriting contracts
     function setPaused(bool paused_) external {
-        require(_isEmergencyAdmin(msg.sender), WRONG_ROLE);
+        require(_isEmergencyAdmin(msg.sender), KBASE_WRONG_ROLE);
         kBaseStorage storage $ = _getBaseStorage();
-        require($.initialized, NOT_INITIALIZED);
+        require($.initialized, KBASE_NOT_INITIALIZED);
         $.paused = paused_;
         emit Paused(paused_);
     }
@@ -105,21 +105,21 @@ contract kBase is ReentrancyGuardTransient {
     /// @param to_ the address that will receive the assets
     /// @param amount_ the amount to rescue
     function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
-        require(_isAdmin(msg.sender), WRONG_ROLE);
-        require(to_ != address(0), ZERO_ADDRESS);
+        require(_isAdmin(msg.sender), KBASE_WRONG_ROLE);
+        require(to_ != address(0), KBASE_ZERO_ADDRESS);
 
         if (asset_ == address(0)) {
             // Rescue ETH
-            require(amount_ > 0 && amount_ <= address(this).balance, ZERO_AMOUNT);
+            require(amount_ > 0 && amount_ <= address(this).balance, KBASE_ZERO_AMOUNT);
 
             (bool success,) = to_.call{ value: amount_ }("");
-            require(success, TRANSFER_FAILED);
+            require(success, KBASE_TRANSFER_FAILED);
 
             emit RescuedETH(to_, amount_);
         } else {
             // Rescue ERC20 tokens
-            require(!_isAsset(asset_), WRONG_ASSET);
-            require(amount_ > 0 && amount_ <= asset_.balanceOf(address(this)), ZERO_AMOUNT);
+            require(!_isAsset(asset_), KBASE_WRONG_ASSET);
+            require(amount_ > 0 && amount_ <= asset_.balanceOf(address(this)), KBASE_ZERO_AMOUNT);
 
             asset_.safeTransfer(to_, amount_);
             emit RescuedAssets(asset_, to_, amount_);
@@ -142,7 +142,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @dev Internal helper for typed registry access
     function _registry() internal view returns (IkRegistry) {
         kBaseStorage storage $ = _getBaseStorage();
-        require($.initialized, NOT_INITIALIZED);
+        require($.initialized, KBASE_NOT_INITIALIZED);
         return IkRegistry($.registry);
     }
 
@@ -165,7 +165,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @dev Reverts if vault not registered
     function _getBatchReceiver(address vault_, bytes32 batchId_) internal view returns (address batchReceiver) {
         batchReceiver = IkStakingVault(vault_).getBatchReceiver(batchId_);
-        require(batchReceiver != address(0), ZERO_ADDRESS);
+        require(batchReceiver != address(0), KBASE_ZERO_ADDRESS);
     }
 
     /// @notice Gets the kMinter singleton contract address
@@ -173,7 +173,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @dev Reverts if kMinter not set in registry
     function _getKMinter() internal view returns (address minter) {
         minter = _registry().getContractById(K_MINTER);
-        require(minter != address(0), CONTRACT_NOT_FOUND);
+        require(minter != address(0), KBASE_CONTRACT_NOT_FOUND);
     }
 
     /// @notice Gets the kAssetRouter singleton contract address
@@ -181,7 +181,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @dev Reverts if kAssetRouter not set in registry
     function _getKAssetRouter() internal view returns (address router) {
         router = _registry().getContractById(K_ASSET_ROUTER);
-        require(router != address(0), CONTRACT_NOT_FOUND);
+        require(router != address(0), KBASE_CONTRACT_NOT_FOUND);
     }
 
     /// @notice Gets the kToken address for a given asset
@@ -190,7 +190,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @dev Reverts if asset not supported
     function _getKTokenForAsset(address asset) internal view returns (address kToken) {
         kToken = _registry().assetToKToken(asset);
-        require(kToken != address(0), ASSET_NOT_SUPPORTED);
+        require(kToken != address(0), KBASE_ASSET_NOT_SUPPORTED);
     }
 
     /// @notice Gets the asset managed by a vault
@@ -199,7 +199,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @dev Reverts if vault not registered
     function _getVaultAssets(address vault) internal view returns (address[] memory assets) {
         assets = _registry().getVaultAssets(vault);
-        require(assets.length > 0, INVALID_VAULT);
+        require(assets.length > 0, KBASE_INVALID_VAULT);
     }
 
     /// @notice Gets the DN vault address for a given asset
@@ -208,7 +208,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @dev Reverts if asset not supported
     function _getDNVaultByAsset(address asset) internal view returns (address vault) {
         vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN));
-        require(vault != address(0), INVALID_VAULT);
+        require(vault != address(0), KBASE_INVALID_VAULT);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -249,7 +249,7 @@ contract kBase is ReentrancyGuardTransient {
     /// @return Whether the address is a institution
     function _isPaused() internal view returns (bool) {
         kBaseStorage storage $ = _getBaseStorage();
-        require($.initialized, NOT_INITIALIZED);
+        require($.initialized, KBASE_NOT_INITIALIZED);
         return $.paused;
     }
 

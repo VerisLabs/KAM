@@ -5,13 +5,13 @@ import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import {
-    ALREADY_INITIALIZED,
-    INVALID_REGISTRY,
-    TRANSFER_FAILED,
-    WRONG_ASSET,
-    WRONG_ROLE,
-    ZERO_ADDRESS,
-    ZERO_AMOUNT
+    ADAPTER_ALREADY_INITIALIZED,
+    ADAPTER_INVALID_REGISTRY,
+    ADAPTER_TRANSFER_FAILED,
+    ADAPTER_WRONG_ASSET,
+    ADAPTER_WRONG_ROLE,
+    ADAPTER_ZERO_ADDRESS,
+    ADAPTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
@@ -68,8 +68,8 @@ contract BaseAdapter is ReentrancyGuardTransient {
         // Initialize adapter storage
         BaseAdapterStorage storage $ = _getBaseAdapterStorage();
 
-        require(!$.initialized, ALREADY_INITIALIZED);
-        require(registry_ != address(0), INVALID_REGISTRY);
+        require(!$.initialized, ADAPTER_ALREADY_INITIALIZED);
+        require(registry_ != address(0), ADAPTER_INVALID_REGISTRY);
 
         $.registry = registry_;
         $.initialized = true;
@@ -104,21 +104,21 @@ contract BaseAdapter is ReentrancyGuardTransient {
     /// @param to_ the address that will receive the assets
     /// @param amount_ the amount to rescue
     function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
-        require(_isAdmin(msg.sender), WRONG_ROLE);
-        require(to_ != address(0), ZERO_ADDRESS);
+        require(_isAdmin(msg.sender), ADAPTER_WRONG_ROLE);
+        require(to_ != address(0), ADAPTER_ZERO_ADDRESS);
 
         if (asset_ == address(0)) {
             // Rescue ETH
-            require(amount_ > 0 && amount_ <= address(this).balance, ZERO_AMOUNT);
+            require(amount_ > 0 && amount_ <= address(this).balance, ADAPTER_ZERO_AMOUNT);
 
             (bool success,) = to_.call{ value: amount_ }("");
-            require(success, TRANSFER_FAILED);
+            require(success, ADAPTER_TRANSFER_FAILED);
 
             emit RescuedETH(to_, amount_);
         } else {
             // Rescue ERC20 tokens
-            require(!_isAsset(asset_), WRONG_ASSET);
-            require(amount_ > 0 && amount_ <= asset_.balanceOf(address(this)), ZERO_AMOUNT);
+            require(!_isAsset(asset_), ADAPTER_WRONG_ASSET);
+            require(amount_ > 0 && amount_ <= asset_.balanceOf(address(this)), ADAPTER_ZERO_AMOUNT);
 
             asset_.safeTransfer(to_, amount_);
             emit RescuedAssets(asset_, to_, amount_);

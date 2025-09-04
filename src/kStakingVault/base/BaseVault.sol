@@ -1,17 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {ERC20} from "solady/tokens/ERC20.sol";
+import { ERC20 } from "solady/tokens/ERC20.sol";
 
-import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {OptimizedBytes32EnumerableSetLib} from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
 
-import {OptimizedReentrancyGuardTransient} from "src/abstracts/OptimizedReentrancyGuardTransient.sol";
-import {IkRegistry} from "src/interfaces/IkRegistry.sol";
-import {IVaultFees} from "src/interfaces/modules/IVaultFees.sol";
-import {BaseVaultTypes} from "src/kStakingVault/types/BaseVaultTypes.sol";
-import {ALREADY_INITIALIZED, CONTRACT_NOT_FOUND, INVALID_REGISTRY, INVALID_VAULT, NOT_INITIALIZED} from "src/errors/Errors.sol";
+import { OptimizedReentrancyGuardTransient } from "src/abstracts/OptimizedReentrancyGuardTransient.sol";
+
+import {
+    BASEVAULT_ALREADY_INITIALIZED,
+    BASEVAULT_CONTRACT_NOT_FOUND,
+    BASEVAULT_INVALID_REGISTRY,
+    BASEVAULT_INVALID_VAULT,
+    BASEVAULT_NOT_INITIALIZED
+} from "src/errors/Errors.sol";
+import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { IVaultFees } from "src/interfaces/modules/IVaultFees.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title BaseVault
 /// @notice Base contract for all modules
@@ -36,21 +43,11 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     event StakeRequestRedeemed(bytes32 indexed requestId);
     event StakeRequestCancelled(bytes32 indexed requestId);
     event UnstakeRequestCreated(
-        bytes32 indexed requestId,
-        address indexed user,
-        uint256 amount,
-        address recipient,
-        bytes32 batchId
+        bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, bytes32 batchId
     );
     event UnstakeRequestCancelled(bytes32 indexed requestId);
     event Paused(bool paused);
-    event Initialized(
-        address registry,
-        string name,
-        string symbol,
-        uint8 decimals,
-        address asset
-    );
+    event Initialized(address registry, string name, string symbol, uint8 decimals, address asset);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
@@ -73,11 +70,9 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     uint256 internal constant PAUSED_SHIFT = 57;
     uint256 internal constant IS_HARD_HURDLE_RATE_MASK = 0x1;
     uint256 internal constant IS_HARD_HURDLE_RATE_SHIFT = 58;
-    uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_MASK =
-        0xFFFFFFFFFFFFFFFF;
+    uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_MASK = 0xFFFFFFFFFFFFFFFF;
     uint256 internal constant LAST_FEES_CHARGED_MANAGEMENT_SHIFT = 59;
-    uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_MASK =
-        0xFFFFFFFFFFFFFFFF;
+    uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_MASK = 0xFFFFFFFFFFFFFFFF;
     uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_SHIFT = 123;
 
     /*//////////////////////////////////////////////////////////////
@@ -120,11 +115,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
 
     /// @notice Returns the base vault storage struct using ERC-7201 pattern
     /// @return $ Storage reference for base vault state variables
-    function _getBaseVaultStorage()
-        internal
-        pure
-        returns (BaseVaultStorage storage $)
-    {
+    function _getBaseVaultStorage() internal pure returns (BaseVaultStorage storage $) {
         assembly {
             $.slot := MODULE_BASE_STORAGE_LOCATION
         }
@@ -134,143 +125,81 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
                           CONFIG GETTERS/SETTERS
     //////////////////////////////////////////////////////////////*/
 
-    function _getDecimals(
-        BaseVaultStorage storage $
-    ) internal view returns (uint8) {
+    function _getDecimals(BaseVaultStorage storage $) internal view returns (uint8) {
         return uint8(($.config >> DECIMALS_SHIFT) & DECIMALS_MASK);
     }
 
     function _setDecimals(BaseVaultStorage storage $, uint8 value) internal {
-        $.config =
-            ($.config & ~(DECIMALS_MASK << DECIMALS_SHIFT)) |
-            (uint256(value) << DECIMALS_SHIFT);
+        $.config = ($.config & ~(DECIMALS_MASK << DECIMALS_SHIFT)) | (uint256(value) << DECIMALS_SHIFT);
     }
 
-    function _getHurdleRate(
-        BaseVaultStorage storage $
-    ) internal view returns (uint16) {
+    function _getHurdleRate(BaseVaultStorage storage $) internal view returns (uint16) {
         return uint16(($.config >> HURDLE_RATE_SHIFT) & HURDLE_RATE_MASK);
     }
 
     function _setHurdleRate(BaseVaultStorage storage $, uint16 value) internal {
+        $.config = ($.config & ~(HURDLE_RATE_MASK << HURDLE_RATE_SHIFT)) | (uint256(value) << HURDLE_RATE_SHIFT);
+    }
+
+    function _getPerformanceFee(BaseVaultStorage storage $) internal view returns (uint16) {
+        return uint16(($.config >> PERFORMANCE_FEE_SHIFT) & PERFORMANCE_FEE_MASK);
+    }
+
+    function _setPerformanceFee(BaseVaultStorage storage $, uint16 value) internal {
         $.config =
-            ($.config & ~(HURDLE_RATE_MASK << HURDLE_RATE_SHIFT)) |
-            (uint256(value) << HURDLE_RATE_SHIFT);
+            ($.config & ~(PERFORMANCE_FEE_MASK << PERFORMANCE_FEE_SHIFT)) | (uint256(value) << PERFORMANCE_FEE_SHIFT);
     }
 
-    function _getPerformanceFee(
-        BaseVaultStorage storage $
-    ) internal view returns (uint16) {
-        return
-            uint16(($.config >> PERFORMANCE_FEE_SHIFT) & PERFORMANCE_FEE_MASK);
-    }
-
-    function _setPerformanceFee(
-        BaseVaultStorage storage $,
-        uint16 value
-    ) internal {
-        $.config =
-            ($.config & ~(PERFORMANCE_FEE_MASK << PERFORMANCE_FEE_SHIFT)) |
-            (uint256(value) << PERFORMANCE_FEE_SHIFT);
-    }
-
-    function _getManagementFee(
-        BaseVaultStorage storage $
-    ) internal view returns (uint16) {
+    function _getManagementFee(BaseVaultStorage storage $) internal view returns (uint16) {
         return uint16(($.config >> MANAGEMENT_FEE_SHIFT) & MANAGEMENT_FEE_MASK);
     }
 
-    function _setManagementFee(
-        BaseVaultStorage storage $,
-        uint16 value
-    ) internal {
+    function _setManagementFee(BaseVaultStorage storage $, uint16 value) internal {
         $.config =
-            ($.config & ~(MANAGEMENT_FEE_MASK << MANAGEMENT_FEE_SHIFT)) |
-            (uint256(value) << MANAGEMENT_FEE_SHIFT);
+            ($.config & ~(MANAGEMENT_FEE_MASK << MANAGEMENT_FEE_SHIFT)) | (uint256(value) << MANAGEMENT_FEE_SHIFT);
     }
 
-    function _getInitialized(
-        BaseVaultStorage storage $
-    ) internal view returns (bool) {
+    function _getInitialized(BaseVaultStorage storage $) internal view returns (bool) {
         return (($.config >> INITIALIZED_SHIFT) & INITIALIZED_MASK) != 0;
     }
 
     function _setInitialized(BaseVaultStorage storage $, bool value) internal {
-        $.config =
-            ($.config & ~(INITIALIZED_MASK << INITIALIZED_SHIFT)) |
-            (uint256(value ? 1 : 0) << INITIALIZED_SHIFT);
+        $.config = ($.config & ~(INITIALIZED_MASK << INITIALIZED_SHIFT)) | (uint256(value ? 1 : 0) << INITIALIZED_SHIFT);
     }
 
-    function _getPaused(
-        BaseVaultStorage storage $
-    ) internal view returns (bool) {
+    function _getPaused(BaseVaultStorage storage $) internal view returns (bool) {
         return (($.config >> PAUSED_SHIFT) & PAUSED_MASK) != 0;
     }
 
     function _setPaused(BaseVaultStorage storage $, bool value) internal {
-        $.config =
-            ($.config & ~(PAUSED_MASK << PAUSED_SHIFT)) |
-            (uint256(value ? 1 : 0) << PAUSED_SHIFT);
+        $.config = ($.config & ~(PAUSED_MASK << PAUSED_SHIFT)) | (uint256(value ? 1 : 0) << PAUSED_SHIFT);
     }
 
-    function _getIsHardHurdleRate(
-        BaseVaultStorage storage $
-    ) internal view returns (bool) {
-        return
-            (($.config >> IS_HARD_HURDLE_RATE_SHIFT) &
-                IS_HARD_HURDLE_RATE_MASK) != 0;
+    function _getIsHardHurdleRate(BaseVaultStorage storage $) internal view returns (bool) {
+        return (($.config >> IS_HARD_HURDLE_RATE_SHIFT) & IS_HARD_HURDLE_RATE_MASK) != 0;
     }
 
-    function _setIsHardHurdleRate(
-        BaseVaultStorage storage $,
-        bool value
-    ) internal {
-        $.config =
-            ($.config &
-                ~(IS_HARD_HURDLE_RATE_MASK << IS_HARD_HURDLE_RATE_SHIFT)) |
-            (uint256(value ? 1 : 0) << IS_HARD_HURDLE_RATE_SHIFT);
+    function _setIsHardHurdleRate(BaseVaultStorage storage $, bool value) internal {
+        $.config = ($.config & ~(IS_HARD_HURDLE_RATE_MASK << IS_HARD_HURDLE_RATE_SHIFT))
+            | (uint256(value ? 1 : 0) << IS_HARD_HURDLE_RATE_SHIFT);
     }
 
-    function _getLastFeesChargedManagement(
-        BaseVaultStorage storage $
-    ) internal view returns (uint64) {
-        return
-            uint64(
-                ($.config >> LAST_FEES_CHARGED_MANAGEMENT_SHIFT) &
-                    LAST_FEES_CHARGED_MANAGEMENT_MASK
-            );
+    function _getLastFeesChargedManagement(BaseVaultStorage storage $) internal view returns (uint64) {
+        return uint64(($.config >> LAST_FEES_CHARGED_MANAGEMENT_SHIFT) & LAST_FEES_CHARGED_MANAGEMENT_MASK);
     }
 
-    function _setLastFeesChargedManagement(
-        BaseVaultStorage storage $,
-        uint64 value
-    ) internal {
-        $.config =
-            ($.config &
-                ~(LAST_FEES_CHARGED_MANAGEMENT_MASK <<
-                    LAST_FEES_CHARGED_MANAGEMENT_SHIFT)) |
-            (uint256(value) << LAST_FEES_CHARGED_MANAGEMENT_SHIFT);
+    function _setLastFeesChargedManagement(BaseVaultStorage storage $, uint64 value) internal {
+        $.config = ($.config & ~(LAST_FEES_CHARGED_MANAGEMENT_MASK << LAST_FEES_CHARGED_MANAGEMENT_SHIFT))
+            | (uint256(value) << LAST_FEES_CHARGED_MANAGEMENT_SHIFT);
     }
 
-    function _getLastFeesChargedPerformance(
-        BaseVaultStorage storage $
-    ) internal view returns (uint64) {
-        return
-            uint64(
-                ($.config >> LAST_FEES_CHARGED_PERFORMANCE_SHIFT) &
-                    LAST_FEES_CHARGED_PERFORMANCE_MASK
-            );
+    function _getLastFeesChargedPerformance(BaseVaultStorage storage $) internal view returns (uint64) {
+        return uint64(($.config >> LAST_FEES_CHARGED_PERFORMANCE_SHIFT) & LAST_FEES_CHARGED_PERFORMANCE_MASK);
     }
 
-    function _setLastFeesChargedPerformance(
-        BaseVaultStorage storage $,
-        uint64 value
-    ) internal {
-        $.config =
-            ($.config &
-                ~(LAST_FEES_CHARGED_PERFORMANCE_MASK <<
-                    LAST_FEES_CHARGED_PERFORMANCE_SHIFT)) |
-            (uint256(value) << LAST_FEES_CHARGED_PERFORMANCE_SHIFT);
+    function _setLastFeesChargedPerformance(BaseVaultStorage storage $, uint64 value) internal {
+        $.config = ($.config & ~(LAST_FEES_CHARGED_PERFORMANCE_MASK << LAST_FEES_CHARGED_PERFORMANCE_SHIFT))
+            | (uint256(value) << LAST_FEES_CHARGED_PERFORMANCE_SHIFT);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -284,8 +213,8 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     function __BaseVault_init(address registry_, bool paused_) internal {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
 
-        require(!_getInitialized($), ALREADY_INITIALIZED);
-        require(registry_ != address(0), INVALID_REGISTRY);
+        require(!_getInitialized($), BASEVAULT_ALREADY_INITIALIZED);
+        require(registry_ != address(0), BASEVAULT_INVALID_REGISTRY);
 
         $.registry = registry_;
         _setPaused($, paused_);
@@ -303,7 +232,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @dev Internal helper for typed registry access
     function _registry() internal view returns (IkRegistry) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(_getInitialized($), NOT_INITIALIZED);
+        require(_getInitialized($), BASEVAULT_NOT_INITIALIZED);
         return IkRegistry($.registry);
     }
 
@@ -316,7 +245,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @dev Reverts if kMinter not set in registry
     function _getKMinter() internal view returns (address minter) {
         minter = _registry().getContractById(K_MINTER);
-        require(minter != address(0), CONTRACT_NOT_FOUND);
+        require(minter != address(0), BASEVAULT_CONTRACT_NOT_FOUND);
     }
 
     /// @notice Gets the kAssetRouter singleton contract address
@@ -324,21 +253,16 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @dev Reverts if kAssetRouter not set in registry
     function _getKAssetRouter() internal view returns (address router) {
         router = _registry().getContractById(K_ASSET_ROUTER);
-        require(router != address(0), CONTRACT_NOT_FOUND);
+        require(router != address(0), BASEVAULT_CONTRACT_NOT_FOUND);
     }
 
     /// @notice Gets the DN vault address for a given asset
     /// @param asset_ The asset address
     /// @return vault The corresponding DN vault address
     /// @dev Reverts if asset not supported
-    function _getDNVaultByAsset(
-        address asset_
-    ) internal view returns (address vault) {
-        vault = _registry().getVaultByAssetAndType(
-            asset_,
-            uint8(IkRegistry.VaultType.DN)
-        );
-        require(vault != address(0), INVALID_VAULT);
+    function _getDNVaultByAsset(address asset_) internal view returns (address vault) {
+        vault = _registry().getVaultByAssetAndType(asset_, uint8(IkRegistry.VaultType.DN));
+        require(vault != address(0), BASEVAULT_INVALID_VAULT);
     }
 
     /// @notice Returns the vault shares token name
@@ -368,7 +292,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @dev Only callable internally by inheriting contracts
     function _setPaused(bool paused_) internal {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(_getInitialized($), NOT_INITIALIZED);
+        require(_getInitialized($), BASEVAULT_NOT_INITIALIZED);
         _setPaused($, paused_);
         emit Paused(paused_);
     }
@@ -379,9 +303,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @notice Converts shares to assets
     /// @param shares Amount of shares to convert
     /// @return assets Amount of assets
-    function _convertToAssets(
-        uint256 shares
-    ) internal view returns (uint256 assets) {
+    function _convertToAssets(uint256 shares) internal view returns (uint256 assets) {
         uint256 totalSupply_ = totalSupply();
         if (totalSupply_ == 0) return shares;
         return shares.fullMulDiv(_totalNetAssets(), totalSupply_);
@@ -390,9 +312,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @notice Converts assets to shares
     /// @param assets Amount of assets to convert
     /// @return shares Amount of shares
-    function _convertToShares(
-        uint256 assets
-    ) internal view returns (uint256 shares) {
+    function _convertToShares(uint256 assets) internal view returns (uint256 shares) {
         uint256 totalSupply_ = totalSupply();
         if (totalSupply_ == 0) return assets;
         return assets.fullMulDiv(totalSupply_, _totalNetAssets());
@@ -429,8 +349,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @notice Calculates accumulated fees
     /// @return accumulatedFees Accumulated fees
     function _accumulatedFees() internal view returns (uint256) {
-        (, , uint256 totalFees) = IVaultFees(address(this))
-            .computeLastBatchFees();
+        (,, uint256 totalFees) = IVaultFees(address(this)).computeLastBatchFees();
         return totalFees;
     }
 
@@ -460,16 +379,14 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @return Whether the address is a institution
     function _isPaused() internal view returns (bool) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(_getInitialized($), NOT_INITIALIZED);
+        require(_getInitialized($), BASEVAULT_NOT_INITIALIZED);
         return _getPaused($);
     }
 
     /// @notice Gets the kMinter singleton contract address
     /// @return minter The kMinter contract address
     /// @dev Reverts if kMinter not set in registry
-    function _isKAssetRouter(
-        address kAssetRouter_
-    ) internal view returns (bool) {
+    function _isKAssetRouter(address kAssetRouter_) internal view returns (bool) {
         bool isTrue;
         address _kAssetRouter = _registry().getContractById(K_ASSET_ROUTER);
         if (_kAssetRouter == kAssetRouter_) isTrue = true;

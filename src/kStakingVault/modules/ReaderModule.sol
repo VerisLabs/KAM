@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
-import {Extsload} from "src/abstracts/Extsload.sol";
-import {BaseVault} from "src/kStakingVault/base/BaseVault.sol";
-import {BaseVaultTypes} from "src/kStakingVault/types/BaseVaultTypes.sol";
-import {NOT_INITIALIZED, VAULT_SETTLED, VAULT_CLOSED} from "src/errors/Errors.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import { Extsload } from "src/abstracts/Extsload.sol";
+
+import { KSTAKINGVAULT_NOT_INITIALIZED, KSTAKINGVAULT_VAULT_CLOSED, KSTAKINGVAULT_VAULT_SETTLED } from "src/errors/Errors.sol";
+import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title ReaderModule
 /// @notice Contains all the public getters for the Staking Vault
@@ -25,7 +26,7 @@ contract ReaderModule is BaseVault, Extsload {
     /// GENERAL
     function registry() external view returns (address) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(_getInitialized($), NOT_INITIALIZED);
+        require(_getInitialized($), KSTAKINGVAULT_NOT_INITIALIZED);
         return $.registry;
     }
 
@@ -50,11 +51,7 @@ contract ReaderModule is BaseVault, Extsload {
     function computeLastBatchFees()
         external
         view
-        returns (
-            uint256 managementFees,
-            uint256 performanceFees,
-            uint256 totalFees
-        )
+        returns (uint256 managementFees, uint256 performanceFees, uint256 totalFees)
     {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         uint256 lastSharePrice = $.sharePriceWatermark;
@@ -62,39 +59,29 @@ contract ReaderModule is BaseVault, Extsload {
         uint256 lastFeesChargedManagement = _getLastFeesChargedManagement($);
         uint256 lastFeesChargedPerformance = _getLastFeesChargedPerformance($);
 
-        uint256 durationManagement = block.timestamp -
-            lastFeesChargedManagement;
-        uint256 durationPerformance = block.timestamp -
-            lastFeesChargedPerformance;
+        uint256 durationManagement = block.timestamp - lastFeesChargedManagement;
+        uint256 durationPerformance = block.timestamp - lastFeesChargedPerformance;
         uint256 currentTotalAssets = _totalAssets();
-        uint256 lastTotalAssets = totalSupply().fullMulDiv(
-            lastSharePrice,
-            10 ** _getDecimals($)
-        );
+        uint256 lastTotalAssets = totalSupply().fullMulDiv(lastSharePrice, 10 ** _getDecimals($));
 
         // Calculate time-based fees (management)
         // These are charged on total assets, prorated for the time period
         managementFees =
-            (currentTotalAssets * durationManagement).fullMulDiv(
-                _getManagementFee($),
-                SECS_PER_YEAR
-            ) /
-            MAX_BPS;
+            (currentTotalAssets * durationManagement).fullMulDiv(_getManagementFee($), SECS_PER_YEAR) / MAX_BPS;
         currentTotalAssets -= managementFees;
         totalFees = managementFees;
 
         // Calculate the asset's value change since entry
         // This gives us the raw profit/loss in asset terms after management fees
-        int256 assetsDelta = int256(currentTotalAssets) -
-            int256(lastTotalAssets);
+        int256 assetsDelta = int256(currentTotalAssets) - int256(lastTotalAssets);
 
         // Only calculate fees if there's a profit
         if (assetsDelta > 0) {
             uint256 excessReturn;
 
             // Calculate returns relative to hurdle rate
-            uint256 hurdleReturn = (lastTotalAssets * _getHurdleRate($))
-                .fullMulDiv(durationPerformance, SECS_PER_YEAR) / MAX_BPS;
+            uint256 hurdleReturn =
+                (lastTotalAssets * _getHurdleRate($)).fullMulDiv(durationPerformance, SECS_PER_YEAR) / MAX_BPS;
 
             // Calculate returns relative to hurdle rate
             uint256 totalReturn = uint256(assetsDelta);
@@ -109,13 +96,9 @@ contract ReaderModule is BaseVault, Extsload {
                 // If its a hard hurdle rate, only charge fees above the hurdle performance
                 // Otherwise, charge fees to all return if its above hurdle return
                 if (_getIsHardHurdleRate($)) {
-                    performanceFees =
-                        (excessReturn * _getPerformanceFee($)) /
-                        MAX_BPS;
+                    performanceFees = (excessReturn * _getPerformanceFee($)) / MAX_BPS;
                 } else {
-                    performanceFees =
-                        (totalReturn * _getPerformanceFee($)) /
-                        MAX_BPS;
+                    performanceFees = (totalReturn * _getPerformanceFee($)) / MAX_BPS;
                 }
             }
 
@@ -182,19 +165,13 @@ contract ReaderModule is BaseVault, Extsload {
     /// @notice Returns whether the current batch is closed
     /// @return Whether the current batch is closed
     function isBatchClosed() external view returns (bool) {
-        return
-            _getBaseVaultStorage()
-                .batches[_getBaseVaultStorage().currentBatchId]
-                .isClosed;
+        return _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].isClosed;
     }
 
     /// @notice Returns whether the current batch is settled
     /// @return Whether the current batch is settled
     function isBatchSettled() external view returns (bool) {
-        return
-            _getBaseVaultStorage()
-                .batches[_getBaseVaultStorage().currentBatchId]
-                .isSettled;
+        return _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].isSettled;
     }
 
     /// @notice Returns the current batch ID, whether it is closed, and whether it is settled
@@ -205,24 +182,13 @@ contract ReaderModule is BaseVault, Extsload {
     function getBatchIdInfo()
         external
         view
-        returns (
-            bytes32 batchId,
-            address batchReceiver,
-            bool isClosed,
-            bool isSettled
-        )
+        returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled)
     {
         return (
             _getBaseVaultStorage().currentBatchId,
-            _getBaseVaultStorage()
-                .batches[_getBaseVaultStorage().currentBatchId]
-                .batchReceiver,
-            _getBaseVaultStorage()
-                .batches[_getBaseVaultStorage().currentBatchId]
-                .isClosed,
-            _getBaseVaultStorage()
-                .batches[_getBaseVaultStorage().currentBatchId]
-                .isSettled
+            _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].batchReceiver,
+            _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].isClosed,
+            _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].isSettled
         );
     }
 
@@ -235,11 +201,9 @@ contract ReaderModule is BaseVault, Extsload {
     /// @notice Returns the batch receiver for a given batch (alias for getBatchIdReceiver)
     /// @return Batch receiver
     /// @dev Throws if the batch is settled
-    function getSafeBatchReceiver(
-        bytes32 batchId
-    ) external view returns (address) {
+    function getSafeBatchReceiver(bytes32 batchId) external view returns (address) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(!$.batches[batchId].isSettled, VAULT_SETTLED);
+        require(!$.batches[batchId].isSettled, KSTAKINGVAULT_VAULT_SETTLED);
         return $.batches[batchId].batchReceiver;
     }
 
@@ -273,8 +237,8 @@ contract ReaderModule is BaseVault, Extsload {
     function getSafeBatchId() external view returns (bytes32) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         bytes32 batchId = getBatchId();
-        require(!$.batches[batchId].isClosed, VAULT_CLOSED);
-        require(!$.batches[batchId].isSettled, VAULT_SETTLED);
+        require(!$.batches[batchId].isClosed, KSTAKINGVAULT_VAULT_CLOSED);
+        require(!$.batches[batchId].isSettled, KSTAKINGVAULT_VAULT_SETTLED);
         return batchId;
     }
 

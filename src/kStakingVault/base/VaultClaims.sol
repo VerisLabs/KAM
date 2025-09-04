@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {ERC20} from "solady/tokens/ERC20.sol";
+import { ERC20 } from "solady/tokens/ERC20.sol";
 
-import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
-import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {IkRegistry} from "src/interfaces/IkRegistry.sol";
-import {OptimizedBytes32EnumerableSetLib} from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
 
-import {BaseVault} from "src/kStakingVault/base/BaseVault.sol";
-import {BaseVaultTypes} from "src/kStakingVault/types/BaseVaultTypes.sol";
-import {BATCH_NOT_SETTLED, INVALID_BATCH_ID, IS_PAUSED, NOT_BENEFICIARY, REQUEST_NOT_PENDING} from "src/errors/Errors.sol";
+import {
+    VAULTCLAIMS_BATCH_NOT_SETTLED, VAULTCLAIMS_INVALID_BATCH_ID, VAULTCLAIMS_IS_PAUSED, VAULTCLAIMS_NOT_BENEFICIARY, VAULTCLAIMS_REQUEST_NOT_PENDING
+} from "src/errors/Errors.sol";
+import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title VaultClaims
 /// @notice Handles claim operations for settled batches
@@ -29,24 +31,10 @@ contract VaultClaims is BaseVault {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice ERC20 Transfer event for stkToken operations
-    event StakingSharesClaimed(
-        bytes32 indexed batchId,
-        bytes32 requestId,
-        address indexed user,
-        uint256 shares
-    );
-    event UnstakingAssetsClaimed(
-        bytes32 indexed batchId,
-        bytes32 requestId,
-        address indexed user,
-        uint256 assets
-    );
+    event StakingSharesClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 shares);
+    event UnstakingAssetsClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 assets);
     event StkTokensIssued(address indexed user, uint256 stkTokenAmount);
-    event KTokenUnstaked(
-        address indexed user,
-        uint256 shares,
-        uint256 kTokenAmount
-    );
+    event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
 
     /*//////////////////////////////////////////////////////////////
                           CLAIM FUNCTIONS
@@ -55,41 +43,25 @@ contract VaultClaims is BaseVault {
     /// @notice Claims stkTokens from a settled staking batch
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
-    function claimStakedShares(
-        bytes32 batchId,
-        bytes32 requestId
-    ) external payable {
+    function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable {
         _lockReentrant();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(!_getPaused($), IS_PAUSED);
-        require($.batches[batchId].isSettled, BATCH_NOT_SETTLED);
+        require(!_getPaused($), VAULTCLAIMS_IS_PAUSED);
+        require($.batches[batchId].isSettled, VAULTCLAIMS_BATCH_NOT_SETTLED);
 
-        BaseVaultTypes.StakeRequest storage request = $.stakeRequests[
-            requestId
-        ];
-        require(request.batchId == batchId, INVALID_BATCH_ID);
-        require(
-            request.status == BaseVaultTypes.RequestStatus.PENDING,
-            REQUEST_NOT_PENDING
-        );
-        require(msg.sender == request.user, NOT_BENEFICIARY);
+        BaseVaultTypes.StakeRequest storage request = $.stakeRequests[requestId];
+        require(request.batchId == batchId, VAULTCLAIMS_INVALID_BATCH_ID);
+        require(request.status == BaseVaultTypes.RequestStatus.PENDING, VAULTCLAIMS_REQUEST_NOT_PENDING);
+        require(msg.sender == request.user, VAULTCLAIMS_NOT_BENEFICIARY);
 
         request.status = BaseVaultTypes.RequestStatus.CLAIMED;
 
         // Calculate stkToken amount based on settlement-time share price
         uint256 netSharePrice = $.batches[batchId].netSharePrice;
         if (netSharePrice == 0) revert();
-        uint256 stkTokensToMint = (uint256(request.kTokenAmount)).fullMulDiv(
-            10 ** _getDecimals($),
-            netSharePrice
-        );
+        uint256 stkTokensToMint = (uint256(request.kTokenAmount)).fullMulDiv(10 ** _getDecimals($), netSharePrice);
 
-        emit StakingSharesClaimed(
-            batchId,
-            requestId,
-            request.user,
-            stkTokensToMint
-        );
+        emit StakingSharesClaimed(batchId, requestId, request.user, stkTokensToMint);
 
         $.userRequests[msg.sender].remove(requestId);
         $.totalPendingStake -= request.kTokenAmount;
@@ -102,24 +74,16 @@ contract VaultClaims is BaseVault {
     /// @notice Claims kTokens from a settled unstaking batch (simplified implementation)
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
-    function claimUnstakedAssets(
-        bytes32 batchId,
-        bytes32 requestId
-    ) external payable {
+    function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable {
         _lockReentrant();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(!_getPaused($), IS_PAUSED);
-        require($.batches[batchId].isSettled, BATCH_NOT_SETTLED);
+        require(!_getPaused($), VAULTCLAIMS_IS_PAUSED);
+        require($.batches[batchId].isSettled, VAULTCLAIMS_BATCH_NOT_SETTLED);
 
-        BaseVaultTypes.UnstakeRequest storage request = $.unstakeRequests[
-            requestId
-        ];
-        require(request.batchId == batchId, INVALID_BATCH_ID);
-        require(
-            request.status == BaseVaultTypes.RequestStatus.PENDING,
-            REQUEST_NOT_PENDING
-        );
-        require(msg.sender == request.user, NOT_BENEFICIARY);
+        BaseVaultTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
+        require(request.batchId == batchId, VAULTCLAIMS_INVALID_BATCH_ID);
+        require(request.status == BaseVaultTypes.RequestStatus.PENDING, VAULTCLAIMS_REQUEST_NOT_PENDING);
+        require(msg.sender == request.user, VAULTCLAIMS_NOT_BENEFICIARY);
 
         request.status = BaseVaultTypes.RequestStatus.CLAIMED;
 
@@ -128,33 +92,20 @@ contract VaultClaims is BaseVault {
         if (sharePrice == 0) revert();
 
         // Calculate total kTokens to return based on settlement-time share price
-        uint256 totalKTokensGross = (uint256(request.stkTokenAmount))
-            .fullMulDiv(sharePrice, 10 ** _getDecimals($));
-        uint256 totalKTokensNet = (uint256(request.stkTokenAmount)).fullMulDiv(
-            netSharePrice,
-            10 ** _getDecimals($)
-        );
+        uint256 totalKTokensGross = (uint256(request.stkTokenAmount)).fullMulDiv(sharePrice, 10 ** _getDecimals($));
+        uint256 totalKTokensNet = (uint256(request.stkTokenAmount)).fullMulDiv(netSharePrice, 10 ** _getDecimals($));
         uint256 fees = totalKTokensGross - totalKTokensNet;
 
         // Burn stkTokens from vault (already transferred to vault during request)
         _burn(address(this), request.stkTokenAmount);
-        emit UnstakingAssetsClaimed(
-            batchId,
-            requestId,
-            request.user,
-            totalKTokensNet
-        );
+        emit UnstakingAssetsClaimed(batchId, requestId, request.user, totalKTokensNet);
 
         // Transfer fees to treasury
         $.kToken.safeTransfer(_registry().getTreasury(), fees);
 
         // Transfer kTokens to user
         $.kToken.safeTransfer(request.user, totalKTokensNet);
-        emit KTokenUnstaked(
-            request.user,
-            request.stkTokenAmount,
-            totalKTokensNet
-        );
+        emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensNet);
         _unlockReentrant();
     }
 }
