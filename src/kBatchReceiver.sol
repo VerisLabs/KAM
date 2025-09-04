@@ -24,9 +24,13 @@ contract kBatchReceiver is IkBatchReceiver {
                               VARIABLES
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Address of the kMinter contract (only authorized caller)
     address public immutable kMinter;
+    /// @notice Address of the asset contract
     address public asset;
+    /// @notice Batch ID this receiver serves
     bytes32 public batchId;
+    /// @notice Whether this receiver has been initialised
     bool public isInitialised;
 
     /*//////////////////////////////////////////////////////////////

@@ -25,13 +25,17 @@ contract BaseAdapter is ReentrancyGuardTransient {
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Emitted when assets are rescued from the contract
     event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
-    event RescuedETH(address indexed asset, uint256 amount);
+
+    /// @notice Emitted when ETH is rescued from the contract
+    event RescuedETH(address indexed to, uint256 amount);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice The asset router key
     bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
 
     /*//////////////////////////////////////////////////////////////
@@ -50,6 +54,7 @@ contract BaseAdapter is ReentrancyGuardTransient {
     bytes32 private constant BASE_ADAPTER_STORAGE_LOCATION =
         0x5547882c17743d50a538cd94a34f6308d65f7005fe26b376dcedda44d3aab800;
 
+    /// @dev Returns the base adapter storage pointer
     function _getBaseAdapterStorage() internal pure returns (BaseAdapterStorage storage $) {
         assembly {
             $.slot := BASE_ADAPTER_STORAGE_LOCATION

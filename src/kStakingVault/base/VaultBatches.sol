@@ -24,11 +24,21 @@ contract VaultBatches is BaseVault {
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Emitted when a new batch is created
+    /// @param batchId The batch ID of the new batch
     event BatchCreated(bytes32 indexed batchId);
-    event BatchReceiverDeployed(bytes32 indexed batchId, address indexed receiver);
+
+    /// @notice Emitted when a batch is settled
+    /// @param batchId The batch ID of the settled batch
     event BatchSettled(bytes32 indexed batchId);
+
+    /// @notice Emitted when a batch is closed
+    /// @param batchId The batch ID of the closed batch
     event BatchClosed(bytes32 indexed batchId);
-    event BatchReceiverSet(address indexed batchReceiver, bytes32 indexed batchId);
+
+    /// @notice Emitted when a BatchReceiver is created
+    /// @param receiver The address of the created BatchReceiver
+    /// @param batchId The batch ID of the BatchReceiver
     event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
 
     /*//////////////////////////////////////////////////////////////
@@ -45,6 +55,7 @@ contract VaultBatches is BaseVault {
 
     /// @notice Closes a batch to prevent new requests
     /// @param _batchId The batch ID to close
+    /// @param _create Whether to create a new batch after closing
     /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
     function closeBatch(bytes32 _batchId, bool _create) external {
         require(_isRelayer(msg.sender), VAULTBATCHES_WRONG_ROLE);
@@ -67,6 +78,8 @@ contract VaultBatches is BaseVault {
         require($.batches[_batchId].isClosed, VAULTBATCHES_NOT_CLOSED);
         require(!$.batches[_batchId].isSettled, VAULTBATCHES_VAULT_SETTLED);
         $.batches[_batchId].isSettled = true;
+
+        // Snapshot the gross and net share price for this batch
         $.batches[_batchId].sharePrice = _sharePrice().toUint128();
         $.batches[_batchId].netSharePrice = _netSharePrice().toUint128();
 
@@ -83,8 +96,11 @@ contract VaultBatches is BaseVault {
         address receiver = $.batches[_batchId].batchReceiver;
         if (receiver != address(0)) return receiver;
 
+        // Deploy a new BatchReceiver minimal proxy
         receiver = LibClone.clone($.receiverImplementation);
         $.batches[_batchId].batchReceiver = receiver;
+
+        // Initialize the BatchReceiver
         kBatchReceiver(receiver).initialize(_batchId, $.underlyingAsset);
 
         emit BatchReceiverCreated(receiver, _batchId);
@@ -115,6 +131,7 @@ contract VaultBatches is BaseVault {
             )
         );
 
+        // Update current batch ID and initialize new batch
         $.currentBatchId = newBatchId;
         BaseVaultTypes.BatchInfo storage batch = $.batches[newBatchId];
         batch.batchId = newBatchId;

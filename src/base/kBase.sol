@@ -30,15 +30,26 @@ contract kBase is ReentrancyGuardTransient {
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event Paused(bool paused);
-    event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
-    event RescuedETH(address indexed asset, uint256 amount);
+    /// @notice Emitted when the pause state is changed
+    /// @param paused_ New pause state
+    event Paused(bool paused_);
+    /// @notice Emitted when assets are rescued from the contract
+    /// @param asset_ The asset rescued
+    /// @param to_ The recipient of the rescued assets
+    /// @param amount_ The amount of assets rescued
+    event RescuedAssets(address indexed asset_, address indexed to_, uint256 amount_);
+    /// @notice Emitted when ETH is rescued from the contract
+    /// @param to_ The recipient of the rescued ETH
+    /// @param amount_ The amount of ETH rescued
+    event RescuedETH(address indexed to_, uint256 amount_);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice kMinter key
     bytes32 internal constant K_MINTER = keccak256("K_MINTER");
+    /// @notice kAssetRouter key
     bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
 
     /*//////////////////////////////////////////////////////////////
@@ -59,8 +70,7 @@ contract kBase is ReentrancyGuardTransient {
                               STORAGE GETTER
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the kBase storage
-    /// @return $ Storage struct containing registry, initialized, and paused states
+    /// @dev Returns the kBase storage pointer
     function _getBaseStorage() internal pure returns (kBaseStorage storage $) {
         assembly {
             $.slot := KBASE_STORAGE_LOCATION
