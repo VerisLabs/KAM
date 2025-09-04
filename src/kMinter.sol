@@ -2,11 +2,12 @@
 pragma solidity 0.8.30;
 
 import { EfficientHashLib } from "solady/utils/EfficientHashLib.sol";
-import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
+
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
+import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
 
 import { Extsload } from "src/abstracts/Extsload.sol";
 import { kBase } from "src/base/kBase.sol";
@@ -37,7 +38,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
     using SafeCastLib for uint64;
-    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+    using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -48,7 +49,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         mapping(address => uint256) totalLockedAssets;
         uint64 requestCounter;
         mapping(bytes32 => RedeemRequest) redeemRequests;
-        mapping(address => EnumerableSetLib.Bytes32Set) userRequests;
+        mapping(address => OptimizedBytes32EnumerableSetLib.Bytes32Set) userRequests;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kMinter")) - 1)) & ~bytes32(uint256(0xff))

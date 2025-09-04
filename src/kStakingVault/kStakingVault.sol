@@ -2,25 +2,26 @@
 pragma solidity 0.8.30;
 
 import {Ownable} from "solady/auth/Ownable.sol";
-import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
+
 import {Initializable} from "solady/utils/Initializable.sol";
 import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
+import {OptimizedBytes32EnumerableSetLib} from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
 
 import {IkAssetRouter} from "src/interfaces/IkAssetRouter.sol";
 import {IkToken} from "src/interfaces/IkToken.sol";
 
-import {MultiFacetProxy} from "src/base/MultiFacetProxy.sol";
-
 import {INSUFFICIENT_BALANCE, IS_PAUSED, REQUEST_NOT_ELIGIBLE, REQUEST_NOT_FOUND, UNAUTHORIZED, VAULT_CLOSED, VAULT_SETTLED, WRONG_ROLE, ZERO_ADDRESS, ZERO_AMOUNT} from "src/errors/Errors.sol";
+
+import {MultiFacetProxy} from "src/base/MultiFacetProxy.sol";
 import {kBatchReceiver} from "src/kBatchReceiver.sol";
-import {BaseVaultModule} from "src/kStakingVault/base/BaseVaultModule.sol";
+import {BaseVault} from "src/kStakingVault/base/BaseVault.sol";
 
 import {VaultBatches} from "src/kStakingVault/base/VaultBatches.sol";
 import {VaultClaims} from "src/kStakingVault/base/VaultClaims.sol";
 import {VaultFees} from "src/kStakingVault/base/VaultFees.sol";
-import {BaseVaultModuleTypes} from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+import {BaseVaultTypes} from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title kStakingVault
 /// @notice Pure ERC20 vault with dual accounting for minter and user pools
@@ -29,13 +30,13 @@ contract kStakingVault is
     Initializable,
     UUPSUpgradeable,
     Ownable,
-    BaseVaultModule,
+    BaseVault,
     MultiFacetProxy,
     VaultFees,
     VaultClaims,
     VaultBatches
 {
-    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+    using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
     using SafeCastLib for uint128;
@@ -69,11 +70,11 @@ contract kStakingVault is
         require(asset_ != address(0), ZERO_ADDRESS);
 
         // Initialize ownership and roles
-        __BaseVaultModule_init(registry_, paused_);
+        __BaseVault_init(registry_, paused_);
         _initializeOwner(owner_);
 
         // Initialize storage with optimized packing
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         $.name = name_;
         $.symbol = symbol_;
         _setDecimals($, decimals_);
@@ -98,8 +99,9 @@ contract kStakingVault is
     function requestStake(
         address to,
         uint256 amount
-    ) external payable nonReentrant returns (bytes32 requestId) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+    ) external payable returns (bytes32 requestId) {
+        _lockReentrant();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         require(!_getPaused($), IS_PAUSED);
         require(amount != 0, ZERO_AMOUNT);
 
@@ -114,12 +116,12 @@ contract kStakingVault is
         requestId = _createStakeRequestId(msg.sender, amount, block.timestamp);
 
         // Create staking request
-        $.stakeRequests[requestId] = BaseVaultModuleTypes.StakeRequest({
+        $.stakeRequests[requestId] = BaseVaultTypes.StakeRequest({
             user: msg.sender,
             kTokenAmount: amount128,
             recipient: to,
             requestTimestamp: block.timestamp.toUint64(),
-            status: BaseVaultModuleTypes.RequestStatus.PENDING,
+            status: BaseVaultTypes.RequestStatus.PENDING,
             batchId: batchId
         });
 
@@ -139,13 +141,14 @@ contract kStakingVault is
         );
 
         emit StakeRequestCreated(
-            requestId,
+            bytes32(requestId),
             msg.sender,
-            address(kToken),
+            $.kToken,
             amount,
             to,
             batchId
         );
+        _unlockReentrant();
 
         return requestId;
     }
@@ -157,8 +160,9 @@ contract kStakingVault is
     function requestUnstake(
         address to,
         uint256 stkTokenAmount
-    ) external payable nonReentrant returns (bytes32 requestId) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+    ) external payable returns (bytes32 requestId) {
+        _lockReentrant();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         require(!_getPaused($), IS_PAUSED);
         require(stkTokenAmount != 0, ZERO_AMOUNT);
         require(balanceOf(msg.sender) >= stkTokenAmount, INSUFFICIENT_BALANCE);
@@ -173,12 +177,12 @@ contract kStakingVault is
         );
 
         // Create unstaking request
-        $.unstakeRequests[requestId] = BaseVaultModuleTypes.UnstakeRequest({
+        $.unstakeRequests[requestId] = BaseVaultTypes.UnstakeRequest({
             user: msg.sender,
             stkTokenAmount: stkTokenAmount.toUint128(),
             recipient: to,
             requestTimestamp: SafeCastLib.toUint64(block.timestamp),
-            status: BaseVaultModuleTypes.RequestStatus.PENDING,
+            status: BaseVaultTypes.RequestStatus.PENDING,
             batchId: batchId
         });
 
@@ -201,16 +205,17 @@ contract kStakingVault is
             batchId
         );
 
+        _unlockReentrant();
+
         return requestId;
     }
 
     /// @notice Cancels a staking request
     /// @param requestId Request ID to cancel
-    function cancelStakeRequest(
-        bytes32 requestId
-    ) external payable nonReentrant {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        BaseVaultModuleTypes.StakeRequest storage request = $.stakeRequests[
+    function cancelStakeRequest(bytes32 requestId) external payable {
+        _lockReentrant();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        BaseVaultTypes.StakeRequest storage request = $.stakeRequests[
             requestId
         ];
 
@@ -220,11 +225,11 @@ contract kStakingVault is
         );
         require(msg.sender == request.user, UNAUTHORIZED);
         require(
-            request.status == BaseVaultModuleTypes.RequestStatus.PENDING,
+            request.status == BaseVaultTypes.RequestStatus.PENDING,
             REQUEST_NOT_ELIGIBLE
         );
 
-        request.status = BaseVaultModuleTypes.RequestStatus.CANCELLED;
+        request.status = BaseVaultTypes.RequestStatus.CANCELLED;
         $.userRequests[msg.sender].remove(requestId);
 
         $.totalPendingStake -= request.kTokenAmount;
@@ -241,17 +246,17 @@ contract kStakingVault is
 
         $.kToken.safeTransfer(request.user, request.kTokenAmount);
 
-        emit StakeRequestCancelled(requestId);
+        emit StakeRequestCancelled(bytes32(requestId));
+        _unlockReentrant();
     }
 
     /// @notice Cancels an unstaking request
     /// @param requestId Request ID to cancel
-    function cancelUnstakeRequest(
-        bytes32 requestId
-    ) external payable nonReentrant {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+    function cancelUnstakeRequest(bytes32 requestId) external payable {
+        _lockReentrant();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         require(!_getPaused($), IS_PAUSED);
-        BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[
+        BaseVaultTypes.UnstakeRequest storage request = $.unstakeRequests[
             requestId
         ];
 
@@ -261,11 +266,11 @@ contract kStakingVault is
             REQUEST_NOT_FOUND
         );
         require(
-            request.status == BaseVaultModuleTypes.RequestStatus.PENDING,
+            request.status == BaseVaultTypes.RequestStatus.PENDING,
             REQUEST_NOT_ELIGIBLE
         );
 
-        request.status = BaseVaultModuleTypes.RequestStatus.CANCELLED;
+        request.status = BaseVaultTypes.RequestStatus.CANCELLED;
         $.userRequests[msg.sender].remove(requestId);
 
         require(!$.batches[request.batchId].isClosed, VAULT_CLOSED);
@@ -280,6 +285,7 @@ contract kStakingVault is
         _transfer(address(this), request.user, request.stkTokenAmount);
 
         emit UnstakeRequestCancelled(requestId);
+        _unlockReentrant();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -295,16 +301,17 @@ contract kStakingVault is
         address user,
         uint256 amount,
         uint256 timestamp
-    ) internal returns (bytes32) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+    ) private returns (bytes32) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        $.currentBatch++;
         return
             keccak256(
-                abi.encodePacked(
+                abi.encode(
                     address(this),
                     user,
                     amount,
                     timestamp,
-                    ++$.currentBatch
+                    $.currentBatch
                 )
             );
     }
@@ -319,45 +326,6 @@ contract kStakingVault is
     function setPaused(bool paused_) external {
         require(_isEmergencyAdmin(msg.sender), WRONG_ROLE);
         _setPaused(paused_);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                            VIEW FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Calculates the price of stkTokens in underlying asset terms
-    /// @dev Uses the last total assets and total supply to calculate the price
-    /// @return price Price per stkToken in underlying asset terms
-    function sharePrice() external view returns (uint256) {
-        return _sharePrice();
-    }
-
-    /// @notice Returns the current total assets
-    /// @return Total assets currently deployed in strategies
-    function totalAssets() external view returns (uint256) {
-        return _totalAssets();
-    }
-
-    /// @notice Returns the current total assets after fees
-    /// @return Total net assets currently deployed in strategies
-    function totalNetAssets() external view returns (uint256) {
-        return _totalNetAssets();
-    }
-
-    /// @notice Returns the current batch
-    /// @return Batch
-    function getBatchId() public view returns (bytes32) {
-        return _getBaseVaultModuleStorage().currentBatchId;
-    }
-
-    /// @notice Returns the safe batch
-    /// @return Batch
-    function getSafeBatchId() external view returns (bytes32) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        bytes32 batchId = $.currentBatchId;
-        require(!$.batches[batchId].isClosed, VAULT_CLOSED);
-        require(!$.batches[batchId].isSettled, VAULT_SETTLED);
-        return batchId;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -380,22 +348,6 @@ contract kStakingVault is
     /// @notice Authorize function modification
     /// @dev This allows modifying functions while keeping modules separate
     function _authorizeModifyFunctions(address sender) internal override {
-        require(_isAdmin(msg.sender), WRONG_ROLE);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        CONTRACT INFO
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Returns the contract name
-    /// @return Contract name
-    function contractName() external pure returns (string memory) {
-        return "kStakingVault";
-    }
-
-    /// @notice Returns the contract version
-    /// @return Contract version
-    function contractVersion() external pure returns (string memory) {
-        return "1.0.0";
+        _checkOwner();
     }
 }

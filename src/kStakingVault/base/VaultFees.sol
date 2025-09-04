@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-
-import { FEE_EXCEEDS_MAXIMUM, INVALID_TIMESTAMP, WRONG_ROLE } from "src/errors/Errors.sol";
-import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import {BaseVault} from "src/kStakingVault/base/BaseVault.sol";
+import {FEE_EXCEEDS_MAXIMUM, INVALID_TIMESTAMP, WRONG_ROLE} from "src/errors/Errors.sol";
 
 /// @title VaultFees
 /// @notice Handles batch operations for staking and unstaking
 /// @dev Contains batch functions for staking and unstaking operations
-contract VaultFees is BaseVaultModule {
+contract VaultFees is BaseVault {
     using SafeCastLib for uint256;
 
     /// @notice Emitted when the management fee is updated
@@ -56,7 +55,7 @@ contract VaultFees is BaseVaultModule {
     function setHurdleRate(uint16 _hurdleRate) external {
         require(_isAdmin(msg.sender), WRONG_ROLE);
         require(_hurdleRate <= MAX_BPS, FEE_EXCEEDS_MAXIMUM);
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         _setHurdleRate($, _hurdleRate);
         emit HurdleRateUpdated(_hurdleRate);
     }
@@ -66,7 +65,7 @@ contract VaultFees is BaseVaultModule {
     /// @dev If true, performance fees will only be charged to the excess return
     function setHardHurdleRate(bool _isHard) external {
         require(_isAdmin(msg.sender), WRONG_ROLE);
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         _setIsHardHurdleRate($, _isHard);
         emit HardHurdleRateUpdated(_isHard);
     }
@@ -77,7 +76,7 @@ contract VaultFees is BaseVaultModule {
     function setManagementFee(uint16 _managementFee) external {
         require(_isAdmin(msg.sender), WRONG_ROLE);
         require(_managementFee <= MAX_BPS, FEE_EXCEEDS_MAXIMUM);
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         uint16 oldFee = _getManagementFee($);
         _setManagementFee($, _managementFee);
         emit ManagementFeeUpdated(oldFee, _managementFee);
@@ -89,7 +88,7 @@ contract VaultFees is BaseVaultModule {
     function setPerformanceFee(uint16 _performanceFee) external {
         require(_isAdmin(msg.sender), WRONG_ROLE);
         require(_performanceFee <= MAX_BPS, FEE_EXCEEDS_MAXIMUM);
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         uint16 oldFee = _getPerformanceFee($);
         _setPerformanceFee($, _performanceFee);
         emit PerformanceFeeUpdated(oldFee, _performanceFee);
@@ -100,8 +99,12 @@ contract VaultFees is BaseVaultModule {
     /// @dev Should only be called by the vault
     function notifyManagementFeesCharged(uint64 _timestamp) external {
         require(_isAdmin(msg.sender), WRONG_ROLE);
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        require(_timestamp >= _getLastFeesChargedManagement($) && _timestamp <= block.timestamp, INVALID_TIMESTAMP);
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        require(
+            _timestamp >= _getLastFeesChargedManagement($) &&
+                _timestamp <= block.timestamp,
+            INVALID_TIMESTAMP
+        );
         _setLastFeesChargedManagement($, _timestamp);
         _updateGlobalWatermark();
         emit ManagementFeesCharged(_timestamp);
@@ -112,8 +115,12 @@ contract VaultFees is BaseVaultModule {
     /// @dev Should only be called by the vault
     function notifyPerformanceFeesCharged(uint64 _timestamp) external {
         require(_isAdmin(msg.sender), WRONG_ROLE);
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
-        require(_timestamp >= _getLastFeesChargedPerformance($) && _timestamp <= block.timestamp, INVALID_TIMESTAMP);
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        require(
+            _timestamp >= _getLastFeesChargedPerformance($) &&
+                _timestamp <= block.timestamp,
+            INVALID_TIMESTAMP
+        );
         _setLastFeesChargedPerformance($, _timestamp);
         _updateGlobalWatermark();
         emit PerformanceFeesCharged(_timestamp);
@@ -122,9 +129,9 @@ contract VaultFees is BaseVaultModule {
     /// @notice Updates the share price watermark
     /// @dev Updates the high water mark if the current share price exceeds the previous mark
     function _updateGlobalWatermark() private {
-        uint256 sp = _sharePrice();
-        if (sp > _getBaseVaultModuleStorage().sharePriceWatermark) {
-            _getBaseVaultModuleStorage().sharePriceWatermark = sp.toUint128();
+        uint256 sp = _netSharePrice();
+        if (sp > _getBaseVaultStorage().sharePriceWatermark) {
+            _getBaseVaultStorage().sharePriceWatermark = sp.toUint128();
         }
     }
 }

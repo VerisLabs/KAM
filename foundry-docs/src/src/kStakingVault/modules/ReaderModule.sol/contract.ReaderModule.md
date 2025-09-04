@@ -2,7 +2,7 @@
 [Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kStakingVault/modules/ReaderModule.sol)
 
 **Inherits:**
-[BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md), [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
+[BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md), [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
 
 Contains all the public getters for the Staking Vault
 

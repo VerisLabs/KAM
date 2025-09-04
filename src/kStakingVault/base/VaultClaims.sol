@@ -1,27 +1,26 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ERC20 } from "solady/tokens/ERC20.sol";
-import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {ERC20} from "solady/tokens/ERC20.sol";
 
-import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {IkRegistry} from "src/interfaces/IkRegistry.sol";
+import {OptimizedBytes32EnumerableSetLib} from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
 
-import {
-    BATCH_NOT_SETTLED, INVALID_BATCH_ID, IS_PAUSED, NOT_BENEFICIARY, REQUEST_NOT_PENDING
-} from "src/errors/Errors.sol";
-import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+import {BaseVault} from "src/kStakingVault/base/BaseVault.sol";
+import {BaseVaultTypes} from "src/kStakingVault/types/BaseVaultTypes.sol";
+import {BATCH_NOT_SETTLED, INVALID_BATCH_ID, IS_PAUSED, NOT_BENEFICIARY, REQUEST_NOT_PENDING} from "src/errors/Errors.sol";
 
 /// @title VaultClaims
 /// @notice Handles claim operations for settled batches
 /// @dev Contains claim functions for staking and unstaking operations
-contract VaultClaims is BaseVaultModule {
+contract VaultClaims is BaseVault {
     using SafeCastLib for uint256;
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
-    using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+    using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
     // Error declarations removed - using library errors instead
 
@@ -30,10 +29,24 @@ contract VaultClaims is BaseVaultModule {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice ERC20 Transfer event for stkToken operations
-    event StakingSharesClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 shares);
-    event UnstakingAssetsClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 assets);
+    event StakingSharesClaimed(
+        bytes32 indexed batchId,
+        bytes32 requestId,
+        address indexed user,
+        uint256 shares
+    );
+    event UnstakingAssetsClaimed(
+        bytes32 indexed batchId,
+        bytes32 requestId,
+        address indexed user,
+        uint256 assets
+    );
     event StkTokensIssued(address indexed user, uint256 stkTokenAmount);
-    event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
+    event KTokenUnstaked(
+        address indexed user,
+        uint256 shares,
+        uint256 kTokenAmount
+    );
 
     /*//////////////////////////////////////////////////////////////
                           CLAIM FUNCTIONS
@@ -42,54 +55,106 @@ contract VaultClaims is BaseVaultModule {
     /// @notice Claims stkTokens from a settled staking batch
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
-    function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable nonReentrant {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+    function claimStakedShares(
+        bytes32 batchId,
+        bytes32 requestId
+    ) external payable {
+        _lockReentrant();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         require(!_getPaused($), IS_PAUSED);
         require($.batches[batchId].isSettled, BATCH_NOT_SETTLED);
 
-        BaseVaultModuleTypes.StakeRequest storage request = $.stakeRequests[requestId];
+        BaseVaultTypes.StakeRequest storage request = $.stakeRequests[
+            requestId
+        ];
         require(request.batchId == batchId, INVALID_BATCH_ID);
-        require(request.status == BaseVaultModuleTypes.RequestStatus.PENDING, REQUEST_NOT_PENDING);
+        require(
+            request.status == BaseVaultTypes.RequestStatus.PENDING,
+            REQUEST_NOT_PENDING
+        );
         require(msg.sender == request.user, NOT_BENEFICIARY);
 
-        request.status = BaseVaultModuleTypes.RequestStatus.CLAIMED;
+        request.status = BaseVaultTypes.RequestStatus.CLAIMED;
 
         // Calculate stkToken amount based on settlement-time share price
-        uint256 stkTokensToMint = _convertToShares(uint256(request.kTokenAmount));
+        uint256 netSharePrice = $.batches[batchId].netSharePrice;
+        if (netSharePrice == 0) revert();
+        uint256 stkTokensToMint = (uint256(request.kTokenAmount)).fullMulDiv(
+            10 ** _getDecimals($),
+            netSharePrice
+        );
 
-        emit StakingSharesClaimed(batchId, requestId, request.user, stkTokensToMint);
+        emit StakingSharesClaimed(
+            batchId,
+            requestId,
+            request.user,
+            stkTokensToMint
+        );
 
         $.userRequests[msg.sender].remove(requestId);
         $.totalPendingStake -= request.kTokenAmount;
         // Mint stkTokens to user
         _mint(request.user, stkTokensToMint);
         emit StkTokensIssued(request.user, stkTokensToMint);
+        _unlockReentrant();
     }
 
     /// @notice Claims kTokens from a settled unstaking batch (simplified implementation)
     /// @param batchId Batch ID to claim from
     /// @param requestId Request ID to claim
-    function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable nonReentrant {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+    function claimUnstakedAssets(
+        bytes32 batchId,
+        bytes32 requestId
+    ) external payable {
+        _lockReentrant();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         require(!_getPaused($), IS_PAUSED);
         require($.batches[batchId].isSettled, BATCH_NOT_SETTLED);
 
-        BaseVaultModuleTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
+        BaseVaultTypes.UnstakeRequest storage request = $.unstakeRequests[
+            requestId
+        ];
         require(request.batchId == batchId, INVALID_BATCH_ID);
-        require(request.status == BaseVaultModuleTypes.RequestStatus.PENDING, REQUEST_NOT_PENDING);
+        require(
+            request.status == BaseVaultTypes.RequestStatus.PENDING,
+            REQUEST_NOT_PENDING
+        );
         require(msg.sender == request.user, NOT_BENEFICIARY);
 
-        request.status = BaseVaultModuleTypes.RequestStatus.CLAIMED;
+        request.status = BaseVaultTypes.RequestStatus.CLAIMED;
+
+        uint256 sharePrice = $.batches[batchId].sharePrice;
+        uint256 netSharePrice = $.batches[batchId].netSharePrice;
+        if (sharePrice == 0) revert();
 
         // Calculate total kTokens to return based on settlement-time share price
-        uint256 totalKTokensToReturn = _convertToAssets(uint256(request.stkTokenAmount));
+        uint256 totalKTokensGross = (uint256(request.stkTokenAmount))
+            .fullMulDiv(sharePrice, 10 ** _getDecimals($));
+        uint256 totalKTokensNet = (uint256(request.stkTokenAmount)).fullMulDiv(
+            netSharePrice,
+            10 ** _getDecimals($)
+        );
+        uint256 fees = totalKTokensGross - totalKTokensNet;
 
         // Burn stkTokens from vault (already transferred to vault during request)
         _burn(address(this), request.stkTokenAmount);
-        emit UnstakingAssetsClaimed(batchId, requestId, request.user, totalKTokensToReturn);
+        emit UnstakingAssetsClaimed(
+            batchId,
+            requestId,
+            request.user,
+            totalKTokensNet
+        );
+
+        // Transfer fees to treasury
+        $.kToken.safeTransfer(_registry().getTreasury(), fees);
 
         // Transfer kTokens to user
-        $.kToken.safeTransfer(request.user, totalKTokensToReturn);
-        emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensToReturn);
+        $.kToken.safeTransfer(request.user, totalKTokensNet);
+        emit KTokenUnstaked(
+            request.user,
+            request.stkTokenAmount,
+            totalKTokensNet
+        );
+        _unlockReentrant();
     }
 }

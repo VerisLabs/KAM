@@ -1,20 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { EfficientHashLib } from "solady/utils/EfficientHashLib.sol";
-import { LibClone } from "solady/utils/LibClone.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+import {LibClone} from "solady/utils/LibClone.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 
-import { kBatchReceiver } from "src/kBatchReceiver.sol";
-import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
-
-import { NOT_CLOSED, VAULT_CLOSED, VAULT_SETTLED, WRONG_ROLE } from "src/errors/Errors.sol";
-import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+import {kBatchReceiver} from "src/kBatchReceiver.sol";
+import {BaseVault} from "src/kStakingVault/base/BaseVault.sol";
+import {BaseVaultTypes} from "src/kStakingVault/types/BaseVaultTypes.sol";
+import {NOT_CLOSED, VAULT_CLOSED, VAULT_SETTLED, WRONG_ROLE} from "src/errors/Errors.sol";
 
 /// @title VaultBatches
 /// @notice Handles batch operations for staking and unstaking
 /// @dev Contains batch functions for staking and unstaking operations
-contract VaultBatches is BaseVaultModule {
+contract VaultBatches is BaseVault {
     using SafeCastLib for uint256;
     using SafeCastLib for uint64;
     /*//////////////////////////////////////////////////////////////
@@ -22,11 +20,20 @@ contract VaultBatches is BaseVaultModule {
     //////////////////////////////////////////////////////////////*/
 
     event BatchCreated(bytes32 indexed batchId);
-    event BatchReceiverDeployed(bytes32 indexed batchId, address indexed receiver);
+    event BatchReceiverDeployed(
+        bytes32 indexed batchId,
+        address indexed receiver
+    );
     event BatchSettled(bytes32 indexed batchId);
     event BatchClosed(bytes32 indexed batchId);
-    event BatchReceiverSet(address indexed batchReceiver, bytes32 indexed batchId);
-    event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
+    event BatchReceiverSet(
+        address indexed batchReceiver,
+        bytes32 indexed batchId
+    );
+    event BatchReceiverCreated(
+        address indexed receiver,
+        bytes32 indexed batchId
+    );
 
     /*//////////////////////////////////////////////////////////////
                             CORE OPERATIONS
@@ -45,7 +52,7 @@ contract VaultBatches is BaseVaultModule {
     /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
     function closeBatch(bytes32 _batchId, bool _create) external {
         require(_isRelayer(msg.sender), WRONG_ROLE);
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         require(!$.batches[_batchId].isClosed, VAULT_CLOSED);
         $.batches[_batchId].isClosed = true;
 
@@ -60,10 +67,12 @@ contract VaultBatches is BaseVaultModule {
     /// @dev Only callable by kMinter, indicates assets have been distributed
     function settleBatch(bytes32 _batchId) external {
         require(_isKAssetRouter(msg.sender), WRONG_ROLE);
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         require($.batches[_batchId].isClosed, NOT_CLOSED);
         require(!$.batches[_batchId].isSettled, VAULT_SETTLED);
         $.batches[_batchId].isSettled = true;
+        $.batches[_batchId].sharePrice = _sharePrice().toUint128();
+        $.batches[_batchId].netSharePrice = _netSharePrice().toUint128();
 
         emit BatchSettled(_batchId);
     }
@@ -71,9 +80,10 @@ contract VaultBatches is BaseVaultModule {
     /// @notice Deploys BatchReceiver for specific batch
     /// @param _batchId Batch ID to deploy receiver for
     /// @dev Only callable by kAssetRouter
-    function createBatchReceiver(bytes32 _batchId) external nonReentrant returns (address) {
+    function createBatchReceiver(bytes32 _batchId) external returns (address) {
+        _lockReentrant();
         require(_isKAssetRouter(msg.sender), WRONG_ROLE);
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         address receiver = $.batches[_batchId].batchReceiver;
         if (receiver != address(0)) return receiver;
 
@@ -83,6 +93,7 @@ contract VaultBatches is BaseVaultModule {
 
         emit BatchReceiverCreated(receiver, _batchId);
 
+        _unlockReentrant();
         return receiver;
     }
 
@@ -94,20 +105,22 @@ contract VaultBatches is BaseVaultModule {
     /// @return The new batch ID
     /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
     function _createNewBatch() internal returns (bytes32) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         unchecked {
             $.currentBatch++;
         }
-        bytes32 newBatchId = EfficientHashLib.hash(
-            uint256(uint160(address(this))),
-            $.currentBatch,
-            block.chainid,
-            block.timestamp,
-            uint256(uint160($.underlyingAsset))
+        bytes32 newBatchId = keccak256(
+            abi.encode(
+                uint256(uint160(address(this))),
+                $.currentBatch,
+                block.chainid,
+                block.timestamp,
+                uint256(uint160($.underlyingAsset))
+            )
         );
 
         $.currentBatchId = newBatchId;
-        BaseVaultModuleTypes.BatchInfo storage batch = $.batches[newBatchId];
+        BaseVaultTypes.BatchInfo storage batch = $.batches[newBatchId];
         batch.batchId = newBatchId;
         batch.batchReceiver = address(0);
         batch.isClosed = false;

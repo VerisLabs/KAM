@@ -13,7 +13,7 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 import { FEE_EXCEEDS_MAXIMUM, INVALID_TIMESTAMP, WRONG_ROLE } from "src/errors/Errors.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title kStakingVaultFeesTest
 /// @notice Tests for fee mechanics in kStakingVault

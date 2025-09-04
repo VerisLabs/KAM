@@ -1,27 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
-import { Initializable } from "solady/utils/Initializable.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
+import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
+import {Initializable} from "solady/utils/Initializable.sol";
 
-import {
-    ADAPTER_ALREADY_SET,
-    ALREADY_REGISTERED,
-    ASSET_NOT_SUPPORTED,
-    INVALID_ADAPTER,
-    TRANSFER_FAILED,
-    WRONG_ASSET,
-    WRONG_ROLE,
-    ZERO_ADDRESS,
-    ZERO_AMOUNT
-} from "src/errors/Errors.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { kToken } from "src/kToken.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
+
+import {ADAPTER_ALREADY_SET, ALREADY_REGISTERED, ASSET_NOT_SUPPORTED, INVALID_ADAPTER, TRANSFER_FAILED, WRONG_ASSET, WRONG_ROLE, ZERO_ADDRESS, ZERO_AMOUNT} from "src/errors/Errors.sol";
+import {IkRegistry} from "src/interfaces/IkRegistry.sol";
+import {kToken} from "src/kToken.sol";
 
 /// @title kRegistry
 /// @notice Central registry for KAM protocol contracts
@@ -61,6 +52,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     struct kRegistryStorage {
         EnumerableSetLib.AddressSet supportedAssets;
         EnumerableSetLib.AddressSet allVaults;
+        address treasury;
         mapping(bytes32 => address) singletonContracts;
         mapping(address => uint8 vaultType) vaultType;
         mapping(address => mapping(uint8 vaultType => address)) assetToVault;
@@ -76,7 +68,11 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     bytes32 private constant KREGISTRY_STORAGE_LOCATION =
         0x164f5345d77b48816cdb20100c950b74361454722dab40c51ecf007b721fa800;
 
-    function _getkRegistryStorage() private pure returns (kRegistryStorage storage $) {
+    function _getkRegistryStorage()
+        private
+        pure
+        returns (kRegistryStorage storage $)
+    {
         assembly {
             $.slot := KREGISTRY_STORAGE_LOCATION
         }
@@ -99,11 +95,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         address admin_,
         address emergencyAdmin_,
         address guardian_,
-        address relayer_
-    )
-        external
-        initializer
-    {
+        address relayer_,
+        address treasury_
+    ) external initializer {
         require(owner_ != address(0), ZERO_ADDRESS);
         require(admin_ != address(0), ZERO_ADDRESS);
         require(emergencyAdmin_ != address(0), ZERO_ADDRESS);
@@ -116,6 +110,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);
         _grantRoles(guardian_, GUARDIAN_ROLE);
         _grantRoles(relayer_, RELAYER_ROLE);
+        _getkRegistryStorage().treasury = treasury_;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -126,15 +121,22 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param asset_ the asset to rescue (use address(0) for ETH)
     /// @param to_ the address that will receive the assets
     /// @param amount_ the amount to rescue
-    function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
+    function rescueAssets(
+        address asset_,
+        address to_,
+        uint256 amount_
+    ) external payable {
         require(_hasRole(msg.sender, ADMIN_ROLE), WRONG_ROLE);
         require(to_ != address(0), ZERO_ADDRESS);
 
         if (asset_ == address(0)) {
             // Rescue ETH
-            require(amount_ != 0 && amount_ <= address(this).balance, ZERO_AMOUNT);
+            require(
+                amount_ != 0 && amount_ <= address(this).balance,
+                ZERO_AMOUNT
+            );
 
-            (bool success,) = to_.call{ value: amount_ }("");
+            (bool success, ) = to_.call{value: amount_}("");
             require(success, TRANSFER_FAILED);
 
             emit RescuedETH(to_, amount_);
@@ -142,7 +144,10 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
             // Rescue ERC20 tokens
             kRegistryStorage storage $ = _getkRegistryStorage();
             require(!$.supportedAssets.contains(asset_), WRONG_ASSET);
-            require(amount_ != 0 && amount_ <= asset_.balanceOf(address(this)), ZERO_AMOUNT);
+            require(
+                amount_ != 0 && amount_ <= asset_.balanceOf(address(this)),
+                ZERO_AMOUNT
+            );
 
             asset_.safeTransfer(to_, amount_);
             emit RescuedAssets(asset_, to_, amount_);
@@ -157,7 +162,10 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param id Contract identifier (e.g., K_MINTER, K_BATCH)
     /// @param contractAddress Address of the singleton contract
     /// @dev Only callable by ADMIN_ROLE
-    function setSingletonContract(bytes32 id, address contractAddress) external payable {
+    function setSingletonContract(
+        bytes32 id,
+        address contractAddress
+    ) external payable {
         require(_hasRole(msg.sender, ADMIN_ROLE), WRONG_ROLE);
         require(contractAddress != address(0), ZERO_ADDRESS);
         kRegistryStorage storage $ = _getkRegistryStorage();
@@ -206,11 +214,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         string memory symbol_,
         address asset,
         bytes32 id
-    )
-        external
-        payable
-        returns (address)
-    {
+    ) external payable returns (address) {
         require(_hasRole(msg.sender, ADMIN_ROLE), WRONG_ROLE);
         require(asset != address(0), ZERO_ADDRESS);
         require(id != bytes32(0), ZERO_ADDRESS);
@@ -261,7 +265,11 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param type_ Type of vault (MINTER, DN, ALPHA, BETA)
     /// @param asset Underlying asset the vault manages
     /// @dev Only callable by ADMIN_ROLE, sets as primary if first of its type
-    function registerVault(address vault, VaultType type_, address asset) external payable {
+    function registerVault(
+        address vault,
+        VaultType type_,
+        address asset
+    ) external payable {
         require(_hasRole(msg.sender, ADMIN_ROLE), WRONG_ROLE);
         require(vault != address(0), ZERO_ADDRESS);
         kRegistryStorage storage $ = _getkRegistryStorage();
@@ -289,6 +297,20 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     }
 
     /*//////////////////////////////////////////////////////////////
+                          ROLES MANAGEMENT
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Sets the treasury address
+    /// @param treasury_ The new treasury address
+    function setTreasury(address treasury_) external payable {
+        require(_hasRole(msg.sender, ADMIN_ROLE), WRONG_ROLE);
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        require(treasury_ != address(0), ZERO_ADDRESS);
+        $.treasury = treasury_;
+        emit TreasurySet(treasury_);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                           ADAPTER MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
@@ -305,7 +327,10 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         require($.allVaults.contains(vault), ASSET_NOT_SUPPORTED); // Reuse error
 
         // Check if adapter is already set for this vault
-        require(!$.vaultAdapters[vault].contains(address(0)), ADAPTER_ALREADY_SET);
+        require(
+            !$.vaultAdapters[vault].contains(address(0)),
+            ADAPTER_ALREADY_SET
+        );
 
         $.vaultAdapters[vault].add(adapter);
 
@@ -366,6 +391,17 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         return $.allVaults.values();
     }
 
+    /*//////////////////////////////////////////////////////////////
+                          VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Get the treasury address
+    /// @return The treasury address
+    function getTreasury() external view returns (address) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        return $.treasury;
+    }
+
     /// @notice Get all core singleton contracts at once
     /// @return kMinter The kMinter contract address
     /// @return kAssetRouter The kAssetRouter contract address
@@ -373,14 +409,19 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address kMinter_ = $.singletonContracts[K_MINTER];
         address kAssetRouter_ = $.singletonContracts[K_ASSET_ROUTER];
-        require(kMinter_ != address(0) && kAssetRouter_ != address(0), ZERO_ADDRESS);
+        require(
+            kMinter_ != address(0) && kAssetRouter_ != address(0),
+            ZERO_ADDRESS
+        );
         return (kMinter_, kAssetRouter_);
     }
 
     /// @notice Get all vaults registered for a specific asset
     /// @param asset Asset address to query
     /// @return Array of vault addresses
-    function getVaultsByAsset(address asset) external view returns (address[] memory) {
+    function getVaultsByAsset(
+        address asset
+    ) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         require($.vaultsByAsset[asset].values().length > 0, ZERO_ADDRESS);
         return $.vaultsByAsset[asset].values();
@@ -391,7 +432,10 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @param vaultType Vault type
     /// @return Vault address
     /// @dev Reverts if vault not found
-    function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address) {
+    function getVaultByAssetAndType(
+        address asset,
+        uint8 vaultType
+    ) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address assetToVault = $.assetToVault[asset][vaultType];
         require(assetToVault != address(0), ZERO_ADDRESS);
@@ -461,7 +505,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Get the adapter for a specific vault
     /// @param vault Vault address
     /// @return Adapter address (address(0) if none set)
-    function getAdapters(address vault) external view returns (address[] memory) {
+    function getAdapters(
+        address vault
+    ) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         require($.vaultAdapters[vault].values().length > 0, ZERO_ADDRESS);
         return $.vaultAdapters[vault].values();
@@ -470,7 +516,10 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Check if an adapter is registered
     /// @param adapter Adapter address
     /// @return True if adapter is registered
-    function isAdapterRegistered(address vault, address adapter) external view returns (bool) {
+    function isAdapterRegistered(
+        address vault,
+        address adapter
+    ) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.vaultAdapters[vault].contains(adapter);
     }
@@ -478,7 +527,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Get the asset for a specific vault
     /// @param vault Vault address
     /// @return Asset address that the vault manages
-    function getVaultAssets(address vault) external view returns (address[] memory) {
+    function getVaultAssets(
+        address vault
+    ) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         require($.vaultAsset[vault].values().length > 0, ZERO_ADDRESS);
         return $.vaultAsset[vault].values();
@@ -496,7 +547,10 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
 
     /// @notice check if the user has the given role
     /// @return Wether the caller have the given role
-    function _hasRole(address user, uint256 role_) internal view returns (bool) {
+    function _hasRole(
+        address user,
+        uint256 role_
+    ) internal view returns (bool) {
         return hasAnyRole(user, role_);
     }
 
@@ -507,7 +561,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Authorizes contract upgrades
     /// @param newImplementation New implementation address
     /// @dev Only callable by contract owner
-    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal view override onlyOwner {
         require(newImplementation != address(0), ZERO_ADDRESS);
     }
 
@@ -516,7 +572,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Receive ETH (for gas refunds, etc.)
-    receive() external payable { }
+    receive() external payable {}
 
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO

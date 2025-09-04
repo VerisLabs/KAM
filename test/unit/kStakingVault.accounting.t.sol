@@ -13,7 +13,7 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 import { INSUFFICIENT_BALANCE, ZERO_AMOUNT } from "src/errors/Errors.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title kStakingVaultAccountingTest
 /// @notice Tests for core accounting mechanics in kStakingVault

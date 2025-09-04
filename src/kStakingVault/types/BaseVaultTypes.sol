@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-/// @title ModuleBaseTypes
+/// @title BaseVaultTypes
 /// @notice Library containing all data structures used in the ModuleBase
 /// @dev Defines standardized data types for cross-contract communication and storage
-library BaseVaultModuleTypes {
+library BaseVaultTypes {
     enum RequestStatus {
         PENDING,
         CLAIMED,
@@ -30,9 +30,11 @@ library BaseVaultModuleTypes {
     }
 
     struct BatchInfo {
-        bytes32 batchId;
         address batchReceiver;
         bool isClosed;
         bool isSettled;
+        bytes32 batchId;
+        uint128 sharePrice;
+        uint128 netSharePrice;
     }
 }
