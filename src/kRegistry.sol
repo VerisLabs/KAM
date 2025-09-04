@@ -79,6 +79,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @custom:storage-location erc7201:kam.storage.kRegistry
     struct kRegistryStorage {
         OptimizedAddressEnumerableSetLib.AddressSet supportedAssets;
+        OptimizedAddressEnumerableSetLib.AddressSet supportedKTokens;
         OptimizedAddressEnumerableSetLib.AddressSet allVaults;
         address treasury;
         mapping(bytes32 => address) singletonContracts;
@@ -88,6 +89,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultsByAsset;
         mapping(bytes32 => address) singletonAssets;
         mapping(address => address) assetToKToken;
+        mapping(address => address) kTokenToAsset;
         mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultAdapters; // vault => adapter
         mapping(address => bool) registeredAdapters; // adapter => registered
         mapping(address => uint16) assetHurdleRate; // asset => hurdle rate
@@ -273,6 +275,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
 
         // Register kToken
         $.assetToKToken[asset] = kToken_;
+        $.kTokenToAsset[kToken_] = asset;
+        $.supportedKTokens.add(kToken_);
         emit AssetRegistered(asset, kToken_);
 
         emit KTokenDeployed(kToken_, name_, symbol_, decimals_);
@@ -435,10 +439,6 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         return $.allVaults.values();
     }
 
-    /*//////////////////////////////////////////////////////////////
-                          VIEW FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
     /// @notice Get the treasury address
     /// @return The treasury address
     function getTreasury() external view returns (address) {
@@ -530,6 +530,14 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         return $.supportedAssets.contains(asset);
     }
 
+    /// @notice Check if an asset is supported
+    /// @param kToken_ Asset address
+    /// @return Whether the asset is supported
+    function isKToken(address kToken_) external view returns (bool) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        return $.supportedKTokens.contains(kToken_);
+    }
+
     /// @notice Check if a vault is registered
     /// @param vault Vault address
     /// @return Whether the vault is registered
@@ -572,6 +580,16 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         address assetToToken_ = $.assetToKToken[asset];
         require(assetToToken_ != address(0), KREGISTRY_ZERO_ADDRESS);
         return assetToToken_;
+    }
+
+    /// @notice Get the asset for a specific kToken
+    /// @param kToken_ address
+    /// @return asset address
+    function kTokenToAsset(address kToken_) external view returns (address) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        address kTokenToAsset_ = $.kTokenToAsset[kToken_];
+        require(kTokenToAsset_ != address(0), KREGISTRY_ZERO_ADDRESS);
+        return kTokenToAsset_;
     }
 
     /// @notice check if the user has the given role

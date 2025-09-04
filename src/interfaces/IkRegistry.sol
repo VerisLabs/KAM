@@ -316,11 +316,13 @@ interface IkRegistry {
     function isInstitution(address user) external view returns (bool);
     function isVendor(address user) external view returns (bool);
     function isAsset(address asset) external view returns (bool);
+    function isKToken(address kToken_) external view returns (bool);
     function isVault(address vault) external view returns (bool);
     function getAdapters(address vault) external view returns (address[] memory);
     function isAdapterRegistered(address vault, address adapter) external view returns (bool);
     function getVaultAssets(address vault) external view returns (address[] memory);
     function assetToKToken(address asset) external view returns (address);
+    function kTokenToAsset(address kToken_) external view returns (address);
     function getTreasury() external view returns (address);
     function setHurdleRate(address asset, uint16 hurdleRate) external payable;
     function getHurdleRate(address asset) external view returns (uint16);

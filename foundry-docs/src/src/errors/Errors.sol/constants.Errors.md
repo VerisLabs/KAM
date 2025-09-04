@@ -1,5 +1,5 @@
 # Constants
-[Git Source](https://github.com/VerisLabs/KAM/blob/9902b1ea80f671449ee88e1d19504fe796d0d9a5/src/errors/Errors.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/bbd875989135c7d3f313fa3fcc61e94d6afb4346/src/errors/Errors.sol)
 
 ### KASSETROUTER_ALREADY_REGISTERED
 *All error codes use contract-specific prefixes for easier debugging:
@@ -620,6 +620,12 @@ string constant VAULTCLAIMS_NOT_BENEFICIARY = "VC4";
 
 ```solidity
 string constant VAULTCLAIMS_REQUEST_NOT_PENDING = "VC5";
+```
+
+### VAULTCLAIMS_ZERO_SHARE_PRICE
+
+```solidity
+string constant VAULTCLAIMS_ZERO_SHARE_PRICE = "VC6";
 ```
 
 ### VAULTFEES_FEE_EXCEEDS_MAXIMUM

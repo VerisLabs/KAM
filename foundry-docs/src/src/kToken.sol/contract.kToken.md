@@ -1,5 +1,5 @@
 # kToken
-[Git Source](https://github.com/VerisLabs/KAM/blob/9902b1ea80f671449ee88e1d19504fe796d0d9a5/src/kToken.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/bbd875989135c7d3f313fa3fcc61e94d6afb4346/src/kToken.sol)
 
 **Inherits:**
 [ERC20](/src/vendor/ERC20.sol/abstract.ERC20.md), [OptimizedOwnableRoles](/src/libraries/OptimizedOwnableRoles.sol/abstract.OptimizedOwnableRoles.md), [OptimizedReentrancyGuardTransient](/src/abstracts/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md), [Multicallable](/src/vendor/Multicallable.sol/abstract.Multicallable.md)

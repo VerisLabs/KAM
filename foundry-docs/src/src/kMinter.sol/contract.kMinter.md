@@ -1,5 +1,5 @@
 # kMinter
-[Git Source](https://github.com/VerisLabs/KAM/blob/9902b1ea80f671449ee88e1d19504fe796d0d9a5/src/kMinter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/bbd875989135c7d3f313fa3fcc61e94d6afb4346/src/kMinter.sol)
 
 **Inherits:**
 [IkMinter](/src/interfaces/IkMinter.sol/interface.IkMinter.md), [Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [kBase](/src/base/kBase.sol/contract.kBase.md), [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md)
@@ -76,13 +76,13 @@ Initiates redemption process by burning kTokens and creating batch redemption re
 
 
 ```solidity
-function requestRedeem(address asset_, address to_, uint256 amount_) external payable returns (bytes32 requestId);
+function requestRedeem(address kToken_, address to_, uint256 amount_) external payable returns (bytes32 requestId);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`asset_`|`address`|Address of the asset to redeem|
+|`kToken_`|`address`|Address of the asset to redeem|
 |`to_`|`address`|Address of the recipient|
 |`amount_`|`uint256`|Amount of the asset to redeem|
 

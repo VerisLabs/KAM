@@ -202,37 +202,37 @@ contract kMinterTest is DeploymentBaseTest {
         // Request redemption - will fail due to insufficient virtual balance in vault
         vm.prank(users.institution);
         vm.expectRevert();
-        minter.requestRedeem(USDC_MAINNET, recipient, amount);
+        minter.requestRedeem(address(kUSD), recipient, amount);
     }
 
     /// @dev Test redemption request requires institution role
     function test_RequestRedeem_WrongRole() public {
         vm.prank(users.alice);
         vm.expectRevert(bytes(KMINTER_WRONG_ROLE));
-        minter.requestRedeem(USDC_MAINNET, users.alice, TEST_AMOUNT);
+        minter.requestRedeem(address(kUSD), users.alice, TEST_AMOUNT);
     }
 
     /// @dev Test redemption request reverts with zero amount
     function test_RequestRedeem_RevertZeroAmount() public {
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_ZERO_AMOUNT));
-        minter.requestRedeem(USDC_MAINNET, users.institution, 0);
+        minter.requestRedeem(address(kUSD), users.institution, 0);
     }
 
     /// @dev Test redemption request reverts with zero recipient
     function test_RequestRedeem_RevertZeroRecipient() public {
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_ZERO_ADDRESS));
-        minter.requestRedeem(USDC_MAINNET, ZERO_ADDRESS, TEST_AMOUNT);
+        minter.requestRedeem(address(kUSD), ZERO_ADDRESS, TEST_AMOUNT);
     }
 
-    /// @dev Test redemption request reverts with invalid asset
-    function test_RequestRedeem_RevertInvalidAsset() public {
-        address invalidAsset = address(0x1234567890123456789012345678901234567890);
+    /// @dev Test redemption request reverts with invalid kToken
+    function test_RequestRedeem_RevertInvalidKToken() public {
+        address invalidKToken = address(0x1234567890123456789012345678901234567890);
 
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_WRONG_ASSET));
-        minter.requestRedeem(invalidAsset, users.institution, TEST_AMOUNT);
+        minter.requestRedeem(invalidKToken, users.institution, TEST_AMOUNT);
     }
 
     /// @dev Test redemption request reverts with insufficient balance
@@ -240,7 +240,7 @@ contract kMinterTest is DeploymentBaseTest {
         // Institution has no kTokens
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_INSUFFICIENT_BALANCE));
-        minter.requestRedeem(USDC_MAINNET, users.institution, TEST_AMOUNT);
+        minter.requestRedeem(address(kUSD), users.institution, TEST_AMOUNT);
     }
 
     /// @dev Test redemption request reverts when paused
@@ -251,7 +251,7 @@ contract kMinterTest is DeploymentBaseTest {
 
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_IS_PAUSED));
-        minter.requestRedeem(USDC_MAINNET, users.institution, TEST_AMOUNT);
+        minter.requestRedeem(address(kUSD), users.institution, TEST_AMOUNT);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -519,6 +519,77 @@ contract kMinterTest is DeploymentBaseTest {
     }
 
     /*//////////////////////////////////////////////////////////////
+                    KTOKEN MAPPING TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev Test minting correctly uses kToken to asset mapping
+    function test_Mint_UsesKTokenToAssetMapping() public {
+        uint256 amount = TEST_AMOUNT;
+        address recipient = users.alice;
+
+        // Fund institution with USDC
+        deal(USDC_MAINNET, users.institution, amount);
+        vm.prank(users.institution);
+        IERC20(USDC_MAINNET).approve(address(minter), amount);
+
+        // Get the expected kToken for USDC
+        address expectedKToken = registry.assetToKToken(USDC_MAINNET);
+        assertEq(expectedKToken, address(kUSD), "Registry should map USDC to kUSD");
+
+        // Mint using asset address
+        vm.prank(users.institution);
+        minter.mint(USDC_MAINNET, recipient, amount);
+
+        // Verify the correct kToken was minted
+        assertEq(kUSD.balanceOf(recipient), amount, "Should mint kUSD tokens");
+    }
+
+    /// @dev Test requestRedeem correctly uses kToken to asset mapping
+    function test_RequestRedeem_UsesAssetForKTokenMapping() public {
+        uint256 amount = TEST_AMOUNT;
+
+        // Setup: Mint kTokens first
+        deal(USDC_MAINNET, users.institution, amount);
+        vm.prank(users.institution);
+        IERC20(USDC_MAINNET).approve(address(minter), amount);
+        vm.prank(users.institution);
+        minter.mint(USDC_MAINNET, users.institution, amount);
+
+        // Get the expected asset for kUSD
+        address expectedAsset = registry.kTokenToAsset(address(kUSD));
+        assertEq(expectedAsset, USDC_MAINNET, "Registry should map kUSD to USDC");
+
+        // Approve kTokens for redemption
+        vm.prank(users.institution);
+        kUSD.approve(address(minter), amount);
+
+        // Request redemption using kToken address
+        vm.prank(users.institution);
+        vm.expectRevert(); // Will fail due to insufficient virtual balance in vault
+        minter.requestRedeem(address(kUSD), users.institution, amount);
+    }
+
+    /// @dev Test requestRedeem validates kToken is registered
+    function test_RequestRedeem_ValidatesKToken() public {
+        // Test with a valid ERC20 that is NOT a kToken
+        address notAKToken = address(0x9999999999999999999999999999999999999999);
+
+        vm.prank(users.institution);
+        vm.expectRevert(bytes(KMINTER_WRONG_ASSET));
+        minter.requestRedeem(notAKToken, users.institution, TEST_AMOUNT);
+    }
+
+    /// @dev Test mint validates asset is supported
+    function test_Mint_ValidatesAsset() public {
+        // Test with an address that is not a supported asset
+        address unsupportedAsset = address(0x8888888888888888888888888888888888888888);
+
+        vm.prank(users.institution);
+        vm.expectRevert(bytes(KMINTER_WRONG_ASSET));
+        minter.mint(unsupportedAsset, users.alice, TEST_AMOUNT);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                         EDGE CASE TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -559,7 +630,7 @@ contract kMinterTest is DeploymentBaseTest {
         for (uint256 i = 0; i < 3; i++) {
             vm.prank(users.institution);
             vm.expectRevert();
-            minter.requestRedeem(USDC_MAINNET, users.institution, requestAmount);
+            minter.requestRedeem(address(kUSD), users.institution, requestAmount);
         }
     }
 

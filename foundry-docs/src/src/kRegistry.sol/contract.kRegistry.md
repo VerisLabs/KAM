@@ -1,5 +1,5 @@
 # kRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/9902b1ea80f671449ee88e1d19504fe796d0d9a5/src/kRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/bbd875989135c7d3f313fa3fcc61e94d6afb4346/src/kRegistry.sol)
 
 **Inherits:**
 [IkRegistry](/src/interfaces/IkRegistry.sol/interface.IkRegistry.md), [Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [OptimizedOwnableRoles](/src/libraries/OptimizedOwnableRoles.sol/abstract.OptimizedOwnableRoles.md)
@@ -672,6 +672,27 @@ function isAsset(address asset) external view returns (bool);
 |`<none>`|`bool`|Whether the asset is supported|
 
 
+### isKToken
+
+Check if an asset is supported
+
+
+```solidity
+function isKToken(address kToken_) external view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`kToken_`|`address`|Asset address|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Whether the asset is supported|
+
+
 ### isVault
 
 Check if a vault is registered
@@ -778,6 +799,27 @@ function assetToKToken(address asset) external view returns (address);
 |`<none>`|`address`|KToken address|
 
 
+### kTokenToAsset
+
+Get the asset for a specific kToken
+
+
+```solidity
+function kTokenToAsset(address kToken_) external view returns (address);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`kToken_`|`address`|address|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`address`|asset address|
+
+
 ### _hasRole
 
 check if the user has the given role
@@ -875,6 +917,7 @@ storage-location: erc7201:kam.storage.kRegistry
 ```solidity
 struct kRegistryStorage {
     OptimizedAddressEnumerableSetLib.AddressSet supportedAssets;
+    OptimizedAddressEnumerableSetLib.AddressSet supportedKTokens;
     OptimizedAddressEnumerableSetLib.AddressSet allVaults;
     address treasury;
     mapping(bytes32 => address) singletonContracts;
@@ -884,6 +927,7 @@ struct kRegistryStorage {
     mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultsByAsset;
     mapping(bytes32 => address) singletonAssets;
     mapping(address => address) assetToKToken;
+    mapping(address => address) kTokenToAsset;
     mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultAdapters;
     mapping(address => bool) registeredAdapters;
     mapping(address => uint16) assetHurdleRate;

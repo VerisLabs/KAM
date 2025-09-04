@@ -1,5 +1,5 @@
 # kBase
-[Git Source](https://github.com/VerisLabs/KAM/blob/9902b1ea80f671449ee88e1d19504fe796d0d9a5/src/base/kBase.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/bbd875989135c7d3f313fa3fcc61e94d6afb4346/src/base/kBase.sol)
 
 **Inherits:**
 [OptimizedReentrancyGuardTransient](/src/abstracts/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)
@@ -234,6 +234,29 @@ function _getKTokenForAsset(address asset) internal view returns (address kToken
 |`kToken`|`address`|The corresponding kToken address|
 
 
+### _getAssetForKToken
+
+Gets the kToken address for a given asset
+
+*Reverts if asset not supported*
+
+
+```solidity
+function _getAssetForKToken(address kToken) internal view returns (address asset);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`kToken`|`address`|The underlying asset address|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The corresponding kToken address|
+
+
 ### _getVaultAssets
 
 Gets the asset managed by a vault
@@ -428,6 +451,13 @@ function _isAsset(address asset) internal view returns (bool);
 |----|----|-----------|
 |`<none>`|`bool`|Whether the asset is registered|
 
+
+### _isKToken
+
+
+```solidity
+function _isKToken(address kToken) internal view returns (bool);
+```
 
 ## Events
 ### Paused

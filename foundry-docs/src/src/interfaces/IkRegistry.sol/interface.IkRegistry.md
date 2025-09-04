@@ -1,5 +1,5 @@
 # IkRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/9902b1ea80f671449ee88e1d19504fe796d0d9a5/src/interfaces/IkRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/bbd875989135c7d3f313fa3fcc61e94d6afb4346/src/interfaces/IkRegistry.sol)
 
 
 ## Functions
@@ -165,6 +165,13 @@ function isVendor(address user) external view returns (bool);
 function isAsset(address asset) external view returns (bool);
 ```
 
+### isKToken
+
+
+```solidity
+function isKToken(address kToken_) external view returns (bool);
+```
+
 ### isVault
 
 
@@ -198,6 +205,13 @@ function getVaultAssets(address vault) external view returns (address[] memory);
 
 ```solidity
 function assetToKToken(address asset) external view returns (address);
+```
+
+### kTokenToAsset
+
+
+```solidity
+function kTokenToAsset(address kToken_) external view returns (address);
 ```
 
 ### getTreasury

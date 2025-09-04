@@ -203,6 +203,15 @@ contract kBase is OptimizedReentrancyGuardTransient {
         require(kToken != address(0), KBASE_ASSET_NOT_SUPPORTED);
     }
 
+    /// @notice Gets the kToken address for a given asset
+    /// @param kToken The underlying asset address
+    /// @return asset The corresponding kToken address
+    /// @dev Reverts if asset not supported
+    function _getAssetForKToken(address kToken) internal view returns (address asset) {
+        asset = _registry().kTokenToAsset(kToken);
+        require(asset != address(0), KBASE_ASSET_NOT_SUPPORTED);
+    }
+
     /// @notice Gets the asset managed by a vault
     /// @param vault The vault address
     /// @return assets The asset address managed by the vault
@@ -285,5 +294,9 @@ contract kBase is OptimizedReentrancyGuardTransient {
     /// @return Whether the asset is registered
     function _isAsset(address asset) internal view returns (bool) {
         return _registry().isAsset(asset);
+    }
+
+    function _isKToken(address kToken) internal view returns (bool) {
+        return _registry().isKToken(kToken);
     }
 }

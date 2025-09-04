@@ -119,25 +119,33 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
     /// @notice Initiates redemption process by burning kTokens and creating batch redemption request
     /// @dev Burns tokens immediately, generates unique request ID, and adds to batch for settlement
-    /// @param asset_ Address of the asset to redeem
+    /// @param kToken_ Address of the asset to redeem
     /// @param to_ Address of the recipient
     /// @param amount_ Amount of the asset to redeem
     /// @return requestId Unique identifier for tracking this redemption request
-    function requestRedeem(address asset_, address to_, uint256 amount_) external payable returns (bytes32 requestId) {
+    function requestRedeem(
+        address kToken_,
+        address to_,
+        uint256 amount_
+    )
+        external
+        payable
+        returns (bytes32 requestId)
+    {
         _lockReentrant();
         require(!_isPaused(), KMINTER_IS_PAUSED);
         require(_isInstitution(msg.sender), KMINTER_WRONG_ROLE);
-        require(_isAsset(asset_), KMINTER_WRONG_ASSET);
+        require(_isKToken(kToken_), KMINTER_WRONG_ASSET);
 
         require(amount_ != 0, KMINTER_ZERO_AMOUNT);
         require(to_ != address(0), KMINTER_ZERO_ADDRESS);
 
-        address kToken = _getKTokenForAsset(asset_);
-        require(kToken.balanceOf(msg.sender) >= amount_, KMINTER_INSUFFICIENT_BALANCE);
+        require(kToken_.balanceOf(msg.sender) >= amount_, KMINTER_INSUFFICIENT_BALANCE);
 
         // Generate request ID
         requestId = _createRedeemRequestId(to_, amount_, block.timestamp);
 
+        address asset_ = _getAssetForKToken(kToken_);
         address vault = _getDNVaultByAsset(asset_);
         bytes32 batchId = _getBatchId(vault);
 
@@ -158,11 +166,11 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         $.userRequests[to_].add(requestId);
 
         // Transfer kTokens from user to this contract until batch is settled
-        kToken.safeTransferFrom(msg.sender, address(this), amount_);
+        kToken_.safeTransferFrom(msg.sender, address(this), amount_);
 
         IkAssetRouter(_getKAssetRouter()).kAssetRequestPull(asset_, vault, amount_, batchId);
 
-        emit RedeemRequestCreated(requestId, to_, kToken, amount_, to_, batchId);
+        emit RedeemRequestCreated(requestId, to_, kToken_, amount_, to_, batchId);
 
         _unlockReentrant();
         return requestId;

@@ -1,5 +1,5 @@
 # CustodialAdapter
-[Git Source](https://github.com/VerisLabs/KAM/blob/9902b1ea80f671449ee88e1d19504fe796d0d9a5/src/adapters/CustodialAdapter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/bbd875989135c7d3f313fa3fcc61e94d6afb4346/src/adapters/CustodialAdapter.sol)
 
 **Inherits:**
 [BaseAdapter](/src/adapters/BaseAdapter.sol/contract.BaseAdapter.md), [Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md)
