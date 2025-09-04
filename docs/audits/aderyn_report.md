@@ -147,7 +147,7 @@ It appears that the contract includes a payable function to accept Ether but lac
 - Found in src/base/MultiFacetProxy.sol [Line: 10](src/base/MultiFacetProxy.sol#L10)
 
 	```solidity
-	contract MultiFacetProxy is Proxy, OwnableRoles {
+	contract MultiFacetProxy is Proxy, OptimizedOwnableRoles {
 	```
 
 </details>

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+import { OptimizedSafeCastLib } from "src/libraries/OptimizedSafeCastLib.sol";
 
 import { VAULTFEES_FEE_EXCEEDS_MAXIMUM, VAULTFEES_INVALID_TIMESTAMP, VAULTFEES_WRONG_ROLE } from "src/errors/Errors.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
@@ -10,7 +10,7 @@ import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 /// @notice Handles batch operations for staking and unstaking
 /// @dev Contains batch functions for staking and unstaking operations
 contract VaultFees is BaseVault {
-    using SafeCastLib for uint256;
+    using OptimizedSafeCastLib for uint256;
 
     /// @notice Emitted when the management fee is updated
     /// @param oldFee Previous management fee in basis points
@@ -101,7 +101,9 @@ contract VaultFees is BaseVault {
     function notifyManagementFeesCharged(uint64 _timestamp) external {
         require(_isAdmin(msg.sender), VAULTFEES_WRONG_ROLE);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(_timestamp >= _getLastFeesChargedManagement($) && _timestamp <= block.timestamp, VAULTFEES_INVALID_TIMESTAMP);
+        require(
+            _timestamp >= _getLastFeesChargedManagement($) && _timestamp <= block.timestamp, VAULTFEES_INVALID_TIMESTAMP
+        );
         _setLastFeesChargedManagement($, _timestamp);
         _updateGlobalWatermark();
         emit ManagementFeesCharged(_timestamp);
@@ -113,7 +115,10 @@ contract VaultFees is BaseVault {
     function notifyPerformanceFeesCharged(uint64 _timestamp) external {
         require(_isAdmin(msg.sender), VAULTFEES_WRONG_ROLE);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(_timestamp >= _getLastFeesChargedPerformance($) && _timestamp <= block.timestamp, VAULTFEES_INVALID_TIMESTAMP);
+        require(
+            _timestamp >= _getLastFeesChargedPerformance($) && _timestamp <= block.timestamp,
+            VAULTFEES_INVALID_TIMESTAMP
+        );
         _setLastFeesChargedPerformance($, _timestamp);
         _updateGlobalWatermark();
         emit PerformanceFeesCharged(_timestamp);

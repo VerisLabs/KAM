@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { ERC20 } from "solady/tokens/ERC20.sol";
-import { Multicallable } from "solady/utils/Multicallable.sol";
-import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { OptimizedReentrancyGuardTransient } from "src/abstracts/OptimizedReentrancyGuardTransient.sol";
+import { OptimizedOwnableRoles } from "src/libraries/OptimizedOwnableRoles.sol";
+import { ERC20 } from "src/vendor/ERC20.sol";
+import { Multicallable } from "src/vendor/Multicallable.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 
 import {
     KTOKEN_IS_PAUSED, KTOKEN_TRANSFER_FAILED, KTOKEN_ZERO_ADDRESS, KTOKEN_ZERO_AMOUNT
@@ -14,7 +14,7 @@ import {
 /// @title kToken
 /// @notice ERC20 token with role-based minting and burning capabilities
 /// @dev Implements UUPS upgradeable pattern with 1:1 backing by underlying assets
-contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
+contract kToken is ERC20, OptimizedOwnableRoles, OptimizedReentrancyGuardTransient, Multicallable {
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
@@ -87,7 +87,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @dev Calls internal _mint function and emits Minted event, restricted to MINTER_ROLE
     /// @param _to The address that will receive the newly minted tokens
     /// @param _amount The quantity of tokens to create and assign
-    function mint(address _to, uint256 _amount) external nonReentrant onlyRoles(MINTER_ROLE) {
+    function mint(address _to, uint256 _amount) external onlyRoles(MINTER_ROLE) {
         require(!_isPaused, KTOKEN_IS_PAUSED);
         _mint(_to, _amount);
         emit Minted(_to, _amount);
@@ -97,7 +97,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @dev Calls internal _burn function and emits Burned event, restricted to MINTER_ROLE
     /// @param _from The address from which tokens will be destroyed
     /// @param _amount The quantity of tokens to destroy
-    function burn(address _from, uint256 _amount) external nonReentrant onlyRoles(MINTER_ROLE) {
+    function burn(address _from, uint256 _amount) external onlyRoles(MINTER_ROLE) {
         require(!_isPaused, KTOKEN_IS_PAUSED);
         _burn(_from, _amount);
         emit Burned(_from, _amount);
@@ -107,7 +107,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
     /// @dev Consumes allowance before burning, calls _spendAllowance then _burn, restricted to MINTER_ROLE
     /// @param _from The address from which tokens will be destroyed
     /// @param _amount The quantity of tokens to destroy from the allowance
-    function burnFrom(address _from, uint256 _amount) external nonReentrant onlyRoles(MINTER_ROLE) {
+    function burnFrom(address _from, uint256 _amount) external onlyRoles(MINTER_ROLE) {
         require(!_isPaused, KTOKEN_IS_PAUSED);
         _spendAllowance(_from, msg.sender, _amount);
         _burn(_from, _amount);

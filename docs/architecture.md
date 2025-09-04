@@ -123,7 +123,7 @@ The fundamental ERC20 implementation representing tokenized real-world assets. E
 
 The kToken contract is the foundational building block of the KAM protocol, implementing a role-restricted ERC20 token with advanced security features. It uses the UUPS upgradeable pattern where the upgrade logic resides in the implementation contract rather than the proxy, reducing proxy size and gas costs while maintaining upgradeability.
 
-The contract implements ERC-7201 "Namespaced Storage Layout" to prevent storage collisions during upgrades. Each storage struct is placed at a deterministic slot to ensure upgrade safety. Role-based access control integrates Solady's OwnableRoles for gas-efficient permission management, with MINTER_ROLE for token operations, ADMIN_ROLE for configuration, and EMERGENCY_ADMIN_ROLE for crisis response.
+The contract implements ERC-7201 "Namespaced Storage Layout" to prevent storage collisions during upgrades. Each storage struct is placed at a deterministic slot to ensure upgrade safety. Role-based access control integrates Solady's OptimizedOwnableRoles for gas-efficient permission management, with MINTER_ROLE for token operations, ADMIN_ROLE for configuration, and EMERGENCY_ADMIN_ROLE for crisis response.
 
 All core functions respect a global pause state, allowing immediate shutdown if security issues are detected. Due to Solidity's stack depth limitations, initialization is split into two phases: basic setup without strings, then metadata configuration in a separate call.
 
@@ -322,7 +322,7 @@ The system calculates virtual balances by querying all adapters for a vault and 
 
 ### Role-Based Access Control
 
-The protocol implements granular permissions via Solady's OwnableRoles with clearly defined responsibilities:
+The protocol implements granular permissions via Solady's OptimizedOwnableRoles with clearly defined responsibilities:
 
 | Role                 | Scope       | Key Permissions                 |
 | -------------------- | ----------- | ------------------------------- |

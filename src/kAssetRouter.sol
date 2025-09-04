@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { EfficientHashLib } from "solady/utils/EfficientHashLib.sol";
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { Initializable } from "solady/utils/Initializable.sol";
-import { Multicallable } from "solady/utils/Multicallable.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
+import { OptimizedEfficientHashLib } from "src/libraries/OptimizedEfficientHashLib.sol";
+import { OptimizedFixedPointMathLib } from "src/libraries/OptimizedFixedPointMathLib.sol";
+
+import { OptimizedSafeCastLib } from "src/libraries/OptimizedSafeCastLib.sol";
+import { Initializable } from "src/vendor/Initializable.sol";
+import { Multicallable } from "src/vendor/Multicallable.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
 import { kBase } from "src/base/kBase.sol";
 import {
@@ -37,10 +38,10 @@ import { IkToken } from "src/interfaces/IkToken.sol";
 
 /// @title kAssetRouter
 contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, Multicallable {
-    using FixedPointMathLib for uint256;
+    using OptimizedFixedPointMathLib for uint256;
     using SafeTransferLib for address;
-    using SafeCastLib for uint256;
-    using SafeCastLib for uint128;
+    using OptimizedSafeCastLib for uint256;
+    using OptimizedSafeCastLib for uint128;
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
     /*//////////////////////////////////////////////////////////////
@@ -103,7 +104,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @param _asset The asset being deposited
     /// @param amount Amount of assets being pushed
     /// @param batchId The batch ID from the DN vault
-    function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable nonReentrant {
+    function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable {
+        _unlockReentrant();
         require(!_isPaused(), KASSETROUTER_IS_PAUSED);
         address kMinter = msg.sender;
         require(_isKMinter(kMinter), KASSETROUTER_WRONG_ROLE);
@@ -112,22 +114,15 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         $.vaultBatchBalances[kMinter][batchId].deposited += amount.toUint128();
         emit AssetsPushed(kMinter, amount);
+        _lockReentrant();
     }
 
     /// @notice Request to pull assets for kMinter redemptions
     /// @param _asset The asset to redeem
     /// @param amount Amount requested for redemption
     /// @param batchId The batch ID for this redemption
-    function kAssetRequestPull(
-        address _asset,
-        address _vault,
-        uint256 amount,
-        bytes32 batchId
-    )
-        external
-        payable
-        nonReentrant
-    {
+    function kAssetRequestPull(address _asset, address _vault, uint256 amount, bytes32 batchId) external payable {
+        _unlockReentrant();
         require(amount != 0, KASSETROUTER_ZERO_AMOUNT);
         require(!_isPaused(), KASSETROUTER_IS_PAUSED);
         address kMinter = msg.sender;
@@ -143,6 +138,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         require(batchReceiver != address(0), KASSETROUTER_ZERO_ADDRESS);
 
         emit AssetsRequestPulled(kMinter, _asset, batchReceiver, amount);
+        _lockReentrant();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -164,8 +160,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     )
         external
         payable
-        nonReentrant
     {
+        _unlockReentrant();
         require(amount != 0, KASSETROUTER_ZERO_AMOUNT);
         require(!_isPaused(), KASSETROUTER_IS_PAUSED);
         require(_isVault(msg.sender), KASSETROUTER_ONLY_KSTAKING_VAULT);
@@ -185,13 +181,15 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         $.vaultBatchBalances[targetVault][batchId].deposited += amount.toUint128();
 
         emit AssetsTransfered(sourceVault, targetVault, _asset, amount);
+        _lockReentrant();
     }
 
     /// @notice Request to pull shares for kStakingVault redemptions
     /// @param sourceVault The vault to redeem shares from
     /// @param amount Amount requested for redemption
     /// @param batchId The batch ID for this redemption
-    function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant {
+    function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable {
+        _unlockReentrant();
         require(amount != 0, KASSETROUTER_ZERO_AMOUNT);
         require(!_isPaused(), KASSETROUTER_IS_PAUSED);
         require(_isVault(msg.sender), KASSETROUTER_ONLY_KSTAKING_VAULT);
@@ -201,13 +199,15 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         $.vaultRequestedShares[sourceVault][batchId] += amount;
 
         emit SharesRequestedPushed(sourceVault, batchId, amount);
+        _lockReentrant();
     }
 
     /// @notice Request to pull shares for kStakingVault redemptions
     /// @param sourceVault The vault to redeem shares from
     /// @param amount Amount requested for redemption
     /// @param batchId The batch ID for this redemption
-    function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant {
+    function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable {
+        _unlockReentrant();
         require(amount != 0, KASSETROUTER_ZERO_AMOUNT);
         require(!_isPaused(), KASSETROUTER_IS_PAUSED);
         require(_isVault(msg.sender), KASSETROUTER_ONLY_KSTAKING_VAULT);
@@ -217,6 +217,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         $.vaultRequestedShares[sourceVault][batchId] -= amount;
 
         emit SharesRequestedPulled(sourceVault, batchId, amount);
+        _lockReentrant();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -243,9 +244,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     )
         external
         payable
-        nonReentrant
         returns (bytes32 proposalId)
     {
+        _unlockReentrant();
         require(!_isPaused(), KASSETROUTER_IS_PAUSED);
         require(_isRelayer(msg.sender), KASSETROUTER_WRONG_ROLE);
 
@@ -258,8 +259,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         unchecked {
             $.proposalCounter++;
         }
-        proposalId =
-            EfficientHashLib.hash(uint256(uint160(vault)), uint256(batchId), block.timestamp, $.proposalCounter);
+        proposalId = OptimizedEfficientHashLib.hash(
+            uint256(uint160(vault)), uint256(batchId), block.timestamp, $.proposalCounter
+        );
 
         // Check if proposal already exists
         require(!$.executedProposalIds.contains(proposalId), KASSETROUTER_PROPOSAL_EXECUTED);
@@ -288,7 +290,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @notice Execute a settlement proposal after cooldown period
     /// @param proposalId The proposal ID to execute
-    function executeSettleBatch(bytes32 proposalId) external payable nonReentrant {
+    function executeSettleBatch(bytes32 proposalId) external payable {
+        _lockReentrant();
         require(!_isPaused(), KASSETROUTER_IS_PAUSED);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
@@ -306,11 +309,14 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _executeSettlement(proposal);
 
         emit SettlementExecuted(proposalId, vault, proposal.batchId, msg.sender);
+
+        _unlockReentrant();
     }
 
     /// @notice Cancel a settlement proposal before execution
     /// @param proposalId The proposal ID to cancel
-    function cancelProposal(bytes32 proposalId) external nonReentrant {
+    function cancelProposal(bytes32 proposalId) external {
+        _lockReentrant();
         require(!_isPaused(), KASSETROUTER_IS_PAUSED);
         require(_isGuardian(msg.sender), KASSETROUTER_WRONG_ROLE);
 
@@ -324,6 +330,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         $.batchIds.remove(proposal.batchId);
 
         emit SettlementCancelled(proposalId, vault, proposal.batchId);
+
+        _unlockReentrant();
     }
 
     /// @notice Internal function to execute settlement logic

@@ -1,20 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {BaseVaultTest, DeploymentBaseTest} from "../utils/BaseVaultTest.sol";
-import {USDC_MAINNET, _1_USDC} from "../utils/Constants.sol";
+import { BaseVaultTest, DeploymentBaseTest } from "../utils/BaseVaultTest.sol";
+import { USDC_MAINNET, _1_USDC } from "../utils/Constants.sol";
 
-import {console2} from "forge-std/console2.sol";
-import {IERC20} from "forge-std/interfaces/IERC20.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import { console2 } from "forge-std/console2.sol";
+import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 
-import {IkAssetRouter} from "src/interfaces/IkAssetRouter.sol";
-import {IkStakingVault} from "src/interfaces/IkStakingVault.sol";
+import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
+import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
-import {KASSETROUTER_BATCH_ID_PROPOSED, KASSETROUTER_PROPOSAL_NOT_FOUND, VAULTBATCHES_VAULT_CLOSED, VAULTBATCHES_WRONG_ROLE} from "src/errors/Errors.sol";
-import {kBatchReceiver} from "src/kBatchReceiver.sol";
-import {BaseVault} from "src/kStakingVault/base/BaseVault.sol";
-import {kStakingVault} from "src/kStakingVault/kStakingVault.sol";
+import {
+    KASSETROUTER_BATCH_ID_PROPOSED,
+    KASSETROUTER_PROPOSAL_NOT_FOUND,
+    VAULTBATCHES_VAULT_CLOSED,
+    VAULTBATCHES_WRONG_ROLE
+} from "src/errors/Errors.sol";
+import { kBatchReceiver } from "src/kBatchReceiver.sol";
+import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
+import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 
 /// @title kStakingVaultBatchesTest
 /// @notice Tests for batch management functionality in kStakingVault
@@ -22,10 +27,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
     using SafeTransferLib for address;
 
     event BatchCreated(bytes32 indexed batchId);
-    event BatchReceiverCreated(
-        address indexed receiver,
-        bytes32 indexed batchId
-    );
+    event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
     event BatchSettled(bytes32 indexed batchId);
     event BatchClosed(bytes32 indexed batchId);
 
@@ -166,13 +168,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET,
-            address(vault),
-            batchId,
-            lastTotalAssets + 1000 * _1_USDC,
-            1000 * _1_USDC,
-            0,
-            false
+            USDC_MAINNET, address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 1000 * _1_USDC, 0, false
         );
 
         // Execute settlement which internally calls settleBatch
@@ -217,26 +213,13 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         // Settle batch
         uint256 lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(
-            address(vault),
-            batchId,
-            lastTotalAssets + 1000 * _1_USDC,
-            1000 * _1_USDC,
-            0,
-            false
-        );
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 1000 * _1_USDC, 0, false);
 
         // Try to settle again through assetRouter
         vm.prank(users.relayer);
         vm.expectRevert(bytes(KASSETROUTER_BATCH_ID_PROPOSED));
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET,
-            address(vault),
-            batchId,
-            lastTotalAssets + 1000 * _1_USDC,
-            1000 * _1_USDC,
-            0,
-            false
+            USDC_MAINNET, address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 1000 * _1_USDC, 0, false
         );
 
         // Should revert with Settled error
@@ -337,14 +320,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         // 4. Settle the closed batch
         uint256 lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(
-            address(vault),
-            batch1,
-            lastTotalAssets + 1000 * _1_USDC,
-            1000 * _1_USDC,
-            0,
-            false
-        );
+        _executeBatchSettlement(address(vault), batch1, lastTotalAssets + 1000 * _1_USDC, 1000 * _1_USDC, 0, false);
 
         // 5. User can claim from settled batch
         vm.prank(users.alice);

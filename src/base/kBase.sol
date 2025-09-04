@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { OptimizedReentrancyGuardTransient } from "src/abstracts/OptimizedReentrancyGuardTransient.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 
 import {
     KBASE_ALREADY_INITIALIZED,
@@ -23,7 +23,7 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 /// @title kBase
 /// @notice Base contract providing common functionality for all KAM protocol contracts
 /// @dev Includes registry integration, role management, pause functionality, and helper methods
-contract kBase is ReentrancyGuardTransient {
+contract kBase is OptimizedReentrancyGuardTransient {
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////

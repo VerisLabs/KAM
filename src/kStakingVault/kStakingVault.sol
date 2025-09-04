@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { Ownable } from "solady/auth/Ownable.sol";
+import { Ownable } from "src/vendor/Ownable.sol";
 
-import { Initializable } from "solady/utils/Initializable.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedSafeCastLib } from "src/libraries/OptimizedSafeCastLib.sol";
+import { Initializable } from "src/vendor/Initializable.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
@@ -49,8 +49,8 @@ contract kStakingVault is
 {
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
     using SafeTransferLib for address;
-    using SafeCastLib for uint256;
-    using SafeCastLib for uint128;
+    using OptimizedSafeCastLib for uint256;
+    using OptimizedSafeCastLib for uint128;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -172,7 +172,7 @@ contract kStakingVault is
             user: msg.sender,
             stkTokenAmount: stkTokenAmount.toUint128(),
             recipient: to,
-            requestTimestamp: SafeCastLib.toUint64(block.timestamp),
+            requestTimestamp: (block.timestamp).toUint64(),
             status: BaseVaultTypes.RequestStatus.PENDING,
             batchId: batchId
         });

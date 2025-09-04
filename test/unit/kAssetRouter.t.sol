@@ -14,7 +14,7 @@ import {
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
+
 import { kBase } from "src/base/kBase.sol";
 import {
     KASSETROUTER_BATCH_ID_PROPOSED,
@@ -39,6 +39,7 @@ import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { kAssetRouter } from "src/kAssetRouter.sol";
+import { ERC1967Factory } from "src/vendor/ERC1967Factory.sol";
 
 /// @title kAssetRouterTest
 /// @notice Comprehensive unit tests for kAssetRouter contract with timelock settlement

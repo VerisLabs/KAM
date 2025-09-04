@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { EfficientHashLib } from "solady/utils/EfficientHashLib.sol";
+import { OptimizedEfficientHashLib } from "src/libraries/OptimizedEfficientHashLib.sol";
 
-import { Initializable } from "solady/utils/Initializable.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedSafeCastLib } from "src/libraries/OptimizedSafeCastLib.sol";
+import { Initializable } from "src/vendor/Initializable.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
 import { Extsload } from "src/abstracts/Extsload.sol";
 import { kBase } from "src/base/kBase.sol";
@@ -36,8 +36,8 @@ import { IkToken } from "src/interfaces/IkToken.sol";
 /// @dev Manages deposits/redemptions through kStakingVault with batch settlement
 contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     using SafeTransferLib for address;
-    using SafeCastLib for uint256;
-    using SafeCastLib for uint64;
+    using OptimizedSafeCastLib for uint256;
+    using OptimizedSafeCastLib for uint64;
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
     /*//////////////////////////////////////////////////////////////
@@ -88,7 +88,8 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @param asset_ Address of the asset to mint
     /// @param to_ Address of the recipient
     /// @param amount_ Amount of the asset to mint
-    function mint(address asset_, address to_, uint256 amount_) external payable nonReentrant {
+    function mint(address asset_, address to_, uint256 amount_) external payable {
+        _lockReentrant();
         require(!_isPaused(), KMINTER_IS_PAUSED);
         require(_isInstitution(msg.sender), KMINTER_WRONG_ROLE);
         require(_isAsset(asset_), KMINTER_WRONG_ASSET);
@@ -113,6 +114,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         IkToken(kToken).mint(to_, amount_);
 
         emit Minted(to_, amount_, batchId);
+        _unlockReentrant();
     }
 
     /// @notice Initiates redemption process by burning kTokens and creating batch redemption request
@@ -121,16 +123,8 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @param to_ Address of the recipient
     /// @param amount_ Amount of the asset to redeem
     /// @return requestId Unique identifier for tracking this redemption request
-    function requestRedeem(
-        address asset_,
-        address to_,
-        uint256 amount_
-    )
-        external
-        payable
-        nonReentrant
-        returns (bytes32 requestId)
-    {
+    function requestRedeem(address asset_, address to_, uint256 amount_) external payable returns (bytes32 requestId) {
+        _lockReentrant();
         require(!_isPaused(), KMINTER_IS_PAUSED);
         require(_isInstitution(msg.sender), KMINTER_WRONG_ROLE);
         require(_isAsset(asset_), KMINTER_WRONG_ASSET);
@@ -169,12 +163,14 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         emit RedeemRequestCreated(requestId, to_, kToken, amount_, to_, batchId);
 
+        _unlockReentrant();
         return requestId;
     }
 
     /// @notice Executes redemption for a request in a settled batch
     /// @param requestId Request ID to execute
-    function redeem(bytes32 requestId) external payable nonReentrant {
+    function redeem(bytes32 requestId) external payable {
+        _lockReentrant();
         require(!_isPaused(), KMINTER_IS_PAUSED);
         require(_isInstitution(msg.sender), KMINTER_WRONG_ROLE);
 
@@ -205,12 +201,15 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         // If batch is not settled, this will fail
         IkBatchReceiver(batchReceiver).pullAssets(redeemRequest.recipient, redeemRequest.amount, redeemRequest.batchId);
 
+        _unlockReentrant();
         emit Redeemed(requestId);
     }
 
     /// @notice Cancels a redemption request before batch settlement
     /// @param requestId Request ID to cancel
-    function cancelRequest(bytes32 requestId) external payable nonReentrant {
+    function cancelRequest(bytes32 requestId) external payable {
+        _lockReentrant();
+
         require(!_isPaused(), KMINTER_IS_PAUSED);
         require(_isInstitution(msg.sender), KMINTER_WRONG_ROLE);
 
@@ -235,6 +234,8 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         kToken.safeTransfer(redeemRequest.user, redeemRequest.amount);
 
         emit Cancelled(requestId);
+
+        _unlockReentrant();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -249,7 +250,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     function _createRedeemRequestId(address user, uint256 amount, uint256 timestamp) internal returns (bytes32) {
         kMinterStorage storage $ = _getkMinterStorage();
         $.requestCounter = (uint256($.requestCounter) + 1).toUint64();
-        return EfficientHashLib.hash(
+        return OptimizedEfficientHashLib.hash(
             uint256(uint160(address(this))), uint256(uint160(user)), amount, timestamp, $.requestCounter
         );
     }

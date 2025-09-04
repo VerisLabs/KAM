@@ -60,10 +60,7 @@ out = "foundry-docs/"
 title = "KAM Contracts Documentation"
 
 [dependencies]
-solady = "0.1.19"
 forge-std = "1.9.7"
-openzeppelin-foundry-upgrades = "0.4.0"
-"@openzeppelin-contracts" = "5.0.2"
 
 [soldeer]
 # whether soldeer manages remappings

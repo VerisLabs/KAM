@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { Initializable } from "solady/utils/Initializable.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
+import { Initializable } from "src/vendor/Initializable.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
 import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
 import {
@@ -88,7 +88,8 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
     /// @param asset The asset to deposit
     /// @param amount The amount to deposit
     /// @param onBehalfOf The vault address this deposit is for
-    function deposit(address asset, uint256 amount, address onBehalfOf) external nonReentrant {
+    function deposit(address asset, uint256 amount, address onBehalfOf) external {
+        _lockReentrant();
         require(_isKAssetRouter(msg.sender), CUSTODIAL_WRONG_ROLE);
         require(asset != address(0), CUSTODIAL_WRONG_ASSET);
         require(amount != 0, CUSTODIAL_ZERO_AMOUNT);
@@ -106,13 +107,16 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         $.balanceOf[onBehalfOf][asset] += amount;
 
         emit Deposited(asset, amount, onBehalfOf);
+
+        _unlockReentrant();
     }
 
     /// @notice Redeems assets from external strategy
     /// @param asset The asset to redeem
     /// @param amount The amount to redeem
     /// @param onBehalfOf The vault address this redemption is for
-    function redeem(address asset, uint256 amount, address onBehalfOf) external virtual nonReentrant {
+    function redeem(address asset, uint256 amount, address onBehalfOf) external virtual {
+        _lockReentrant();
         require(_isKAssetRouter(msg.sender), CUSTODIAL_WRONG_ROLE);
         require(asset != address(0), CUSTODIAL_WRONG_ASSET);
         require(amount != 0, CUSTODIAL_ZERO_AMOUNT);
@@ -127,6 +131,8 @@ contract CustodialAdapter is BaseAdapter, Initializable, UUPSUpgradeable {
         $.balanceOf[onBehalfOf][asset] -= amount;
 
         emit RedemptionRequested(asset, amount, onBehalfOf);
+
+        _unlockReentrant();
     }
 
     /*//////////////////////////////////////////////////////////////

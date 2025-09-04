@@ -532,9 +532,9 @@ storage-location: erc7201:kam.storage.kAssetRouter
 struct kAssetRouterStorage {
     uint256 proposalCounter;
     uint256 vaultSettlementCooldown;
-    EnumerableSetLib.Bytes32Set executedProposalIds;
-    EnumerableSetLib.Bytes32Set batchIds;
-    mapping(address vault => EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;
+    OptimizedBytes32EnumerableSetLib.Bytes32Set executedProposalIds;
+    OptimizedBytes32EnumerableSetLib.Bytes32Set batchIds;
+    mapping(address vault => OptimizedBytes32EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;
     mapping(address account => mapping(bytes32 batchId => Balances)) vaultBatchBalances;
     mapping(address vault => mapping(bytes32 batchId => uint256)) vaultRequestedShares;
     mapping(bytes32 proposalId => VaultSettlementProposal) settlementProposals;
