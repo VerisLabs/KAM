@@ -101,6 +101,10 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Initializes the kRegistry contract
     /// @param owner_ Contract owner address
     /// @param admin_ Admin role recipient
+    /// @param emergencyAdmin_ Emergency admin role recipient
+    /// @param guardian_ Guardian role recipient
+    /// @param relayer_ Relayer role recipient
+    /// @param treasury_ Treasury address
     function initialize(
         address owner_,
         address admin_,

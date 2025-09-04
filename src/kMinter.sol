@@ -135,6 +135,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         bytes32 batchId = _getBatchId(vault);
 
         kMinterStorage storage $ = _getkMinterStorage();
+
         // Create redemption request
         $.redeemRequests[requestId] = RedeemRequest({
             user: msg.sender,

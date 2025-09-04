@@ -24,6 +24,13 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Emitted when a stake request is created
+    /// @param requestId The unique identifier of the stake request
+    /// @param user The address of the user who created the request
+    /// @param kToken The address of the kToken associated with the request
+    /// @param amount The amount of kTokens requested
+    /// @param recipient The address to which the kTokens will be sent
+    /// @param batchId The batch ID associated with the request
     event StakeRequestCreated(
         bytes32 indexed requestId,
         address indexed user,
@@ -32,22 +39,51 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
         address recipient,
         bytes32 batchId
     );
+
+    /// @notice Emitted when a stake request is redeemed
+    /// @param requestId The unique identifier of the stake request
     event StakeRequestRedeemed(bytes32 indexed requestId);
+
+    /// @notice Emitted when a stake request is cancelled
+    /// @param requestId The unique identifier of the stake request
     event StakeRequestCancelled(bytes32 indexed requestId);
+
+    /// @notice Emitted when an unstake request is created
+    /// @param requestId The unique identifier of the unstake request
+    /// @param user The address of the user who created the request
+    /// @param amount The amount of kTokens requested
+    /// @param recipient The address to which the kTokens will be sent
+    /// @param batchId The batch ID associated with the request
     event UnstakeRequestCreated(
         bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, bytes32 batchId
     );
+
+    /// @notice Emitted when an unstake request is cancelled
+    /// @param requestId The unique identifier of the unstake request
     event UnstakeRequestCancelled(bytes32 indexed requestId);
+
+    /// @notice Emitted when the vault is paused
+    /// @param paused The new paused state
     event Paused(bool paused);
+
+    /// @notice Emitted when the vault is initialized
+    /// @param registry The registry address
+    /// @param name The name of the vault
+    /// @param symbol The symbol of the vault
+    /// @param decimals The decimals of the vault
+    /// @param asset The asset of the vault
     event Initialized(address registry, string name, string symbol, uint8 decimals, address asset);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice kAssetRouter key
     bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
+    /// @notice kMinter key
     bytes32 internal constant K_MINTER = keccak256("K_MINTER");
 
+    /// @dev Bitmask and shift constants for module configuration
     uint256 internal constant DECIMALS_MASK = 0xFF;
     uint256 internal constant DECIMALS_SHIFT = 0;
     uint256 internal constant HURDLE_RATE_MASK = 0xFFFF;
@@ -333,12 +369,14 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     }
 
     /// @notice Calculates share price for stkToken
-    /// @return sharePrice Price per stkToken in underlying asset terms (18 decimals)
+    /// @return sharePrice Price per stkToken after fees in underlying asset terms (18 decimals)
     function _netSharePrice() internal view returns (uint256) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _convertToAssets(10 ** _getDecimals($));
     }
 
+    /// @notice Calculates share price for stkToken
+    /// @return sharePrice Price per stkToken in underlying asset terms (18 decimals)
     function _sharePrice() internal view returns (uint256) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         uint256 shares = 10 ** _getDecimals($);
@@ -354,7 +392,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
         return $.kToken.balanceOf(address(this)) - $.totalPendingStake;
     }
 
-    /// @notice Returns the total net assets in the vault
+    /// @notice Returns the total assets after fees in the vault
     /// @return totalNetAssets Total net assets in the vault
     function _totalNetAssets() internal view returns (uint256) {
         return _totalAssets() - _accumulatedFees();

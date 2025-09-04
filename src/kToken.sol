@@ -17,12 +17,9 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Emitted when a new token is created
-    /// @param token The address of the new token
-    /// @param owner The owner of the new token
-    /// @param name The name of the new token
-    /// @param symbol The symbol of the new token
-    /// @param decimals The decimals of the new token
+    /// @notice Emitted when tokens are minted
+    /// @param to The address to which the tokens are minted
+    /// @param amount The quantity of tokens minted
     event Minted(address indexed to, uint256 amount);
 
     /// @notice Emitted when tokens are burned
@@ -134,7 +131,7 @@ contract kToken is ERC20, OwnableRoles, ReentrancyGuard, Multicallable {
         }
         if (minter_ == address(0)) revert ZeroAddress();
 
-        /// @custom:initializer
+        // Initialize ownership and roles
         _initializeOwner(owner_);
         _grantRoles(admin_, ADMIN_ROLE);
         _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);

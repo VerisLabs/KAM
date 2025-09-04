@@ -95,6 +95,7 @@ contract kStakingVault is
     /// @param amount Amount of kTokens to stake
     /// @return requestId Request ID for this staking request
     function requestStake(address to, uint256 amount) external payable returns (bytes32 requestId) {
+        // Open `nonReentrant`
         _lockReentrant();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_getPaused($)) revert IsPaused();
@@ -121,15 +122,22 @@ contract kStakingVault is
         // Add to user requests tracking
         $.userRequests[msg.sender].add(requestId);
 
+        // Deposit ktokens
         $.kToken.safeTransferFrom(msg.sender, address(this), amount);
 
+        // Increase pending stakt
         $.totalPendingStake += amount.toUint128();
 
+        // Notify the router to move underlying assets from DN strategy
+        // To the strategy of this vault
+        // That movement will happen from the wallet managing the portfolio
         IkAssetRouter(_getKAssetRouter()).kAssetTransfer(
             _getKMinter(), address(this), $.underlyingAsset, amount, batchId
         );
 
         emit StakeRequestCreated(bytes32(requestId), msg.sender, $.kToken, amount, to, batchId);
+
+        // Close `nonReentrant`
         _unlockReentrant();
 
         return requestId;
@@ -140,7 +148,9 @@ contract kStakingVault is
     /// @param stkTokenAmount Amount of stkTokens to unstake
     /// @return requestId Request ID for this unstaking request
     function requestUnstake(address to, uint256 stkTokenAmount) external payable returns (bytes32 requestId) {
+        // Open `nonReentrant`
         _lockReentrant();
+
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_getPaused($)) revert IsPaused();
         if (stkTokenAmount == 0) revert ZeroAmount();
@@ -166,12 +176,15 @@ contract kStakingVault is
         // Add to user requests tracking
         $.userRequests[msg.sender].add(requestId);
 
+        // Transfer stkTokens to contract to keep share price stable
+        // It will only be burned when the assets are claimed later
         _transfer(msg.sender, address(this), stkTokenAmount);
 
         IkAssetRouter(_getKAssetRouter()).kSharesRequestPush(address(this), stkTokenAmount, batchId);
 
         emit UnstakeRequestCreated(bytes32(requestId), msg.sender, stkTokenAmount, to, batchId);
 
+        // Close `nonReentrant`
         _unlockReentrant();
 
         return requestId;
@@ -180,7 +193,9 @@ contract kStakingVault is
     /// @notice Cancels a staking request
     /// @param requestId Request ID to cancel
     function cancelStakeRequest(bytes32 requestId) external payable {
+        // Open `nonReentrant`
         _lockReentrant();
+
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         BaseVaultTypes.StakeRequest storage request = $.stakeRequests[requestId];
 
@@ -206,13 +221,17 @@ contract kStakingVault is
         $.kToken.safeTransfer(request.user, request.kTokenAmount);
 
         emit StakeRequestCancelled(bytes32(requestId));
+
+        // Close `nonReentrant`
         _unlockReentrant();
     }
 
     /// @notice Cancels an unstaking request
     /// @param requestId Request ID to cancel
     function cancelUnstakeRequest(bytes32 requestId) external payable {
+        // Open `nonReentrant`
         _lockReentrant();
+
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_getPaused($)) revert IsPaused();
         BaseVaultTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
@@ -236,6 +255,8 @@ contract kStakingVault is
         _transfer(address(this), request.user, request.stkTokenAmount);
 
         emit UnstakeRequestCancelled(requestId);
+
+        // Close `nonReentrant`
         _unlockReentrant();
     }
 

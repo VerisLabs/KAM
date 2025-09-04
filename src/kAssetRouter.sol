@@ -320,6 +320,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     }
 
     /// @notice Cancel a settlement proposal before execution
+    /// @notice Guardian can cancel a settlement proposal if some data is wrong
     /// @param proposalId The proposal ID to cancel
     function cancelProposal(bytes32 proposalId) external nonReentrant {
         if (_isPaused()) revert IsPaused();
@@ -354,7 +355,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         address kToken = _getKTokenForAsset(asset);
 
-        // Track wether it was originally a kMinter 
+        // Track wether it was originally a kMinter
         // Since kMinters are treated as DN vaults in some operations
         bool isKMinter; // for event Deposited
 
