@@ -13,6 +13,7 @@ import {
     KREGISTRY_ADAPTER_ALREADY_SET,
     KREGISTRY_ALREADY_REGISTERED,
     KREGISTRY_ASSET_NOT_SUPPORTED,
+    KREGISTRY_FEE_EXCEEDS_MAXIMUM,
     KREGISTRY_INVALID_ADAPTER,
     KREGISTRY_TRANSFER_FAILED,
     KREGISTRY_WRONG_ASSET,
@@ -68,6 +69,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @notice WBTC key
     bytes32 public constant WBTC = keccak256("WBTC");
 
+    /// @notice Maximum basis points (100%)
+    uint256 constant MAX_BPS = 10_000;
+
     /*//////////////////////////////////////////////////////////////
                               STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -86,6 +90,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         mapping(address => address) assetToKToken;
         mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultAdapters; // vault => adapter
         mapping(address => bool) registeredAdapters; // adapter => registered
+        mapping(address => uint16) assetHurdleRate; // asset => hurdle rate
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kRegistry")) - 1)) & ~bytes32(uint256(0xff))
@@ -359,6 +364,33 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         $.vaultAdapters[vault].remove(adapter);
 
         emit AdapterRemoved(vault, adapter);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                      HURDLE RATE MANAGEMENT
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Sets the hurdle rate for a specific asset
+    /// @param asset The asset address
+    /// @param hurdleRate The hurdle rate in basis points
+    function setHurdleRate(address asset, uint16 hurdleRate) external payable {
+        require(_hasRole(msg.sender, RELAYER_ROLE), KREGISTRY_WRONG_ROLE);
+        require(hurdleRate <= MAX_BPS, KREGISTRY_FEE_EXCEEDS_MAXIMUM);
+
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        require($.supportedAssets.contains(asset), KREGISTRY_ASSET_NOT_SUPPORTED);
+
+        $.assetHurdleRate[asset] = hurdleRate;
+        emit HurdleRateSet(asset, hurdleRate);
+    }
+
+    /// @notice Gets the hurdle rate for a specific asset
+    /// @param asset The asset address
+    /// @return The hurdle rate in basis points
+    function getHurdleRate(address asset) external view returns (uint16) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        require($.supportedAssets.contains(asset), KREGISTRY_ASSET_NOT_SUPPORTED);
+        return $.assetHurdleRate[asset];
     }
 
     /*//////////////////////////////////////////////////////////////

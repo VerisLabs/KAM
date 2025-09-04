@@ -1,25 +1,8 @@
 # IVaultFees
-[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/interfaces/modules/IVaultFees.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/9902b1ea80f671449ee88e1d19504fe796d0d9a5/src/interfaces/modules/IVaultFees.sol)
 
 
 ## Functions
-### setHurdleRate
-
-Sets the yearly hurdle rate for the underlying asset
-
-*Fee is a basis point (1% = 100)*
-
-
-```solidity
-function setHurdleRate(uint16 _hurdleRate) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`_hurdleRate`|`uint16`|The new yearly hurdle rate|
-
-
 ### setHardHurdleRate
 
 Sets the hard hurdle rate

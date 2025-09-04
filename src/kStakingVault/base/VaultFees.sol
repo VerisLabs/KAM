@@ -50,17 +50,6 @@ contract VaultFees is BaseVault {
     /// @notice Maximum basis points
     uint256 constant MAX_BPS = 10_000;
 
-    /// @notice Sets the yearly hurdle rate for the underlying asset
-    /// @param _hurdleRate The new yearly hurdle rate
-    /// @dev Fee is a basis point (1% = 100)
-    function setHurdleRate(uint16 _hurdleRate) external {
-        require(_isAdmin(msg.sender), VAULTFEES_WRONG_ROLE);
-        require(_hurdleRate <= MAX_BPS, VAULTFEES_FEE_EXCEEDS_MAXIMUM);
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        _setHurdleRate($, _hurdleRate);
-        emit HurdleRateUpdated(_hurdleRate);
-    }
-
     /// @notice Sets the hard hurdle rate
     /// @param _isHard Whether the hard hurdle rate is enabled
     /// @dev If true, performance fees will only be charged to the excess return
