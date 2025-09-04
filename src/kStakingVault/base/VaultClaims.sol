@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ERC20 } from "solady/tokens/ERC20.sol";
+import { ERC20 } from "src/vendor/ERC20.sol";
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedFixedPointMathLib } from "src/libraries/OptimizedFixedPointMathLib.sol";
+import { OptimizedSafeCastLib } from "src/libraries/OptimizedSafeCastLib.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 
 import {
     VAULTCLAIMS_BATCH_NOT_SETTLED,
@@ -23,9 +23,9 @@ import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 /// @notice Handles claim operations for settled batches
 /// @dev Contains claim functions for staking and unstaking operations
 contract VaultClaims is BaseVault {
-    using SafeCastLib for uint256;
+    using OptimizedSafeCastLib for uint256;
     using SafeTransferLib for address;
-    using FixedPointMathLib for uint256;
+    using OptimizedFixedPointMathLib for uint256;
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
     // Error declarations removed - using library errors instead

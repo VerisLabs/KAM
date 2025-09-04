@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { LibClone } from "solady/utils/LibClone.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+import { OptimizedLibClone } from "src/libraries/OptimizedLibClone.sol";
+import { OptimizedSafeCastLib } from "src/libraries/OptimizedSafeCastLib.sol";
 
 import {
     VAULTBATCHES_NOT_CLOSED,
@@ -18,8 +18,8 @@ import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 /// @notice Handles batch operations for staking and unstaking
 /// @dev Contains batch functions for staking and unstaking operations
 contract VaultBatches is BaseVault {
-    using SafeCastLib for uint256;
-    using SafeCastLib for uint64;
+    using OptimizedSafeCastLib for uint256;
+    using OptimizedSafeCastLib for uint64;
     /*//////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -96,8 +96,7 @@ contract VaultBatches is BaseVault {
         address receiver = $.batches[_batchId].batchReceiver;
         if (receiver != address(0)) return receiver;
 
-        // Deploy a new BatchReceiver minimal proxy
-        receiver = LibClone.clone($.receiverImplementation);
+        receiver = OptimizedLibClone.clone($.receiverImplementation);
         $.batches[_batchId].batchReceiver = receiver;
 
         // Initialize the BatchReceiver

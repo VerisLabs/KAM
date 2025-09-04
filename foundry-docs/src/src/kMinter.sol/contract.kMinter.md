@@ -323,7 +323,7 @@ struct kMinterStorage {
     mapping(address => uint256) totalLockedAssets;
     uint64 requestCounter;
     mapping(bytes32 => RedeemRequest) redeemRequests;
-    mapping(address => EnumerableSetLib.Bytes32Set) userRequests;
+    mapping(address => OptimizedBytes32EnumerableSetLib.Bytes32Set) userRequests;
 }
 ```
 

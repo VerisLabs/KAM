@@ -75,7 +75,7 @@ The scope of audit involves the complete KAM protocol implementation in `src/`:
 
 **Explicit Approval Pattern** - Adapters receive temporary approvals only during settlement execution, immediately revoked afterward for security.
 
-**Role-Based Access Control** - Comprehensive role system implemented through Solady's OwnableRoles including:
+**Role-Based Access Control** - Comprehensive role system implemented through Solady's OptimizedOwnableRoles including:
 - Owner: Protocol ownership and ultimate control
 - Admin: Administrative functions and upgrades  
 - Emergency Admin: Pause functionality and emergency operations
@@ -95,9 +95,9 @@ The scope of audit involves the complete KAM protocol implementation in `src/`:
 **Solady Dependencies** - Protocol extensively uses Solady library for gas optimization and security:
 - `SafeTransferLib` for secure token transfers
 - `ReentrancyGuardTransient` for gas-efficient reentrancy protection  
-- `FixedPointMathLib` for precision arithmetic
-- `EnumerableSetLib` for efficient set operations
-- `OwnableRoles` for role-based access control
+- `OptimizedFixedPointMathLib` for precision arithmetic
+- `OptimizedBytes32EnumerableSetLib` for efficient set operations
+- `OptimizedOwnableRoles` for role-based access control
 
 **Extsload Pattern** - `kMinter` implements Extsload for storage reading optimization, allowing efficient cross-contract storage access without additional SLOAD operations.
 

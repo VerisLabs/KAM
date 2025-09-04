@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { OptimizedOwnableRoles } from "src/libraries/OptimizedOwnableRoles.sol";
 
-import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
-import { Initializable } from "solady/utils/Initializable.sol";
+import { OptimizedAddressEnumerableSetLib } from "src/libraries/OptimizedAddressEnumerableSetLib.sol";
+import { Initializable } from "src/vendor/Initializable.sol";
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
 import {
     KREGISTRY_ADAPTER_ALREADY_SET,
@@ -27,8 +26,8 @@ import { kToken } from "src/kToken.sol";
 /// @title kRegistry
 /// @notice Central registry for KAM protocol contracts
 /// @dev Manages singleton contracts, vault registration, asset support, and kToken mapping
-contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
-    using EnumerableSetLib for EnumerableSetLib.AddressSet;
+contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnableRoles {
+    using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
@@ -75,17 +74,17 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
 
     /// @custom:storage-location erc7201:kam.storage.kRegistry
     struct kRegistryStorage {
-        EnumerableSetLib.AddressSet supportedAssets;
-        EnumerableSetLib.AddressSet allVaults;
+        OptimizedAddressEnumerableSetLib.AddressSet supportedAssets;
+        OptimizedAddressEnumerableSetLib.AddressSet allVaults;
         address treasury;
         mapping(bytes32 => address) singletonContracts;
         mapping(address => uint8 vaultType) vaultType;
         mapping(address => mapping(uint8 vaultType => address)) assetToVault;
-        mapping(address => EnumerableSetLib.AddressSet) vaultAsset; // kMinter will have > 1 assets
-        mapping(address => EnumerableSetLib.AddressSet) vaultsByAsset;
+        mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultAsset; // kMinter will have > 1 assets
+        mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultsByAsset;
         mapping(bytes32 => address) singletonAssets;
         mapping(address => address) assetToKToken;
-        mapping(address => EnumerableSetLib.AddressSet) vaultAdapters; // vault => adapter
+        mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultAdapters; // vault => adapter
         mapping(address => bool) registeredAdapters; // adapter => registered
     }
 
@@ -249,8 +248,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         address minter_ = getContractById(K_MINTER);
         require(minter_ != address(0), KREGISTRY_ZERO_ADDRESS);
 
-        uint8 decimals_ = IERC20Metadata(asset).decimals();
-        if (decimals_ == 0) decimals_ = 18;
+        (bool success, uint8 decimals_) = _tryGetAssetDecimals(asset);
+        if (!success) revert();
 
         address kToken_ = $.assetToKToken[asset];
         require(kToken_ == address(0), KREGISTRY_ALREADY_REGISTERED);
@@ -547,6 +546,33 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @return Wether the caller have the given role
     function _hasRole(address user, uint256 role_) internal view returns (bool) {
         return hasAnyRole(user, role_);
+    }
+
+    /// @dev Helper function to get the decimals of the underlying asset.
+    /// Useful for setting the return value of `_underlyingDecimals` during initialization.
+    /// If the retrieval succeeds, `success` will be true, and `result` will hold the result.
+    /// Otherwise, `success` will be false, and `result` will be zero.
+    ///
+    /// Example usage:
+    /// ```
+    /// (bool success, uint8 result) = _tryGetAssetDecimals(underlying);
+    /// _decimals = success ? result : _DEFAULT_UNDERLYING_DECIMALS;
+    /// ```
+    function _tryGetAssetDecimals(address underlying) internal view returns (bool success, uint8 result) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            // Store the function selector of `decimals()`.
+            mstore(0x00, 0x313ce567)
+            // Arguments are evaluated last to first.
+            success :=
+                and(
+                    // Returned value is less than 256, at left-padded to 32 bytes.
+                    and(lt(mload(0x00), 0x100), gt(returndatasize(), 0x1f)),
+                    // The staticcall succeeds.
+                    staticcall(gas(), underlying, 0x1c, 0x04, 0x00, 0x20)
+                )
+            result := mul(mload(0x00), success)
+        }
     }
 
     /*//////////////////////////////////////////////////////////////

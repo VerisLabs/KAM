@@ -2,7 +2,7 @@
 [Git Source](https://github.com/VerisLabs/KAM/blob/77168a37e8e40e14b0fd1320a6e90f9203339144/src/kRegistry.sol)
 
 **Inherits:**
-[IkRegistry](/src/interfaces/IkRegistry.sol/interface.IkRegistry.md), Initializable, UUPSUpgradeable, OwnableRoles
+[IkRegistry](/src/interfaces/IkRegistry.sol/interface.IkRegistry.md), Initializable, UUPSUpgradeable, OptimizedOwnableRoles
 
 Central registry for KAM protocol contracts
 
@@ -757,16 +757,16 @@ storage-location: erc7201:kam.storage.kRegistry
 
 ```solidity
 struct kRegistryStorage {
-    EnumerableSetLib.AddressSet supportedAssets;
-    EnumerableSetLib.AddressSet allVaults;
+    OptimizedBytes32EnumerableSetLib.AddressSet supportedAssets;
+    OptimizedBytes32EnumerableSetLib.AddressSet allVaults;
     mapping(bytes32 => address) singletonContracts;
     mapping(address => uint8 vaultType) vaultType;
     mapping(address => mapping(uint8 vaultType => address)) assetToVault;
-    mapping(address => EnumerableSetLib.AddressSet) vaultAsset;
-    mapping(address => EnumerableSetLib.AddressSet) vaultsByAsset;
+    mapping(address => OptimizedBytes32EnumerableSetLib.AddressSet) vaultAsset;
+    mapping(address => OptimizedBytes32EnumerableSetLib.AddressSet) vaultsByAsset;
     mapping(bytes32 => address) singletonAssets;
     mapping(address => address) assetToKToken;
-    mapping(address => EnumerableSetLib.AddressSet) vaultAdapters;
+    mapping(address => OptimizedBytes32EnumerableSetLib.AddressSet) vaultAdapters;
     mapping(address => bool) registeredAdapters;
 }
 ```

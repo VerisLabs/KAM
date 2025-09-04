@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ReentrancyGuardTransient } from "solady/utils/ReentrancyGuardTransient.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { OptimizedReentrancyGuardTransient } from "src/abstracts/OptimizedReentrancyGuardTransient.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 
 import {
     ADAPTER_ALREADY_INITIALIZED,
@@ -18,7 +18,7 @@ import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 /// @title BaseAdapter
 /// @notice Abstract base contract for all protocol adapters
 /// @dev Provides common functionality and virtual balance tracking for external strategy integrations
-contract BaseAdapter is ReentrancyGuardTransient {
+contract BaseAdapter is OptimizedReentrancyGuardTransient {
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////

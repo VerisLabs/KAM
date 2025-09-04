@@ -731,7 +731,7 @@ struct BaseVaultStorage {
     mapping(bytes32 => BaseVaultTypes.BatchInfo) batches;
     mapping(bytes32 => BaseVaultTypes.StakeRequest) stakeRequests;
     mapping(bytes32 => BaseVaultTypes.UnstakeRequest) unstakeRequests;
-    mapping(address => EnumerableSetLib.Bytes32Set) userRequests;
+    mapping(address => OptimizedBytes32EnumerableSetLib.Bytes32Set) userRequests;
 }
 ```
 

@@ -5,7 +5,7 @@ import { USDC_MAINNET, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { LibClone } from "solady/utils/LibClone.sol";
+import { OptimizedLibClone } from "src/libraries/OptimizedLibClone.sol";
 
 import {
     KBATCHRECEIVER_ALREADY_INITIALIZED,
@@ -20,7 +20,7 @@ import { kBatchReceiver } from "src/kBatchReceiver.sol";
 /// @title kBatchReceiverTest
 /// @notice Unit tests for kBatchReceiver contract
 contract kBatchReceiverTest is DeploymentBaseTest {
-    using LibClone for address;
+    using OptimizedLibClone for address;
 
     // Test constants
     bytes32 constant TEST_BATCH_ID = bytes32(uint256(1));

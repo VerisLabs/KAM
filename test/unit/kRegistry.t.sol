@@ -429,7 +429,7 @@ contract kRegistryTest is DeploymentBaseTest {
 
         // Non-owner should fail with Unauthorized
         vm.prank(users.admin);
-        vm.expectRevert(); // OwnableRoles Unauthorized
+        vm.expectRevert(); // OptimizedOwnableRoles Unauthorized
         registry.upgradeToAndCall(newImpl, "");
 
         // Note: Testing actual upgrade is complex due to initialization requirements

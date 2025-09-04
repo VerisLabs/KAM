@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Extsload } from "src/abstracts/Extsload.sol";
+import { OptimizedFixedPointMathLib } from "src/libraries/OptimizedFixedPointMathLib.sol";
 
 import {
     KSTAKINGVAULT_NOT_INITIALIZED,
@@ -15,7 +15,7 @@ import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 /// @title ReaderModule
 /// @notice Contains all the public getters for the Staking Vault
 contract ReaderModule is BaseVault, Extsload {
-    using FixedPointMathLib for uint256;
+    using OptimizedFixedPointMathLib for uint256;
 
     /// @notice Interval for management fee (1 month)
     uint256 constant MANAGEMENT_FEE_INTERVAL = 657_436;

@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import { BaseTest } from "../utils/BaseTest.sol";
 import { USDC_MAINNET, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
 
-import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
+import { OptimizedLibClone } from "src/libraries/OptimizedLibClone.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
 import { CustodialAdapter } from "src/adapters/CustodialAdapter.sol";
@@ -43,7 +43,7 @@ contract CustodialAdapterTest is BaseTest {
         adapterImpl = address(new CustodialAdapter());
 
         // Deploy proxy and initialize
-        address proxy = Clones.clone(adapterImpl);
+        address proxy = OptimizedLibClone.clone(adapterImpl);
         adapter = CustodialAdapter(proxy);
 
         // Initialize with mock registry
@@ -67,7 +67,7 @@ contract CustodialAdapterTest is BaseTest {
     /// @dev Test successful initialization
     function test_Initialize_Success() public {
         // Deploy new proxy for testing
-        address newProxy = Clones.clone(adapterImpl);
+        address newProxy = OptimizedLibClone.clone(adapterImpl);
         CustodialAdapter newAdapter = CustodialAdapter(newProxy);
 
         newAdapter.initialize(mockRegistry);
@@ -79,7 +79,7 @@ contract CustodialAdapterTest is BaseTest {
 
     /// @dev Test initialization with zero registry reverts
     function test_Initialize_ZeroRegistry() public {
-        address newProxy = Clones.clone(adapterImpl);
+        address newProxy = OptimizedLibClone.clone(adapterImpl);
         CustodialAdapter newAdapter = CustodialAdapter(newProxy);
 
         vm.expectRevert(bytes(ADAPTER_INVALID_REGISTRY));
