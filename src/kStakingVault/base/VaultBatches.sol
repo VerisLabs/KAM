@@ -97,6 +97,7 @@ contract VaultBatches is BaseVault {
         if (receiver != address(0)) return receiver;
 
         receiver = OptimizedLibClone.clone($.receiverImplementation);
+
         $.batches[_batchId].batchReceiver = receiver;
 
         // Initialize the BatchReceiver

@@ -274,6 +274,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         unchecked {
             $.proposalCounter++;
         }
+
         proposalId = OptimizedEfficientHashLib.hash(
             uint256(uint160(vault)), uint256(batchId), block.timestamp, $.proposalCounter
         );
