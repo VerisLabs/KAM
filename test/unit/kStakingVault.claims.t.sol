@@ -18,7 +18,6 @@ import {
     VAULTCLAIMS_REQUEST_NOT_PENDING
 } from "src/errors/Errors.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
-import { VaultClaims } from "src/kStakingVault/base/VaultClaims.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 

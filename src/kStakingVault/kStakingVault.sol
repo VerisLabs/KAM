@@ -568,17 +568,6 @@ contract kStakingVault is Initializable, UUPSUpgradeable, Ownable, BaseVault, Mu
                           VAULT FEES FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Sets the yearly hurdle rate for the underlying asset
-    /// @param _hurdleRate The new yearly hurdle rate
-    /// @dev Fee is a basis point (1% = 100)
-    function setHurdleRate(uint16 _hurdleRate) external {
-        _checkAdmin(msg.sender);
-        _checkValidBPS(_hurdleRate);
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        _setHurdleRate($, _hurdleRate);
-        emit HurdleRateUpdated(_hurdleRate);
-    }
-
     /// @notice Sets the hard hurdle rate
     /// @param _isHard Whether the hard hurdle rate is enabled
     /// @dev If true, performance fees will only be charged to the excess return

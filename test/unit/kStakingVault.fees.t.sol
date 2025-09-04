@@ -94,19 +94,6 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vault.setPerformanceFee(uint16(MAX_BPS + 1));
     }
 
-    function test_SetHurdleRate() public {
-        vm.prank(users.admin);
-        vault.setHurdleRate(TEST_HURDLE_RATE);
-
-        assertEq(vault.hurdleRate(), TEST_HURDLE_RATE);
-    }
-
-    function test_SetHurdleRate_ExceedsMaximum() public {
-        vm.expectRevert(bytes(VAULTFEES_FEE_EXCEEDS_MAXIMUM));
-        vm.prank(users.admin);
-        vault.setHurdleRate(uint16(MAX_BPS + 1));
-    }
-
     function test_SetHardHurdleRate() public {
         vm.prank(users.admin);
         vault.setHardHurdleRate(true);
@@ -502,10 +489,11 @@ contract kStakingVaultFeesTest is BaseVaultTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_ZeroHurdleRate() public {
-        vm.startPrank(users.admin);
+        vm.prank(users.admin);
         vault.setPerformanceFee(TEST_PERFORMANCE_FEE);
-        vault.setHurdleRate(0); // No hurdle
-        vm.stopPrank();
+
+        vm.prank(users.relayer);
+        registry.setHurdleRate(USDC_MAINNET, 0); // No hurdle
 
         _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
 
@@ -527,8 +515,10 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vm.startPrank(users.admin);
         vault.setManagementFee(TEST_MANAGEMENT_FEE);
         vault.setPerformanceFee(0); // No performance fee
-        vault.setHurdleRate(TEST_HURDLE_RATE);
         vm.stopPrank();
+
+        vm.prank(users.relayer);
+        registry.setHurdleRate(USDC_MAINNET, TEST_HURDLE_RATE);
 
         _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
 
@@ -586,14 +576,6 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
         vm.prank(users.admin);
         vault.setPerformanceFee(TEST_PERFORMANCE_FEE);
-    }
-
-    function test_HurdleRateUpdated_Event() public {
-        vm.expectEmit(false, false, false, true);
-        emit HurdleRateUpdated(TEST_HURDLE_RATE);
-
-        vm.prank(users.admin);
-        vault.setHurdleRate(TEST_HURDLE_RATE);
     }
 
     function test_HardHurdleRateUpdated_Event() public {

@@ -280,6 +280,7 @@ interface IkRegistry {
     event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
     event RescuedETH(address indexed asset, uint256 amount);
     event TreasurySet(address indexed treasury);
+    event HurdleRateSet(address indexed asset, uint16 hurdleRate);
 
     /*//////////////////////////////////////////////////////////////
                               FUNCTIONS
@@ -321,4 +322,6 @@ interface IkRegistry {
     function getVaultAssets(address vault) external view returns (address[] memory);
     function assetToKToken(address asset) external view returns (address);
     function getTreasury() external view returns (address);
+    function setHurdleRate(address asset, uint16 hurdleRate) external payable;
+    function getHurdleRate(address asset) external view returns (uint16);
 }

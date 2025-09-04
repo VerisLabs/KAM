@@ -82,9 +82,11 @@ contract BaseVaultTest is DeploymentBaseTest {
         vm.startPrank(users.admin);
         vault.setManagementFee(TEST_MANAGEMENT_FEE);
         vault.setPerformanceFee(TEST_PERFORMANCE_FEE);
-        vault.setHurdleRate(TEST_HURDLE_RATE);
         vault.setHardHurdleRate(false); // Soft hurdle by default
         vm.stopPrank();
+
+        vm.prank(users.relayer);
+        registry.setHurdleRate(USDC_MAINNET, TEST_HURDLE_RATE);
     }
 
     function _mintKTokensToUsers() internal {

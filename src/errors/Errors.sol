@@ -106,6 +106,7 @@ string constant KREGISTRY_WRONG_ASSET = "R6";
 string constant KREGISTRY_WRONG_ROLE = "R7";
 string constant KREGISTRY_ZERO_ADDRESS = "R8";
 string constant KREGISTRY_ZERO_AMOUNT = "R9";
+string constant KREGISTRY_FEE_EXCEEDS_MAXIMUM = "R10";
 
 // kStakingVault Errors
 string constant KSTAKINGVAULT_INSUFFICIENT_BALANCE = "SV1";

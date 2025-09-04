@@ -1,5 +1,5 @@
 # Constants
-[Git Source](https://github.com/VerisLabs/KAM/blob/26924a026af1e1620e830002fd931ff7e42525b6/src/errors/Errors.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/9902b1ea80f671449ee88e1d19504fe796d0d9a5/src/errors/Errors.sol)
 
 ### KASSETROUTER_ALREADY_REGISTERED
 *All error codes use contract-specific prefixes for easier debugging:
@@ -470,6 +470,12 @@ string constant KREGISTRY_ZERO_ADDRESS = "R8";
 
 ```solidity
 string constant KREGISTRY_ZERO_AMOUNT = "R9";
+```
+
+### KREGISTRY_FEE_EXCEEDS_MAXIMUM
+
+```solidity
+string constant KREGISTRY_FEE_EXCEEDS_MAXIMUM = "R10";
 ```
 
 ### KSTAKINGVAULT_INSUFFICIENT_BALANCE
