@@ -4,8 +4,8 @@ pragma solidity 0.8.30;
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 
-import { Initializable } from "solady/utils/Initializable.sol";
 import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";

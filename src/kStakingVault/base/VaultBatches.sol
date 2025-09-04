@@ -97,13 +97,15 @@ contract VaultBatches is BaseVault {
         unchecked {
             $.currentBatch++;
         }
-        bytes32 newBatchId = keccak256(abi.encode(
-            uint256(uint160(address(this))),
-            $.currentBatch,
-            block.chainid,
-            block.timestamp,
-            uint256(uint160($.underlyingAsset))
-        ));
+        bytes32 newBatchId = keccak256(
+            abi.encode(
+                uint256(uint160(address(this))),
+                $.currentBatch,
+                block.chainid,
+                block.timestamp,
+                uint256(uint160($.underlyingAsset))
+            )
+        );
 
         $.currentBatchId = newBatchId;
         BaseVaultTypes.BatchInfo storage batch = $.batches[newBatchId];
