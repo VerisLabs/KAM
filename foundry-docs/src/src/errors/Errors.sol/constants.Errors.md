@@ -1,5 +1,5 @@
 # Constants
-[Git Source](https://github.com/VerisLabs/KAM/blob/9902b1ea80f671449ee88e1d19504fe796d0d9a5/src/errors/Errors.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/670f05acf8766190fcaa1d272341611f065917de/src/errors/Errors.sol)
 
 ### KASSETROUTER_ALREADY_REGISTERED
 *All error codes use contract-specific prefixes for easier debugging:
@@ -586,12 +586,6 @@ string constant VAULTBATCHES_VAULT_CLOSED = "VB2";
 string constant VAULTBATCHES_VAULT_SETTLED = "VB3";
 ```
 
-### VAULTBATCHES_WRONG_ROLE
-
-```solidity
-string constant VAULTBATCHES_WRONG_ROLE = "VB4";
-```
-
 ### VAULTCLAIMS_BATCH_NOT_SETTLED
 
 ```solidity
@@ -602,12 +596,6 @@ string constant VAULTCLAIMS_BATCH_NOT_SETTLED = "VC1";
 
 ```solidity
 string constant VAULTCLAIMS_INVALID_BATCH_ID = "VC2";
-```
-
-### VAULTCLAIMS_IS_PAUSED
-
-```solidity
-string constant VAULTCLAIMS_IS_PAUSED = "VC3";
 ```
 
 ### VAULTCLAIMS_NOT_BENEFICIARY
@@ -632,11 +620,5 @@ string constant VAULTFEES_FEE_EXCEEDS_MAXIMUM = "VF1";
 
 ```solidity
 string constant VAULTFEES_INVALID_TIMESTAMP = "VF2";
-```
-
-### VAULTFEES_WRONG_ROLE
-
-```solidity
-string constant VAULTFEES_WRONG_ROLE = "VF3";
 ```
 

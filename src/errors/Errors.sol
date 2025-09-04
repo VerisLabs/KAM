@@ -131,17 +131,13 @@ string constant KTOKEN_ZERO_AMOUNT = "T4";
 string constant VAULTBATCHES_NOT_CLOSED = "VB1";
 string constant VAULTBATCHES_VAULT_CLOSED = "VB2";
 string constant VAULTBATCHES_VAULT_SETTLED = "VB3";
-string constant VAULTBATCHES_WRONG_ROLE = "VB4";
 
 // VaultClaims Errors
 string constant VAULTCLAIMS_BATCH_NOT_SETTLED = "VC1";
 string constant VAULTCLAIMS_INVALID_BATCH_ID = "VC2";
-string constant VAULTCLAIMS_IS_PAUSED = "VC3";
 string constant VAULTCLAIMS_NOT_BENEFICIARY = "VC4";
 string constant VAULTCLAIMS_REQUEST_NOT_PENDING = "VC5";
-string constant VAULTCLAIMS_ZERO_SHARE_PRICE = "VC6";
 
 // VaultFees Errors
 string constant VAULTFEES_FEE_EXCEEDS_MAXIMUM = "VF1";
 string constant VAULTFEES_INVALID_TIMESTAMP = "VF2";
-string constant VAULTFEES_WRONG_ROLE = "VF3";

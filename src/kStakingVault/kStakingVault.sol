@@ -4,7 +4,13 @@ pragma solidity 0.8.30;
 import { Ownable } from "src/vendor/Ownable.sol";
 
 import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
+
+import { OptimizedFixedPointMathLib } from "src/libraries/OptimizedFixedPointMathLib.sol";
+
+import { OptimizedEfficientHashLib } from "src/libraries/OptimizedEfficientHashLib.sol";
+import { OptimizedLibClone } from "src/libraries/OptimizedLibClone.sol";
 import { OptimizedSafeCastLib } from "src/libraries/OptimizedSafeCastLib.sol";
+
 import { Initializable } from "src/vendor/Initializable.sol";
 import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
@@ -22,35 +28,97 @@ import {
     KSTAKINGVAULT_VAULT_SETTLED,
     KSTAKINGVAULT_WRONG_ROLE,
     KSTAKINGVAULT_ZERO_ADDRESS,
-    KSTAKINGVAULT_ZERO_AMOUNT
+    KSTAKINGVAULT_ZERO_AMOUNT,
+    VAULTBATCHES_NOT_CLOSED,
+    VAULTBATCHES_VAULT_CLOSED,
+    VAULTBATCHES_VAULT_SETTLED,
+    VAULTCLAIMS_BATCH_NOT_SETTLED,
+    VAULTCLAIMS_INVALID_BATCH_ID,
+    VAULTCLAIMS_NOT_BENEFICIARY,
+    VAULTCLAIMS_REQUEST_NOT_PENDING,
+    VAULTFEES_FEE_EXCEEDS_MAXIMUM,
+    VAULTFEES_INVALID_TIMESTAMP
 } from "src/errors/Errors.sol";
 
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
-
-import { VaultBatches } from "src/kStakingVault/base/VaultBatches.sol";
-import { VaultClaims } from "src/kStakingVault/base/VaultClaims.sol";
-import { VaultFees } from "src/kStakingVault/base/VaultFees.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title kStakingVault
 /// @notice Pure ERC20 vault with dual accounting for minter and user pools
 /// @dev Implements automatic yield distribution from minter to user pools with modular architecture
-contract kStakingVault is
-    Initializable,
-    UUPSUpgradeable,
-    Ownable,
-    BaseVault,
-    MultiFacetProxy,
-    VaultFees,
-    VaultClaims,
-    VaultBatches
-{
+contract kStakingVault is Initializable, UUPSUpgradeable, Ownable, BaseVault, MultiFacetProxy {
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
     using SafeTransferLib for address;
     using OptimizedSafeCastLib for uint256;
     using OptimizedSafeCastLib for uint128;
+    using OptimizedSafeCastLib for uint64;
+    using OptimizedFixedPointMathLib for uint256;
+
+    /*//////////////////////////////////////////////////////////////
+                              EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    // VaultBatches Events
+    /// @notice Emitted when a new batch is created
+    /// @param batchId The batch ID of the new batch
+    event BatchCreated(bytes32 indexed batchId);
+
+    /// @notice Emitted when a batch is settled
+    /// @param batchId The batch ID of the settled batch
+    event BatchSettled(bytes32 indexed batchId);
+
+    /// @notice Emitted when a batch is closed
+    /// @param batchId The batch ID of the closed batch
+    event BatchClosed(bytes32 indexed batchId);
+
+    /// @notice Emitted when a BatchReceiver is created
+    /// @param receiver The address of the created BatchReceiver
+    /// @param batchId The batch ID of the BatchReceiver
+    event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
+
+    // VaultClaims Events
+    /// @notice Emitted when a user claims staking shares
+    event StakingSharesClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 shares);
+
+    /// @notice Emitted when a user claims unstaking assets
+    event UnstakingAssetsClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 assets);
+
+    /// @notice Emitted when kTokens are unstaked
+    event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
+
+    // VaultFees Events
+    /// @notice Emitted when the management fee is updated
+    /// @param oldFee Previous management fee in basis points
+    /// @param newFee New management fee in basis points
+    event ManagementFeeUpdated(uint16 oldFee, uint16 newFee);
+
+    /// @notice Emitted when the performance fee is updated
+    /// @param oldFee Previous performance fee in basis points
+    /// @param newFee New performance fee in basis points
+    event PerformanceFeeUpdated(uint16 oldFee, uint16 newFee);
+
+    /// @notice Emitted when fees are charged to the vault
+    /// @param managementFees Amount of management fees collected
+    /// @param performanceFees Amount of performance fees collected
+    event FeesAssesed(uint256 managementFees, uint256 performanceFees);
+
+    /// @notice Emitted when the hurdle rate is updated
+    /// @param newRate New hurdle rate in basis points
+    event HurdleRateUpdated(uint16 newRate);
+
+    /// @notice Emitted when the hard hurdle rate is updated
+    /// @param newRate New hard hurdle rate in basis points
+    event HardHurdleRateUpdated(bool newRate);
+
+    /// @notice Emitted when management fees are charged
+    /// @param timestamp Timestamp of the fee charge
+    event ManagementFeesCharged(uint256 timestamp);
+
+    /// @notice Emitted when performance fees are charged
+    /// @param timestamp Timestamp of the fee charge
+    event PerformanceFeesCharged(uint256 timestamp);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
@@ -112,8 +180,8 @@ contract kStakingVault is
         // Open `nonReentrant`
         _lockReentrant();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(!_getPaused($), KSTAKINGVAULT_IS_PAUSED);
-        require(amount != 0, KSTAKINGVAULT_ZERO_AMOUNT);
+        _checkPaused($);
+        _checkAmountNotZero(amount);
 
         // Cache frequently used values
         IkToken kToken = IkToken($.kToken);
@@ -168,8 +236,8 @@ contract kStakingVault is
         _lockReentrant();
 
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(!_getPaused($), KSTAKINGVAULT_IS_PAUSED);
-        require(stkTokenAmount != 0, KSTAKINGVAULT_ZERO_AMOUNT);
+        _checkPaused($);
+        _checkAmountNotZero(stkTokenAmount);
         require(balanceOf(msg.sender) >= stkTokenAmount, KSTAKINGVAULT_INSUFFICIENT_BALANCE);
 
         bytes32 batchId = $.currentBatchId;
@@ -211,6 +279,7 @@ contract kStakingVault is
         _lockReentrant();
 
         BaseVaultStorage storage $ = _getBaseVaultStorage();
+        _checkPaused($);
         BaseVaultTypes.StakeRequest storage request = $.stakeRequests[requestId];
 
         require($.userRequests[msg.sender].contains(requestId), KSTAKINGVAULT_REQUEST_NOT_FOUND);
@@ -243,7 +312,7 @@ contract kStakingVault is
         _lockReentrant();
 
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(!_getPaused($), KSTAKINGVAULT_IS_PAUSED);
+        _checkPaused($);
         BaseVaultTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
 
         require(msg.sender == request.user, KSTAKINGVAULT_UNAUTHORIZED);
@@ -267,6 +336,303 @@ contract kStakingVault is
     }
 
     /*//////////////////////////////////////////////////////////////
+                            VAULT BATCHES FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Creates a new batch for processing requests
+    /// @return The new batch ID
+    /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
+    function createNewBatch() external returns (bytes32) {
+        _checkRelayer(msg.sender);
+        return _createNewBatch();
+    }
+
+    /// @notice Closes a batch to prevent new requests
+    /// @param _batchId The batch ID to close
+    /// @param _create Whether to create a new batch after closing
+    /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
+    function closeBatch(bytes32 _batchId, bool _create) external {
+        _checkRelayer(msg.sender);
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        require(!$.batches[_batchId].isClosed, VAULTBATCHES_VAULT_CLOSED);
+        $.batches[_batchId].isClosed = true;
+
+        if (_create) {
+            _batchId = _createNewBatch();
+        }
+        emit BatchClosed(_batchId);
+    }
+
+    /// @notice Marks a batch as settled
+    /// @param _batchId The batch ID to settle
+    /// @dev Only callable by kMinter, indicates assets have been distributed
+    function settleBatch(bytes32 _batchId) external {
+        _checkRouter(msg.sender);
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        require($.batches[_batchId].isClosed, VAULTBATCHES_NOT_CLOSED);
+        require(!$.batches[_batchId].isSettled, VAULTBATCHES_VAULT_SETTLED);
+        $.batches[_batchId].isSettled = true;
+
+        // Snapshot the gross and net share price for this batch
+        $.batches[_batchId].sharePrice = _sharePrice().toUint128();
+        $.batches[_batchId].netSharePrice = _netSharePrice().toUint128();
+
+        emit BatchSettled(_batchId);
+    }
+
+    /// @notice Deploys BatchReceiver for specific batch
+    /// @param _batchId Batch ID to deploy receiver for
+    /// @dev Only callable by kAssetRouter
+    function createBatchReceiver(bytes32 _batchId) external returns (address) {
+        _lockReentrant();
+        _checkRouter(msg.sender);
+
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        address receiver = $.batches[_batchId].batchReceiver;
+        if (receiver != address(0)) return receiver;
+
+        receiver = OptimizedLibClone.clone($.receiverImplementation);
+
+        $.batches[_batchId].batchReceiver = receiver;
+
+        // Initialize the BatchReceiver
+        kBatchReceiver(receiver).initialize(_batchId, $.underlyingAsset);
+
+        emit BatchReceiverCreated(receiver, _batchId);
+
+        _unlockReentrant();
+        return receiver;
+    }
+
+    /// @notice Creates a new batch for processing requests
+    /// @return The new batch ID
+    /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
+    function _createNewBatch() internal returns (bytes32) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        unchecked {
+            $.currentBatch++;
+        }
+        bytes32 newBatchId = OptimizedEfficientHashLib.hash(
+            uint256(uint160(address(this))),
+            $.currentBatch,
+            block.chainid,
+            block.timestamp,
+            uint256(uint160($.underlyingAsset))
+        );
+
+        // Update current batch ID and initialize new batch
+        $.currentBatchId = newBatchId;
+        BaseVaultTypes.BatchInfo storage batch = $.batches[newBatchId];
+        batch.batchId = newBatchId;
+        batch.batchReceiver = address(0);
+        batch.isClosed = false;
+        batch.isSettled = false;
+
+        emit BatchCreated(newBatchId);
+
+        return newBatchId;
+    }
+
+    /// @notice Checks if the vault is paused
+    /// @param $ Storage pointer
+    /// @dev Only callable by RELAYER_ROLE
+    function _checkPaused(BaseVaultStorage storage $) internal view {
+        require(!_getPaused($), KSTAKINGVAULT_IS_PAUSED);
+    }
+
+    /// @notice Checks if the amount is not zero
+    /// @param amount Amount to check
+    function _checkAmountNotZero(uint256 amount) internal pure {
+        require(amount != 0, KSTAKINGVAULT_ZERO_AMOUNT);
+    }
+
+    /// @notice Checks if the bps is valid
+    /// @param bps BPS to check
+    function _checkValidBPS(uint256 bps) internal pure {
+        require(bps <= 10_000, VAULTFEES_FEE_EXCEEDS_MAXIMUM);
+    }
+
+    /// @dev Only callable by RELAYER_ROLE
+    function _checkRelayer(address relayer) internal view {
+        require(_isRelayer(relayer), KSTAKINGVAULT_WRONG_ROLE);
+    }
+
+    /// @dev Only callable by kAssetRouter
+    function _checkRouter(address router) internal view {
+        require(_isKAssetRouter(router), KSTAKINGVAULT_WRONG_ROLE);
+    }
+
+    /// @dev Only callable by ADMIN_ROLE
+    function _checkAdmin(address admin) internal view {
+        require(_isAdmin(admin), KSTAKINGVAULT_WRONG_ROLE);
+    }
+
+    /// @dev Validate timestamp
+    /// @param timestamp Timestamp to validate
+    /// @param lastTimestamp Last timestamp to validate
+    function _validateTimestamp(uint256 timestamp, uint256 lastTimestamp) internal view {
+        require(timestamp >= lastTimestamp && timestamp <= block.timestamp, VAULTFEES_INVALID_TIMESTAMP);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          VAULT CLAIMS FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Claims stkTokens from a settled staking batch
+    /// @param batchId Batch ID to claim from
+    /// @param requestId Request ID to claim
+    function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable {
+        // Open `nonRentrant`
+        _lockReentrant();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        _checkPaused($);
+        require($.batches[batchId].isSettled, VAULTCLAIMS_BATCH_NOT_SETTLED);
+
+        BaseVaultTypes.StakeRequest storage request = $.stakeRequests[requestId];
+        require(request.batchId == batchId, VAULTCLAIMS_INVALID_BATCH_ID);
+        require(request.status == BaseVaultTypes.RequestStatus.PENDING, VAULTCLAIMS_REQUEST_NOT_PENDING);
+        require(msg.sender == request.user, VAULTCLAIMS_NOT_BENEFICIARY);
+
+        request.status = BaseVaultTypes.RequestStatus.CLAIMED;
+
+        // Calculate stkToken amount based on settlement-time share price
+        uint256 netSharePrice = $.batches[batchId].netSharePrice;
+        _checkAmountNotZero(netSharePrice);
+
+        // Divide the deposited assets by the share price of the batch to obtain stkTokens to mint
+        uint256 stkTokensToMint = (uint256(request.kTokenAmount)).fullMulDiv(10 ** _getDecimals($), netSharePrice);
+
+        emit StakingSharesClaimed(batchId, requestId, request.user, stkTokensToMint);
+
+        // Reduce total pending stake and remove user stake request
+        $.userRequests[msg.sender].remove(requestId);
+        $.totalPendingStake -= request.kTokenAmount;
+
+        // Mint stkTokens to user
+        _mint(request.user, stkTokensToMint);
+
+        // Close `nonRentrant`
+        _unlockReentrant();
+    }
+
+    /// @notice Claims kTokens from a settled unstaking batch (simplified implementation)
+    /// @param batchId Batch ID to claim from
+    /// @param requestId Request ID to claim
+    function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable {
+        // Open `nonRentrant`
+        _lockReentrant();
+
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        _checkPaused($);
+
+        require($.batches[batchId].isSettled, VAULTCLAIMS_BATCH_NOT_SETTLED);
+
+        BaseVaultTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
+        require(request.batchId == batchId, VAULTCLAIMS_INVALID_BATCH_ID);
+        require(request.status == BaseVaultTypes.RequestStatus.PENDING, VAULTCLAIMS_REQUEST_NOT_PENDING);
+        require(msg.sender == request.user, VAULTCLAIMS_NOT_BENEFICIARY);
+
+        request.status = BaseVaultTypes.RequestStatus.CLAIMED;
+
+        uint256 sharePrice = $.batches[batchId].sharePrice;
+        uint256 netSharePrice = $.batches[batchId].netSharePrice;
+        _checkAmountNotZero(sharePrice);
+
+        // Calculate total kTokens to return based on settlement-time share price
+        // Multply redeemed shares for net and gross share price to obtain gross and net amount of assets
+        uint8 decimals = _getDecimals($);
+        uint256 totalKTokensNet = (uint256(request.stkTokenAmount)).fullMulDiv(netSharePrice, 10 ** decimals);
+
+        // Calculate fees as the deifference between gross and net amount
+        uint256 fees = (uint256(request.stkTokenAmount)).fullMulDiv(sharePrice, 10 ** decimals) - totalKTokensNet;
+
+        // Burn stkTokens from vault (already transferred to vault during request)
+        _burn(address(this), request.stkTokenAmount);
+        emit UnstakingAssetsClaimed(batchId, requestId, request.user, totalKTokensNet);
+
+        // Transfer fees to treasury
+        $.kToken.safeTransfer(_registry().getTreasury(), fees);
+
+        // Transfer kTokens to user
+        $.kToken.safeTransfer(request.user, totalKTokensNet);
+        emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensNet);
+
+        // Close `nonRentrant`
+        _unlockReentrant();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          VAULT FEES FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Sets the hard hurdle rate
+    /// @param _isHard Whether the hard hurdle rate is enabled
+    /// @dev If true, performance fees will only be charged to the excess return
+    function setHardHurdleRate(bool _isHard) external {
+        _checkAdmin(msg.sender);
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        _setIsHardHurdleRate($, _isHard);
+        emit HardHurdleRateUpdated(_isHard);
+    }
+
+    /// @notice Sets the management fee
+    /// @param _managementFee The new management fee
+    /// @dev Fee is a basis point (1% = 100)
+    function setManagementFee(uint16 _managementFee) external {
+        _checkAdmin(msg.sender);
+        _checkValidBPS(_managementFee);
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        uint16 oldFee = _getManagementFee($);
+        _setManagementFee($, _managementFee);
+        emit ManagementFeeUpdated(oldFee, _managementFee);
+    }
+
+    /// @notice Sets the performance fee
+    /// @param _performanceFee The new performance fee
+    /// @dev Fee is a basis point (1% = 100)
+    function setPerformanceFee(uint16 _performanceFee) external {
+        _checkAdmin(msg.sender);
+        _checkValidBPS(_performanceFee);
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        uint16 oldFee = _getPerformanceFee($);
+        _setPerformanceFee($, _performanceFee);
+        emit PerformanceFeeUpdated(oldFee, _performanceFee);
+    }
+
+    /// @notice Notifies the module that management fees have been charged from backend
+    /// @param _timestamp The timestamp of the fee charge
+    /// @dev Should only be called by the vault
+    function notifyManagementFeesCharged(uint64 _timestamp) external {
+        _checkAdmin(msg.sender);
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        _validateTimestamp(_timestamp, _getLastFeesChargedManagement($));
+        _setLastFeesChargedManagement($, _timestamp);
+        _updateGlobalWatermark();
+        emit ManagementFeesCharged(_timestamp);
+    }
+
+    /// @notice Notifies the module that performance fees have been charged from backend
+    /// @param _timestamp The timestamp of the fee charge
+    /// @dev Should only be called by the vault
+    function notifyPerformanceFeesCharged(uint64 _timestamp) external {
+        _checkAdmin(msg.sender);
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        _validateTimestamp(_timestamp, _getLastFeesChargedPerformance($));
+        _setLastFeesChargedPerformance($, _timestamp);
+        _updateGlobalWatermark();
+        emit PerformanceFeesCharged(_timestamp);
+    }
+
+    /// @notice Updates the share price watermark
+    /// @dev Updates the high water mark if the current share price exceeds the previous mark
+    function _updateGlobalWatermark() private {
+        uint256 sp = _netSharePrice();
+        if (sp > _getBaseVaultStorage().sharePriceWatermark) {
+            _getBaseVaultStorage().sharePriceWatermark = sp.toUint128();
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
                           INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -277,8 +643,12 @@ contract kStakingVault is
     /// @return Request ID
     function _createStakeRequestId(address user, uint256 amount, uint256 timestamp) private returns (bytes32) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        $.currentBatch++;
-        return keccak256(abi.encode(address(this), user, amount, timestamp, $.currentBatch));
+        unchecked {
+            $.currentBatch++;
+        }
+        return OptimizedEfficientHashLib.hash(
+            uint256(uint160(address(this))), uint256(uint160(user)), amount, timestamp, $.currentBatch
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -300,7 +670,7 @@ contract kStakingVault is
     /// @notice Authorize upgrade (only owner can upgrade)
     /// @dev This allows upgrading the main contract while keeping modules separate
     function _authorizeUpgrade(address newImplementation) internal view override {
-        require(_isAdmin(msg.sender), KSTAKINGVAULT_WRONG_ROLE);
+        _checkAdmin(msg.sender);
         require(newImplementation != address(0), KSTAKINGVAULT_ZERO_ADDRESS);
     }
 
