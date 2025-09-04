@@ -2,12 +2,12 @@
 pragma solidity 0.8.30;
 
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
+import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 
 /// @title VaultFees
 /// @notice Handles batch operations for staking and unstaking
 /// @dev Contains batch functions for staking and unstaking operations
-contract VaultFees is BaseVaultModule {
+contract VaultFees is BaseVault {
     using SafeCastLib for uint256;
 
     /// @notice Emitted when the management fee is updated
@@ -54,7 +54,7 @@ contract VaultFees is BaseVaultModule {
     function setHurdleRate(uint16 _hurdleRate) external {
         if (!_isAdmin(msg.sender)) revert WrongRole();
         if (_hurdleRate > MAX_BPS) revert("Fee exceeds maximum");
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         _setHurdleRate($, _hurdleRate);
         emit HurdleRateUpdated(_hurdleRate);
     }
@@ -64,7 +64,7 @@ contract VaultFees is BaseVaultModule {
     /// @dev If true, performance fees will only be charged to the excess return
     function setHardHurdleRate(bool _isHard) external {
         if (!_isAdmin(msg.sender)) revert WrongRole();
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         _setIsHardHurdleRate($, _isHard);
         emit HardHurdleRateUpdated(_isHard);
     }
@@ -75,7 +75,7 @@ contract VaultFees is BaseVaultModule {
     function setManagementFee(uint16 _managementFee) external {
         if (!_isAdmin(msg.sender)) revert WrongRole();
         if (_managementFee > MAX_BPS) revert("Fee exceeds maximum");
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         uint16 oldFee = _getManagementFee($);
         _setManagementFee($, _managementFee);
         emit ManagementFeeUpdated(oldFee, _managementFee);
@@ -87,7 +87,7 @@ contract VaultFees is BaseVaultModule {
     function setPerformanceFee(uint16 _performanceFee) external {
         if (!_isAdmin(msg.sender)) revert WrongRole();
         if (_performanceFee > MAX_BPS) revert("Fee exceeds maximum");
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         uint16 oldFee = _getPerformanceFee($);
         _setPerformanceFee($, _performanceFee);
         emit PerformanceFeeUpdated(oldFee, _performanceFee);
@@ -98,7 +98,7 @@ contract VaultFees is BaseVaultModule {
     /// @dev Should only be called by the vault
     function notifyManagementFeesCharged(uint64 _timestamp) external {
         if (!_isAdmin(msg.sender)) revert WrongRole();
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_timestamp < _getLastFeesChargedManagement($) || _timestamp > block.timestamp) revert("Invalid timestamp");
         _setLastFeesChargedManagement($, _timestamp);
         _updateGlobalWatermark();
@@ -110,7 +110,7 @@ contract VaultFees is BaseVaultModule {
     /// @dev Should only be called by the vault
     function notifyPerformanceFeesCharged(uint64 _timestamp) external {
         if (!_isAdmin(msg.sender)) revert WrongRole();
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (_timestamp < _getLastFeesChargedPerformance($) || _timestamp > block.timestamp) revert("Invalid timestamp");
         _setLastFeesChargedPerformance($, _timestamp);
         _updateGlobalWatermark();
@@ -120,9 +120,9 @@ contract VaultFees is BaseVaultModule {
     /// @notice Updates the share price watermark
     /// @dev Updates the high water mark if the current share price exceeds the previous mark
     function _updateGlobalWatermark() private {
-        uint256 sp = _sharePrice();
-        if (sp > _getBaseVaultModuleStorage().sharePriceWatermark) {
-            _getBaseVaultModuleStorage().sharePriceWatermark = sp.toUint128();
+        uint256 sp = _netSharePrice();
+        if (sp > _getBaseVaultStorage().sharePriceWatermark) {
+            _getBaseVaultStorage().sharePriceWatermark = sp.toUint128();
         }
     }
 }

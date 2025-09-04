@@ -279,6 +279,7 @@ interface IkRegistry {
     event KTokenImplementationSet(address indexed implementation);
     event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
     event RescuedETH(address indexed asset, uint256 amount);
+    event TreasurySet(address indexed treasury);
 
     /*//////////////////////////////////////////////////////////////
                               ERRORS
@@ -333,4 +334,5 @@ interface IkRegistry {
     function isAdapterRegistered(address vault, address adapter) external view returns (bool);
     function getVaultAssets(address vault) external view returns (address[] memory);
     function assetToKToken(address asset) external view returns (address);
+    function getTreasury() external view returns (address);
 }

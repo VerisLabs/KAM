@@ -1,5 +1,5 @@
-# BaseVaultModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/786bfc5b94e4c849db94b9fb47f71818d5cce1ab/src/kStakingVault/base/BaseVaultModule.sol)
+# BaseVault
+[Git Source](https://github.com/VerisLabs/KAM/blob/786bfc5b94e4c849db94b9fb47f71818d5cce1ab/src/kStakingVault/base/BaseVault.sol)
 
 **Inherits:**
 ERC20, ReentrancyGuardTransient
@@ -159,148 +159,148 @@ bytes32 internal constant MODULE_BASE_STORAGE_LOCATION =
 
 
 ## Functions
-### _getBaseVaultModuleStorage
+### _getBaseVaultStorage
 
 Returns the base vault storage struct using ERC-7201 pattern
 
 
 ```solidity
-function _getBaseVaultModuleStorage() internal pure returns (BaseVaultModuleStorage storage $);
+function _getBaseVaultStorage() internal pure returns (BaseVaultStorage storage $);
 ```
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`$`|`BaseVaultModuleStorage`|Storage reference for base vault state variables|
+|`$`|`BaseVaultStorage`|Storage reference for base vault state variables|
 
 
 ### _getDecimals
 
 
 ```solidity
-function _getDecimals(BaseVaultModuleStorage storage $) internal view returns (uint8);
+function _getDecimals(BaseVaultStorage storage $) internal view returns (uint8);
 ```
 
 ### _setDecimals
 
 
 ```solidity
-function _setDecimals(BaseVaultModuleStorage storage $, uint8 value) internal;
+function _setDecimals(BaseVaultStorage storage $, uint8 value) internal;
 ```
 
 ### _getHurdleRate
 
 
 ```solidity
-function _getHurdleRate(BaseVaultModuleStorage storage $) internal view returns (uint16);
+function _getHurdleRate(BaseVaultStorage storage $) internal view returns (uint16);
 ```
 
 ### _setHurdleRate
 
 
 ```solidity
-function _setHurdleRate(BaseVaultModuleStorage storage $, uint16 value) internal;
+function _setHurdleRate(BaseVaultStorage storage $, uint16 value) internal;
 ```
 
 ### _getPerformanceFee
 
 
 ```solidity
-function _getPerformanceFee(BaseVaultModuleStorage storage $) internal view returns (uint16);
+function _getPerformanceFee(BaseVaultStorage storage $) internal view returns (uint16);
 ```
 
 ### _setPerformanceFee
 
 
 ```solidity
-function _setPerformanceFee(BaseVaultModuleStorage storage $, uint16 value) internal;
+function _setPerformanceFee(BaseVaultStorage storage $, uint16 value) internal;
 ```
 
 ### _getManagementFee
 
 
 ```solidity
-function _getManagementFee(BaseVaultModuleStorage storage $) internal view returns (uint16);
+function _getManagementFee(BaseVaultStorage storage $) internal view returns (uint16);
 ```
 
 ### _setManagementFee
 
 
 ```solidity
-function _setManagementFee(BaseVaultModuleStorage storage $, uint16 value) internal;
+function _setManagementFee(BaseVaultStorage storage $, uint16 value) internal;
 ```
 
 ### _getInitialized
 
 
 ```solidity
-function _getInitialized(BaseVaultModuleStorage storage $) internal view returns (bool);
+function _getInitialized(BaseVaultStorage storage $) internal view returns (bool);
 ```
 
 ### _setInitialized
 
 
 ```solidity
-function _setInitialized(BaseVaultModuleStorage storage $, bool value) internal;
+function _setInitialized(BaseVaultStorage storage $, bool value) internal;
 ```
 
 ### _getPaused
 
 
 ```solidity
-function _getPaused(BaseVaultModuleStorage storage $) internal view returns (bool);
+function _getPaused(BaseVaultStorage storage $) internal view returns (bool);
 ```
 
 ### _setPaused
 
 
 ```solidity
-function _setPaused(BaseVaultModuleStorage storage $, bool value) internal;
+function _setPaused(BaseVaultStorage storage $, bool value) internal;
 ```
 
 ### _getIsHardHurdleRate
 
 
 ```solidity
-function _getIsHardHurdleRate(BaseVaultModuleStorage storage $) internal view returns (bool);
+function _getIsHardHurdleRate(BaseVaultStorage storage $) internal view returns (bool);
 ```
 
 ### _setIsHardHurdleRate
 
 
 ```solidity
-function _setIsHardHurdleRate(BaseVaultModuleStorage storage $, bool value) internal;
+function _setIsHardHurdleRate(BaseVaultStorage storage $, bool value) internal;
 ```
 
 ### _getLastFeesChargedManagement
 
 
 ```solidity
-function _getLastFeesChargedManagement(BaseVaultModuleStorage storage $) internal view returns (uint64);
+function _getLastFeesChargedManagement(BaseVaultStorage storage $) internal view returns (uint64);
 ```
 
 ### _setLastFeesChargedManagement
 
 
 ```solidity
-function _setLastFeesChargedManagement(BaseVaultModuleStorage storage $, uint64 value) internal;
+function _setLastFeesChargedManagement(BaseVaultStorage storage $, uint64 value) internal;
 ```
 
 ### _getLastFeesChargedPerformance
 
 
 ```solidity
-function _getLastFeesChargedPerformance(BaseVaultModuleStorage storage $) internal view returns (uint64);
+function _getLastFeesChargedPerformance(BaseVaultStorage storage $) internal view returns (uint64);
 ```
 
 ### _setLastFeesChargedPerformance
 
 
 ```solidity
-function _setLastFeesChargedPerformance(BaseVaultModuleStorage storage $, uint64 value) internal;
+function _setLastFeesChargedPerformance(BaseVaultStorage storage $, uint64 value) internal;
 ```
 
-### __BaseVaultModule_init
+### __BaseVault_init
 
 Initializes the base contract with registry and pause state
 
@@ -308,7 +308,7 @@ Initializes the base contract with registry and pause state
 
 
 ```solidity
-function __BaseVaultModule_init(address registry_, bool paused_) internal;
+function __BaseVault_init(address registry_, bool paused_) internal;
 ```
 **Parameters**
 
@@ -500,7 +500,7 @@ Calculates share price for stkToken
 
 
 ```solidity
-function _sharePrice() internal view returns (uint256);
+function _netSharePrice() internal view returns (uint256);
 ```
 **Returns**
 
@@ -808,13 +808,13 @@ error NotClosed();
 ```
 
 ## Structs
-### BaseVaultModuleStorage
+### BaseVaultStorage
 **Note:**
-storage-location: erc7201.kam.storage.BaseVaultModule
+storage-location: erc7201.kam.storage.BaseVault
 
 
 ```solidity
-struct BaseVaultModuleStorage {
+struct BaseVaultStorage {
     uint256 config;
     uint128 sharePriceWatermark;
     uint128 totalPendingStake;
@@ -826,9 +826,9 @@ struct BaseVaultModuleStorage {
     address kToken;
     string name;
     string symbol;
-    mapping(bytes32 => BaseVaultModuleTypes.BatchInfo) batches;
-    mapping(bytes32 => BaseVaultModuleTypes.StakeRequest) stakeRequests;
-    mapping(bytes32 => BaseVaultModuleTypes.UnstakeRequest) unstakeRequests;
+    mapping(bytes32 => BaseVaultTypes.BatchInfo) batches;
+    mapping(bytes32 => BaseVaultTypes.StakeRequest) stakeRequests;
+    mapping(bytes32 => BaseVaultTypes.UnstakeRequest) unstakeRequests;
     mapping(address => EnumerableSetLib.Bytes32Set) userRequests;
 }
 ```

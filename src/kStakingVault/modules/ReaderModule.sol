@@ -3,12 +3,12 @@ pragma solidity 0.8.30;
 
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Extsload } from "src/abstracts/Extsload.sol";
-import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
-import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title ReaderModule
 /// @notice Contains all the public getters for the Staking Vault
-contract ReaderModule is BaseVaultModule, Extsload {
+contract ReaderModule is BaseVault, Extsload {
     using FixedPointMathLib for uint256;
 
     /// @notice Interval for management fee (1 month)
@@ -23,7 +23,7 @@ contract ReaderModule is BaseVaultModule, Extsload {
 
     /// GENERAL
     function registry() external view returns (address) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         if (!_getInitialized($)) revert NotInitialized();
         return $.registry;
     }
@@ -31,13 +31,13 @@ contract ReaderModule is BaseVaultModule, Extsload {
     /// @notice Returns the underlying asset address (for compatibility)
     /// @return Asset address
     function asset() external view returns (address) {
-        return _getBaseVaultModuleStorage().kToken;
+        return _getBaseVaultStorage().kToken;
     }
 
     /// @notice Returns the underlying asset address
     /// @return Asset address
     function underlyingAsset() external view returns (address) {
-        return _getBaseVaultModuleStorage().underlyingAsset;
+        return _getBaseVaultStorage().underlyingAsset;
     }
 
     /// FEES
@@ -51,7 +51,7 @@ contract ReaderModule is BaseVaultModule, Extsload {
         view
         returns (uint256 managementFees, uint256 performanceFees, uint256 totalFees)
     {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         uint256 lastSharePrice = $.sharePriceWatermark;
 
         uint256 lastFeesChargedManagement = _getLastFeesChargedManagement($);
@@ -110,28 +110,28 @@ contract ReaderModule is BaseVaultModule, Extsload {
     /// @notice Returns the last time management fees were charged
     /// @return lastFeesChargedManagement Timestamp of last management fee charge
     function lastFeesChargedManagement() public view returns (uint256) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _getLastFeesChargedManagement($);
     }
 
     /// @notice Returns the last time performance fees were charged
     /// @return lastFeesChargedPerformance Timestamp of last performance fee charge
     function lastFeesChargedPerformance() public view returns (uint256) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _getLastFeesChargedPerformance($);
     }
 
     /// @notice Returns the current hurdle rate used for performance fee calculations
     /// @return The hurdle rate in basis points (e.g., 500 = 5%)
     function hurdleRate() external view returns (uint16) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _getHurdleRate($);
     }
 
     /// @notice Returns the current performance fee percentage
     /// @return The performance fee in basis points (e.g., 2000 = 20%)
     function performanceFee() external view returns (uint16) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _getPerformanceFee($);
     }
 
@@ -150,26 +150,26 @@ contract ReaderModule is BaseVaultModule, Extsload {
     /// @notice Returns the current management fee percentage
     /// @return The management fee in basis points (e.g., 100 = 1%)
     function managementFee() external view returns (uint16) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _getManagementFee($);
     }
 
     /// @notice Returns the high watermark for share price used in performance fee calculations
     /// @return The share price watermark value
     function sharePriceWatermark() external view returns (uint256) {
-        return _getBaseVaultModuleStorage().sharePriceWatermark;
+        return _getBaseVaultStorage().sharePriceWatermark;
     }
 
     /// @notice Returns whether the current batch is closed
     /// @return Whether the current batch is closed
     function isBatchClosed() external view returns (bool) {
-        return _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isClosed;
+        return _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].isClosed;
     }
 
     /// @notice Returns whether the current batch is settled
     /// @return Whether the current batch is settled
     function isBatchSettled() external view returns (bool) {
-        return _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isSettled;
+        return _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].isSettled;
     }
 
     /// @notice Returns the current batch ID, whether it is closed, and whether it is settled
@@ -183,58 +183,107 @@ contract ReaderModule is BaseVaultModule, Extsload {
         returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled)
     {
         return (
-            _getBaseVaultModuleStorage().currentBatchId,
-            _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].batchReceiver,
-            _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isClosed,
-            _getBaseVaultModuleStorage().batches[_getBaseVaultModuleStorage().currentBatchId].isSettled
+            _getBaseVaultStorage().currentBatchId,
+            _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].batchReceiver,
+            _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].isClosed,
+            _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].isSettled
         );
-    }
-
-    /// @notice Returns the batch receiver for the current batch
-    /// @return Batch receiver
-    function getBatchIdReceiver(bytes32 batchId) external view returns (address) {
-        return _getBaseVaultModuleStorage().batches[batchId].batchReceiver;
     }
 
     /// @notice Returns the batch receiver for a given batch (alias for getBatchIdReceiver)
     /// @return Batch receiver
     function getBatchReceiver(bytes32 batchId) external view returns (address) {
-        return _getBaseVaultModuleStorage().batches[batchId].batchReceiver;
+        return _getBaseVaultStorage().batches[batchId].batchReceiver;
     }
 
     /// @notice Returns the batch receiver for a given batch (alias for getBatchIdReceiver)
     /// @return Batch receiver
     /// @dev Throws if the batch is settled
     function getSafeBatchReceiver(bytes32 batchId) external view returns (address) {
-        BaseVaultModuleStorage storage $ = _getBaseVaultModuleStorage();
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
         if ($.batches[batchId].isSettled) revert Settled();
         return $.batches[batchId].batchReceiver;
+    }
+
+    /// @notice Calculates the price of stkTokens in underlying asset terms
+    /// @dev Uses the last total assets and total supply to calculate the price
+    /// @return price Price per stkToken in underlying asset terms
+    function sharePrice() external view returns (uint256) {
+        return _netSharePrice();
+    }
+
+    /// @notice Returns the current total assets
+    /// @return Total assets currently deployed in strategies
+    function totalAssets() external view returns (uint256) {
+        return _totalAssets();
+    }
+
+    /// @notice Returns the current total assets after fees
+    /// @return Total net assets currently deployed in strategies
+    function totalNetAssets() external view returns (uint256) {
+        return _totalNetAssets();
+    }
+
+    /// @notice Returns the current batch
+    /// @return Batch
+    function getBatchId() public view returns (bytes32) {
+        return _getBaseVaultStorage().currentBatchId;
+    }
+
+    /// @notice Returns the safe batch
+    /// @return Batch
+    function getSafeBatchId() external view returns (bytes32) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        bytes32 batchId = getBatchId();
+        if ($.batches[batchId].isClosed) revert Closed();
+        if ($.batches[batchId].isSettled) revert Settled();
+        return batchId;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        CONTRACT INFO
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Returns the contract name
+    /// @return Contract name
+    function contractName() external pure returns (string memory) {
+        return "kStakingVault";
+    }
+
+    /// @notice Returns the contract version
+    /// @return Contract version
+    function contractVersion() external pure returns (string memory) {
+        return "1.0.0";
     }
 
     /// @notice Returns the selectors for functions in this module
     /// @return selectors Array of function selectors
     function selectors() public pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](20);
+        bytes4[] memory moduleSelectors = new bytes4[](24);
         moduleSelectors[0] = this.registry.selector;
         moduleSelectors[1] = this.asset.selector;
         moduleSelectors[2] = this.underlyingAsset.selector;
-        moduleSelectors[3] = this.name.selector;
-        moduleSelectors[4] = this.symbol.selector;
-        moduleSelectors[5] = this.computeLastBatchFees.selector;
-        moduleSelectors[6] = this.lastFeesChargedManagement.selector;
-        moduleSelectors[7] = this.lastFeesChargedPerformance.selector;
-        moduleSelectors[8] = this.hurdleRate.selector;
-        moduleSelectors[9] = this.performanceFee.selector;
-        moduleSelectors[10] = this.managementFee.selector;
-        moduleSelectors[11] = this.sharePriceWatermark.selector;
-        moduleSelectors[12] = this.nextPerformanceFeeTimestamp.selector;
-        moduleSelectors[13] = this.nextManagementFeeTimestamp.selector;
-        moduleSelectors[14] = this.isBatchClosed.selector;
-        moduleSelectors[15] = this.isBatchSettled.selector;
-        moduleSelectors[16] = this.getBatchIdInfo.selector;
-        moduleSelectors[17] = this.getBatchIdReceiver.selector;
-        moduleSelectors[18] = this.getBatchReceiver.selector;
-        moduleSelectors[19] = this.getSafeBatchReceiver.selector;
+        moduleSelectors[3] = this.computeLastBatchFees.selector;
+        moduleSelectors[4] = this.lastFeesChargedManagement.selector;
+        moduleSelectors[5] = this.lastFeesChargedPerformance.selector;
+        moduleSelectors[6] = this.hurdleRate.selector;
+        moduleSelectors[7] = this.performanceFee.selector;
+        moduleSelectors[8] = this.managementFee.selector;
+        moduleSelectors[9] = this.sharePriceWatermark.selector;
+        moduleSelectors[10] = this.nextPerformanceFeeTimestamp.selector;
+        moduleSelectors[11] = this.nextManagementFeeTimestamp.selector;
+        moduleSelectors[12] = this.isBatchClosed.selector;
+        moduleSelectors[13] = this.isBatchSettled.selector;
+        moduleSelectors[14] = this.getBatchIdInfo.selector;
+        moduleSelectors[15] = this.getBatchReceiver.selector;
+        moduleSelectors[16] = this.getSafeBatchReceiver.selector;
+        moduleSelectors[17] = this.sharePrice.selector;
+        moduleSelectors[18] = this.totalAssets.selector;
+        moduleSelectors[19] = this.totalNetAssets.selector;
+        moduleSelectors[20] = this.getBatchId.selector;
+        moduleSelectors[21] = this.getSafeBatchId.selector;
+        moduleSelectors[22] = this.contractName.selector;
+        moduleSelectors[23] = this.contractVersion.selector;
         return moduleSelectors;
     }
 }

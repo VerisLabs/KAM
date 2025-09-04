@@ -2,7 +2,7 @@
 [Git Source](https://github.com/VerisLabs/KAM/blob/786bfc5b94e4c849db94b9fb47f71818d5cce1ab/src/kStakingVault/base/VaultClaims.sol)
 
 **Inherits:**
-[BaseVaultModule](/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.md)
+[BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md)
 
 Handles claim operations for settled batches
 
