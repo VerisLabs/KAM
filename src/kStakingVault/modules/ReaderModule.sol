@@ -4,7 +4,11 @@ pragma solidity 0.8.30;
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { Extsload } from "src/abstracts/Extsload.sol";
 
-import { KSTAKINGVAULT_NOT_INITIALIZED, KSTAKINGVAULT_VAULT_CLOSED, KSTAKINGVAULT_VAULT_SETTLED } from "src/errors/Errors.sol";
+import {
+    KSTAKINGVAULT_NOT_INITIALIZED,
+    KSTAKINGVAULT_VAULT_CLOSED,
+    KSTAKINGVAULT_VAULT_SETTLED
+} from "src/errors/Errors.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 

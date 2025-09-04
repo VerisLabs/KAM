@@ -101,7 +101,9 @@ contract VaultFees is BaseVault {
     function notifyManagementFeesCharged(uint64 _timestamp) external {
         require(_isAdmin(msg.sender), VAULTFEES_WRONG_ROLE);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(_timestamp >= _getLastFeesChargedManagement($) && _timestamp <= block.timestamp, VAULTFEES_INVALID_TIMESTAMP);
+        require(
+            _timestamp >= _getLastFeesChargedManagement($) && _timestamp <= block.timestamp, VAULTFEES_INVALID_TIMESTAMP
+        );
         _setLastFeesChargedManagement($, _timestamp);
         _updateGlobalWatermark();
         emit ManagementFeesCharged(_timestamp);
@@ -113,7 +115,10 @@ contract VaultFees is BaseVault {
     function notifyPerformanceFeesCharged(uint64 _timestamp) external {
         require(_isAdmin(msg.sender), VAULTFEES_WRONG_ROLE);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(_timestamp >= _getLastFeesChargedPerformance($) && _timestamp <= block.timestamp, VAULTFEES_INVALID_TIMESTAMP);
+        require(
+            _timestamp >= _getLastFeesChargedPerformance($) && _timestamp <= block.timestamp,
+            VAULTFEES_INVALID_TIMESTAMP
+        );
         _setLastFeesChargedPerformance($, _timestamp);
         _updateGlobalWatermark();
         emit PerformanceFeesCharged(_timestamp);

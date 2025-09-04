@@ -7,7 +7,7 @@ import { USDC_MAINNET, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
 
-import { ADAPTER_ZERO_ADDRESS, ADAPTER_INSUFFICIENT_BALANCE } from "src/errors/Errors.sol";
+import { ADAPTER_INSUFFICIENT_BALANCE, ADAPTER_ZERO_ADDRESS } from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 contract BaseAdapterTest is BaseTest {

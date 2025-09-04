@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.20;
 
-import {Script} from "forge-std/Script.sol";
-import {console} from "forge-std/console.sol";
-import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
+import { Script } from "forge-std/Script.sol";
+import { console } from "forge-std/console.sol";
+import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
-import {DeploymentManager} from "../utils/DeploymentManager.sol";
-import {kRegistry} from "src/kRegistry.sol";
+import { DeploymentManager } from "../utils/DeploymentManager.sol";
+import { kRegistry } from "src/kRegistry.sol";
 
 contract DeployRegistryScript is Script, DeploymentManager {
     function run() public {
@@ -34,20 +34,13 @@ contract DeployRegistryScript is Script, DeploymentManager {
             config.roles.treasury
         );
 
-        address registryProxy = factory.deployAndCall(
-            address(registryImpl),
-            msg.sender,
-            initData
-        );
+        address registryProxy = factory.deployAndCall(address(registryImpl), msg.sender, initData);
 
         vm.stopBroadcast();
 
         console.log("=== DEPLOYMENT COMPLETE ===");
         console.log("ERC1967Factory deployed at:", address(factory));
-        console.log(
-            "kRegistry implementation deployed at:",
-            address(registryImpl)
-        );
+        console.log("kRegistry implementation deployed at:", address(registryImpl));
         console.log("kRegistry proxy deployed at:", registryProxy);
         console.log("Network:", config.network);
         console.log("Chain ID:", config.chainId);

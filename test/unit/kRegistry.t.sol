@@ -5,7 +5,12 @@ import { ADMIN_ROLE, RELAYER_ROLE, USDC_MAINNET, WBTC_MAINNET, _1_USDC, _1_WBTC 
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
-import { KREGISTRY_ALREADY_REGISTERED, KREGISTRY_ASSET_NOT_SUPPORTED, KREGISTRY_INVALID_ADAPTER, KREGISTRY_ZERO_ADDRESS } from "src/errors/Errors.sol";
+import {
+    KREGISTRY_ALREADY_REGISTERED,
+    KREGISTRY_ASSET_NOT_SUPPORTED,
+    KREGISTRY_INVALID_ADAPTER,
+    KREGISTRY_ZERO_ADDRESS
+} from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { kRegistry } from "src/kRegistry.sol";
 

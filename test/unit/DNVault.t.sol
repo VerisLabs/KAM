@@ -13,7 +13,12 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 
-import { VAULTCLAIMS_BATCH_NOT_SETTLED, VAULTCLAIMS_IS_PAUSED, VAULTCLAIMS_NOT_BENEFICIARY, VAULTCLAIMS_REQUEST_NOT_PENDING } from "src/errors/Errors.sol";
+import {
+    VAULTCLAIMS_BATCH_NOT_SETTLED,
+    VAULTCLAIMS_IS_PAUSED,
+    VAULTCLAIMS_NOT_BENEFICIARY,
+    VAULTCLAIMS_REQUEST_NOT_PENDING
+} from "src/errors/Errors.sol";
 import { VaultClaims } from "src/kStakingVault/base/VaultClaims.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";

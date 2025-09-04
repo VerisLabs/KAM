@@ -10,7 +10,11 @@ import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
 
 import {
-    VAULTCLAIMS_BATCH_NOT_SETTLED, VAULTCLAIMS_INVALID_BATCH_ID, VAULTCLAIMS_IS_PAUSED, VAULTCLAIMS_NOT_BENEFICIARY, VAULTCLAIMS_REQUEST_NOT_PENDING
+    VAULTCLAIMS_BATCH_NOT_SETTLED,
+    VAULTCLAIMS_INVALID_BATCH_ID,
+    VAULTCLAIMS_IS_PAUSED,
+    VAULTCLAIMS_NOT_BENEFICIARY,
+    VAULTCLAIMS_REQUEST_NOT_PENDING
 } from "src/errors/Errors.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
