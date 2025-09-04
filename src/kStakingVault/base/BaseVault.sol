@@ -286,15 +286,6 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
         require(router != address(0), BASEVAULT_CONTRACT_NOT_FOUND);
     }
 
-    /// @notice Gets the DN vault address for a given asset
-    /// @param asset_ The asset address
-    /// @return vault The corresponding DN vault address
-    /// @dev Reverts if asset not supported
-    function _getDNVaultByAsset(address asset_) internal view returns (address vault) {
-        vault = _registry().getVaultByAssetAndType(asset_, uint8(IkRegistry.VaultType.DN));
-        require(vault != address(0), BASEVAULT_INVALID_VAULT);
-    }
-
     /// @notice Returns the vault shares token name
     /// @return Token name
     function name() public view override returns (string memory) {
@@ -407,14 +398,6 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
         return _registry().isRelayer(user);
     }
 
-    /// @notice Checks if an address is a institution
-    /// @return Whether the address is a institution
-    function _isPaused() internal view returns (bool) {
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        require(_getInitialized($), BASEVAULT_NOT_INITIALIZED);
-        return _getPaused($);
-    }
-
     /// @notice Gets the kMinter singleton contract address
     /// @return minter The kMinter contract address
     /// @dev Reverts if kMinter not set in registry
@@ -423,12 +406,5 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
         address _kAssetRouter = _registry().getContractById(K_ASSET_ROUTER);
         if (_kAssetRouter == kAssetRouter_) isTrue = true;
         return isTrue;
-    }
-
-    /// @notice Checks if an asset is registered
-    /// @param asset The asset address to check
-    /// @return Whether the asset is registered
-    function _isAsset(address asset) internal view returns (bool) {
-        return _registry().isAsset(asset);
     }
 }

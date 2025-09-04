@@ -1,5 +1,5 @@
 # OptimizedBytes32EnumerableSetLib
-[Git Source](https://github.com/VerisLabs/KAM/blob/bbd875989135c7d3f313fa3fcc61e94d6afb4346/src/libraries/OptimizedBytes32EnumerableSetLib.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/670f05acf8766190fcaa1d272341611f065917de/src/libraries/OptimizedBytes32EnumerableSetLib.sol)
 
 **Author:**
 Solady(https://github.com/Vectorized/solady/blob/main/src/utils/OptimizedBytes32EnumerableSetLib.sol)
