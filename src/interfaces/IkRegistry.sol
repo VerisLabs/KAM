@@ -337,7 +337,23 @@ interface IkRegistry {
                               FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Registers a core singleton contract in the protocol
+    /// @dev Only callable by ADMIN_ROLE. Ensures single source of truth for protocol contracts.
+    /// @param id Unique contract identifier (e.g., K_MINTER, K_ASSET_ROUTER)
+    /// @param contractAddress Address of the singleton contract
     function setSingletonContract(bytes32 id, address contractAddress) external payable;
+
+    /// @notice Registers a new underlying asset in the protocol and deploys its corresponding kToken
+    /// @dev This function performs critical asset onboarding: (1) Validates the asset isn't already registered,
+    /// (2) Adds asset to the supported set and singleton registry, (3) Deploys a new kToken contract with
+    /// matching decimals, (4) Establishes bidirectional asset-kToken mapping, (5) Grants minting privileges
+    /// to kMinter. The function automatically inherits decimals from the underlying asset for consistency.
+    /// Only callable by ADMIN_ROLE to maintain protocol security and prevent unauthorized token creation.
+    /// @param name The name for the kToken (e.g., "KAM USDC")
+    /// @param symbol The symbol for the kToken (e.g., "kUSDC")
+    /// @param asset The underlying asset contract address to register
+    /// @param id The unique identifier for singleton asset storage (e.g., USDC, WBTC)
+    /// @return The deployed kToken contract address
     function registerAsset(
         string memory name,
         string memory symbol,
@@ -347,32 +363,196 @@ interface IkRegistry {
         external
         payable
         returns (address);
+
+    /// @notice Registers a new vault contract in the protocol's vault management system
+    /// @dev This function integrates vaults into the protocol by: (1) Validating the vault isn't already registered,
+    /// (2) Verifying the asset is supported by the protocol, (3) Classifying the vault by type for routing,
+    /// (4) Establishing vault-asset relationships for both forward and reverse lookups, (5) Setting as primary
+    /// vault for the asset-type combination if it's the first registered. The vault type determines routing
+    /// logic and strategy selection (DN for institutional, ALPHA/BETA for different risk profiles).
+    /// Only callable by ADMIN_ROLE to ensure proper vault vetting and integration.
+    /// @param vault The vault contract address to register
+    /// @param type_ The vault classification type (DN, ALPHA, BETA, etc.) determining its role
+    /// @param asset The underlying asset address this vault will manage
     function registerVault(address vault, VaultType type_, address asset) external payable;
+
+    /// @notice Registers an external protocol adapter for a vault
+    /// @dev Enables yield strategy integrations through external DeFi protocols. Only callable by ADMIN_ROLE.
+    /// @param vault The vault address receiving the adapter
+    /// @param adapter The adapter contract address
     function registerAdapter(address vault, address adapter) external payable;
+
+    /// @notice Removes an adapter from a vault's registered adapter set
+    /// @dev This disables a specific external protocol integration for the vault. Only callable by ADMIN_ROLE
+    /// to ensure proper risk assessment before removing yield strategies.
+    /// @param vault The vault address to remove the adapter from
+    /// @param adapter The adapter address to remove
     function removeAdapter(address vault, address adapter) external payable;
+
+    /// @notice Grants institution role to enable privileged protocol access
+    /// @dev Only callable by VENDOR_ROLE. Institutions gain access to kMinter and other premium features.
+    /// @param institution_ The address to grant institution privileges
     function grantInstitutionRole(address institution_) external payable;
+
+    /// @notice Grants vendor role for vendor management capabilities
+    /// @dev Only callable by ADMIN_ROLE. Vendors can grant institution roles and manage vendor vaults.
+    /// @param vendor_ The address to grant vendor privileges
     function grantVendorRole(address vendor_) external payable;
+
+    /// @notice Grants relayer role for external vault operations
+    /// @dev Only callable by ADMIN_ROLE. Relayers manage external vaults and set hurdle rates.
+    /// @param relayer_ The address to grant relayer privileges
     function grantRelayerRole(address relayer_) external payable;
+
+    /// @notice Retrieves a singleton contract address by identifier
+    /// @dev Reverts if contract not registered. Used for protocol contract discovery.
+    /// @param id Contract identifier (e.g., K_MINTER, K_ASSET_ROUTER)
+    /// @return The contract address
     function getContractById(bytes32 id) external view returns (address);
+
+    /// @notice Retrieves a singleton asset address by identifier
+    /// @dev Reverts if asset not registered. Provides named access to common assets.
+    /// @param id Asset identifier (e.g., USDC, WBTC)
+    /// @return The asset address
     function getAssetById(bytes32 id) external view returns (address);
+
+    /// @notice Gets all protocol-supported asset addresses
+    /// @dev Returns the complete whitelist of supported underlying assets.
+    /// @return Array of all supported asset addresses
     function getAllAssets() external view returns (address[] memory);
+
+    /// @notice Retrieves core protocol contract addresses in one call
+    /// @dev Optimized getter for frequently accessed contracts. Reverts if either not set.
+    /// @return kMinter The kMinter contract address
+    /// @return kAssetRouter The kAssetRouter contract address
     function getCoreContracts() external view returns (address kMinter, address kAssetRouter);
+
+    /// @notice Gets all vaults that support a specific asset
+    /// @dev Enables discovery of all vaults capable of handling an asset across different types.
+    /// @param asset Asset address to query
+    /// @return Array of vault addresses supporting the asset
     function getVaultsByAsset(address asset) external view returns (address[] memory);
+
+    /// @notice Retrieves the primary vault for an asset-type combination
+    /// @dev Used for routing operations to the appropriate vault. Reverts if not found.
+    /// @param asset The asset address
+    /// @param vaultType The vault type classification
+    /// @return The vault address for the asset-type pair
     function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address);
+
+    /// @notice Gets the classification type of a vault
+    /// @dev Returns the VaultType enum value for routing and strategy selection.
+    /// @param vault The vault address to query
+    /// @return The vault's type classification
     function getVaultType(address vault) external view returns (uint8);
+
+    /// @notice Checks if an address has admin privileges
+    /// @dev Admin role has broad protocol management capabilities.
+    /// @param user The address to check
+    /// @return True if address has ADMIN_ROLE
     function isAdmin(address user) external view returns (bool);
+
+    /// @notice Checks if an address has emergency admin privileges
+    /// @dev Emergency admin can perform critical safety operations.
+    /// @param user The address to check
+    /// @return True if address has EMERGENCY_ADMIN_ROLE
     function isEmergencyAdmin(address user) external view returns (bool);
+
+    /// @notice Checks if an address has guardian privileges
+    /// @dev Guardian acts as circuit breaker for settlement proposals.
+    /// @param user The address to check
+    /// @return True if address has GUARDIAN_ROLE
     function isGuardian(address user) external view returns (bool);
+
+    /// @notice Checks if an address has relayer privileges
+    /// @dev Relayer manages external vault operations and hurdle rates.
+    /// @param user The address to check
+    /// @return True if address has RELAYER_ROLE
     function isRelayer(address user) external view returns (bool);
+
+    /// @notice Checks if an address is a qualified institution
+    /// @dev Institutions have access to privileged operations like kMinter.
+    /// @param user The address to check
+    /// @return True if address has INSTITUTION_ROLE
     function isInstitution(address user) external view returns (bool);
+
+    /// @notice Checks if an address has vendor privileges
+    /// @dev Vendors can grant institution roles and manage vendor vaults.
+    /// @param user The address to check
+    /// @return True if address has VENDOR_ROLE
     function isVendor(address user) external view returns (bool);
+
+    /// @notice Checks if an asset is supported by the protocol
+    /// @dev Used for validation before operations. Checks supportedAssets set membership.
+    /// @param asset The asset address to verify
+    /// @return True if asset is in the protocol whitelist
     function isAsset(address asset) external view returns (bool);
+
+    /// @notice Checks if a vault is registered in the protocol
+    /// @dev Used for validation before vault operations. Checks allVaults set membership.
+    /// @param vault The vault address to verify
+    /// @return True if vault is registered
     function isVault(address vault) external view returns (bool);
+
+    /// @notice Gets all adapters registered for a specific vault
+    /// @dev Returns external protocol integrations enabling yield strategies.
+    /// @param vault The vault address to query
+    /// @return Array of adapter addresses for the vault
     function getAdapters(address vault) external view returns (address[] memory);
+
+    /// @notice Checks if a specific adapter is registered for a vault
+    /// @dev Used to validate adapter-vault relationships before operations.
+    /// @param vault The vault address to check
+    /// @param adapter The adapter address to verify
+    /// @return True if adapter is registered for the vault
     function isAdapterRegistered(address vault, address adapter) external view returns (bool);
+
+    /// @notice Gets all assets managed by a specific vault
+    /// @dev Most vaults manage single asset, some (like kMinter) handle multiple.
+    /// @param vault The vault address to query
+    /// @return Array of asset addresses the vault manages
     function getVaultAssets(address vault) external view returns (address[] memory);
+
+    /// @notice Gets the kToken address for a specific underlying asset
+    /// @dev Critical for minting/redemption operations. Reverts if no kToken exists.
+    /// @param asset The underlying asset address
+    /// @return The corresponding kToken address
     function assetToKToken(address asset) external view returns (address);
+
+    /// @notice Gets all registered vaults in the protocol
+    /// @dev Returns array of all vault addresses that have been registered through addVault().
+    /// Includes both active and inactive vaults. Used for protocol monitoring and management operations.
+    /// @return Array of all registered vault addresses
+    function getAllVaults() external view returns (address[] memory);
+
+    /// @notice Gets the protocol treasury address
+    /// @dev Treasury receives protocol fees and serves as emergency fund holder.
+    /// @return The treasury address
     function getTreasury() external view returns (address);
+
+    /// @notice Sets the hurdle rate for a specific asset
+    /// @dev Only relayer can set hurdle rates (performance thresholds). Ensures hurdle rate doesn't exceed 100%.
+    /// Asset must be registered before setting hurdle rate. Sets minimum performance threshold for yield distribution.
+    /// @param asset The asset address to set hurdle rate for
+    /// @param hurdleRate The hurdle rate in basis points (100 = 1%)
     function setHurdleRate(address asset, uint16 hurdleRate) external payable;
+
+    /// @notice Gets the hurdle rate for a specific asset
+    /// @dev Returns minimum performance threshold in basis points for yield distribution.
+    /// Asset must be registered to query hurdle rate.
+    /// @param asset The asset address to query
+    /// @return The hurdle rate in basis points
     function getHurdleRate(address asset) external view returns (uint16);
+
+    /// @notice Removes a vault from the protocol registry
+    /// @dev This function deregisters a vault, removing it from the active vault set. This operation should be
+    /// used carefully as it affects routing and asset management. Only callable by ADMIN_ROLE to ensure proper
+    /// decommissioning procedures are followed. Note that this doesn't clear all vault mappings for gas efficiency.
+    /// @param vault The vault contract address to remove from the registry
+    function removeVault(address vault) external payable;
+
+    /// @notice Sets the treasury address
+    /// @dev Treasury receives protocol fees and serves as emergency fund holder. Only callable by ADMIN_ROLE.
+    /// @param treasury_ The new treasury address
+    function setTreasury(address treasury_) external payable;
 }
