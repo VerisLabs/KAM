@@ -268,18 +268,69 @@ interface IkRegistry {
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Emitted when a singleton contract is registered in the protocol
+    /// @param id The unique identifier for the contract (e.g., K_MINTER, K_ASSET_ROUTER)
+    /// @param contractAddress The address of the registered singleton contract
     event SingletonContractSet(bytes32 indexed id, address indexed contractAddress);
+
+    /// @notice Emitted when a new vault is registered in the protocol
+    /// @param vault The vault contract address
+    /// @param asset The underlying asset the vault manages
+    /// @param vaultType The classification type of the vault
     event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
+
+    /// @notice Emitted when a vault is removed from the protocol
+    /// @param vault The vault contract address being removed
     event VaultRemoved(address indexed vault);
+
+    /// @notice Emitted when an asset and its kToken are registered
+    /// @param asset The underlying asset address
+    /// @param kToken The corresponding kToken address
     event AssetRegistered(address indexed asset, address indexed kToken);
+
+    /// @notice Emitted when an asset is added to the supported set
+    /// @param asset The newly supported asset address
     event AssetSupported(address indexed asset);
+
+    /// @notice Emitted when an adapter is registered for a vault
+    /// @param vault The vault receiving the adapter
+    /// @param adapter The adapter contract address
     event AdapterRegistered(address indexed vault, address indexed adapter);
+
+    /// @notice Emitted when an adapter is removed from a vault
+    /// @param vault The vault losing the adapter
+    /// @param adapter The adapter being removed
     event AdapterRemoved(address indexed vault, address indexed adapter);
+
+    /// @notice Emitted when a new kToken is deployed
+    /// @param kTokenContract The deployed kToken address
+    /// @param name_ The kToken name
+    /// @param symbol_ The kToken symbol
+    /// @param decimals_ The kToken decimals (matches underlying)
     event KTokenDeployed(address indexed kTokenContract, string name_, string symbol_, uint8 decimals_);
+
+    /// @notice Emitted when the kToken implementation is updated
+    /// @param implementation The new implementation address
     event KTokenImplementationSet(address indexed implementation);
+
+    /// @notice Emitted when ERC20 assets are rescued from the contract
+    /// @param asset The rescued asset address
+    /// @param to The recipient address
+    /// @param amount The amount rescued
     event RescuedAssets(address indexed asset, address indexed to, uint256 amount);
+
+    /// @notice Emitted when ETH is rescued from the contract
+    /// @param asset The recipient address (asset field for consistency)
+    /// @param amount The amount of ETH rescued
     event RescuedETH(address indexed asset, uint256 amount);
+
+    /// @notice Emitted when the treasury address is updated
+    /// @param treasury The new treasury address
     event TreasurySet(address indexed treasury);
+
+    /// @notice Emitted when a hurdle rate is set for an asset
+    /// @param asset The asset receiving the hurdle rate
+    /// @param hurdleRate The hurdle rate in basis points
     event HurdleRateSet(address indexed asset, uint16 hurdleRate);
 
     /*//////////////////////////////////////////////////////////////

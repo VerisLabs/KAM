@@ -32,8 +32,16 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 
 /// @title kMinter
-/// @notice Institutional minting and redemption manager for kTokens
-/// @dev Manages deposits/redemptions through kStakingVault with batch settlement
+/// @notice Institutional gateway for kToken minting and redemption with batch settlement processing
+/// @dev This contract serves as the primary interface for qualified institutions to interact with the KAM protocol,
+/// enabling them to mint kTokens by depositing underlying assets and redeem them through a sophisticated batch
+/// settlement system. Key features include: (1) Immediate 1:1 kToken minting upon asset deposit, bypassing the
+/// share-based accounting used for retail users, (2) Two-phase redemption process that handles requests through
+/// batch settlements to optimize gas costs and maintain protocol efficiency, (3) Integration with kStakingVault
+/// for yield generation on deposited assets, (4) Request tracking and management system with unique IDs for each
+/// redemption, (5) Cancellation mechanism for pending requests before batch closure. The contract enforces strict
+/// access control, ensuring only verified institutions can access these privileged operations while maintaining
+/// the security and integrity of the protocol's asset backing.
 contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     using SafeTransferLib for address;
     using OptimizedSafeCastLib for uint256;
@@ -44,11 +52,22 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Core storage structure for kMinter using ERC-7201 namespaced storage pattern
+    /// @dev This structure manages all state for institutional minting and redemption operations.
+    /// Uses the diamond storage pattern to avoid storage collisions in upgradeable contracts.
     /// @custom:storage-location erc7201:kam.storage.kMinter
     struct kMinterStorage {
+        /// @dev Tracks the total amount of each asset deposited through mint operations
+        /// Used to maintain accurate accounting of assets backing kTokens
         mapping(address => uint256) totalLockedAssets;
+        /// @dev Monotonically increasing counter used for generating unique redemption request IDs
+        /// Ensures each request has a globally unique identifier even with identical parameters
         uint64 requestCounter;
+        /// @dev Stores all redemption requests indexed by their unique request ID
+        /// Contains full request details including user, amount, status, and batch information
         mapping(bytes32 => RedeemRequest) redeemRequests;
+        /// @dev Maps user addresses to their set of redemption request IDs for efficient lookup
+        /// Enables quick retrieval of all requests associated with a specific user
         mapping(address => OptimizedBytes32EnumerableSetLib.Bytes32Set) userRequests;
     }
 
@@ -56,6 +75,11 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     bytes32 private constant KMINTER_STORAGE_LOCATION =
         0xd0574379115d2b8497bfd9020aa9e0becaffc59e5509520aa5fe8c763e40d000;
 
+    /// @notice Retrieves the kMinter storage struct from its designated storage slot
+    /// @dev Uses ERC-7201 namespaced storage pattern to access the storage struct at a deterministic location.
+    /// This approach prevents storage collisions in upgradeable contracts and allows safe addition of new
+    /// storage variables in future upgrades without affecting existing storage layout.
+    /// @return $ The kMinterStorage struct reference for state modifications
     function _getkMinterStorage() private pure returns (kMinterStorage storage $) {
         assembly {
             $.slot := KMINTER_STORAGE_LOCATION
@@ -83,11 +107,16 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
                           CORE OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Creates new kTokens by accepting underlying asset deposits in a 1:1 ratio
-    /// @dev Validates request parameters, transfers assets, deposits to vault, and mints tokens
-    /// @param asset_ Address of the asset to mint
-    /// @param to_ Address of the recipient
-    /// @param amount_ Amount of the asset to mint
+    /// @notice Executes institutional minting of kTokens through immediate 1:1 issuance against deposited assets
+    /// @dev This function enables qualified institutions to mint kTokens by depositing underlying assets. The process
+    /// involves: (1) transferring assets from the caller to kAssetRouter, (2) pushing assets into the current batch
+    /// of the designated DN vault for yield generation, and (3) immediately minting an equivalent amount of kTokens
+    /// to the recipient. Unlike retail operations, institutional mints bypass share-based accounting and provide
+    /// immediate token issuance without waiting for batch settlement. The deposited assets are tracked separately
+    /// to maintain the 1:1 backing ratio and will participate in vault yield strategies through the batch system.
+    /// @param asset_ The underlying asset address to deposit (must be registered in the protocol)
+    /// @param to_ The recipient address that will receive the newly minted kTokens
+    /// @param amount_ The amount of underlying asset to deposit and kTokens to mint (1:1 ratio)
     function mint(address asset_, address to_, uint256 amount_) external payable {
         _lockReentrant();
         _checkNotPaused();
@@ -103,26 +132,36 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         address router = _getKAssetRouter();
 
-        // Transfer underlying asset from sender to this contract
+        // Transfer underlying asset from sender directly to router for efficiency
         asset_.safeTransferFrom(msg.sender, router, amount_);
 
-        // Push assets to kAssetRouter
+        // Push assets to kAssetRouter which will forward them to the DN vault for yield generation
         IkAssetRouter(router).kAssetPush(asset_, amount_, batchId);
+        // Track total assets deposited for this asset type (important for protocol accounting)
         _getkMinterStorage().totalLockedAssets[asset_] += amount_;
 
-        // Mint kTokens 1:1 with deposited amount (no batch ID in push model)
+        // Mint kTokens 1:1 with deposited amount - immediate issuance for institutional users
         IkToken(kToken).mint(to_, amount_);
 
         emit Minted(to_, amount_, batchId);
         _unlockReentrant();
     }
 
-    /// @notice Initiates redemption process by burning kTokens and creating batch redemption request
-    /// @dev Burns tokens immediately, generates unique request ID, and adds to batch for settlement
-    /// @param asset_ Address of the asset to redeem
-    /// @param to_ Address of the recipient
-    /// @param amount_ Amount of the asset to redeem
-    /// @return requestId Unique identifier for tracking this redemption request
+    /// @notice Initiates a two-phase institutional redemption by creating a batch request for underlying asset
+    /// withdrawal
+    /// @dev This function implements the first phase of the redemption process for qualified institutions. The workflow
+    /// consists of: (1) transferring kTokens from the caller to this contract for escrow (not burned yet), (2)
+    /// generating
+    /// a unique request ID for tracking, (3) creating a RedeemRequest struct with PENDING status, (4) registering the
+    /// request with kAssetRouter for batch processing. The kTokens remain in escrow until the batch is settled and the
+    /// user calls redeem() to complete the process. This two-phase approach is necessary because redemptions are
+    /// processed
+    /// in batches through the DN vault system, which requires waiting for batch settlement to ensure proper asset
+    /// availability and yield distribution. The request can be cancelled before batch closure/settlement.
+    /// @param asset_ The underlying asset address to redeem (must match the kToken's underlying asset)
+    /// @param to_ The recipient address that will receive the underlying assets after batch settlement
+    /// @param amount_ The amount of kTokens to redeem (will receive equivalent underlying assets)
+    /// @return requestId A unique bytes32 identifier for tracking and executing this redemption request
     function requestRedeem(address asset_, address to_, uint256 amount_) external payable returns (bytes32 requestId) {
         _lockReentrant();
         _checkNotPaused();
@@ -134,7 +173,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         address kToken = _getKTokenForAsset(asset_);
         require(kToken.balanceOf(msg.sender) >= amount_, KMINTER_INSUFFICIENT_BALANCE);
 
-        // Generate request ID
+        // Generate unique request ID using recipient, amount, timestamp and counter for uniqueness
         requestId = _createRedeemRequestId(to_, amount_, block.timestamp);
 
         address vault = _getDNVaultByAsset(asset_);
@@ -142,7 +181,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         kMinterStorage storage $ = _getkMinterStorage();
 
-        // Create redemption request
+        // Create and store redemption request with all necessary tracking information
         $.redeemRequests[requestId] = RedeemRequest({
             user: msg.sender,
             amount: amount_,
@@ -153,12 +192,13 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
             recipient: to_
         });
 
-        // Add to user requests tracking
+        // Add request ID to user's set for efficient lookup of all their requests
         $.userRequests[to_].add(requestId);
 
-        // Transfer kTokens from user to this contract until batch is settled
+        // Escrow kTokens in this contract - NOT burned yet to allow cancellation
         kToken.safeTransferFrom(msg.sender, address(this), amount_);
 
+        // Register redemption request with router for batch processing and settlement
         IkAssetRouter(_getKAssetRouter()).kAssetRequestPull(asset_, vault, amount_, batchId);
 
         emit RedeemRequestCreated(requestId, to_, kToken, amount_, to_, batchId);
@@ -167,8 +207,20 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         return requestId;
     }
 
-    /// @notice Executes redemption for a request in a settled batch
-    /// @param requestId Request ID to execute
+    /// @notice Completes the second phase of institutional redemption by executing a settled batch request
+    /// @dev This function finalizes the redemption process initiated by requestRedeem(). It can only be called after
+    /// the batch containing this request has been settled through the kAssetRouter settlement process. The execution
+    /// involves: (1) validating the request exists and is in PENDING status, (2) updating the request status to
+    /// REDEEMED,
+    /// (3) removing the request from tracking, (4) burning the escrowed kTokens permanently, (5) instructing the
+    /// kBatchReceiver contract to transfer the underlying assets to the recipient. The kBatchReceiver is a minimal
+    /// proxy
+    /// deployed per batch that holds the settled assets and ensures isolated distribution. This function will revert if
+    /// the batch is not yet settled, ensuring assets are only distributed when available. The separation between
+    /// request
+    /// and redemption phases allows for efficient batch processing of multiple redemptions while maintaining asset
+    /// safety.
+    /// @param requestId The unique identifier of the redemption request to execute (obtained from requestRedeem)
     function redeem(bytes32 requestId) external payable {
         _lockReentrant();
         _checkNotPaused();
@@ -177,16 +229,19 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         kMinterStorage storage $ = _getkMinterStorage();
         RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
 
-        // Validate request
+        // Validate request exists and belongs to the user
         require($.userRequests[redeemRequest.user].contains(requestId), KMINTER_REQUEST_NOT_FOUND);
+        // Ensure request is still pending (not already processed)
         require(redeemRequest.status == RequestStatus.PENDING, KMINTER_REQUEST_NOT_ELIGIBLE);
+        // Double-check request hasn't been redeemed (redundant but safe)
         require(redeemRequest.status != RequestStatus.REDEEMED, KMINTER_REQUEST_PROCESSED);
+        // Ensure request wasn't cancelled
         require(redeemRequest.status != RequestStatus.CANCELLED, KMINTER_REQUEST_NOT_ELIGIBLE);
 
-        // Update state
+        // Mark request as redeemed to prevent double-spending
         redeemRequest.status = RequestStatus.REDEEMED;
 
-        // Delete request
+        // Clean up request tracking and update accounting
         $.userRequests[redeemRequest.user].remove(requestId);
         $.totalLockedAssets[redeemRequest.asset] -= redeemRequest.amount;
 
@@ -194,19 +249,31 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         address batchReceiver = _getBatchReceiver(vault, redeemRequest.batchId);
         require(batchReceiver != address(0), KMINTER_ZERO_ADDRESS);
 
-        // Burn kTokens
+        // Permanently burn the escrowed kTokens to reduce total supply
         address kToken = _getKTokenForAsset(redeemRequest.asset);
         IkToken(kToken).burn(address(this), redeemRequest.amount);
 
-        // If batch is not settled, this will fail
+        // Pull assets from batch receiver - will revert if batch not settled
         IkBatchReceiver(batchReceiver).pullAssets(redeemRequest.recipient, redeemRequest.amount, redeemRequest.batchId);
 
         _unlockReentrant();
         emit Redeemed(requestId);
     }
 
-    /// @notice Cancels a redemption request before batch settlement
-    /// @param requestId Request ID to cancel
+    /// @notice Cancels a pending redemption request and returns the escrowed kTokens to the user
+    /// @dev This function allows institutions to cancel their redemption requests before the batch is closed or
+    /// settled.
+    /// The cancellation process involves: (1) validating the request exists and is in PENDING status, (2) checking that
+    /// the batch is neither closed nor settled (once closed, cancellation is not possible as the batch is being
+    /// processed),
+    /// (3) updating the request status to CANCELLED, (4) removing the request from tracking, (5) returning the escrowed
+    /// kTokens back to the original requester. This mechanism provides flexibility for institutions to manage their
+    /// liquidity needs, allowing them to reverse redemption decisions if market conditions change or if they need
+    /// immediate
+    /// access to their kTokens. The function enforces strict timing constraints - cancellation is only permitted while
+    /// the
+    /// batch remains open, ensuring batch integrity and preventing manipulation of settled redemptions.
+    /// @param requestId The unique identifier of the redemption request to cancel (obtained from requestRedeem)
     function cancelRequest(bytes32 requestId) external payable {
         _lockReentrant();
         _checkNotPaused();
@@ -215,21 +282,22 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         kMinterStorage storage $ = _getkMinterStorage();
         RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
 
-        // Validate request
+        // Validate request exists and is eligible for cancellation
         require($.userRequests[redeemRequest.user].contains(requestId), KMINTER_REQUEST_NOT_FOUND);
         require(redeemRequest.status == RequestStatus.PENDING, KMINTER_REQUEST_NOT_ELIGIBLE);
-        // Update state
+
+        // Update status and remove from tracking
         redeemRequest.status = RequestStatus.CANCELLED;
-        // Remove request from user's requests
         $.userRequests[redeemRequest.user].remove(requestId);
 
+        // Ensure batch is still open - cannot cancel after batch closure or settlement
         address vault = _getDNVaultByAsset(redeemRequest.asset);
         require(!IkStakingVault(vault).isBatchClosed(), KMINTER_BATCH_CLOSED);
         require(!IkStakingVault(vault).isBatchSettled(), KMINTER_BATCH_SETTLED);
 
         address kToken = _getKTokenForAsset(redeemRequest.asset);
 
-        // Transfer kTokens from this contract to user
+        // Return escrowed kTokens to the original requester
         kToken.safeTransfer(redeemRequest.user, redeemRequest.amount);
 
         emit Cancelled(requestId);
@@ -293,11 +361,17 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
                           ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Rescue assets from batch receiver
-    /// @param batchReceiver Batch receiver address
-    /// @param asset_ Asset address
-    /// @param to_ Destination address
-    /// @param amount_ Amount
+    /// @notice Emergency admin function to recover stuck assets from a batch receiver contract
+    /// @dev This function provides a recovery mechanism for assets that may become stuck in kBatchReceiver contracts
+    /// due to failed redemptions or system errors. The process involves two steps: (1) calling rescueAssets on the
+    /// kBatchReceiver to transfer assets back to this contract, and (2) using the inherited rescueAssets function
+    /// from kBase to forward them to the specified destination. This two-step process ensures proper access control
+    /// and maintains the security model where only authorized contracts can interact with batch receivers. This
+    /// function should only be used in emergency situations and requires admin privileges to prevent abuse.
+    /// @param batchReceiver The address of the kBatchReceiver contract holding the stuck assets
+    /// @param asset_ The address of the asset token to rescue (must not be a protocol asset)
+    /// @param to_ The destination address to receive the rescued assets
+    /// @param amount_ The amount of assets to rescue
     function rescueReceiverAssets(address batchReceiver, address asset_, address to_, uint256 amount_) external {
         require(batchReceiver != address(0) && asset_ != address(0) && to_ != address(0), KMINTER_ZERO_ADDRESS);
         IkBatchReceiver(batchReceiver).rescueAssets(asset_);
