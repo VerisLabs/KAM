@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 interface IVaultBatch {
     /// @notice Creates a new batch for processing requests
     /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
-    function createNewBatch() external;
+    function createNewBatch() external returns (bytes32 batchId);
 
     /// @notice Closes a batch to prevent new requests
     /// @param _batchId The batch ID to close

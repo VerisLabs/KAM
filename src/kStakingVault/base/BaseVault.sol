@@ -17,7 +17,7 @@ import {
     BASEVAULT_NOT_INITIALIZED
 } from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { IVaultFees } from "src/interfaces/modules/IVaultFees.sol";
+import { IVaultReader } from "src/interfaces/modules/IVaultReader.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title BaseVault
@@ -372,7 +372,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @notice Calculates accumulated fees
     /// @return accumulatedFees Accumulated fees
     function _accumulatedFees() internal view returns (uint256) {
-        (,, uint256 totalFees) = IVaultFees(address(this)).computeLastBatchFees();
+        (,, uint256 totalFees) = IVaultReader(address(this)).computeLastBatchFees();
         return totalFees;
     }
 

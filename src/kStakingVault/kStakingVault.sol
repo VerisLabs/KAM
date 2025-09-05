@@ -16,6 +16,8 @@ import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
+
+import { IVault } from "src/interfaces/IVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 
 import {
@@ -48,7 +50,7 @@ import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 /// @title kStakingVault
 /// @notice Pure ERC20 vault with dual accounting for minter and user pools
 /// @dev Implements automatic yield distribution from minter to user pools with modular architecture
-contract kStakingVault is Initializable, UUPSUpgradeable, Ownable, BaseVault, MultiFacetProxy {
+contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Ownable, MultiFacetProxy {
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
     using SafeTransferLib for address;
     using OptimizedSafeCastLib for uint256;
@@ -407,7 +409,7 @@ contract kStakingVault is Initializable, UUPSUpgradeable, Ownable, BaseVault, Mu
     /// @notice Creates a new batch for processing requests
     /// @return The new batch ID
     /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
-    function _createNewBatch() internal returns (bytes32) {
+    function _createNewBatch() private returns (bytes32) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         unchecked {
             $.currentBatch++;
@@ -436,41 +438,41 @@ contract kStakingVault is Initializable, UUPSUpgradeable, Ownable, BaseVault, Mu
     /// @notice Checks if the vault is paused
     /// @param $ Storage pointer
     /// @dev Only callable by RELAYER_ROLE
-    function _checkPaused(BaseVaultStorage storage $) internal view {
+    function _checkPaused(BaseVaultStorage storage $) private view {
         require(!_getPaused($), KSTAKINGVAULT_IS_PAUSED);
     }
 
     /// @notice Checks if the amount is not zero
     /// @param amount Amount to check
-    function _checkAmountNotZero(uint256 amount) internal pure {
+    function _checkAmountNotZero(uint256 amount) private pure {
         require(amount != 0, KSTAKINGVAULT_ZERO_AMOUNT);
     }
 
     /// @notice Checks if the bps is valid
     /// @param bps BPS to check
-    function _checkValidBPS(uint256 bps) internal pure {
+    function _checkValidBPS(uint256 bps) private pure {
         require(bps <= 10_000, VAULTFEES_FEE_EXCEEDS_MAXIMUM);
     }
 
     /// @dev Only callable by RELAYER_ROLE
-    function _checkRelayer(address relayer) internal view {
+    function _checkRelayer(address relayer) private view {
         require(_isRelayer(relayer), KSTAKINGVAULT_WRONG_ROLE);
     }
 
     /// @dev Only callable by kAssetRouter
-    function _checkRouter(address router) internal view {
+    function _checkRouter(address router) private view {
         require(_isKAssetRouter(router), KSTAKINGVAULT_WRONG_ROLE);
     }
 
     /// @dev Only callable by ADMIN_ROLE
-    function _checkAdmin(address admin) internal view {
+    function _checkAdmin(address admin) private view {
         require(_isAdmin(admin), KSTAKINGVAULT_WRONG_ROLE);
     }
 
     /// @dev Validate timestamp
     /// @param timestamp Timestamp to validate
     /// @param lastTimestamp Last timestamp to validate
-    function _validateTimestamp(uint256 timestamp, uint256 lastTimestamp) internal view {
+    function _validateTimestamp(uint256 timestamp, uint256 lastTimestamp) private view {
         require(timestamp >= lastTimestamp && timestamp <= block.timestamp, VAULTFEES_INVALID_TIMESTAMP);
     }
 

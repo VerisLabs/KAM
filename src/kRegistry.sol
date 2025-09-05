@@ -131,11 +131,12 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         external
         initializer
     {
-        require(owner_ != address(0), KREGISTRY_ZERO_ADDRESS);
-        require(admin_ != address(0), KREGISTRY_ZERO_ADDRESS);
-        require(emergencyAdmin_ != address(0), KREGISTRY_ZERO_ADDRESS);
-        require(guardian_ != address(0), KREGISTRY_ZERO_ADDRESS);
-        require(relayer_ != address(0), KREGISTRY_ZERO_ADDRESS);
+        _checkAddressNotZero(owner_);
+        _checkAddressNotZero(admin_);
+        _checkAddressNotZero(emergencyAdmin_);
+        _checkAddressNotZero(guardian_);
+        _checkAddressNotZero(relayer_);
+        _checkAddressNotZero(treasury_);
 
         _initializeOwner(owner_);
         _grantRoles(admin_, ADMIN_ROLE);
@@ -155,8 +156,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @param to_ the address that will receive the assets
     /// @param amount_ the amount to rescue
     function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
-        require(_hasRole(msg.sender, ADMIN_ROLE), KREGISTRY_WRONG_ROLE);
-        require(to_ != address(0), KREGISTRY_ZERO_ADDRESS);
+        _checkAdmin(msg.sender);
+        _checkAddressNotZero(to_);
 
         if (asset_ == address(0)) {
             // Rescue ETH
@@ -169,7 +170,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         } else {
             // Rescue ERC20 tokens
             kRegistryStorage storage $ = _getkRegistryStorage();
-            require(!$.supportedAssets.contains(asset_), KREGISTRY_WRONG_ASSET);
+            _checkAssetNotRegistered(asset_);
             require(amount_ != 0 && amount_ <= asset_.balanceOf(address(this)), KREGISTRY_ZERO_AMOUNT);
 
             asset_.safeTransfer(to_, amount_);
@@ -186,8 +187,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @param contractAddress Address of the singleton contract
     /// @dev Only callable by ADMIN_ROLE
     function setSingletonContract(bytes32 id, address contractAddress) external payable {
-        require(_hasRole(msg.sender, ADMIN_ROLE), KREGISTRY_WRONG_ROLE);
-        require(contractAddress != address(0), KREGISTRY_ZERO_ADDRESS);
+        _checkAdmin(msg.sender);
+        _checkAddressNotZero(contractAddress);
         kRegistryStorage storage $ = _getkRegistryStorage();
         require($.singletonContracts[id] == address(0), KREGISTRY_ALREADY_REGISTERED);
         $.singletonContracts[id] = contractAddress;
@@ -202,7 +203,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @param institution_ the institution address
     /// @dev Only callable by VENDOR_ROLE
     function grantInstitutionRole(address institution_) external payable {
-        require(_hasRole(msg.sender, VENDOR_ROLE), KREGISTRY_WRONG_ROLE);
+        _checkVendor(msg.sender);
         _grantRoles(institution_, INSTITUTION_ROLE);
     }
 
@@ -210,7 +211,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @param vendor_ the vendor address
     /// @dev Only callable by ADMIN_ROLE
     function grantVendorRole(address vendor_) external payable {
-        require(_hasRole(msg.sender, ADMIN_ROLE), KREGISTRY_WRONG_ROLE);
+        _checkAdmin(msg.sender);
         _grantRoles(vendor_, VENDOR_ROLE);
     }
 
@@ -218,7 +219,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @param relayer_ the relayer address
     /// @dev Only callable by ADMIN_ROLE
     function grantRelayerRole(address relayer_) external payable {
-        require(_hasRole(msg.sender, ADMIN_ROLE), KREGISTRY_WRONG_ROLE);
+        _checkAdmin(msg.sender);
         _grantRoles(relayer_, RELAYER_ROLE);
     }
 
@@ -239,25 +240,25 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         payable
         returns (address)
     {
-        require(_hasRole(msg.sender, ADMIN_ROLE), KREGISTRY_WRONG_ROLE);
-        require(asset != address(0), KREGISTRY_ZERO_ADDRESS);
+        _checkAdmin(msg.sender);
+        _checkAddressNotZero(asset);
         require(id != bytes32(0), KREGISTRY_ZERO_ADDRESS);
 
         kRegistryStorage storage $ = _getkRegistryStorage();
-        require(!$.supportedAssets.contains(asset), KREGISTRY_ALREADY_REGISTERED);
+        _checkAssetNotRegistered(asset);
 
         $.supportedAssets.add(asset);
         $.singletonAssets[id] = asset;
         emit AssetSupported(asset);
 
         address minter_ = getContractById(K_MINTER);
-        require(minter_ != address(0), KREGISTRY_ZERO_ADDRESS);
+        _checkAddressNotZero(minter_);
 
         (bool success, uint8 decimals_) = _tryGetAssetDecimals(asset);
-        if (!success) revert();
+        require(success, KREGISTRY_WRONG_ASSET);
 
         address kToken_ = $.assetToKToken[asset];
-        require(kToken_ == address(0), KREGISTRY_ALREADY_REGISTERED);
+        _checkAssetNotRegistered(kToken_);
 
         kToken_ = address(
             new kToken(
@@ -290,11 +291,11 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @param asset Underlying asset the vault manages
     /// @dev Only callable by ADMIN_ROLE, sets as primary if first of its type
     function registerVault(address vault, VaultType type_, address asset) external payable {
-        require(_hasRole(msg.sender, ADMIN_ROLE), KREGISTRY_WRONG_ROLE);
-        require(vault != address(0), KREGISTRY_ZERO_ADDRESS);
+        _checkAdmin(msg.sender);
+        _checkAddressNotZero(vault);
         kRegistryStorage storage $ = _getkRegistryStorage();
         require(!$.allVaults.contains(vault), KREGISTRY_ALREADY_REGISTERED);
-        require($.supportedAssets.contains(asset), KREGISTRY_ASSET_NOT_SUPPORTED);
+        _checkAssetRegistered(asset);
 
         // Register vault
         $.vaultType[vault] = uint8(type_);
@@ -309,9 +310,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     }
 
     function removeVault(address vault) external payable {
-        require(_hasRole(msg.sender, ADMIN_ROLE), KREGISTRY_WRONG_ROLE);
+        _checkAdmin(msg.sender);
         kRegistryStorage storage $ = _getkRegistryStorage();
-        require($.allVaults.contains(vault), KREGISTRY_ASSET_NOT_SUPPORTED);
+        _checkVaultRegistered(vault);
         $.allVaults.remove(vault);
         emit VaultRemoved(vault);
     }
@@ -323,9 +324,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @notice Sets the treasury address
     /// @param treasury_ The new treasury address
     function setTreasury(address treasury_) external payable {
-        require(_hasRole(msg.sender, ADMIN_ROLE), KREGISTRY_WRONG_ROLE);
+        _checkAdmin(msg.sender);
         kRegistryStorage storage $ = _getkRegistryStorage();
-        require(treasury_ != address(0), KREGISTRY_ZERO_ADDRESS);
+        _checkAddressNotZero(treasury_);
         $.treasury = treasury_;
         emit TreasurySet(treasury_);
     }
@@ -338,13 +339,14 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @param vault The vault address
     /// @param adapter The adapter address
     function registerAdapter(address vault, address adapter) external payable {
-        require(_hasRole(msg.sender, ADMIN_ROLE), KREGISTRY_WRONG_ROLE);
-        require(vault != address(0) && adapter != address(0), KREGISTRY_INVALID_ADAPTER);
+        _checkAdmin(msg.sender);
+        _checkAddressNotZero(vault);
+        require(adapter != address(0), KREGISTRY_INVALID_ADAPTER);
 
         kRegistryStorage storage $ = _getkRegistryStorage();
 
         // Validate vault is registered
-        require($.allVaults.contains(vault), KREGISTRY_ASSET_NOT_SUPPORTED); // Reuse error
+        _checkVaultRegistered(vault);
 
         // Check if adapter is already set for this vault
         require(!$.vaultAdapters[vault].contains(address(0)), KREGISTRY_ADAPTER_ALREADY_SET);
@@ -357,7 +359,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @notice Removes an adapter for a specific vault
     /// @param vault The vault address
     function removeAdapter(address vault, address adapter) external payable {
-        require(_hasRole(msg.sender, ADMIN_ROLE), KREGISTRY_WRONG_ROLE);
+        _checkAdmin(msg.sender);
         kRegistryStorage storage $ = _getkRegistryStorage();
 
         require($.vaultAdapters[vault].contains(adapter), KREGISTRY_INVALID_ADAPTER);
@@ -374,11 +376,11 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @param asset The asset address
     /// @param hurdleRate The hurdle rate in basis points
     function setHurdleRate(address asset, uint16 hurdleRate) external payable {
-        require(_hasRole(msg.sender, RELAYER_ROLE), KREGISTRY_WRONG_ROLE);
+        _checkRelayer(msg.sender);
         require(hurdleRate <= MAX_BPS, KREGISTRY_FEE_EXCEEDS_MAXIMUM);
 
         kRegistryStorage storage $ = _getkRegistryStorage();
-        require($.supportedAssets.contains(asset), KREGISTRY_ASSET_NOT_SUPPORTED);
+        _checkAssetRegistered(asset);
 
         $.assetHurdleRate[asset] = hurdleRate;
         emit HurdleRateSet(asset, hurdleRate);
@@ -389,7 +391,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @return The hurdle rate in basis points
     function getHurdleRate(address asset) external view returns (uint16) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        require($.supportedAssets.contains(asset), KREGISTRY_ASSET_NOT_SUPPORTED);
+        _checkAssetRegistered(asset);
         return $.assetHurdleRate[asset];
     }
 
@@ -404,7 +406,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     function getContractById(bytes32 id) public view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address addr = $.singletonContracts[id];
-        require(addr != address(0), KREGISTRY_ZERO_ADDRESS);
+        _checkAddressNotZero(addr);
         return addr;
     }
 
@@ -415,7 +417,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     function getAssetById(bytes32 id) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address addr = $.singletonAssets[id];
-        require(addr != address(0), KREGISTRY_ZERO_ADDRESS);
+        _checkAddressNotZero(addr);
         return addr;
     }
 
@@ -453,7 +455,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         kRegistryStorage storage $ = _getkRegistryStorage();
         address kMinter_ = $.singletonContracts[K_MINTER];
         address kAssetRouter_ = $.singletonContracts[K_ASSET_ROUTER];
-        require(kMinter_ != address(0) && kAssetRouter_ != address(0), KREGISTRY_ZERO_ADDRESS);
+        _checkAddressNotZero(kMinter_);
+        _checkAddressNotZero(kAssetRouter_);
         return (kMinter_, kAssetRouter_);
     }
 
@@ -474,7 +477,7 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address assetToVault = $.assetToVault[asset][vaultType];
-        require(assetToVault != address(0), KREGISTRY_ZERO_ADDRESS);
+        _checkAddressNotZero(assetToVault);
         return assetToVault;
     }
 
@@ -580,6 +583,51 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         return hasAnyRole(user, role_);
     }
 
+    /// @notice Check if caller has admin role
+    /// @param user Address to check
+    function _checkAdmin(address user) private view {
+        require(_hasRole(user, ADMIN_ROLE), KREGISTRY_WRONG_ROLE);
+    }
+
+    /// @notice Check if caller has vendor role
+    /// @param user Address to check
+    function _checkVendor(address user) private view {
+        require(_hasRole(user, VENDOR_ROLE), KREGISTRY_WRONG_ROLE);
+    }
+
+    /// @notice Check if caller has relayer role
+    /// @param user Address to check
+    function _checkRelayer(address user) private view {
+        require(_hasRole(user, RELAYER_ROLE), KREGISTRY_WRONG_ROLE);
+    }
+
+    /// @notice Check if address is not zero
+    /// @param addr Address to check
+    function _checkAddressNotZero(address addr) private pure {
+        require(addr != address(0), KREGISTRY_ZERO_ADDRESS);
+    }
+
+    /// @notice Check if asset is not already registered
+    /// @param asset Asset address to check
+    function _checkAssetNotRegistered(address asset) private view {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        require(!$.supportedAssets.contains(asset), KREGISTRY_ALREADY_REGISTERED);
+    }
+
+    /// @notice Check if asset is already registered
+    /// @param asset Asset address to check
+    function _checkAssetRegistered(address asset) private view {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        require($.supportedAssets.contains(asset), KREGISTRY_ASSET_NOT_SUPPORTED);
+    }
+
+    /// @notice Check if vault is not already registered
+    /// @param vault Vault address to check
+    function _checkVaultRegistered(address vault) private view {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        require($.allVaults.contains(vault), KREGISTRY_ASSET_NOT_SUPPORTED);
+    }
+
     /// @dev Helper function to get the decimals of the underlying asset.
     /// Useful for setting the return value of `_underlyingDecimals` during initialization.
     /// If the retrieval succeeds, `success` will be true, and `result` will hold the result.
@@ -614,7 +662,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @notice Authorizes contract upgrades
     /// @param newImplementation New implementation address
     /// @dev Only callable by contract owner
-    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
+    function _authorizeUpgrade(address newImplementation) internal view override {
+        _checkOwner();
         require(newImplementation != address(0), KREGISTRY_ZERO_ADDRESS);
     }
 

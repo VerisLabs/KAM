@@ -135,7 +135,7 @@ contract kToken is ERC20, OptimizedOwnableRoles, OptimizedReentrancyGuardTransie
     /// @param _to The address that will receive the newly minted tokens
     /// @param _amount The quantity of tokens to create and assign
     function mint(address _to, uint256 _amount) external onlyRoles(MINTER_ROLE) {
-        require(!_isPaused, KTOKEN_IS_PAUSED);
+        _checkPaused();
         _mint(_to, _amount);
         emit Minted(_to, _amount);
     }
@@ -145,7 +145,7 @@ contract kToken is ERC20, OptimizedOwnableRoles, OptimizedReentrancyGuardTransie
     /// @param _from The address from which tokens will be destroyed
     /// @param _amount The quantity of tokens to destroy
     function burn(address _from, uint256 _amount) external onlyRoles(MINTER_ROLE) {
-        require(!_isPaused, KTOKEN_IS_PAUSED);
+        _checkPaused();
         _burn(_from, _amount);
         emit Burned(_from, _amount);
     }
@@ -155,7 +155,7 @@ contract kToken is ERC20, OptimizedOwnableRoles, OptimizedReentrancyGuardTransie
     /// @param _from The address from which tokens will be destroyed
     /// @param _amount The quantity of tokens to destroy from the allowance
     function burnFrom(address _from, uint256 _amount) external onlyRoles(MINTER_ROLE) {
-        require(!_isPaused, KTOKEN_IS_PAUSED);
+        _checkPaused();
         _spendAllowance(_from, msg.sender, _amount);
         _burn(_from, _amount);
         emit Burned(_from, _amount);
@@ -270,13 +270,19 @@ contract kToken is ERC20, OptimizedOwnableRoles, OptimizedReentrancyGuardTransie
                         INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Checks if contract is currently in paused state
+    /// @dev Reads the isPaused flag from contract storage
+    function _checkPaused() private view {
+        require(!_isPaused, KTOKEN_IS_PAUSED);
+    }
+
     /// @notice Internal hook that executes before any token transfer
     /// @dev Applies whenNotPaused modifier to prevent transfers during pause, then calls parent implementation
     /// @param from The address tokens are being transferred from
     /// @param to The address tokens are being transferred to
     /// @param amount The quantity of tokens being transferred
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
-        require(!_isPaused, KTOKEN_IS_PAUSED);
+        _checkPaused();
         super._beforeTokenTransfer(from, to, amount);
     }
 }
