@@ -1,56 +1,40 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import { IVaultBatch } from "./modules/IVaultBatch.sol";
-import { IVaultClaim } from "./modules/IVaultClaim.sol";
-import { IVaultFees } from "./modules/IVaultFees.sol";
+import { IVault } from "./IVault.sol";
+import { IVaultReader } from "./modules/IVaultReader.sol";
 
 /// @title IkStakingVault
-/// @notice Interface for kStakingVault that manages minter operations and user staking
+/// @notice Interface for kStakingVault(single vault + reader module) that manages minter operations and user staking
 /// @dev Matches kStakingVault implementation
-interface IkStakingVault is IVaultBatch, IVaultClaim, IVaultFees {
-    /*//////////////////////////////////////////////////////////////
-                        USER STAKING OPERATIONS
-    //////////////////////////////////////////////////////////////*/
-
-    function requestStake(address to, uint256 kTokensAmount) external payable returns (bytes32 requestId);
-    function requestUnstake(address to, uint256 stkTokenAmount) external payable returns (bytes32 requestId);
-    function updateLastTotalAssets(uint256 totalAssets) external;
-
-    /*//////////////////////////////////////////////////////////////
-                          VIEW FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    function asset() external view returns (address);
+interface IkStakingVault is IVault, IVaultReader {
+    /// @notice Returns the owner of the contract
     function owner() external view returns (address);
-    function totalSupply() external view returns (uint256);
-    function underlyingAsset() external view returns (address);
+
+    /// @notice Returns the name of the token
     function name() external view returns (string memory);
+
+    /// @notice Returns the symbol of the token
     function symbol() external view returns (string memory);
+
+    /// @notice Returns the decimals of the token
     function decimals() external view returns (uint8);
-    function calculateStkTokenPrice(uint256 totalAssets) external view returns (uint256);
-    function totalAssets() external view returns (uint256);
-    function totalNetAssets() external view returns (uint256);
+
+    /// @notice Returns the total supply of the token
+    function totalSupply() external view returns (uint256);
+
+    /// @notice Returns the balance of the specified account
     function balanceOf(address account) external view returns (uint256);
-    function lastTotalAssets() external view returns (uint256);
-    function kToken() external view returns (address);
-    function getBatchId() external view returns (bytes32);
-    function getSafeBatchId() external view returns (bytes32);
-    function getSafeBatchReceiver(bytes32 batchId) external view returns (address);
-    function isBatchClosed() external view returns (bool);
-    function isBatchSettled() external view returns (bool);
-    function getBatchIdInfo()
-        external
-        view
-        returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled);
-    function getBatchReceiver(bytes32 batchId) external view returns (address);
-    function getBatchIdReceiver(bytes32 batchId) external view returns (address);
-    function sharePrice() external view returns (uint256);
 
-    /*//////////////////////////////////////////////////////////////
-                        CONTRACT INFO
-    //////////////////////////////////////////////////////////////*/
+    /// @notice Transfers tokens to the specified recipient
+    function transfer(address to, uint256 amount) external returns (bool);
 
-    function contractName() external pure returns (string memory);
-    function contractVersion() external pure returns (string memory);
+    /// @notice Returns the remaining allowance that spender has to spend on behalf of owner
+    function allowance(address owner, address spender) external view returns (uint256);
+
+    /// @notice Sets amount as the allowance of spender over the caller's tokens
+    function approve(address spender, uint256 amount) external returns (bool);
+
+    /// @notice Transfers tokens from sender to recipient using the allowance mechanism
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
 }

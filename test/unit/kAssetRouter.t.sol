@@ -167,7 +167,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     /// @dev Test asset push reverts when called by non-kMinter
     function test_KAssetPush_OnlyKMinter() public {
         vm.prank(users.alice);
-        vm.expectRevert(bytes(KASSETROUTER_WRONG_ROLE));
+        vm.expectRevert(bytes(KASSETROUTER_ONLY_KMINTER));
         assetRouter.kAssetPush(USDC_MAINNET, TEST_AMOUNT, TEST_BATCH_ID);
     }
 

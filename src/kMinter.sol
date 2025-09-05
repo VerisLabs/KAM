@@ -90,12 +90,12 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @param amount_ Amount of the asset to mint
     function mint(address asset_, address to_, uint256 amount_) external payable {
         _lockReentrant();
-        require(!_isPaused(), KMINTER_IS_PAUSED);
-        require(_isInstitution(msg.sender), KMINTER_WRONG_ROLE);
-        require(_isAsset(asset_), KMINTER_WRONG_ASSET);
+        _checkNotPaused();
+        _checkInstitution(msg.sender);
+        _checkValidAsset(asset_);
 
-        require(amount_ != 0, KMINTER_ZERO_AMOUNT);
-        require(to_ != address(0), KMINTER_ZERO_ADDRESS);
+        _checkAmountNotZero(amount_);
+        _checkAddressNotZero(to_);
 
         address kToken = _getKTokenForAsset(asset_);
         address dnVault = _getDNVaultByAsset(asset_);
@@ -125,12 +125,11 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @return requestId Unique identifier for tracking this redemption request
     function requestRedeem(address asset_, address to_, uint256 amount_) external payable returns (bytes32 requestId) {
         _lockReentrant();
-        require(!_isPaused(), KMINTER_IS_PAUSED);
-        require(_isInstitution(msg.sender), KMINTER_WRONG_ROLE);
-        require(_isAsset(asset_), KMINTER_WRONG_ASSET);
-
-        require(amount_ != 0, KMINTER_ZERO_AMOUNT);
-        require(to_ != address(0), KMINTER_ZERO_ADDRESS);
+        _checkNotPaused();
+        _checkInstitution(msg.sender);
+        _checkValidAsset(asset_);
+        _checkAmountNotZero(amount_);
+        _checkAddressNotZero(to_);
 
         address kToken = _getKTokenForAsset(asset_);
         require(kToken.balanceOf(msg.sender) >= amount_, KMINTER_INSUFFICIENT_BALANCE);
@@ -172,8 +171,8 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @param requestId Request ID to execute
     function redeem(bytes32 requestId) external payable {
         _lockReentrant();
-        require(!_isPaused(), KMINTER_IS_PAUSED);
-        require(_isInstitution(msg.sender), KMINTER_WRONG_ROLE);
+        _checkNotPaused();
+        _checkInstitution(msg.sender);
 
         kMinterStorage storage $ = _getkMinterStorage();
         RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
@@ -210,9 +209,8 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @param requestId Request ID to cancel
     function cancelRequest(bytes32 requestId) external payable {
         _lockReentrant();
-
-        require(!_isPaused(), KMINTER_IS_PAUSED);
-        require(_isInstitution(msg.sender), KMINTER_WRONG_ROLE);
+        _checkNotPaused();
+        _checkInstitution(msg.sender);
 
         kMinterStorage storage $ = _getkMinterStorage();
         RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
@@ -243,12 +241,47 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
                       INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Check if contract is not paused
+    function _checkNotPaused() private view {
+        require(!_isPaused(), KMINTER_IS_PAUSED);
+    }
+
+    /// @notice Check if caller is an institution
+    /// @param user Address to check
+    function _checkInstitution(address user) private view {
+        require(_isInstitution(user), KMINTER_WRONG_ROLE);
+    }
+
+    /// @notice Check if caller is an admin
+    /// @param user Address to check
+    function _checkAdmin(address user) private view {
+        require(_isAdmin(user), KMINTER_WRONG_ROLE);
+    }
+
+    /// @notice Check if asset is valid/supported
+    /// @param asset Asset address to check
+    function _checkValidAsset(address asset) private view {
+        require(_isAsset(asset), KMINTER_WRONG_ASSET);
+    }
+
+    /// @notice Check if amount is not zero
+    /// @param amount Amount to check
+    function _checkAmountNotZero(uint256 amount) private pure {
+        require(amount != 0, KMINTER_ZERO_AMOUNT);
+    }
+
+    /// @notice Check if address is not zero
+    /// @param addr Address to check
+    function _checkAddressNotZero(address addr) private pure {
+        require(addr != address(0), KMINTER_ZERO_ADDRESS);
+    }
+
     /// @notice Generates a request ID
     /// @param user User address
     /// @param amount Amount
     /// @param timestamp Timestamp
     /// @return Request ID
-    function _createRedeemRequestId(address user, uint256 amount, uint256 timestamp) internal returns (bytes32) {
+    function _createRedeemRequestId(address user, uint256 amount, uint256 timestamp) private returns (bytes32) {
         kMinterStorage storage $ = _getkMinterStorage();
         $.requestCounter = (uint256($.requestCounter) + 1).toUint64();
         return OptimizedEfficientHashLib.hash(

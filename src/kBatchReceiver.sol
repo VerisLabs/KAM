@@ -41,7 +41,7 @@ contract kBatchReceiver is IkBatchReceiver {
     /// @param _kMinter Address of the kMinter contract (only authorized caller)
     /// @dev Sets kMinter as immutable variable
     constructor(address _kMinter) {
-        require(_kMinter != address(0), KBATCHRECEIVER_ZERO_ADDRESS);
+        _checkAddressNotZero(_kMinter);
         kMinter = _kMinter;
     }
 
@@ -51,7 +51,7 @@ contract kBatchReceiver is IkBatchReceiver {
     /// @dev Sets batch ID and asset, then emits initialization event
     function initialize(bytes32 _batchId, address _asset) external {
         require(!isInitialised, KBATCHRECEIVER_ALREADY_INITIALIZED);
-        require(_asset != address(0), KBATCHRECEIVER_ZERO_ADDRESS);
+        _checkAddressNotZero(_asset);
 
         isInitialised = true;
         batchId = _batchId;
@@ -70,10 +70,10 @@ contract kBatchReceiver is IkBatchReceiver {
     /// @param _batchId Batch ID for validation (must match this receiver's batch)
     /// @dev Only callable by kMinter, transfers assets from caller to receiver
     function pullAssets(address receiver, uint256 amount, bytes32 _batchId) external {
-        require(msg.sender == kMinter, KBATCHRECEIVER_ONLY_KMINTER);
+        _checkMinter(msg.sender);
         require(_batchId == batchId, KBATCHRECEIVER_INVALID_BATCH_ID);
-        require(amount != 0, KBATCHRECEIVER_ZERO_AMOUNT);
-        require(receiver != address(0), KBATCHRECEIVER_ZERO_ADDRESS);
+        _checkAmountNotZero(amount);
+        _checkAddressNotZero(receiver);
 
         asset.safeTransfer(receiver, amount);
         emit PulledAssets(receiver, asset, amount);
@@ -84,12 +84,12 @@ contract kBatchReceiver is IkBatchReceiver {
     /// @dev Only callable by kMinter, transfers assets to kMinter
     function rescueAssets(address asset_) external payable {
         address sender = msg.sender;
-        require(sender == kMinter, KBATCHRECEIVER_ONLY_KMINTER);
+        _checkMinter(sender);
 
         if (asset_ == address(0)) {
             // Rescue ETH
             uint256 balance = address(this).balance;
-            require(balance != 0, KBATCHRECEIVER_ZERO_AMOUNT);
+            _checkAmountNotZero(balance);
 
             (bool success,) = sender.call{ value: balance }("");
             require(success, KBATCHRECEIVER_TRANSFER_FAILED);
@@ -100,10 +100,29 @@ contract kBatchReceiver is IkBatchReceiver {
             require(asset_ != asset, KBATCHRECEIVER_WRONG_ASSET);
 
             uint256 balance = asset_.balanceOf(address(this));
-            require(balance != 0, KBATCHRECEIVER_ZERO_AMOUNT);
+            _checkAmountNotZero(balance);
 
             asset_.safeTransfer(sender, balance);
             emit RescuedAssets(asset_, sender, balance);
         }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              PRIVATE FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev Only callable by kMinter
+    function _checkMinter(address minter) private view {
+        require(minter == kMinter, KBATCHRECEIVER_ONLY_KMINTER);
+    }
+
+    /// @dev Checks address is not zero
+    function _checkAddressNotZero(address address_) private pure {
+        require(address_ != address(0), KBATCHRECEIVER_ZERO_ADDRESS);
+    }
+
+    /// @dev Checks amount is not zero
+    function _checkAmountNotZero(uint256 amount) private pure {
+        require(amount != 0, KBATCHRECEIVER_ZERO_AMOUNT);
     }
 }
