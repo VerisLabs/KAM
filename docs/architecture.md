@@ -2,7 +2,7 @@
 
 ## Overview
 
-KAM is an institutional-grade tokenization protocol that creates kTokens (kUSD, kBTC, etc.) backed 1:1 by real-world assets (USDC, WBTC, etc.). The protocol bridges traditional finance and DeFi by serving two distinct user bases through separate but interconnected pathways.
+KAM is an institutional-grade tokenization protocol that creates kTokens (kUSDC, kWBTC, etc.) backed 1:1 by real-world assets (USDC, WBTC, etc.). The protocol bridges traditional finance and DeFi by serving two distinct user bases through separate but interconnected pathways.
 
 **Institutional Access**: Institutions interact directly with the kMinter contract to mint and redeem kTokens with guaranteed 1:1 backing. This provides instant liquidity for large operations without slippage or MEV concerns. Institutions deposit underlying assets and receive kTokens immediately, or request redemptions that are processed through batch settlement.
 
@@ -119,7 +119,7 @@ KAM is split into the following main contracts:
 
 #### kToken
 
-The fundamental ERC20 implementation representing tokenized real-world assets. Each kToken maintains a 1:1 peg with its underlying asset (e.g., kUSD:USDC, kBTC:WBTC).
+The fundamental ERC20 implementation representing tokenized real-world assets. Each kToken maintains a 1:1 peg with its underlying asset (e.g., kUSD:USDC, kWBTC:WBTC).
 
 The kToken contract is the foundational building block of the KAM protocol, implementing a role-restricted ERC20 token with advanced security features. It uses the UUPS upgradeable pattern where the upgrade logic resides in the implementation contract rather than the proxy, reducing proxy size and gas costs while maintaining upgradeability.
 
@@ -175,19 +175,21 @@ During settlement execution, the system handles kMinter versus regular vault set
 
 #### kStakingVault
 
-Modular vault implementation deployed per asset type, enabling retail users to stake kTokens for yield-bearing stkTokens.
+Single vault contract implementation deployed per asset type, enabling retail users to stake kTokens for yield-bearing stkTokens.
 
-The kStakingVault implements a sophisticated modular architecture using the "diamond pattern" via MultiFacetProxy. This design allows the vault to compose functionality from multiple specialized modules while maintaining a single contract interface.
+The kStakingVault is implemented as a unified contract that inherits from multiple base contracts to provide comprehensive staking functionality. The contract combines BaseVault, Initializable, UUPSUpgradeable, Ownable, and MultiFacetProxy to create a complete staking solution.
 
-**BaseVault**: Provides foundational vault logic including ERC20 token functionality for stkTokens. These tokens represent staked positions and automatically accrue yield. The module uses ERC-7201 namespaced storage for upgrade safety, connects to kRegistry for system-wide configuration, implements role-based permissions, and uses ReentrancyGuardTransient for gas-efficient protection.
+**Core Architecture**: The vault implements all staking functionality directly within the main contract, including batch processing, fee management, and claim processing. It uses ERC-7201 namespaced storage for upgrade safety, integrates with kRegistry for system-wide configuration, implements role-based permissions, and uses ReentrancyGuardTransient for gas-efficient protection.
 
-**VaultBatches**: Handles the complete batch lifecycle for efficient gas usage. It automatically creates new batches when current batches settle, marks batches ready for settlement processing, coordinates with kAssetRouter for atomic settlement, and creates deterministic addresses for redemption distribution.
+**BaseVault Integration**: Provides foundational vault logic including ERC20 token functionality for stkTokens. These tokens represent staked positions and automatically accrue yield through share price appreciation. The BaseVault handles core mathematical operations for asset-to-share conversions and fee calculations.
 
-**VaultFees**: Manages comprehensive fee collection and distribution. Management fees accrue continuously based on time and total assets under management, while performance fees are charged only on positive yields from external strategies. Fee calculation uses precise math to avoid rounding errors, and collection occurs during settlement operations to minimize gas or over an X period of time.
+**Batch Processing**: The vault manages the complete batch lifecycle for efficient gas usage. It creates new batches automatically, handles batch closure and settlement coordination with kAssetRouter, and manages deterministic BatchReceiver deployment for asset distribution.
 
-**VaultClaims**: Processes user claims for completed requests. It converts completed stake requests into stkToken balances, processes unstaking requests and distributes underlying tokens plus yield, ensures claims are only processed for settled batches, and batches multiple claims for efficiency.
+**Fee Management**: Implements comprehensive fee collection including management fees that accrue continuously based on time and assets under management, and performance fees charged only on positive yields. Fee calculations use precise mathematical operations to avoid rounding errors.
 
-The MultiFacetProxy pattern enables modular functionality through delegatecall routing, allowing new functionality to be added without contract redeployment, isolating complex logic in specialized modules, maintaining a clean main contract interface, and upgrading individual modules independently.
+**Claims Processing**: Handles user claims for completed requests by converting stake requests into stkToken balances, processing unstaking requests with underlying token plus yield distribution, and ensuring claims are only processed for settled batches.
+
+**Module Integration**: The vault includes a ReaderModule for external state queries and fee calculations, providing a clean interface for off-chain monitoring and integration while keeping core logic within the main contract.
 
 #### kBatchReceiver
 
@@ -249,7 +251,7 @@ Institution                kMinter              kAssetRouter            kToken
     │                         ├──kAssetPush────────->│                    │
     │                         │                      ├──updateVirtual()   │
     │                         │                      │                    │
-    │                         ├──mint(kUSD)────────────────-─────────────>│
+    │                         ├──mint(kUSD)-───────────────-─────────────>│
     │<────────────────────────┤                      │                    │
     │                         │                      │                    │
     │  kTokens received 1:1   │                      │                    │
@@ -403,6 +405,7 @@ keccak256(abi.encode(uint256(keccak256("kam.storage.ContractName")) - 1)) & ~byt
 ```
 
 This ensures that:
+
 - Storage layouts are upgrade-safe
 - No accidental overwrites between contracts
 - Clear separation of concerns for each contract's state

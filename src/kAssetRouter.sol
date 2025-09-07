@@ -38,7 +38,8 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 
 /// @title kAssetRouter
-/// @notice Central money flow coordinator for the KAM protocol, orchestrating all asset movements and yield distribution
+/// @notice Central money flow coordinator for the KAM protocol, orchestrating all asset movements and yield
+/// distribution
 /// @dev This contract serves as the heart of the KAM protocol's financial infrastructure, coordinating complex
 /// interactions between institutional flows (kMinter), retail flows (kStakingVaults), and yield generation (DN vaults).
 /// Key responsibilities include: (1) Managing asset pushes from kMinter institutional deposits to DN vaults for yield

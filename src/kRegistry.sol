@@ -86,7 +86,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Core storage structure for kRegistry using ERC-7201 namespaced storage pattern
-    /// @dev This structure maintains all protocol configuration state including contracts, assets, vaults, and permissions.
+    /// @dev This structure maintains all protocol configuration state including contracts, assets, vaults, and
+    /// permissions.
     /// Uses the diamond storage pattern to prevent storage collisions in upgradeable contracts.
     /// @custom:storage-location erc7201:kam.storage.kRegistry
     struct kRegistryStorage {
@@ -305,12 +306,12 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         kToken_ = address(
             new kToken(
                 owner(),
-                msg.sender,    // admin gets initial control
-                msg.sender,    // emergency admin for safety
-                minter_,       // kMinter gets minting rights
+                msg.sender, // admin gets initial control
+                msg.sender, // emergency admin for safety
+                minter_, // kMinter gets minting rights
                 name_,
                 symbol_,
-                decimals_      // matches underlying for consistency
+                decimals_ // matches underlying for consistency
             )
         );
 

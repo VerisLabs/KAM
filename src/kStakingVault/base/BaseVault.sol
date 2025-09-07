@@ -21,8 +21,18 @@ import { IVaultReader } from "src/interfaces/modules/IVaultReader.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title BaseVault
-/// @notice Base contract for all modules
-/// @dev Provides shared storage, roles, and common functionality
+/// @notice Foundation contract providing essential shared functionality for all kStakingVault implementations
+/// @dev This abstract contract serves as the architectural foundation for the retail staking system, establishing
+/// critical patterns and utilities that ensure consistency across vault implementations. Key responsibilities include:
+/// (1) ERC-7201 namespaced storage preventing upgrade collisions while enabling safe inheritance, (2) Registry
+/// integration for protocol-wide configuration and role-based access control, (3) Share accounting mathematics
+/// for accurate conversion between assets and stkTokens, (4) Fee calculation framework supporting management and
+/// performance fees with hurdle rate mechanisms, (5) Batch processing coordination for gas-efficient settlement,
+/// (6) Virtual balance tracking for pending operations and accurate share price calculations. The contract employs
+/// optimized storage packing in the config field to minimize gas costs while maintaining extensive configurability.
+/// Mathematical operations use the OptimizedFixedPointMathLib for precision and overflow protection in share
+/// calculations. All inheriting vault implementations leverage these utilities to maintain protocol integrity
+/// while reducing code duplication and ensuring consistent behavior across the vault network.
 abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     using OptimizedFixedPointMathLib for uint256;
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
@@ -236,10 +246,16 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Initializes the base contract with registry and pause state
-    /// @param registry_ Address of the kRegistry contract
-    /// @param paused_ Initial pause state
-    /// @dev Can only be called once during initialization
+    /// @notice Initializes the base vault foundation with registry integration and operational state
+    /// @dev This internal initialization function establishes the core foundation for all vault implementations.
+    /// The initialization process: (1) Validates single initialization to prevent reinitialization attacks in proxy
+    /// patterns, (2) Ensures registry address is valid since all protocol operations depend on it, (3) Sets initial
+    /// operational state enabling normal vault operations or emergency pause, (4) Initializes fee tracking timestamps
+    /// to current block time for accurate fee accrual calculations, (5) Marks initialization complete to prevent
+    /// future calls. The registry serves as the single source of truth for protocol configuration, role management,
+    /// and contract discovery. Fee timestamps are initialized to prevent immediate fee charges on new vaults.
+    /// @param registry_ The kRegistry contract address providing protocol configuration and role management
+    /// @param paused_ Initial operational state (true = paused, false = active)
     function __BaseVault_init(address registry_, bool paused_) internal {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
 
@@ -308,9 +324,14 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
                             PAUSE 
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Sets the pause state of the contract
-    /// @param paused_ New pause state
-    /// @dev Only callable internally by inheriting contracts
+    /// @notice Updates the vault's operational pause state for emergency risk management
+    /// @dev This internal function enables vault implementations to halt operations during emergencies or maintenance.
+    /// The pause mechanism: (1) Validates vault initialization to prevent invalid state changes, (2) Updates the
+    /// packed config storage with new pause state, (3) Emits event for monitoring and user notification. When paused,
+    /// state-changing operations should be blocked while view functions remain accessible for monitoring. The pause
+    /// state is stored in packed config for gas efficiency. This function provides the foundation for emergency
+    /// controls while maintaining transparency through event emission.
+    /// @param paused_ The desired pause state (true = halt operations, false = resume normal operation)
     function _setPaused(bool paused_) internal {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         require(_getInitialized($), BASEVAULT_NOT_INITIALIZED);
@@ -321,33 +342,58 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /*//////////////////////////////////////////////////////////////
                                 MATH HELPERS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Converts shares to assets
-    /// @param shares Amount of shares to convert
-    /// @return assets Amount of assets
+    /// @notice Converts stkToken shares to underlying asset value based on current vault performance
+    /// @dev This function implements the core share accounting mechanism that determines asset value for stkToken
+    /// holders. The conversion process: (1) Handles edge case where total supply is zero by returning 1:1 conversion,
+    /// (2) Uses precise fixed-point math to calculate proportional asset value based on share ownership percentage,
+    /// (3) Applies current total net assets (after fees) to ensure accurate user valuations. The calculation
+    /// maintains precision through fullMulDiv to prevent rounding errors that could accumulate over time. This
+    /// function is critical for determining redemption values, share price calculations, and user balance queries.
+    /// @param shares The quantity of stkTokens to convert to underlying asset terms
+    /// @return assets The equivalent value in underlying assets based on current vault performance
     function _convertToAssets(uint256 shares) internal view returns (uint256 assets) {
         uint256 totalSupply_ = totalSupply();
         if (totalSupply_ == 0) return shares;
         return shares.fullMulDiv(_totalNetAssets(), totalSupply_);
     }
 
-    /// @notice Converts assets to shares
-    /// @param assets Amount of assets to convert
-    /// @return shares Amount of shares
+    /// @notice Converts underlying asset amount to equivalent stkToken shares at current vault valuation
+    /// @dev This function determines how many stkTokens should be issued for a given asset deposit based on current
+    /// vault performance. The conversion process: (1) Handles edge case of zero total supply with 1:1 initial pricing,
+    /// (2) Calculates proportional share amount based on current vault valuation and total outstanding shares,
+    /// (3) Uses total net assets to ensure new shares are priced fairly relative to existing holders. The precise
+    /// fixed-point mathematics prevent dilution attacks and ensure fair pricing for all participants. This function
+    /// is essential for determining share issuance during staking operations and maintaining equitable vault ownership.
+    /// @param assets The underlying asset amount to convert to share terms
+    /// @return shares The equivalent stkToken amount based on current share price
     function _convertToShares(uint256 assets) internal view returns (uint256 shares) {
         uint256 totalSupply_ = totalSupply();
         if (totalSupply_ == 0) return assets;
         return assets.fullMulDiv(totalSupply_, _totalNetAssets());
     }
 
-    /// @notice Calculates share price for stkToken
-    /// @return sharePrice Price per stkToken after fees in underlying asset terms (18 decimals)
+    /// @notice Calculates net share price per stkToken after deducting accumulated fees
+    /// @dev This function provides the user-facing share price that reflects actual value after management and
+    /// performance fee deductions. The calculation: (1) Uses vault decimals for proper scaling to match token
+    /// precision, (2) Calls _convertToAssets with unit share amount to determine per-token value, (3) Reflects
+    /// total net assets which exclude accrued but unpaid fees. This net pricing ensures users see accurate
+    /// value after all fee obligations, providing transparent visibility into their true vault position value.
+    /// Used primarily for user-facing calculations and accurate balance reporting.
+    /// @return Net price per stkToken in underlying asset terms (scaled to vault decimals)
     function _netSharePrice() internal view returns (uint256) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _convertToAssets(10 ** _getDecimals($));
     }
 
-    /// @notice Calculates share price for stkToken
-    /// @return sharePrice Price per stkToken in underlying asset terms (18 decimals)
+    /// @notice Calculates gross share price per stkToken including accumulated fees
+    /// @dev This function provides the total vault performance-based share price before fee deductions. The
+    /// calculation:
+    /// (1) Handles zero total supply edge case with 1:1 initial pricing, (2) Uses total gross assets including accrued
+    /// fees for complete performance measurement, (3) Applies precise fixed-point mathematics for accurate pricing.
+    /// This gross pricing is used for settlement calculations, performance fee assessments, and watermark tracking.
+    /// The inclusion of fees provides complete vault performance measurement for fee calculations and settlement
+    /// coordination.
+    /// @return Gross price per stkToken in underlying asset terms (scaled to vault decimals)
     function _sharePrice() internal view returns (uint256) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         uint256 shares = 10 ** _getDecimals($);
@@ -356,21 +402,40 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
         return shares.fullMulDiv(_totalAssets(), totalSupply_);
     }
 
-    /// @notice Returns the total assets in the vault
-    /// @return totalAssets Total assets in the vault
+    /// @notice Calculates total assets under management including pending stakes and accrued yields
+    /// @dev This function determines the complete asset base managed by the vault for share price calculations.
+    /// The calculation: (1) Starts with total kToken balance held by the vault contract, (2) Subtracts pending
+    /// stakes that haven't yet been converted to stkTokens to avoid double-counting during settlement periods,
+    /// (3) Includes all accrued yields and performance gains. The pending stake adjustment is crucial for accurate
+    /// share pricing during batch processing periods when assets are deposited but shares haven't been issued.
+    /// This total forms the basis for both gross and net share price calculations.
+    /// @return Total asset value managed by the vault including yields but excluding pending operations
     function _totalAssets() internal view returns (uint256) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return $.kToken.balanceOf(address(this)) - $.totalPendingStake;
     }
 
-    /// @notice Returns the total assets after fees in the vault
-    /// @return totalNetAssets Total net assets in the vault
+    /// @notice Calculates net assets available to users after deducting accumulated fees
+    /// @dev This function provides the user-facing asset value by removing management and performance fee obligations.
+    /// The calculation: (1) Takes total gross assets as the starting point, (2) Subtracts accumulated fees calculated
+    /// by the fee computation module, (3) Results in the net value attributable to stkToken holders. This net asset
+    /// calculation is critical for fair share pricing, ensuring new entrants pay appropriate prices and existing
+    /// holders receive accurate valuations. The fee deduction prevents users from claiming value that belongs to
+    /// vault operators through fee mechanisms.
+    /// @return Net asset value available to users after all fee deductions
     function _totalNetAssets() internal view returns (uint256) {
         return _totalAssets() - _accumulatedFees();
     }
 
-    /// @notice Calculates accumulated fees
-    /// @return accumulatedFees Accumulated fees
+    /// @notice Delegates fee calculation to the vault reader module for comprehensive fee computation
+    /// @dev This function serves as a gateway to the modular fee calculation system implemented in the vault reader.
+    /// The delegation pattern: (1) Calls the reader module which implements detailed fee calculation logic including
+    /// management fee accrual and performance fee assessment, (2) Returns total accumulated fees for asset
+    /// calculations,
+    /// (3) Maintains separation of concerns by isolating complex fee logic in dedicated modules. The reader module
+    /// handles time-based management fees, watermark-based performance fees, and hurdle rate calculations.
+    /// This modular approach enables upgradeable fee calculation logic while maintaining consistent interfaces.
+    /// @return Total accumulated fees (management + performance) in underlying asset terms
     function _accumulatedFees() internal view returns (uint256) {
         (,, uint256 totalFees) = IVaultReader(address(this)).computeLastBatchFees();
         return totalFees;
@@ -380,27 +445,38 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
                             VALIDATORS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Checks if an address is a admin
-    /// @return Whether the address is a admin
+    /// @notice Validates admin role permissions for vault configuration and emergency functions
+    /// @dev Queries the protocol registry to verify admin status for access control. Admins can execute
+    /// critical vault management functions including fee parameter changes and emergency interventions.
+    /// @param user The address to validate for admin privileges
+    /// @return True if the address is registered as an admin in the protocol registry
     function _isAdmin(address user) internal view returns (bool) {
         return _registry().isAdmin(user);
     }
 
-    /// @notice Checks if an address is a emergencyAdmin
-    /// @return Whether the address is a emergencyAdmin
+    /// @notice Validates emergency admin role for critical pause/unpause operations
+    /// @dev Emergency admins have elevated privileges to halt vault operations during security incidents
+    /// or market anomalies. This role provides rapid response capability for risk management.
+    /// @param user The address to validate for emergency admin privileges
+    /// @return True if the address is registered as an emergency admin in the protocol registry
     function _isEmergencyAdmin(address user) internal view returns (bool) {
         return _registry().isEmergencyAdmin(user);
     }
 
-    /// @notice Checks if an address is a relayer
-    /// @return Whether the address is a relayer
+    /// @notice Validates relayer role for automated batch processing operations
+    /// @dev Relayers execute scheduled operations including batch creation, closure, and settlement
+    /// coordination. This role enables automation while maintaining security through limited permissions.
+    /// @param user The address to validate for relayer privileges
+    /// @return True if the address is registered as a relayer in the protocol registry
     function _isRelayer(address user) internal view returns (bool) {
         return _registry().isRelayer(user);
     }
 
-    /// @notice Gets the kMinter singleton contract address
-    /// @return minter The kMinter contract address
-    /// @dev Reverts if kMinter not set in registry
+    /// @notice Validates kAssetRouter contract identity for settlement coordination
+    /// @dev Only the protocol's kAssetRouter singleton can trigger vault settlements and coordinate
+    /// cross-vault asset flows. This validation ensures settlement integrity and prevents unauthorized access.
+    /// @param kAssetRouter_ The address to validate against the registered kAssetRouter
+    /// @return True if the address matches the registered kAssetRouter contract
     function _isKAssetRouter(address kAssetRouter_) internal view returns (bool) {
         bool isTrue;
         address _kAssetRouter = _registry().getContractById(K_ASSET_ROUTER);

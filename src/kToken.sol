@@ -15,7 +15,8 @@ import {
 /// @notice ERC20 representation of underlying assets with guaranteed 1:1 backing in the KAM protocol
 /// @dev This contract serves as the tokenized wrapper for protocol-supported underlying assets (USDC, WBTC, etc.).
 /// Each kToken maintains a strict 1:1 relationship with its underlying asset through controlled minting and burning.
-/// Key characteristics: (1) Authorized minters (kMinter for institutional deposits, kAssetRouter for yield distribution)
+/// Key characteristics: (1) Authorized minters (kMinter for institutional deposits, kAssetRouter for yield
+/// distribution)
 /// can create/destroy tokens, (2) kMinter mints tokens 1:1 when assets are deposited and burns during redemptions,
 /// (3) kAssetRouter mints tokens to distribute positive yield to vaults and burns tokens for negative yield/losses,
 /// (4) Implements three-tier role system: ADMIN_ROLE for management, EMERGENCY_ADMIN_ROLE for emergency operations,
@@ -154,7 +155,8 @@ contract kToken is ERC20, OptimizedOwnableRoles, OptimizedReentrancyGuardTransie
     /// is restricted to MINTER_ROLE holders (kMinter, kAssetRouter) and requires the contract to not be paused.
     /// All minting operations emit a Minted event for transparency and tracking.
     /// @param _to The address that will receive the newly minted kTokens
-    /// @param _amount The quantity of kTokens to create (matches asset amount for deposits, yield amount for distributions)
+    /// @param _amount The quantity of kTokens to create (matches asset amount for deposits, yield amount for
+    /// distributions)
     function mint(address _to, uint256 _amount) external onlyRoles(MINTER_ROLE) {
         _checkPaused();
         _mint(_to, _amount);
@@ -284,7 +286,8 @@ contract kToken is ERC20, OptimizedOwnableRoles, OptimizedReentrancyGuardTransie
     }
 
     /// @notice Emergency recovery function for accidentally sent assets
-    /// @dev This function provides a safety mechanism to recover tokens or ETH accidentally sent to the kToken contract.
+    /// @dev This function provides a safety mechanism to recover tokens or ETH accidentally sent to the kToken
+    /// contract.
     /// It's designed for emergency situations where users mistakenly transfer assets to the wrong address.
     /// The function can handle both ERC20 tokens and native ETH. Only emergency admins can execute withdrawals
     /// to prevent unauthorized asset extraction. This should not be used for regular operations.

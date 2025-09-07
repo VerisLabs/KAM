@@ -95,12 +95,15 @@ interface IkMinter {
     /// @param amount The amount of underlying asset to deposit and kTokens to mint (1:1 ratio)
     function mint(address asset, address to, uint256 amount) external payable;
 
-    /// @notice Initiates a two-phase institutional redemption by creating a batch request for underlying asset withdrawal
+    /// @notice Initiates a two-phase institutional redemption by creating a batch request for underlying asset
+    /// withdrawal
     /// @dev This function implements the first phase of the redemption process for qualified institutions. The workflow
-    /// consists of: (1) transferring kTokens from the caller to this contract for escrow (not burned yet), (2) generating
+    /// consists of: (1) transferring kTokens from the caller to this contract for escrow (not burned yet), (2)
+    /// generating
     /// a unique request ID for tracking, (3) creating a RedeemRequest struct with PENDING status, (4) registering the
     /// request with kAssetRouter for batch processing. The kTokens remain in escrow until the batch is settled and the
-    /// user calls redeem() to complete the process. This two-phase approach is necessary because redemptions are processed
+    /// user calls redeem() to complete the process. This two-phase approach is necessary because redemptions are
+    /// processed
     /// in batches through the DN vault system, which requires waiting for batch settlement to ensure proper asset
     /// availability and yield distribution. The request can be cancelled before batch closure/settlement.
     /// @param asset The underlying asset address to redeem (must match the kToken's underlying asset)
@@ -112,23 +115,31 @@ interface IkMinter {
     /// @notice Completes the second phase of institutional redemption by executing a settled batch request
     /// @dev This function finalizes the redemption process initiated by requestRedeem(). It can only be called after
     /// the batch containing this request has been settled through the kAssetRouter settlement process. The execution
-    /// involves: (1) validating the request exists and is in PENDING status, (2) updating the request status to REDEEMED,
+    /// involves: (1) validating the request exists and is in PENDING status, (2) updating the request status to
+    /// REDEEMED,
     /// (3) removing the request from tracking, (4) burning the escrowed kTokens permanently, (5) instructing the
-    /// kBatchReceiver contract to transfer the underlying assets to the recipient. The kBatchReceiver is a minimal proxy
+    /// kBatchReceiver contract to transfer the underlying assets to the recipient. The kBatchReceiver is a minimal
+    /// proxy
     /// deployed per batch that holds the settled assets and ensures isolated distribution. This function will revert if
-    /// the batch is not yet settled, ensuring assets are only distributed when available. The separation between request
-    /// and redemption phases allows for efficient batch processing of multiple redemptions while maintaining asset safety.
+    /// the batch is not yet settled, ensuring assets are only distributed when available. The separation between
+    /// request
+    /// and redemption phases allows for efficient batch processing of multiple redemptions while maintaining asset
+    /// safety.
     /// @param requestId The unique identifier of the redemption request to execute (obtained from requestRedeem)
     function redeem(bytes32 requestId) external payable;
 
     /// @notice Cancels a pending redemption request and returns the escrowed kTokens to the user
-    /// @dev This function allows institutions to cancel their redemption requests before the batch is closed or settled.
+    /// @dev This function allows institutions to cancel their redemption requests before the batch is closed or
+    /// settled.
     /// The cancellation process involves: (1) validating the request exists and is in PENDING status, (2) checking that
-    /// the batch is neither closed nor settled (once closed, cancellation is not possible as the batch is being processed),
+    /// the batch is neither closed nor settled (once closed, cancellation is not possible as the batch is being
+    /// processed),
     /// (3) updating the request status to CANCELLED, (4) removing the request from tracking, (5) returning the escrowed
     /// kTokens back to the original requester. This mechanism provides flexibility for institutions to manage their
-    /// liquidity needs, allowing them to reverse redemption decisions if market conditions change or if they need immediate
-    /// access to their kTokens. The function enforces strict timing constraints - cancellation is only permitted while the
+    /// liquidity needs, allowing them to reverse redemption decisions if market conditions change or if they need
+    /// immediate
+    /// access to their kTokens. The function enforces strict timing constraints - cancellation is only permitted while
+    /// the
     /// batch remains open, ensuring batch integrity and preventing manipulation of settled redemptions.
     /// @param requestId The unique identifier of the redemption request to cancel (obtained from requestRedeem)
     function cancelRequest(bytes32 requestId) external payable;

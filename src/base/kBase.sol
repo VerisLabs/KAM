@@ -21,8 +21,20 @@ import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 /// @title kBase
-/// @notice Base contract providing common functionality for all KAM protocol contracts
-/// @dev Includes registry integration, role management, pause functionality, and helper methods
+/// @notice Foundation contract providing essential shared functionality and registry integration for all KAM protocol
+/// contracts
+/// @dev This abstract contract serves as the architectural foundation for the entire KAM protocol, establishing
+/// critical patterns and utilities that ensure consistency across all protocol components. Key responsibilities
+/// include: (1) Registry integration through a singleton pattern that enables dynamic protocol configuration and
+/// contract discovery, (2) Role-based access control validation that enforces protocol governance permissions,
+/// (3) Emergency pause functionality for protocol-wide risk mitigation during critical events, (4) Asset rescue
+/// mechanisms to recover stuck funds while protecting protocol assets, (5) Vault and asset validation to ensure
+/// only registered components interact, (6) Batch processing coordination through ID management and receiver tracking.
+/// The contract employs ERC-7201 namespaced storage to prevent storage collisions during upgrades and enable safe
+/// inheritance patterns. All inheriting contracts (kMinter, kAssetRouter, etc.) leverage these utilities to maintain
+/// protocol integrity, reduce code duplication, and ensure consistent security checks across the ecosystem. The
+/// registry serves as the single source of truth for protocol configuration, making the system highly modular and
+/// upgradeable.
 contract kBase is OptimizedReentrancyGuardTransient {
     using SafeTransferLib for address;
 
@@ -30,26 +42,44 @@ contract kBase is OptimizedReentrancyGuardTransient {
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Emitted when the pause state is changed
-    /// @param paused_ New pause state
+    /// @notice Emitted when the emergency pause state is toggled for protocol-wide risk mitigation
+    /// @dev This event signals a critical protocol state change that affects all inheriting contracts.
+    /// When paused=true, protocol operations are halted to prevent potential exploits or manage emergencies.
+    /// Only emergency admins can trigger this, providing rapid response capability during security incidents.
+    /// @param paused_ The new pause state (true = operations halted, false = normal operation)
     event Paused(bool paused_);
-    /// @notice Emitted when assets are rescued from the contract
-    /// @param asset_ The asset rescued
-    /// @param to_ The recipient of the rescued assets
-    /// @param amount_ The amount of assets rescued
+
+    /// @notice Emitted when ERC20 tokens are rescued from the contract to prevent permanent loss
+    /// @dev This rescue mechanism is restricted to non-protocol assets only - registered assets (USDC, WBTC, etc.)
+    /// cannot be rescued to protect user funds and maintain protocol integrity. Typically used to recover
+    /// accidentally sent tokens or airdrops. Only admin role can execute rescues as a security measure.
+    /// @param asset_ The ERC20 token address being rescued (must not be a registered protocol asset)
+    /// @param to_ The recipient address receiving the rescued tokens (cannot be zero address)
+    /// @param amount_ The quantity of tokens rescued (must not exceed contract balance)
     event RescuedAssets(address indexed asset_, address indexed to_, uint256 amount_);
-    /// @notice Emitted when ETH is rescued from the contract
-    /// @param to_ The recipient of the rescued ETH
-    /// @param amount_ The amount of ETH rescued
+
+    /// @notice Emitted when native ETH is rescued from the contract to recover stuck funds
+    /// @dev ETH rescue is separate from ERC20 rescue due to different transfer mechanisms. This prevents
+    /// ETH from being permanently locked if sent to the contract accidentally. Uses low-level call for
+    /// ETH transfer with proper success checking. Only admin role authorized for security.
+    /// @param to_ The recipient address receiving the rescued ETH (cannot be zero address)
+    /// @param amount_ The quantity of ETH rescued in wei (must not exceed contract balance)
     event RescuedETH(address indexed to_, uint256 amount_);
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice kMinter key
+    /// @notice Registry lookup key for the kMinter singleton contract
+    /// @dev This hash is used to retrieve the kMinter address from the registry's contract mapping.
+    /// kMinter handles institutional minting/redemption flows, so many contracts need to identify it
+    /// for access control and routing decisions. The hash ensures consistent lookups across the protocol.
     bytes32 internal constant K_MINTER = keccak256("K_MINTER");
-    /// @notice kAssetRouter key
+
+    /// @notice Registry lookup key for the kAssetRouter singleton contract
+    /// @dev This hash is used to retrieve the kAssetRouter address from the registry's contract mapping.
+    /// kAssetRouter coordinates all asset movements and settlements, making it a critical dependency
+    /// for vaults and other protocol components. The hash-based lookup enables dynamic upgrades.
     bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
 
     /*//////////////////////////////////////////////////////////////
@@ -57,20 +87,35 @@ contract kBase is OptimizedReentrancyGuardTransient {
     //////////////////////////////////////////////////////////////*/
 
     /// @custom:storage-location erc7201:kam.storage.kBase
+    /// @dev Storage struct following ERC-7201 namespaced storage pattern to prevent collisions during upgrades.
+    /// This pattern ensures that storage layout remains consistent across proxy upgrades and prevents
+    /// accidental overwriting when contracts inherit from multiple base contracts. The namespace
+    /// "kam.storage.kBase" uniquely identifies this storage area within the contract's storage space.
     struct kBaseStorage {
+        /// @dev Address of the kRegistry singleton that serves as the protocol's configuration hub
         address registry;
+        /// @dev Initialization flag preventing multiple initialization calls (reentrancy protection)
         bool initialized;
+        /// @dev Emergency pause state affecting all protocol operations in inheriting contracts
         bool paused;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("kam.storage.kBase")) - 1)) & ~bytes32(uint256(0xff))
+    /// @dev ERC-7201 storage location calculated as: keccak256(abi.encode(uint256(keccak256("kam.storage.kBase")) - 1))
+    /// & ~bytes32(uint256(0xff))
+    /// This specific slot is chosen to avoid any possible collision with standard storage layouts while maintaining
+    /// deterministic addressing. The calculation ensures the storage location is unique to this namespace and won't
+    /// conflict with other inherited contracts or future upgrades. The 0xff mask ensures proper alignment.
     bytes32 private constant KBASE_STORAGE_LOCATION = 0xe91688684975c4d7d54a65dd96da5d4dcbb54b8971c046d5351d3c111e43a800;
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE GETTER
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Returns the kBase storage pointer
+    /// @dev Returns the kBase storage pointer using ERC-7201 namespaced storage pattern
+    /// @return $ Storage pointer to the kBaseStorage struct at the designated storage location
+    /// This function uses inline assembly to directly set the storage pointer to our namespaced location,
+    /// ensuring efficient access to storage variables while maintaining upgrade safety. The pure modifier
+    /// is used because we're only returning a storage pointer, not reading storage values.
     function _getBaseStorage() internal pure returns (kBaseStorage storage $) {
         assembly {
             $.slot := KBASE_STORAGE_LOCATION
@@ -81,9 +126,15 @@ contract kBase is OptimizedReentrancyGuardTransient {
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Initializes the base contract with registry and pause state
-    /// @param registry_ Address of the kRegistry contract
-    /// @dev Can only be called once during initialization
+    /// @notice Initializes the base contract with registry integration and default operational state
+    /// @dev This internal initialization function establishes the foundational connection between any inheriting
+    /// contract and the protocol's registry system. The initialization process: (1) Validates that initialization
+    /// hasn't occurred to prevent reinitialization attacks in proxy patterns, (2) Ensures registry address is valid
+    /// since the registry is critical for all protocol operations, (3) Sets the contract to unpaused state enabling
+    /// normal operations, (4) Marks initialization complete to prevent future calls. This function MUST be called
+    /// by all inheriting contracts during their initialization phase to establish proper protocol integration.
+    /// The internal visibility ensures only inheriting contracts can initialize, preventing external manipulation.
+    /// @param registry_ The kRegistry contract address that serves as the protocol's configuration and discovery hub
     function __kBase_init(address registry_) internal {
         kBaseStorage storage $ = _getBaseStorage();
 
@@ -99,9 +150,15 @@ contract kBase is OptimizedReentrancyGuardTransient {
                           ROLES FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Sets the pause state of the contract
-    /// @param paused_ New pause state
-    /// @dev Only callable internally by inheriting contracts
+    /// @notice Toggles the emergency pause state affecting all protocol operations in this contract
+    /// @dev This function provides critical risk management capability by allowing emergency admins to halt
+    /// contract operations during security incidents or market anomalies. The pause mechanism: (1) Affects all
+    /// state-changing operations in inheriting contracts that check _isPaused(), (2) Does not affect view/pure
+    /// functions ensuring protocol state remains readable, (3) Enables rapid response to potential exploits by
+    /// halting operations protocol-wide, (4) Requires emergency admin role ensuring only authorized governance
+    /// can trigger pauses. Inheriting contracts should check _isPaused() modifier in critical functions to
+    /// respect the pause state. The external visibility with role check prevents unauthorized pause manipulation.
+    /// @param paused_ The desired pause state (true = halt operations, false = resume normal operation)
     function setPaused(bool paused_) external {
         require(_isEmergencyAdmin(msg.sender), KBASE_WRONG_ROLE);
         kBaseStorage storage $ = _getBaseStorage();
@@ -110,10 +167,18 @@ contract kBase is OptimizedReentrancyGuardTransient {
         emit Paused(paused_);
     }
 
-    /// @notice rescues locked assets (ETH or ERC20) in the contract
-    /// @param asset_ the asset to rescue (use address(0) for ETH)
-    /// @param to_ the address that will receive the assets
-    /// @param amount_ the amount to rescue
+    /// @notice Rescues accidentally sent assets (ETH or ERC20 tokens) preventing permanent loss of funds
+    /// @dev This function implements a critical safety mechanism for recovering tokens or ETH that become stuck
+    /// in the contract through user error or airdrops. The rescue process: (1) Validates admin authorization to
+    /// prevent unauthorized fund extraction, (2) Ensures recipient address is valid to prevent burning funds,
+    /// (3) For ETH rescue (asset_=address(0)): validates balance sufficiency and uses low-level call for transfer,
+    /// (4) For ERC20 rescue: critically checks the token is NOT a registered protocol asset (USDC, WBTC, etc.) to
+    /// protect user deposits and protocol integrity, then validates balance and uses SafeTransferLib for secure
+    /// transfer. The distinction between ETH and ERC20 handling accounts for their different transfer mechanisms.
+    /// Protocol assets are explicitly blocked from rescue to prevent admin abuse and maintain user trust.
+    /// @param asset_ The asset to rescue (use address(0) for native ETH, otherwise ERC20 token address)
+    /// @param to_ The recipient address that will receive the rescued assets (cannot be zero address)
+    /// @param amount_ The quantity to rescue (must not exceed available balance)
     function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
         require(_isAdmin(msg.sender), KBASE_WRONG_ROLE);
         require(to_ != address(0), KBASE_ZERO_ADDRESS);
@@ -225,47 +290,66 @@ contract kBase is OptimizedReentrancyGuardTransient {
                             VALIDATORS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Checks if an address is a admin
-    /// @return Whether the address is a admin
+    /// @notice Checks if an address has admin role in the protocol governance
+    /// @dev Admins can execute critical functions like asset rescue and protocol configuration changes.
+    /// This validation is used throughout inheriting contracts to enforce permission boundaries.
+    /// @param user The address to check for admin privileges
+    /// @return Whether the address is registered as an admin in the registry
     function _isAdmin(address user) internal view returns (bool) {
         return _registry().isAdmin(user);
     }
 
-    /// @notice Checks if an address is a emergencyAdmin
-    /// @return Whether the address is a emergencyAdmin
+    /// @notice Checks if an address has emergency admin role for critical protocol interventions
+    /// @dev Emergency admins can pause/unpause contracts during security incidents or market anomalies.
+    /// This elevated role enables rapid response to threats while limiting scope to emergency functions only.
+    /// @param user The address to check for emergency admin privileges
+    /// @return Whether the address is registered as an emergency admin in the registry
     function _isEmergencyAdmin(address user) internal view returns (bool) {
         return _registry().isEmergencyAdmin(user);
     }
 
-    /// @notice Checks if an address is a guardian
-    /// @return Whether the address is a guardian
+    /// @notice Checks if an address has guardian role for protocol monitoring and verification
+    /// @dev Guardians verify settlement proposals and can cancel incorrect settlements during cooldown periods.
+    /// This role provides an additional security layer for yield distribution accuracy.
+    /// @param user The address to check for guardian privileges
+    /// @return Whether the address is registered as a guardian in the registry
     function _isGuardian(address user) internal view returns (bool) {
         return _registry().isGuardian(user);
     }
 
-    /// @notice Checks if an address is a relayer
-    /// @return Whether the address is a relayer
+    /// @notice Checks if an address has relayer role for automated protocol operations
+    /// @dev Relayers execute batched operations and trigger settlements on behalf of users to optimize gas costs.
+    /// This role enables automation while maintaining security through limited permissions.
+    /// @param user The address to check for relayer privileges
+    /// @return Whether the address is registered as a relayer in the registry
     function _isRelayer(address user) internal view returns (bool) {
         return _registry().isRelayer(user);
     }
 
-    /// @notice Checks if an address is a institution
-    /// @return Whether the address is a institution
+    /// @notice Checks if an address is registered as an institutional user
+    /// @dev Institutions have special privileges in kMinter for large-scale minting and redemption operations.
+    /// This distinction enables optimized flows for high-volume users while maintaining retail accessibility.
+    /// @param user The address to check for institutional status
+    /// @return Whether the address is registered as an institution in the registry
     function _isInstitution(address user) internal view returns (bool) {
         return _registry().isInstitution(user);
     }
 
-    /// @notice Checks if an address is a institution
-    /// @return Whether the address is a institution
+    /// @notice Checks if the contract is currently in emergency pause state
+    /// @dev Used by inheriting contracts to halt operations during emergencies. When paused, state-changing
+    /// functions should revert while view functions remain accessible for protocol monitoring.
+    /// @return Whether the contract is currently paused
     function _isPaused() internal view returns (bool) {
         kBaseStorage storage $ = _getBaseStorage();
         require($.initialized, KBASE_NOT_INITIALIZED);
         return $.paused;
     }
 
-    /// @notice Gets the kMinter singleton contract address
-    /// @return minter The kMinter contract address
-    /// @dev Reverts if kMinter not set in registry
+    /// @notice Checks if an address is the kMinter contract
+    /// @dev Validates if the caller is the protocol's kMinter singleton for access control in vault operations.
+    /// Used to ensure only kMinter can trigger institutional deposit and redemption flows.
+    /// @param user The address to check against kMinter
+    /// @return Whether the address is the registered kMinter contract
     function _isKMinter(address user) internal view returns (bool) {
         bool isTrue;
         address _kminter = _registry().getContractById(K_MINTER);
