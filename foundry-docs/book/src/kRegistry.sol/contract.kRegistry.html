@@ -157,49 +157,81 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="kregistry"><a class="header" href="#kregistry">kRegistry</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kRegistry.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/kRegistry.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
-<a href="/src/interfaces/IkRegistry.sol/interface.IkRegistry.html">IkRegistry</a>, Initializable, UUPSUpgradeable, OwnableRoles</p>
-<p>Central registry for KAM protocol contracts</p>
-<p><em>Manages singleton contracts, vault registration, asset support, and kToken mapping</em></p>
+<a href="/src/interfaces/IkRegistry.sol/interface.IkRegistry.html">IkRegistry</a>, <a href="/src/vendor/Initializable.sol/abstract.Initializable.html">Initializable</a>, <a href="/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.html">UUPSUpgradeable</a>, <a href="/src/libraries/OptimizedOwnableRoles.sol/abstract.OptimizedOwnableRoles.html">OptimizedOwnableRoles</a></p>
+<p>Central configuration hub and contract registry for the KAM protocol ecosystem</p>
+<p><em>This contract serves as the protocol's backbone for configuration management and access control. It provides
+five critical functions: (1) Singleton contract management - registers and tracks core protocol contracts like
+kMinter and kAssetRouter ensuring single source of truth, (2) Asset and kToken management - handles asset
+whitelisting, kToken deployment, and maintains bidirectional mappings between underlying assets and their
+corresponding kTokens, (3) Vault registry - manages vault registration, classification (DN, ALPHA, BETA, etc.),
+and routing logic to direct assets to appropriate vaults based on type and strategy, (4) Role-based access
+control - implements a hierarchical permission system with ADMIN, EMERGENCY_ADMIN, GUARDIAN, RELAYER, INSTITUTION,
+and VENDOR roles to enforce protocol security, (5) Adapter management - registers and tracks external protocol
+adapters per vault enabling yield strategy integrations. The registry uses upgradeable architecture with UUPS
+pattern and ERC-7201 namespaced storage to ensure future extensibility while maintaining state consistency.</em></p>
 <h2 id="state-variables"><a class="header" href="#state-variables">State Variables</a></h2>
 <h3 id="admin_role"><a class="header" href="#admin_role">ADMIN_ROLE</a></h3>
+<p>Admin role for authorized operations</p>
 <pre><code class="language-solidity">uint256 internal constant ADMIN_ROLE = _ROLE_0;
 </code></pre>
 <h3 id="emergency_admin_role"><a class="header" href="#emergency_admin_role">EMERGENCY_ADMIN_ROLE</a></h3>
+<p>Emergency admin role for emergency operations</p>
 <pre><code class="language-solidity">uint256 internal constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
 </code></pre>
 <h3 id="guardian_role"><a class="header" href="#guardian_role">GUARDIAN_ROLE</a></h3>
+<p>Guardian role as a circuit breaker for settlement proposals</p>
 <pre><code class="language-solidity">uint256 internal constant GUARDIAN_ROLE = _ROLE_2;
 </code></pre>
 <h3 id="relayer_role"><a class="header" href="#relayer_role">RELAYER_ROLE</a></h3>
+<p>Relayer role for external vaults</p>
 <pre><code class="language-solidity">uint256 internal constant RELAYER_ROLE = _ROLE_3;
 </code></pre>
 <h3 id="institution_role"><a class="header" href="#institution_role">INSTITUTION_ROLE</a></h3>
+<p>Reserved role for special whitelisted addresses</p>
 <pre><code class="language-solidity">uint256 internal constant INSTITUTION_ROLE = _ROLE_4;
 </code></pre>
 <h3 id="vendor_role"><a class="header" href="#vendor_role">VENDOR_ROLE</a></h3>
+<p>Vendor role for vendor vaults</p>
 <pre><code class="language-solidity">uint256 internal constant VENDOR_ROLE = _ROLE_5;
 </code></pre>
 <h3 id="k_minter"><a class="header" href="#k_minter">K_MINTER</a></h3>
+<p>kMinter key</p>
 <pre><code class="language-solidity">bytes32 public constant K_MINTER = keccak256("K_MINTER");
 </code></pre>
 <h3 id="k_asset_router"><a class="header" href="#k_asset_router">K_ASSET_ROUTER</a></h3>
+<p>kAssetRouter key</p>
 <pre><code class="language-solidity">bytes32 public constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
 </code></pre>
 <h3 id="usdc"><a class="header" href="#usdc">USDC</a></h3>
+<p>USDC key</p>
 <pre><code class="language-solidity">bytes32 public constant USDC = keccak256("USDC");
 </code></pre>
 <h3 id="wbtc"><a class="header" href="#wbtc">WBTC</a></h3>
+<p>WBTC key</p>
 <pre><code class="language-solidity">bytes32 public constant WBTC = keccak256("WBTC");
+</code></pre>
+<h3 id="max_bps"><a class="header" href="#max_bps">MAX_BPS</a></h3>
+<p>Maximum basis points (100%)</p>
+<pre><code class="language-solidity">uint256 constant MAX_BPS = 10_000;
 </code></pre>
 <h3 id="kregistry_storage_location"><a class="header" href="#kregistry_storage_location">KREGISTRY_STORAGE_LOCATION</a></h3>
 <pre><code class="language-solidity">bytes32 private constant KREGISTRY_STORAGE_LOCATION = 0x164f5345d77b48816cdb20100c950b74361454722dab40c51ecf007b721fa800;
 </code></pre>
 <h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
 <h3 id="_getkregistrystorage"><a class="header" href="#_getkregistrystorage">_getkRegistryStorage</a></h3>
+<p>Retrieves the kRegistry storage struct from its designated storage slot</p>
+<p><em>Uses ERC-7201 namespaced storage pattern to access the storage struct at a deterministic location.
+This approach prevents storage collisions in upgradeable contracts and allows safe addition of new
+storage variables in future upgrades without affecting existing storage layout.</em></p>
 <pre><code class="language-solidity">function _getkRegistryStorage() private pure returns (kRegistryStorage storage $);
 </code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>$</code></td><td><code>kRegistryStorage</code></td><td>The kRegistryStorage struct reference for state modifications</td></tr>
+</tbody></table>
+</div>
 <h3 id="constructor"><a class="header" href="#constructor">constructor</a></h3>
 <p>Disables initializers to prevent implementation contract initialization</p>
 <pre><code class="language-solidity">constructor();
@@ -211,7 +243,8 @@
     address admin_,
     address emergencyAdmin_,
     address guardian_,
-    address relayer_
+    address relayer_,
+    address treasury_
 )
     external
     initializer;
@@ -220,66 +253,76 @@
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>owner_</code></td><td><code>address</code></td><td>Contract owner address</td></tr>
 <tr><td><code>admin_</code></td><td><code>address</code></td><td>Admin role recipient</td></tr>
-<tr><td><code>emergencyAdmin_</code></td><td><code>address</code></td><td></td></tr>
-<tr><td><code>guardian_</code></td><td><code>address</code></td><td></td></tr>
-<tr><td><code>relayer_</code></td><td><code>address</code></td><td></td></tr>
+<tr><td><code>emergencyAdmin_</code></td><td><code>address</code></td><td>Emergency admin role recipient</td></tr>
+<tr><td><code>guardian_</code></td><td><code>address</code></td><td>Guardian role recipient</td></tr>
+<tr><td><code>relayer_</code></td><td><code>address</code></td><td>Relayer role recipient</td></tr>
+<tr><td><code>treasury_</code></td><td><code>address</code></td><td>Treasury address</td></tr>
 </tbody></table>
 </div>
 <h3 id="rescueassets"><a class="header" href="#rescueassets">rescueAssets</a></h3>
-<p>rescues locked assets (ETH or ERC20) in the contract</p>
+<p>Emergency function to rescue accidentally sent assets (ETH or ERC20) from the contract</p>
+<p><em>This function provides a recovery mechanism for assets mistakenly sent to the registry. It includes
+critical safety checks: (1) Only callable by ADMIN_ROLE to prevent unauthorized access, (2) Cannot rescue
+registered protocol assets to prevent draining legitimate funds, (3) Validates amounts and balances.
+For ETH rescue, use address(0) as the asset parameter. The function ensures protocol integrity by
+preventing rescue of assets that are part of normal protocol operations.</em></p>
 <pre><code class="language-solidity">function rescueAssets(address asset_, address to_, uint256 amount_) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>asset_</code></td><td><code>address</code></td><td>the asset to rescue (use address(0) for ETH)</td></tr>
-<tr><td><code>to_</code></td><td><code>address</code></td><td>the address that will receive the assets</td></tr>
-<tr><td><code>amount_</code></td><td><code>uint256</code></td><td>the amount to rescue</td></tr>
+<tr><td><code>asset_</code></td><td><code>address</code></td><td>The asset address to rescue (use address(0) for ETH)</td></tr>
+<tr><td><code>to_</code></td><td><code>address</code></td><td>The destination address that will receive the rescued assets</td></tr>
+<tr><td><code>amount_</code></td><td><code>uint256</code></td><td>The amount of assets to rescue (must not exceed contract balance)</td></tr>
 </tbody></table>
 </div>
 <h3 id="setsingletoncontract"><a class="header" href="#setsingletoncontract">setSingletonContract</a></h3>
-<p>Set a singleton contract address</p>
-<p><em>Only callable by ADMIN_ROLE</em></p>
+<p>Registers a core singleton contract in the protocol</p>
+<p><em>Only callable by ADMIN_ROLE. Ensures single source of truth for protocol contracts.</em></p>
 <pre><code class="language-solidity">function setSingletonContract(bytes32 id, address contractAddress) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>id</code></td><td><code>bytes32</code></td><td>Contract identifier (e.g., K_MINTER, K_BATCH)</td></tr>
+<tr><td><code>id</code></td><td><code>bytes32</code></td><td>Unique contract identifier (e.g., K_MINTER, K_ASSET_ROUTER)</td></tr>
 <tr><td><code>contractAddress</code></td><td><code>address</code></td><td>Address of the singleton contract</td></tr>
 </tbody></table>
 </div>
 <h3 id="grantinstitutionrole"><a class="header" href="#grantinstitutionrole">grantInstitutionRole</a></h3>
-<p>grant the institution role to a given address</p>
-<p><em>Only callable by VENDOR_ROLE</em></p>
+<p>Grants institution role to enable privileged protocol access</p>
+<p><em>Only callable by VENDOR_ROLE. Institutions gain access to kMinter and other premium features.</em></p>
 <pre><code class="language-solidity">function grantInstitutionRole(address institution_) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>institution_</code></td><td><code>address</code></td><td>the institution address</td></tr>
+<tr><td><code>institution_</code></td><td><code>address</code></td><td>The address to grant institution privileges</td></tr>
 </tbody></table>
 </div>
 <h3 id="grantvendorrole"><a class="header" href="#grantvendorrole">grantVendorRole</a></h3>
-<p>grant the vendor role to a given address</p>
-<p><em>Only callable by ADMIN_ROLE</em></p>
+<p>Grants vendor role for vendor management capabilities</p>
+<p><em>Only callable by ADMIN_ROLE. Vendors can grant institution roles and manage vendor vaults.</em></p>
 <pre><code class="language-solidity">function grantVendorRole(address vendor_) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vendor_</code></td><td><code>address</code></td><td>the vendor address</td></tr>
+<tr><td><code>vendor_</code></td><td><code>address</code></td><td>The address to grant vendor privileges</td></tr>
 </tbody></table>
 </div>
 <h3 id="grantrelayerrole"><a class="header" href="#grantrelayerrole">grantRelayerRole</a></h3>
-<p>grant the relayer role to a given address</p>
-<p><em>Only callable by ADMIN_ROLE</em></p>
+<p>Grants relayer role for external vault operations</p>
+<p><em>Only callable by ADMIN_ROLE. Relayers manage external vaults and set hurdle rates.</em></p>
 <pre><code class="language-solidity">function grantRelayerRole(address relayer_) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>relayer_</code></td><td><code>address</code></td><td>the relayer address</td></tr>
+<tr><td><code>relayer_</code></td><td><code>address</code></td><td>The address to grant relayer privileges</td></tr>
 </tbody></table>
 </div>
 <h3 id="registerasset"><a class="header" href="#registerasset">registerAsset</a></h3>
-<p>Register support for a new asset and its corresponding kToken</p>
-<p><em>Only callable by ADMIN_ROLE, establishes bidirectional mapping</em></p>
+<p>Registers a new underlying asset in the protocol and deploys its corresponding kToken</p>
+<p><em>This function performs critical asset onboarding: (1) Validates the asset isn't already registered,
+(2) Adds asset to the supported set and singleton registry, (3) Deploys a new kToken contract with
+matching decimals, (4) Establishes bidirectional asset-kToken mapping, (5) Grants minting privileges
+to kMinter. The function automatically inherits decimals from the underlying asset for consistency.
+Only callable by ADMIN_ROLE to maintain protocol security and prevent unauthorized token creation.</em></p>
 <pre><code class="language-solidity">function registerAsset(
     string memory name_,
     string memory symbol_,
@@ -294,63 +337,123 @@
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>name_</code></td><td><code>string</code></td><td></td></tr>
 <tr><td><code>symbol_</code></td><td><code>string</code></td><td></td></tr>
-<tr><td><code>asset</code></td><td><code>address</code></td><td>Underlying asset address (e.g., USDC, WBTC)</td></tr>
-<tr><td><code>id</code></td><td><code>bytes32</code></td><td></td></tr>
-</tbody></table>
-</div>
-<h3 id="registervault"><a class="header" href="#registervault">registerVault</a></h3>
-<p>Register a new vault in the protocol</p>
-<p><em>Only callable by ADMIN_ROLE, sets as primary if first of its type</em></p>
-<pre><code class="language-solidity">function registerVault(address vault, VaultType type_, address asset) external payable;
-</code></pre>
-<p><strong>Parameters</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vault</code></td><td><code>address</code></td><td>Vault contract address</td></tr>
-<tr><td><code>type_</code></td><td><code>VaultType</code></td><td>Type of vault (MINTER, DN, ALPHA, BETA)</td></tr>
-<tr><td><code>asset</code></td><td><code>address</code></td><td>Underlying asset the vault manages</td></tr>
-</tbody></table>
-</div>
-<h3 id="removevault"><a class="header" href="#removevault">removeVault</a></h3>
-<pre><code class="language-solidity">function removeVault(address vault) external payable;
-</code></pre>
-<h3 id="registeradapter"><a class="header" href="#registeradapter">registerAdapter</a></h3>
-<p>Registers an adapter for a specific vault</p>
-<pre><code class="language-solidity">function registerAdapter(address vault, address adapter) external payable;
-</code></pre>
-<p><strong>Parameters</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address</td></tr>
-<tr><td><code>adapter</code></td><td><code>address</code></td><td>The adapter address</td></tr>
-</tbody></table>
-</div>
-<h3 id="removeadapter"><a class="header" href="#removeadapter">removeAdapter</a></h3>
-<p>Removes an adapter for a specific vault</p>
-<pre><code class="language-solidity">function removeAdapter(address vault, address adapter) external payable;
-</code></pre>
-<p><strong>Parameters</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address</td></tr>
-<tr><td><code>adapter</code></td><td><code>address</code></td><td></td></tr>
-</tbody></table>
-</div>
-<h3 id="getcontractbyid"><a class="header" href="#getcontractbyid">getContractById</a></h3>
-<p>Get a singleton contract address by its identifier</p>
-<p><em>Reverts if contract not set</em></p>
-<pre><code class="language-solidity">function getContractById(bytes32 id) public view returns (address);
-</code></pre>
-<p><strong>Parameters</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>id</code></td><td><code>bytes32</code></td><td>Contract identifier (e.g., K_MINTER, K_BATCH)</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The underlying asset contract address to register</td></tr>
+<tr><td><code>id</code></td><td><code>bytes32</code></td><td>The unique identifier for singleton asset storage (e.g., USDC, WBTC)</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>Contract address</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The deployed kToken contract address</td></tr>
+</tbody></table>
+</div>
+<h3 id="registervault"><a class="header" href="#registervault">registerVault</a></h3>
+<p>Registers a new vault contract in the protocol's vault management system</p>
+<p><em>This function integrates vaults into the protocol by: (1) Validating the vault isn't already registered,
+(2) Verifying the asset is supported by the protocol, (3) Classifying the vault by type for routing,
+(4) Establishing vault-asset relationships for both forward and reverse lookups, (5) Setting as primary
+vault for the asset-type combination if it's the first registered. The vault type determines routing
+logic and strategy selection (DN for institutional, ALPHA/BETA for different risk profiles).
+Only callable by ADMIN_ROLE to ensure proper vault vetting and integration.</em></p>
+<pre><code class="language-solidity">function registerVault(address vault, VaultType type_, address asset) external payable;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault contract address to register</td></tr>
+<tr><td><code>type_</code></td><td><code>VaultType</code></td><td>The vault classification type (DN, ALPHA, BETA, etc.) determining its role</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The underlying asset address this vault will manage</td></tr>
+</tbody></table>
+</div>
+<h3 id="removevault"><a class="header" href="#removevault">removeVault</a></h3>
+<p>Removes a vault from the protocol registry</p>
+<p><em>This function deregisters a vault, removing it from the active vault set. This operation should be
+used carefully as it affects routing and asset management. Only callable by ADMIN_ROLE to ensure proper
+decommissioning procedures are followed. Note that this doesn't clear all vault mappings for gas efficiency.</em></p>
+<pre><code class="language-solidity">function removeVault(address vault) external payable;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault contract address to remove from the registry</td></tr>
+</tbody></table>
+</div>
+<h3 id="settreasury"><a class="header" href="#settreasury">setTreasury</a></h3>
+<p>Sets the treasury address</p>
+<p><em>Treasury receives protocol fees and serves as emergency fund holder. Only callable by ADMIN_ROLE.</em></p>
+<pre><code class="language-solidity">function setTreasury(address treasury_) external payable;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>treasury_</code></td><td><code>address</code></td><td>The new treasury address</td></tr>
+</tbody></table>
+</div>
+<h3 id="registeradapter"><a class="header" href="#registeradapter">registerAdapter</a></h3>
+<p>Registers an external protocol adapter for a vault</p>
+<p><em>Enables yield strategy integrations through external DeFi protocols. Only callable by ADMIN_ROLE.</em></p>
+<pre><code class="language-solidity">function registerAdapter(address vault, address adapter) external payable;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address receiving the adapter</td></tr>
+<tr><td><code>adapter</code></td><td><code>address</code></td><td>The adapter contract address</td></tr>
+</tbody></table>
+</div>
+<h3 id="removeadapter"><a class="header" href="#removeadapter">removeAdapter</a></h3>
+<p>Removes an adapter from a vault's registered adapter set</p>
+<p><em>This disables a specific external protocol integration for the vault. Only callable by ADMIN_ROLE
+to ensure proper risk assessment before removing yield strategies.</em></p>
+<pre><code class="language-solidity">function removeAdapter(address vault, address adapter) external payable;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address to remove the adapter from</td></tr>
+<tr><td><code>adapter</code></td><td><code>address</code></td><td>The adapter address to remove</td></tr>
+</tbody></table>
+</div>
+<h3 id="sethurdlerate"><a class="header" href="#sethurdlerate">setHurdleRate</a></h3>
+<p>Sets the hurdle rate for a specific asset</p>
+<p><em>Only relayer can set hurdle rates (performance thresholds). Ensures hurdle rate doesn't exceed 100%.
+Asset must be registered before setting hurdle rate. Sets minimum performance threshold for yield distribution.</em></p>
+<pre><code class="language-solidity">function setHurdleRate(address asset, uint16 hurdleRate) external payable;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The asset address to set hurdle rate for</td></tr>
+<tr><td><code>hurdleRate</code></td><td><code>uint16</code></td><td>The hurdle rate in basis points (100 = 1%)</td></tr>
+</tbody></table>
+</div>
+<h3 id="gethurdlerate"><a class="header" href="#gethurdlerate">getHurdleRate</a></h3>
+<p>Gets the hurdle rate for a specific asset</p>
+<p><em>Returns minimum performance threshold in basis points for yield distribution.
+Asset must be registered to query hurdle rate.</em></p>
+<pre><code class="language-solidity">function getHurdleRate(address asset) external view returns (uint16);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The asset address to query</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint16</code></td><td>The hurdle rate in basis points</td></tr>
+</tbody></table>
+</div>
+<h3 id="getcontractbyid"><a class="header" href="#getcontractbyid">getContractById</a></h3>
+<p>Retrieves a singleton contract address by identifier</p>
+<p><em>Reverts if contract not registered. Used for protocol contract discovery.</em></p>
+<pre><code class="language-solidity">function getContractById(bytes32 id) public view returns (address);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>id</code></td><td><code>bytes32</code></td><td>Contract identifier (e.g., K_MINTER, K_ASSET_ROUTER)</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The contract address</td></tr>
 </tbody></table>
 </div>
 <h3 id="getassetbyid"><a class="header" href="#getassetbyid">getAssetById</a></h3>
-<p>Get a singleton asset address by its identifier</p>
-<p><em>Reverts if asset not set</em></p>
+<p>Retrieves a singleton asset address by identifier</p>
+<p><em>Reverts if asset not registered. Provides named access to common assets.</em></p>
 <pre><code class="language-solidity">function getAssetById(bytes32 id) external view returns (address);
 </code></pre>
 <p><strong>Parameters</strong></p>
@@ -360,29 +463,43 @@
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>Asset address</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The asset address</td></tr>
 </tbody></table>
 </div>
 <h3 id="getallassets"><a class="header" href="#getallassets">getAllAssets</a></h3>
-<p>Get all supported assets</p>
+<p>Gets all protocol-supported asset addresses</p>
+<p><em>Returns the complete whitelist of supported underlying assets.</em></p>
 <pre><code class="language-solidity">function getAllAssets() external view returns (address[] memory);
 </code></pre>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Array of supported asset addresses</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Array of all supported asset addresses</td></tr>
 </tbody></table>
 </div>
 <h3 id="getallvaults"><a class="header" href="#getallvaults">getAllVaults</a></h3>
-<p>Get all vaults registered in the protocol</p>
+<p>Gets all registered vaults in the protocol</p>
+<p><em>Returns array of all vault addresses that have been registered through addVault().
+Includes both active and inactive vaults. Used for protocol monitoring and management operations.</em></p>
 <pre><code class="language-solidity">function getAllVaults() external view returns (address[] memory);
 </code></pre>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Array of vault addresses</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Array of all registered vault addresses</td></tr>
+</tbody></table>
+</div>
+<h3 id="gettreasury"><a class="header" href="#gettreasury">getTreasury</a></h3>
+<p>Gets the protocol treasury address</p>
+<p><em>Treasury receives protocol fees and serves as emergency fund holder.</em></p>
+<pre><code class="language-solidity">function getTreasury() external view returns (address);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The treasury address</td></tr>
 </tbody></table>
 </div>
 <h3 id="getcorecontracts"><a class="header" href="#getcorecontracts">getCoreContracts</a></h3>
-<p>Get all core singleton contracts at once</p>
+<p>Retrieves core protocol contract addresses in one call</p>
+<p><em>Optimized getter for frequently accessed contracts. Reverts if either not set.</em></p>
 <pre><code class="language-solidity">function getCoreContracts() external view returns (address, address);
 </code></pre>
 <p><strong>Returns</strong></p>
@@ -392,7 +509,8 @@
 </tbody></table>
 </div>
 <h3 id="getvaultsbyasset"><a class="header" href="#getvaultsbyasset">getVaultsByAsset</a></h3>
-<p>Get all vaults registered for a specific asset</p>
+<p>Gets all vaults that support a specific asset</p>
+<p><em>Enables discovery of all vaults capable of handling an asset across different types.</em></p>
 <pre><code class="language-solidity">function getVaultsByAsset(address asset) external view returns (address[] memory);
 </code></pre>
 <p><strong>Parameters</strong></p>
@@ -402,191 +520,324 @@
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Array of vault addresses</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Array of vault addresses supporting the asset</td></tr>
 </tbody></table>
 </div>
 <h3 id="getvaultbyassetandtype"><a class="header" href="#getvaultbyassetandtype">getVaultByAssetAndType</a></h3>
-<p>Get a vault address by asset and vault type</p>
-<p><em>Reverts if vault not found</em></p>
+<p>Retrieves the primary vault for an asset-type combination</p>
+<p><em>Used for routing operations to the appropriate vault. Reverts if not found.</em></p>
 <pre><code class="language-solidity">function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>asset</code></td><td><code>address</code></td><td>Asset address</td></tr>
-<tr><td><code>vaultType</code></td><td><code>uint8</code></td><td>Vault type</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The asset address</td></tr>
+<tr><td><code>vaultType</code></td><td><code>uint8</code></td><td>The vault type classification</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>Vault address</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The vault address for the asset-type pair</td></tr>
 </tbody></table>
 </div>
 <h3 id="getvaulttype"><a class="header" href="#getvaulttype">getVaultType</a></h3>
-<p>Get the type of a vault</p>
+<p>Gets the classification type of a vault</p>
+<p><em>Returns the VaultType enum value for routing and strategy selection.</em></p>
 <pre><code class="language-solidity">function getVaultType(address vault) external view returns (uint8);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vault</code></td><td><code>address</code></td><td>Vault address</td></tr>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address to query</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>uint8</code></td><td>Vault type</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint8</code></td><td>The vault's type classification</td></tr>
 </tbody></table>
 </div>
 <h3 id="isadmin"><a class="header" href="#isadmin">isAdmin</a></h3>
-<p>Check if caller is the Admin</p>
+<p>Checks if an address has admin privileges</p>
+<p><em>Admin role has broad protocol management capabilities.</em></p>
 <pre><code class="language-solidity">function isAdmin(address user) external view returns (bool);
 </code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>user</code></td><td><code>address</code></td><td>The address to check</td></tr>
+</tbody></table>
+</div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the caller is a Admin</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if address has ADMIN_ROLE</td></tr>
 </tbody></table>
 </div>
 <h3 id="isemergencyadmin"><a class="header" href="#isemergencyadmin">isEmergencyAdmin</a></h3>
-<p>Check if caller is the EmergencyAdmin</p>
+<p>Checks if an address has emergency admin privileges</p>
+<p><em>Emergency admin can perform critical safety operations.</em></p>
 <pre><code class="language-solidity">function isEmergencyAdmin(address user) external view returns (bool);
 </code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>user</code></td><td><code>address</code></td><td>The address to check</td></tr>
+</tbody></table>
+</div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the caller is a EmergencyAdmin</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if address has EMERGENCY_ADMIN_ROLE</td></tr>
 </tbody></table>
 </div>
 <h3 id="isguardian"><a class="header" href="#isguardian">isGuardian</a></h3>
-<p>Check if caller is the Guardian</p>
+<p>Checks if an address has guardian privileges</p>
+<p><em>Guardian acts as circuit breaker for settlement proposals.</em></p>
 <pre><code class="language-solidity">function isGuardian(address user) external view returns (bool);
 </code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>user</code></td><td><code>address</code></td><td>The address to check</td></tr>
+</tbody></table>
+</div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the caller is a Guardian</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if address has GUARDIAN_ROLE</td></tr>
 </tbody></table>
 </div>
 <h3 id="isrelayer"><a class="header" href="#isrelayer">isRelayer</a></h3>
-<p>Check if the caller is the relayer</p>
+<p>Checks if an address has relayer privileges</p>
+<p><em>Relayer manages external vault operations and hurdle rates.</em></p>
 <pre><code class="language-solidity">function isRelayer(address user) external view returns (bool);
 </code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>user</code></td><td><code>address</code></td><td>The address to check</td></tr>
+</tbody></table>
+</div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the caller is the relayer</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if address has RELAYER_ROLE</td></tr>
 </tbody></table>
 </div>
 <h3 id="isinstitution"><a class="header" href="#isinstitution">isInstitution</a></h3>
-<p>Check if the caller is a institution</p>
+<p>Checks if an address is a qualified institution</p>
+<p><em>Institutions have access to privileged operations like kMinter.</em></p>
 <pre><code class="language-solidity">function isInstitution(address user) external view returns (bool);
 </code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>user</code></td><td><code>address</code></td><td>The address to check</td></tr>
+</tbody></table>
+</div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the caller is a institution</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if address has INSTITUTION_ROLE</td></tr>
 </tbody></table>
 </div>
 <h3 id="isvendor"><a class="header" href="#isvendor">isVendor</a></h3>
-<p>Check if the caller is a vendor</p>
+<p>Checks if an address has vendor privileges</p>
+<p><em>Vendors can grant institution roles and manage vendor vaults.</em></p>
 <pre><code class="language-solidity">function isVendor(address user) external view returns (bool);
 </code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>user</code></td><td><code>address</code></td><td>The address to check</td></tr>
+</tbody></table>
+</div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the caller is a vendor</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if address has VENDOR_ROLE</td></tr>
 </tbody></table>
 </div>
 <h3 id="isasset"><a class="header" href="#isasset">isAsset</a></h3>
-<p>Check if an asset is supported</p>
+<p>Checks if an asset is supported by the protocol</p>
+<p><em>Used for validation before operations. Checks supportedAssets set membership.</em></p>
 <pre><code class="language-solidity">function isAsset(address asset) external view returns (bool);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>asset</code></td><td><code>address</code></td><td>Asset address</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The asset address to verify</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the asset is supported</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if asset is in the protocol whitelist</td></tr>
 </tbody></table>
 </div>
 <h3 id="isvault"><a class="header" href="#isvault">isVault</a></h3>
-<p>Check if a vault is registered</p>
+<p>Checks if a vault is registered in the protocol</p>
+<p><em>Used for validation before vault operations. Checks allVaults set membership.</em></p>
 <pre><code class="language-solidity">function isVault(address vault) external view returns (bool);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vault</code></td><td><code>address</code></td><td>Vault address</td></tr>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address to verify</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Whether the vault is registered</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if vault is registered</td></tr>
 </tbody></table>
 </div>
 <h3 id="getadapters"><a class="header" href="#getadapters">getAdapters</a></h3>
-<p>Get the adapter for a specific vault</p>
+<p>Gets all adapters registered for a specific vault</p>
+<p><em>Returns external protocol integrations enabling yield strategies.</em></p>
 <pre><code class="language-solidity">function getAdapters(address vault) external view returns (address[] memory);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vault</code></td><td><code>address</code></td><td>Vault address</td></tr>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address to query</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Adapter address (address(0) if none set)</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Array of adapter addresses for the vault</td></tr>
 </tbody></table>
 </div>
 <h3 id="isadapterregistered"><a class="header" href="#isadapterregistered">isAdapterRegistered</a></h3>
-<p>Check if an adapter is registered</p>
+<p>Checks if a specific adapter is registered for a vault</p>
+<p><em>Used to validate adapter-vault relationships before operations.</em></p>
 <pre><code class="language-solidity">function isAdapterRegistered(address vault, address adapter) external view returns (bool);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vault</code></td><td><code>address</code></td><td></td></tr>
-<tr><td><code>adapter</code></td><td><code>address</code></td><td>Adapter address</td></tr>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address to check</td></tr>
+<tr><td><code>adapter</code></td><td><code>address</code></td><td>The adapter address to verify</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if adapter is registered</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if adapter is registered for the vault</td></tr>
 </tbody></table>
 </div>
 <h3 id="getvaultassets"><a class="header" href="#getvaultassets">getVaultAssets</a></h3>
-<p>Get the asset for a specific vault</p>
+<p>Gets all assets managed by a specific vault</p>
+<p><em>Most vaults manage single asset, some (like kMinter) handle multiple.</em></p>
 <pre><code class="language-solidity">function getVaultAssets(address vault) external view returns (address[] memory);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vault</code></td><td><code>address</code></td><td>Vault address</td></tr>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address to query</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Asset address that the vault manages</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Array of asset addresses the vault manages</td></tr>
 </tbody></table>
 </div>
 <h3 id="assettoktoken"><a class="header" href="#assettoktoken">assetToKToken</a></h3>
-<p>Get the kToken for a specific asset</p>
+<p>Gets the kToken address for a specific underlying asset</p>
+<p><em>Critical for minting/redemption operations. Reverts if no kToken exists.</em></p>
 <pre><code class="language-solidity">function assetToKToken(address asset) external view returns (address);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>asset</code></td><td><code>address</code></td><td>Asset address</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The underlying asset address</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>KToken address</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The corresponding kToken address</td></tr>
 </tbody></table>
 </div>
 <h3 id="_hasrole"><a class="header" href="#_hasrole">_hasRole</a></h3>
-<p>check if the user has the given role</p>
+<p>Internal helper to check if a user has a specific role</p>
+<p><em>Wraps the OptimizedOwnableRoles hasAnyRole function for role verification</em></p>
 <pre><code class="language-solidity">function _hasRole(address user, uint256 role_) internal view returns (bool);
 </code></pre>
-<p><strong>Returns</strong></p>
+<p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>Wether the caller have the given role</td></tr>
+<tr><td><code>user</code></td><td><code>address</code></td><td>The address to check for role membership</td></tr>
+<tr><td><code>role_</code></td><td><code>uint256</code></td><td>The role constant to check (e.g., ADMIN_ROLE, VENDOR_ROLE)</td></tr>
 </tbody></table>
 </div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if the user has the specified role, false otherwise</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkadmin"><a class="header" href="#_checkadmin">_checkAdmin</a></h3>
+<p>Check if caller has admin role</p>
+<pre><code class="language-solidity">function _checkAdmin(address user) private view;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>user</code></td><td><code>address</code></td><td>Address to check</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkvendor"><a class="header" href="#_checkvendor">_checkVendor</a></h3>
+<p>Check if caller has vendor role</p>
+<pre><code class="language-solidity">function _checkVendor(address user) private view;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>user</code></td><td><code>address</code></td><td>Address to check</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkrelayer"><a class="header" href="#_checkrelayer">_checkRelayer</a></h3>
+<p>Check if caller has relayer role</p>
+<pre><code class="language-solidity">function _checkRelayer(address user) private view;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>user</code></td><td><code>address</code></td><td>Address to check</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkaddressnotzero"><a class="header" href="#_checkaddressnotzero">_checkAddressNotZero</a></h3>
+<p>Check if address is not zero</p>
+<pre><code class="language-solidity">function _checkAddressNotZero(address addr) private pure;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>addr</code></td><td><code>address</code></td><td>Address to check</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkassetnotregistered"><a class="header" href="#_checkassetnotregistered">_checkAssetNotRegistered</a></h3>
+<p>Validates that an asset is not already registered in the protocol</p>
+<p><em>Reverts with KREGISTRY_ALREADY_REGISTERED if the asset exists in supportedAssets set.
+Used to prevent duplicate registrations and maintain protocol integrity.</em></p>
+<pre><code class="language-solidity">function _checkAssetNotRegistered(address asset) private view;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The asset address to validate</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkassetregistered"><a class="header" href="#_checkassetregistered">_checkAssetRegistered</a></h3>
+<p>Validates that an asset is registered in the protocol</p>
+<p><em>Reverts with KREGISTRY_ASSET_NOT_SUPPORTED if the asset doesn't exist in supportedAssets set.
+Used to ensure operations only occur on whitelisted assets.</em></p>
+<pre><code class="language-solidity">function _checkAssetRegistered(address asset) private view;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The asset address to validate</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkvaultregistered"><a class="header" href="#_checkvaultregistered">_checkVaultRegistered</a></h3>
+<p>Validates that a vault is registered in the protocol</p>
+<p><em>Reverts with KREGISTRY_ASSET_NOT_SUPPORTED if the vault doesn't exist in allVaults set.
+Used to ensure operations only occur on registered vaults. Note: error message could be improved.</em></p>
+<pre><code class="language-solidity">function _checkVaultRegistered(address vault) private view;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address to validate</td></tr>
+</tbody></table>
+</div>
+<h3 id="_trygetassetdecimals"><a class="header" href="#_trygetassetdecimals">_tryGetAssetDecimals</a></h3>
+<p>*Helper function to get the decimals of the underlying asset.
+Useful for setting the return value of <code>_underlyingDecimals</code> during initialization.
+If the retrieval succeeds, <code>success</code> will be true, and <code>result</code> will hold the result.
+Otherwise, <code>success</code> will be false, and <code>result</code> will be zero.
+Example usage:</p>
+<pre><code>(bool success, uint8 result) = _tryGetAssetDecimals(underlying);
+_decimals = success ? result : _DEFAULT_UNDERLYING_DECIMALS;
+```*
+
+
+```solidity
+function _tryGetAssetDecimals(address underlying) internal view returns (bool success, uint8 result);
+</code></pre>
 <h3 id="_authorizeupgrade"><a class="header" href="#_authorizeupgrade">_authorizeUpgrade</a></h3>
 <p>Authorizes contract upgrades</p>
 <p><em>Only callable by contract owner</em></p>
-<pre><code class="language-solidity">function _authorizeUpgrade(address newImplementation) internal view override onlyOwner;
+<pre><code class="language-solidity">function _authorizeUpgrade(address newImplementation) internal view override;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -594,7 +845,9 @@
 </tbody></table>
 </div>
 <h3 id="receive"><a class="header" href="#receive">receive</a></h3>
-<p>Receive ETH (for gas refunds, etc.)</p>
+<p>Fallback function to receive ETH transfers</p>
+<p><em>Allows the contract to receive ETH for gas refunds, donations, or accidental transfers.
+Received ETH can be rescued using the rescueAssets function with address(0).</em></p>
 <pre><code class="language-solidity">receive() external payable;
 </code></pre>
 <h3 id="contractname"><a class="header" href="#contractname">contractName</a></h3>
@@ -617,20 +870,26 @@
 </div>
 <h2 id="structs"><a class="header" href="#structs">Structs</a></h2>
 <h3 id="kregistrystorage"><a class="header" href="#kregistrystorage">kRegistryStorage</a></h3>
+<p>Core storage structure for kRegistry using ERC-7201 namespaced storage pattern</p>
+<p><em>This structure maintains all protocol configuration state including contracts, assets, vaults, and
+permissions.
+Uses the diamond storage pattern to prevent storage collisions in upgradeable contracts.</em></p>
 <p><strong>Note:</strong>
 storage-location: erc7201:kam.storage.kRegistry</p>
 <pre><code class="language-solidity">struct kRegistryStorage {
-    EnumerableSetLib.AddressSet supportedAssets;
-    EnumerableSetLib.AddressSet allVaults;
+    OptimizedAddressEnumerableSetLib.AddressSet supportedAssets;
+    OptimizedAddressEnumerableSetLib.AddressSet allVaults;
+    address treasury;
     mapping(bytes32 =&gt; address) singletonContracts;
     mapping(address =&gt; uint8 vaultType) vaultType;
     mapping(address =&gt; mapping(uint8 vaultType =&gt; address)) assetToVault;
-    mapping(address =&gt; EnumerableSetLib.AddressSet) vaultAsset;
-    mapping(address =&gt; EnumerableSetLib.AddressSet) vaultsByAsset;
+    mapping(address =&gt; OptimizedAddressEnumerableSetLib.AddressSet) vaultAsset;
+    mapping(address =&gt; OptimizedAddressEnumerableSetLib.AddressSet) vaultsByAsset;
     mapping(bytes32 =&gt; address) singletonAssets;
     mapping(address =&gt; address) assetToKToken;
-    mapping(address =&gt; EnumerableSetLib.AddressSet) vaultAdapters;
+    mapping(address =&gt; OptimizedAddressEnumerableSetLib.AddressSet) vaultAdapters;
     mapping(address =&gt; bool) registeredAdapters;
+    mapping(address =&gt; uint16) assetHurdleRate;
 }
 </code></pre>
 

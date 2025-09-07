@@ -1,65 +1,35 @@
 # IkStakingVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/670f05acf8766190fcaa1d272341611f065917de/src/interfaces/IkStakingVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/interfaces/IkStakingVault.sol)
 
 **Inherits:**
-[IVaultBatch](/src/interfaces/modules/IVaultBatch.sol/interface.IVaultBatch.md), [IVaultClaim](/src/interfaces/modules/IVaultClaim.sol/interface.IVaultClaim.md), [IVaultFees](/src/interfaces/modules/IVaultFees.sol/interface.IVaultFees.md)
+[IVault](/src/interfaces/IVault.sol/interface.IVault.md), [IVaultReader](/src/interfaces/modules/IVaultReader.sol/interface.IVaultReader.md)
 
-Interface for kStakingVault that manages minter operations and user staking
+Comprehensive interface combining retail staking operations with ERC20 share tokens and vault state reading
 
-*Matches kStakingVault implementation*
+*This interface aggregates all kStakingVault functionality by extending IVault (staking/batch/claims/fees) and
+IVaultReader (state queries) while adding standard ERC20 operations for stkToken management. The interface provides
+a complete view of vault capabilities: (1) Staking Operations: Full request/claim lifecycle for retail users,
+(2) Batch Management: Lifecycle control for settlement periods, (3) Share Tokens: Standard ERC20 functionality for
+stkTokens that accrue yield, (4) State Reading: Comprehensive vault metrics and calculations, (5) Fee Management:
+Performance and management fee configuration. This unified interface enables complete vault interaction through a
+single contract, simplifying integration for front-ends and external protocols while maintaining modularity through
+interface composition. The combination of vault-specific operations with standard ERC20 compatibility ensures
+stkTokens work seamlessly with existing DeFi infrastructure while providing specialized staking functionality.*
 
 
 ## Functions
-### requestStake
-
-
-```solidity
-function requestStake(address to, uint256 kTokensAmount) external payable returns (bytes32 requestId);
-```
-
-### requestUnstake
-
-
-```solidity
-function requestUnstake(address to, uint256 stkTokenAmount) external payable returns (bytes32 requestId);
-```
-
-### updateLastTotalAssets
-
-
-```solidity
-function updateLastTotalAssets(uint256 totalAssets) external;
-```
-
-### asset
-
-
-```solidity
-function asset() external view returns (address);
-```
-
 ### owner
+
+Returns the owner of the contract
 
 
 ```solidity
 function owner() external view returns (address);
 ```
 
-### totalSupply
-
-
-```solidity
-function totalSupply() external view returns (uint256);
-```
-
-### underlyingAsset
-
-
-```solidity
-function underlyingAsset() external view returns (address);
-```
-
 ### name
+
+Returns the name of the token
 
 
 ```solidity
@@ -68,6 +38,8 @@ function name() external view returns (string memory);
 
 ### symbol
 
+Returns the symbol of the token
+
 
 ```solidity
 function symbol() external view returns (string memory);
@@ -75,130 +47,64 @@ function symbol() external view returns (string memory);
 
 ### decimals
 
+Returns the decimals of the token
+
 
 ```solidity
 function decimals() external view returns (uint8);
 ```
 
-### calculateStkTokenPrice
+### totalSupply
+
+Returns the total supply of the token
 
 
 ```solidity
-function calculateStkTokenPrice(uint256 totalAssets) external view returns (uint256);
-```
-
-### totalAssets
-
-
-```solidity
-function totalAssets() external view returns (uint256);
-```
-
-### totalNetAssets
-
-
-```solidity
-function totalNetAssets() external view returns (uint256);
+function totalSupply() external view returns (uint256);
 ```
 
 ### balanceOf
+
+Returns the balance of the specified account
 
 
 ```solidity
 function balanceOf(address account) external view returns (uint256);
 ```
 
-### lastTotalAssets
+### transfer
+
+Transfers tokens to the specified recipient
 
 
 ```solidity
-function lastTotalAssets() external view returns (uint256);
+function transfer(address to, uint256 amount) external returns (bool);
 ```
 
-### kToken
+### allowance
+
+Returns the remaining allowance that spender has to spend on behalf of owner
 
 
 ```solidity
-function kToken() external view returns (address);
+function allowance(address owner, address spender) external view returns (uint256);
 ```
 
-### getBatchId
+### approve
+
+Sets amount as the allowance of spender over the caller's tokens
 
 
 ```solidity
-function getBatchId() external view returns (bytes32);
+function approve(address spender, uint256 amount) external returns (bool);
 ```
 
-### getSafeBatchId
+### transferFrom
+
+Transfers tokens from sender to recipient using the allowance mechanism
 
 
 ```solidity
-function getSafeBatchId() external view returns (bytes32);
-```
-
-### getSafeBatchReceiver
-
-
-```solidity
-function getSafeBatchReceiver(bytes32 batchId) external view returns (address);
-```
-
-### isBatchClosed
-
-
-```solidity
-function isBatchClosed() external view returns (bool);
-```
-
-### isBatchSettled
-
-
-```solidity
-function isBatchSettled() external view returns (bool);
-```
-
-### getBatchIdInfo
-
-
-```solidity
-function getBatchIdInfo()
-    external
-    view
-    returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled);
-```
-
-### getBatchReceiver
-
-
-```solidity
-function getBatchReceiver(bytes32 batchId) external view returns (address);
-```
-
-### getBatchIdReceiver
-
-
-```solidity
-function getBatchIdReceiver(bytes32 batchId) external view returns (address);
-```
-
-### sharePrice
-
-
-```solidity
-function sharePrice() external view returns (uint256);
-```
-
-### contractName
-
-
-```solidity
-function contractName() external pure returns (string memory);
-```
-
-### contractVersion
-
-
-```solidity
-function contractVersion() external pure returns (string memory);
+function transferFrom(address from, address to, uint256 amount) external returns (bool);
 ```
 

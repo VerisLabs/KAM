@@ -17,7 +17,7 @@ import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 
-import { IVault } from "src/interfaces/IVault.sol";
+import { IVault, IVaultBatch } from "src/interfaces/IVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 
 import {
@@ -352,13 +352,13 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
                             VAULT BATCHES FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IVault
+    /// @inheritdoc IVaultBatch
     function createNewBatch() external returns (bytes32) {
         _checkRelayer(msg.sender);
         return _createNewBatch();
     }
 
-    /// @inheritdoc IVault
+    /// @inheritdoc IVaultBatch
     function closeBatch(bytes32 _batchId, bool _create) external {
         _checkRelayer(msg.sender);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
@@ -371,7 +371,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit BatchClosed(_batchId);
     }
 
-    /// @inheritdoc IVault
+    /// @inheritdoc IVaultBatch
     function settleBatch(bytes32 _batchId) external {
         _checkRouter(msg.sender);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
@@ -386,7 +386,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit BatchSettled(_batchId);
     }
 
-    /// @inheritdoc IVault
+    /// @inheritdoc IVaultBatch
     function createBatchReceiver(bytes32 _batchId) external returns (address) {
         _lockReentrant();
         _checkRouter(msg.sender);

@@ -157,92 +157,59 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="ikstakingvault"><a class="header" href="#ikstakingvault">IkStakingVault</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/IkStakingVault.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/interfaces/IkStakingVault.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
-<a href="/src/interfaces/modules/IVaultBatch.sol/interface.IVaultBatch.html">IVaultBatch</a>, <a href="/src/interfaces/modules/IVaultClaim.sol/interface.IVaultClaim.html">IVaultClaim</a>, <a href="/src/interfaces/modules/IVaultFees.sol/interface.IVaultFees.html">IVaultFees</a></p>
-<p>Interface for kStakingVault that manages minter operations and user staking</p>
-<p><em>Matches kStakingVault implementation</em></p>
+<a href="/src/interfaces/IVault.sol/interface.IVault.html">IVault</a>, <a href="/src/interfaces/modules/IVaultReader.sol/interface.IVaultReader.html">IVaultReader</a></p>
+<p>Comprehensive interface combining retail staking operations with ERC20 share tokens and vault state reading</p>
+<p><em>This interface aggregates all kStakingVault functionality by extending IVault (staking/batch/claims/fees) and
+IVaultReader (state queries) while adding standard ERC20 operations for stkToken management. The interface provides
+a complete view of vault capabilities: (1) Staking Operations: Full request/claim lifecycle for retail users,
+(2) Batch Management: Lifecycle control for settlement periods, (3) Share Tokens: Standard ERC20 functionality for
+stkTokens that accrue yield, (4) State Reading: Comprehensive vault metrics and calculations, (5) Fee Management:
+Performance and management fee configuration. This unified interface enables complete vault interaction through a
+single contract, simplifying integration for front-ends and external protocols while maintaining modularity through
+interface composition. The combination of vault-specific operations with standard ERC20 compatibility ensures
+stkTokens work seamlessly with existing DeFi infrastructure while providing specialized staking functionality.</em></p>
 <h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
-<h3 id="requeststake"><a class="header" href="#requeststake">requestStake</a></h3>
-<pre><code class="language-solidity">function requestStake(address to, uint256 kTokensAmount) external payable returns (bytes32 requestId);
-</code></pre>
-<h3 id="requestunstake"><a class="header" href="#requestunstake">requestUnstake</a></h3>
-<pre><code class="language-solidity">function requestUnstake(address to, uint256 stkTokenAmount) external payable returns (bytes32 requestId);
-</code></pre>
-<h3 id="updatelasttotalassets"><a class="header" href="#updatelasttotalassets">updateLastTotalAssets</a></h3>
-<pre><code class="language-solidity">function updateLastTotalAssets(uint256 totalAssets) external;
-</code></pre>
-<h3 id="asset"><a class="header" href="#asset">asset</a></h3>
-<pre><code class="language-solidity">function asset() external view returns (address);
-</code></pre>
-<h3 id="totalsupply"><a class="header" href="#totalsupply">totalSupply</a></h3>
-<pre><code class="language-solidity">function totalSupply() external view returns (uint256);
-</code></pre>
-<h3 id="underlyingasset"><a class="header" href="#underlyingasset">underlyingAsset</a></h3>
-<pre><code class="language-solidity">function underlyingAsset() external view returns (address);
+<h3 id="owner"><a class="header" href="#owner">owner</a></h3>
+<p>Returns the owner of the contract</p>
+<pre><code class="language-solidity">function owner() external view returns (address);
 </code></pre>
 <h3 id="name"><a class="header" href="#name">name</a></h3>
+<p>Returns the name of the token</p>
 <pre><code class="language-solidity">function name() external view returns (string memory);
 </code></pre>
 <h3 id="symbol"><a class="header" href="#symbol">symbol</a></h3>
+<p>Returns the symbol of the token</p>
 <pre><code class="language-solidity">function symbol() external view returns (string memory);
 </code></pre>
 <h3 id="decimals"><a class="header" href="#decimals">decimals</a></h3>
+<p>Returns the decimals of the token</p>
 <pre><code class="language-solidity">function decimals() external view returns (uint8);
 </code></pre>
-<h3 id="calculatestktokenprice"><a class="header" href="#calculatestktokenprice">calculateStkTokenPrice</a></h3>
-<pre><code class="language-solidity">function calculateStkTokenPrice(uint256 totalAssets) external view returns (uint256);
-</code></pre>
-<h3 id="totalassets"><a class="header" href="#totalassets">totalAssets</a></h3>
-<pre><code class="language-solidity">function totalAssets() external view returns (uint256);
-</code></pre>
-<h3 id="totalnetassets"><a class="header" href="#totalnetassets">totalNetAssets</a></h3>
-<pre><code class="language-solidity">function totalNetAssets() external view returns (uint256);
+<h3 id="totalsupply"><a class="header" href="#totalsupply">totalSupply</a></h3>
+<p>Returns the total supply of the token</p>
+<pre><code class="language-solidity">function totalSupply() external view returns (uint256);
 </code></pre>
 <h3 id="balanceof"><a class="header" href="#balanceof">balanceOf</a></h3>
+<p>Returns the balance of the specified account</p>
 <pre><code class="language-solidity">function balanceOf(address account) external view returns (uint256);
 </code></pre>
-<h3 id="lasttotalassets"><a class="header" href="#lasttotalassets">lastTotalAssets</a></h3>
-<pre><code class="language-solidity">function lastTotalAssets() external view returns (uint256);
+<h3 id="transfer"><a class="header" href="#transfer">transfer</a></h3>
+<p>Transfers tokens to the specified recipient</p>
+<pre><code class="language-solidity">function transfer(address to, uint256 amount) external returns (bool);
 </code></pre>
-<h3 id="ktoken"><a class="header" href="#ktoken">kToken</a></h3>
-<pre><code class="language-solidity">function kToken() external view returns (address);
+<h3 id="allowance"><a class="header" href="#allowance">allowance</a></h3>
+<p>Returns the remaining allowance that spender has to spend on behalf of owner</p>
+<pre><code class="language-solidity">function allowance(address owner, address spender) external view returns (uint256);
 </code></pre>
-<h3 id="getbatchid"><a class="header" href="#getbatchid">getBatchId</a></h3>
-<pre><code class="language-solidity">function getBatchId() external view returns (bytes32);
+<h3 id="approve"><a class="header" href="#approve">approve</a></h3>
+<p>Sets amount as the allowance of spender over the caller's tokens</p>
+<pre><code class="language-solidity">function approve(address spender, uint256 amount) external returns (bool);
 </code></pre>
-<h3 id="getsafebatchid"><a class="header" href="#getsafebatchid">getSafeBatchId</a></h3>
-<pre><code class="language-solidity">function getSafeBatchId() external view returns (bytes32);
-</code></pre>
-<h3 id="getsafebatchreceiver"><a class="header" href="#getsafebatchreceiver">getSafeBatchReceiver</a></h3>
-<pre><code class="language-solidity">function getSafeBatchReceiver(bytes32 batchId) external view returns (address);
-</code></pre>
-<h3 id="isbatchclosed"><a class="header" href="#isbatchclosed">isBatchClosed</a></h3>
-<pre><code class="language-solidity">function isBatchClosed() external view returns (bool);
-</code></pre>
-<h3 id="isbatchsettled"><a class="header" href="#isbatchsettled">isBatchSettled</a></h3>
-<pre><code class="language-solidity">function isBatchSettled() external view returns (bool);
-</code></pre>
-<h3 id="getbatchidinfo"><a class="header" href="#getbatchidinfo">getBatchIdInfo</a></h3>
-<pre><code class="language-solidity">function getBatchIdInfo()
-    external
-    view
-    returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled);
-</code></pre>
-<h3 id="getbatchreceiver"><a class="header" href="#getbatchreceiver">getBatchReceiver</a></h3>
-<pre><code class="language-solidity">function getBatchReceiver(bytes32 batchId) external view returns (address);
-</code></pre>
-<h3 id="getbatchidreceiver"><a class="header" href="#getbatchidreceiver">getBatchIdReceiver</a></h3>
-<pre><code class="language-solidity">function getBatchIdReceiver(bytes32 batchId) external view returns (address);
-</code></pre>
-<h3 id="shareprice"><a class="header" href="#shareprice">sharePrice</a></h3>
-<pre><code class="language-solidity">function sharePrice() external view returns (uint256);
-</code></pre>
-<h3 id="contractname"><a class="header" href="#contractname">contractName</a></h3>
-<pre><code class="language-solidity">function contractName() external pure returns (string memory);
-</code></pre>
-<h3 id="contractversion"><a class="header" href="#contractversion">contractVersion</a></h3>
-<pre><code class="language-solidity">function contractVersion() external pure returns (string memory);
+<h3 id="transferfrom"><a class="header" href="#transferfrom">transferFrom</a></h3>
+<p>Transfers tokens from sender to recipient using the allowance mechanism</p>
+<pre><code class="language-solidity">function transferFrom(address from, address to, uint256 amount) external returns (bool);
 </code></pre>
 
                     </main>

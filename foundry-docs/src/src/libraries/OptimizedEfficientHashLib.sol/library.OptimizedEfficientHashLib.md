@@ -1,5 +1,5 @@
 # OptimizedEfficientHashLib
-[Git Source](https://github.com/VerisLabs/KAM/blob/670f05acf8766190fcaa1d272341611f065917de/src/libraries/OptimizedEfficientHashLib.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/libraries/OptimizedEfficientHashLib.sol)
 
 **Author:**
 Solady (https://github.com/vectorized/solady/blob/main/src/utils/OptimizedEfficientHashLib.sol)
