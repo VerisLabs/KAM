@@ -2,15 +2,10 @@
 pragma solidity 0.8.30;
 
 /// @notice Library for efficiently performing keccak256 hashes.
-/// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/OptimizedEfficientHashLib.sol)
-/// @dev To avoid stack-too-deep, you can use:
-/// ```
-/// bytes32[] memory buffer = OptimizedEfficientHashLib.malloc(10);
-/// OptimizedEfficientHashLib.set(buffer, 0, value0);
-/// ..
-/// OptimizedEfficientHashLib.set(buffer, 9, value9);
-/// bytes32 finalHash = OptimizedEfficientHashLib.hash(buffer);
-/// ```
+/// @author Originally by Solady (https://github.com/vectorized/solady/blob/main/src/utils/EfficientHashLib.sol)
+/// @dev NOTE: This is a reduced version of the original Solady library.
+/// We have extracted only the necessary hashing functionality to optimize contract size.
+/// Original code by Solady, modified for size optimization.
 library OptimizedEfficientHashLib {
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*               MALLOC-LESS HASHING OPERATIONS               */

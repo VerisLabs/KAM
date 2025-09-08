@@ -2,9 +2,11 @@
 pragma solidity 0.8.30;
 
 /// @notice Arithmetic library with operations for fixed-point numbers.
-/// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/OptimizedFixedPointMathLib.sol)
-/// @author Modified from Solmate
-/// (https://github.com/transmissions11/solmate/blob/main/src/utils/OptimizedFixedPointMathLib.sol)
+/// @author Originally by Solady (https://github.com/vectorized/solady/blob/main/src/utils/FixedPointMathLib.sol)
+/// @author Modified from Solmate (https://github.com/transmissions11/solmate/blob/main/src/utils/FixedPointMathLib.sol)
+/// @dev NOTE: This is a reduced version of the original Solady library.
+/// We have extracted only the necessary fixed-point math functionality to optimize contract size.
+/// Original code by Solady, modified for size optimization.
 library OptimizedFixedPointMathLib {
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       CUSTOM ERRORS                        */

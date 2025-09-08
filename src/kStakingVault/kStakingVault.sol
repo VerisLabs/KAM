@@ -17,7 +17,7 @@ import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 
-import { IVault } from "src/interfaces/IVault.sol";
+import { IVault, IVaultBatch, IVaultClaim, IVaultFees } from "src/interfaces/IVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 
 import {
@@ -48,8 +48,17 @@ import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title kStakingVault
-/// @notice Pure ERC20 vault with dual accounting for minter and user pools
-/// @dev Implements automatic yield distribution from minter to user pools with modular architecture
+/// @notice Retail staking vault enabling kToken holders to earn yield through batch-processed share tokens
+/// @dev This contract implements the complete retail staking system for the KAM protocol, providing individual
+/// kToken holders access to institutional-grade yield opportunities through a share-based mechanism. The implementation
+/// combines several architectural patterns: (1) Dual-token system where kTokens convert to yield-bearing stkTokens,
+/// (2) Batch processing for gas-efficient operations and fair pricing across multiple users, (3) Virtual balance
+/// coordination with kAssetRouter for cross-vault yield optimization, (4) Two-phase operations (request → claim)
+/// ensuring accurate settlement and preventing MEV attacks, (5) Fee management system supporting both management
+/// and performance fees with hurdle rate mechanisms. The vault integrates with the broader protocol through
+/// kAssetRouter for asset flow coordination and yield distribution. Gas optimizations include packed storage,
+/// minimal proxy deployment for batch receivers, and efficient batch settlement processing. The modular architecture
+/// enables upgrades while maintaining state integrity through UUPS pattern and ERC-7201 storage.
 contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Ownable, MultiFacetProxy {
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
     using SafeTransferLib for address;
@@ -131,14 +140,22 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _disableInitializers();
     }
 
-    /// @notice Initializes the kStakingVault contract (stack optimized)
-    /// @dev Phase 1: Core initialization without strings to avoid stack too deep
-    /// @param registry_ The registry address
-    /// @param paused_ If the vault is paused_
-    /// @param name_ Token name
-    /// @param symbol_ Token symbol
-    /// @param decimals_ Token decimals
-    /// @param asset_ Underlying asset address
+    /// @notice Initializes the kStakingVault with complete protocol integration and share token configuration
+    /// @dev This function establishes the vault's integration with the KAM protocol ecosystem. The initialization
+    /// process: (1) Validates asset address to prevent deployment with invalid configuration, (2) Initializes
+    /// BaseVault foundation with registry and operational state, (3) Sets up ownership and access control through
+    /// Ownable pattern, (4) Configures share token metadata and decimals for ERC20 functionality, (5) Establishes
+    /// kToken integration through registry lookup for asset-to-token mapping, (6) Sets initial share price watermark
+    /// for performance fee calculations, (7) Deploys BatchReceiver implementation for settlement asset distribution.
+    /// The initialization creates a complete retail staking solution integrated with the protocol's institutional
+    /// flows.
+    /// @param owner_ The address that will have administrative control over the vault
+    /// @param registry_ The kRegistry contract address for protocol configuration integration
+    /// @param paused_ Initial operational state (true = paused, false = active)
+    /// @param name_ ERC20 token name for the stkToken (e.g., "Staked kUSDC")
+    /// @param symbol_ ERC20 token symbol for the stkToken (e.g., "stkUSDC")
+    /// @param decimals_ Token decimals matching the underlying asset precision
+    /// @param asset_ Underlying asset address that this vault will generate yield on
     function initialize(
         address owner_,
         address registry_,
@@ -174,10 +191,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
                           CORE OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Request to stake kTokens for stkTokens (rebase token)
-    /// @param to Address to receive the stkTokens
-    /// @param amount Amount of kTokens to stake
-    /// @return requestId Request ID for this staking request
+    /// @inheritdoc IVault
     function requestStake(address to, uint256 amount) external payable returns (bytes32 requestId) {
         // Open `nonReentrant`
         _lockReentrant();
@@ -229,10 +243,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         return requestId;
     }
 
-    /// @notice Request to unstake stkTokens for kTokens + yield
-    /// @dev Works with both claimed and unclaimed stkTokens (can unstake immediately after settlement)
-    /// @param stkTokenAmount Amount of stkTokens to unstake
-    /// @return requestId Request ID for this unstaking request
+    /// @inheritdoc IVault
     function requestUnstake(address to, uint256 stkTokenAmount) external payable returns (bytes32 requestId) {
         // Open `nonReentrant`
         _lockReentrant();
@@ -274,8 +285,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         return requestId;
     }
 
-    /// @notice Cancels a staking request
-    /// @param requestId Request ID to cancel
+    /// @inheritdoc IVault
     function cancelStakeRequest(bytes32 requestId) external payable {
         // Open `nonReentrant`
         _lockReentrant();
@@ -307,8 +317,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _unlockReentrant();
     }
 
-    /// @notice Cancels an unstaking request
-    /// @param requestId Request ID to cancel
+    /// @inheritdoc IVault
     function cancelUnstakeRequest(bytes32 requestId) external payable {
         // Open `nonReentrant`
         _lockReentrant();
@@ -341,18 +350,13 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
                             VAULT BATCHES FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Creates a new batch for processing requests
-    /// @return The new batch ID
-    /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
+    /// @inheritdoc IVaultBatch
     function createNewBatch() external returns (bytes32) {
         _checkRelayer(msg.sender);
         return _createNewBatch();
     }
 
-    /// @notice Closes a batch to prevent new requests
-    /// @param _batchId The batch ID to close
-    /// @param _create Whether to create a new batch after closing
-    /// @dev Only callable by RELAYER_ROLE, typically called at cutoff time
+    /// @inheritdoc IVaultBatch
     function closeBatch(bytes32 _batchId, bool _create) external {
         _checkRelayer(msg.sender);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
@@ -365,9 +369,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit BatchClosed(_batchId);
     }
 
-    /// @notice Marks a batch as settled
-    /// @param _batchId The batch ID to settle
-    /// @dev Only callable by kMinter, indicates assets have been distributed
+    /// @inheritdoc IVaultBatch
     function settleBatch(bytes32 _batchId) external {
         _checkRouter(msg.sender);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
@@ -382,9 +384,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit BatchSettled(_batchId);
     }
 
-    /// @notice Deploys BatchReceiver for specific batch
-    /// @param _batchId Batch ID to deploy receiver for
-    /// @dev Only callable by kAssetRouter
+    /// @inheritdoc IVaultBatch
     function createBatchReceiver(bytes32 _batchId) external returns (address) {
         _lockReentrant();
         _checkRouter(msg.sender);
@@ -406,9 +406,15 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         return receiver;
     }
 
-    /// @notice Creates a new batch for processing requests
-    /// @return The new batch ID
-    /// @dev Only callable by RELAYER_ROLE, typically called at batch intervals
+    /// @notice Internal function to create deterministic batch IDs with collision resistance
+    /// @dev This function generates unique batch identifiers using multiple entropy sources for security. The ID
+    /// generation process: (1) Increments internal batch counter to ensure uniqueness within the vault, (2) Combines
+    /// vault address, batch number, chain ID, timestamp, and asset address for collision resistance, (3) Uses
+    /// optimized hashing function for gas efficiency, (4) Initializes batch storage with default state for new
+    /// requests. The deterministic approach enables consistent batch identification across different contexts while
+    /// the multiple entropy sources prevent prediction or collision attacks. Each batch starts in open state ready
+    /// to accept user requests until explicitly closed by relayers.
+    /// @return Deterministic batch identifier for the newly created batch period
     function _createNewBatch() private returns (bytes32) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         unchecked {
@@ -435,43 +441,69 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         return newBatchId;
     }
 
-    /// @notice Checks if the vault is paused
-    /// @param $ Storage pointer
-    /// @dev Only callable by RELAYER_ROLE
+    /// @notice Validates vault operational state preventing actions during emergency pause
+    /// @dev This internal validation function ensures vault safety by blocking operations when paused. Emergency
+    /// pause can be triggered by emergency admins during security incidents or market anomalies. The function
+    /// provides consistent pause checking across all vault operations while maintaining gas efficiency through
+    /// direct storage access. When paused, users cannot create new requests but can still query vault state.
+    /// @param $ Direct storage pointer for gas-efficient pause state access
     function _checkPaused(BaseVaultStorage storage $) private view {
         require(!_getPaused($), KSTAKINGVAULT_IS_PAUSED);
     }
 
-    /// @notice Checks if the amount is not zero
-    /// @param amount Amount to check
+    /// @notice Validates non-zero amounts preventing invalid operations
+    /// @dev This utility function prevents zero-amount operations that would waste gas or create invalid state.
+    /// Zero amounts are rejected for staking, unstaking, and fee operations to maintain data integrity and
+    /// prevent operational errors. The pure function enables gas-efficient validation without state access.
+    /// @param amount The amount value to validate (must be greater than zero)
     function _checkAmountNotZero(uint256 amount) private pure {
         require(amount != 0, KSTAKINGVAULT_ZERO_AMOUNT);
     }
 
-    /// @notice Checks if the bps is valid
-    /// @param bps BPS to check
+    /// @notice Validates basis point values preventing excessive fee configuration
+    /// @dev This function ensures fee parameters remain within acceptable bounds (0-10000 bp = 0-100%) to
+    /// protect users from excessive fee extraction. The 10000 bp limit enforces the maximum fee cap while
+    /// enabling flexible fee configuration within reasonable ranges. Used for both management and performance
+    /// fee validation to maintain consistent fee bounds across all fee types.
+    /// @param bps The basis point value to validate (must be <= 10000)
     function _checkValidBPS(uint256 bps) private pure {
         require(bps <= 10_000, VAULTFEES_FEE_EXCEEDS_MAXIMUM);
     }
 
-    /// @dev Only callable by RELAYER_ROLE
+    /// @notice Validates relayer role authorization for batch management operations
+    /// @dev This access control function ensures only authorized relayers can execute batch lifecycle operations.
+    /// Relayers are responsible for automated batch creation, closure, and coordination with settlement processes.
+    /// The role-based access prevents unauthorized manipulation of batch timing while enabling protocol automation.
+    /// @param relayer The address to validate against registered relayer roles
     function _checkRelayer(address relayer) private view {
         require(_isRelayer(relayer), KSTAKINGVAULT_WRONG_ROLE);
     }
 
-    /// @dev Only callable by kAssetRouter
+    /// @notice Validates kAssetRouter authorization for settlement and asset coordination
+    /// @dev This critical access control ensures only the protocol's kAssetRouter can trigger settlement operations
+    /// and coordinate cross-vault asset flows. The router manages complex settlement logic including yield distribution
+    /// and virtual balance coordination, making this validation essential for protocol integrity and security.
+    /// @param router The address to validate against the registered kAssetRouter contract
     function _checkRouter(address router) private view {
         require(_isKAssetRouter(router), KSTAKINGVAULT_WRONG_ROLE);
     }
 
-    /// @dev Only callable by ADMIN_ROLE
+    /// @notice Validates admin role authorization for vault configuration changes
+    /// @dev This access control function restricts administrative operations to authorized admin addresses.
+    /// Admins can modify fee parameters, update vault settings, and execute emergency functions requiring
+    /// elevated privileges. The role validation maintains security while enabling necessary governance operations.
+    /// @param admin The address to validate against registered admin roles
     function _checkAdmin(address admin) private view {
         require(_isAdmin(admin), KSTAKINGVAULT_WRONG_ROLE);
     }
 
-    /// @dev Validate timestamp
-    /// @param timestamp Timestamp to validate
-    /// @param lastTimestamp Last timestamp to validate
+    /// @notice Validates timestamp progression preventing manipulation and ensuring logical sequence
+    /// @dev This function ensures fee timestamp updates follow logical progression and remain within valid ranges.
+    /// Validation checks: (1) New timestamp must be >= last timestamp to prevent backwards time manipulation,
+    /// (2) New timestamp must be <= current block time to prevent future-dating. These validations are critical
+    /// for accurate fee calculations and preventing temporal manipulation attacks on the fee system.
+    /// @param timestamp The new timestamp being set for fee tracking
+    /// @param lastTimestamp The previous timestamp for progression validation
     function _validateTimestamp(uint256 timestamp, uint256 lastTimestamp) private view {
         require(timestamp >= lastTimestamp && timestamp <= block.timestamp, VAULTFEES_INVALID_TIMESTAMP);
     }
@@ -480,9 +512,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
                           VAULT CLAIMS FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Claims stkTokens from a settled staking batch
-    /// @param batchId Batch ID to claim from
-    /// @param requestId Request ID to claim
+    /// @inheritdoc IVaultClaim
     function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable {
         // Open `nonRentrant`
         _lockReentrant();
@@ -517,9 +547,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _unlockReentrant();
     }
 
-    /// @notice Claims kTokens from a settled unstaking batch (simplified implementation)
-    /// @param batchId Batch ID to claim from
-    /// @param requestId Request ID to claim
+    /// @inheritdoc IVaultClaim
     function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable {
         // Open `nonRentrant`
         _lockReentrant();
@@ -567,9 +595,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
                           VAULT FEES FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Sets the hard hurdle rate
-    /// @param _isHard Whether the hard hurdle rate is enabled
-    /// @dev If true, performance fees will only be charged to the excess return
+    /// @inheritdoc IVaultFees
     function setHardHurdleRate(bool _isHard) external {
         _checkAdmin(msg.sender);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
@@ -577,9 +603,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit HardHurdleRateUpdated(_isHard);
     }
 
-    /// @notice Sets the management fee
-    /// @param _managementFee The new management fee
-    /// @dev Fee is a basis point (1% = 100)
+    /// @inheritdoc IVaultFees
     function setManagementFee(uint16 _managementFee) external {
         _checkAdmin(msg.sender);
         _checkValidBPS(_managementFee);
@@ -589,9 +613,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit ManagementFeeUpdated(oldFee, _managementFee);
     }
 
-    /// @notice Sets the performance fee
-    /// @param _performanceFee The new performance fee
-    /// @dev Fee is a basis point (1% = 100)
+    /// @inheritdoc IVaultFees
     function setPerformanceFee(uint16 _performanceFee) external {
         _checkAdmin(msg.sender);
         _checkValidBPS(_performanceFee);
@@ -601,9 +623,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit PerformanceFeeUpdated(oldFee, _performanceFee);
     }
 
-    /// @notice Notifies the module that management fees have been charged from backend
-    /// @param _timestamp The timestamp of the fee charge
-    /// @dev Should only be called by the vault
+    /// @inheritdoc IVaultFees
     function notifyManagementFeesCharged(uint64 _timestamp) external {
         _checkAdmin(msg.sender);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
@@ -613,9 +633,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit ManagementFeesCharged(_timestamp);
     }
 
-    /// @notice Notifies the module that performance fees have been charged from backend
-    /// @param _timestamp The timestamp of the fee charge
-    /// @dev Should only be called by the vault
+    /// @inheritdoc IVaultFees
     function notifyPerformanceFeesCharged(uint64 _timestamp) external {
         _checkAdmin(msg.sender);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
@@ -657,9 +675,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
                             PAUSE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Sets the pause state of the contract
-    /// @param paused_ New pause state
-    /// @dev Only callable internally by inheriting contracts
+    /// @inheritdoc IVault
     function setPaused(bool paused_) external {
         require(_isEmergencyAdmin(msg.sender), KSTAKINGVAULT_WRONG_ROLE);
         _setPaused(paused_);

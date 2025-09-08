@@ -1,12 +1,24 @@
 # CustodialAdapter
-[Git Source](https://github.com/VerisLabs/KAM/blob/670f05acf8766190fcaa1d272341611f065917de/src/adapters/CustodialAdapter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/adapters/CustodialAdapter.sol)
 
 **Inherits:**
 [BaseAdapter](/src/adapters/BaseAdapter.sol/contract.BaseAdapter.md), [Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md)
 
-Adapter for custodial address integrations (CEX, CEFFU, etc.)
+Specialized adapter enabling yield generation through custodial services like CEX staking and institutional
+platforms
 
-*Simple adapter that transfers assets to custodial addresses and tracks virtual balances*
+*This adapter implements the bridge between KAM protocol vaults and external custodial yield sources
+(centralized
+exchanges, CEFFU, institutional staking providers). Key functionality includes: (1) Virtual balance tracking that
+maintains on-chain accounting while assets are held off-chain, (2) Configurable custodial destinations per vault
+allowing flexible routing to different providers, (3) Two-phase deposit/redemption flow where deposits are tracked
+virtually and actual transfers happen through manual processes, (4) Total assets management for accurate yield
+calculation during settlements, (5) Request ID system for tracking redemption operations. The adapter operates on
+a trust-minimized model where admin-controlled totalAssets updates reflect off-chain yields, which are then
+distributed
+through the settlement process. This design enables institutional-grade yield opportunities while maintaining the
+protocol's unified settlement and distribution mechanisms. The virtual balance system ensures accurate accounting
+even when assets are temporarily off-chain for yield generation.*
 
 
 ## State Variables
@@ -39,7 +51,12 @@ constructor();
 
 ### initialize
 
-Initializes the MetaVault adapter
+Initializes the CustodialAdapter with registry integration and request tracking
+
+*Initialization process: (1) Calls BaseAdapter initialization for registry setup and metadata,
+(2) Initializes request ID counter for redemption tracking, (3) Emits initialization event for
+monitoring. The adapter starts with no vault destinations configured - these must be set by admin
+before deposits can occur. Uses OpenZeppelin's initializer modifier for reentrancy protection.*
 
 
 ```solidity
@@ -49,12 +66,21 @@ function initialize(address registry_) external initializer;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`registry_`|`address`|Address of the kRegistry contract|
+|`registry_`|`address`|The kRegistry contract address for protocol configuration and access control|
 
 
 ### deposit
 
-Deposits assets to external strategy
+Virtually deposits assets for custodial yield generation while maintaining on-chain accounting
+
+*This function handles the on-chain accounting when assets are routed to custodial services. Process:
+(1) Validates caller is kAssetRouter ensuring centralized control over deposits, (2) Validates parameters
+to prevent zero deposits or invalid addresses, (3) Checks vault has configured custodial destination,
+(4) Verifies adapter has received the assets from kAssetRouter, (5) Updates virtual balance tracking
+for accurate accounting. Note: This doesn't transfer to custodial address - that happens through separate
+manual processes. The virtual tracking ensures the protocol knows asset locations even when off-chain.
+This two-phase approach enables yield generation through custodial services while maintaining protocol
+accounting integrity for settlements.*
 
 
 ```solidity
@@ -64,14 +90,22 @@ function deposit(address asset, uint256 amount, address onBehalfOf) external;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`asset`|`address`|The asset to deposit|
-|`amount`|`uint256`|The amount to deposit|
-|`onBehalfOf`|`address`|The vault address this deposit is for|
+|`asset`|`address`|The underlying asset being deposited (must be protocol-registered)|
+|`amount`|`uint256`|The quantity being virtually deposited (must be non-zero)|
+|`onBehalfOf`|`address`|The vault that owns these assets for yield attribution|
 
 
 ### redeem
 
-Redeems assets from external strategy
+Virtually redeems assets from custodial holdings by updating on-chain accounting
+
+*Handles the accounting for asset redemptions from custodial services. Process: (1) Validates
+caller is kAssetRouter for centralized control, (2) Validates parameters preventing invalid redemptions,
+(3) Checks vault has configured destination ensuring proper setup, (4) Decrements virtual balance
+reflecting the redemption request. Like deposits, actual asset return from custodial address happens
+through manual processes. The virtual balance update ensures accurate protocol accounting during the
+redemption period. This function is virtual allowing specialized implementations to add custom logic
+while maintaining base redemption accounting.*
 
 
 ```solidity
@@ -81,9 +115,9 @@ function redeem(address asset, uint256 amount, address onBehalfOf) external virt
 
 |Name|Type|Description|
 |----|----|-----------|
-|`asset`|`address`|The asset to redeem|
-|`amount`|`uint256`|The amount to redeem|
-|`onBehalfOf`|`address`|The vault address this redemption is for|
+|`asset`|`address`|The underlying asset being redeemed|
+|`amount`|`uint256`|The quantity to redeem (must not exceed virtual balance)|
+|`onBehalfOf`|`address`|The vault requesting redemption of its assets|
 
 
 ### totalEstimatedAssets
@@ -197,7 +231,13 @@ function getVaultDestination(address vault) external view returns (address);
 
 ### setVaultDestination
 
-Sets the custodial address for a vault
+Configures the custodial destination address for a specific vault's assets
+
+*Admin function to map vaults to their custodial service providers. Process: (1) Validates admin
+authorization for security, (2) Ensures both addresses are valid preventing misconfiguration,
+(3) Validates vault is registered in protocol ensuring only authorized vaults use custodial services,
+(4) Updates mapping and emits event for tracking. Each vault can have a unique destination enabling
+diversification across custodial providers. Must be configured before deposits can occur.*
 
 
 ```solidity
@@ -207,13 +247,20 @@ function setVaultDestination(address vault, address custodialAddress) external;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`vault`|`address`|The vault address|
-|`custodialAddress`|`address`|The custodial address for this vault|
+|`vault`|`address`|The vault address to configure custodial destination for|
+|`custodialAddress`|`address`|The off-chain custodial address (CEX wallet, institutional account)|
 
 
 ### setTotalAssets
 
-Sets the total assets for a given vault
+Updates total assets to reflect off-chain yields for settlement calculations
+
+*Critical function for yield distribution - allows kAssetRouter to update asset values based on
+off-chain performance. Process: (1) Validates caller is kAssetRouter ensuring only settlement process
+can update, (2) Sets new total reflecting yields or losses from custodial services, (3) Emits event
+for tracking. The difference between previous and new totalAssets represents yield to be distributed
+during settlement. This trust-minimized approach requires careful monitoring but enables access to
+institutional yield opportunities not available on-chain.*
 
 
 ```solidity
@@ -223,14 +270,18 @@ function setTotalAssets(address vault, address asset, uint256 totalAssets_) exte
 
 |Name|Type|Description|
 |----|----|-----------|
-|`vault`|`address`|The vault address|
-|`asset`|`address`||
-|`totalAssets_`|`uint256`|The total assets to set|
+|`vault`|`address`|The vault whose assets are being updated|
+|`asset`|`address`|The specific asset being updated|
+|`totalAssets_`|`uint256`|The new total value including any yields or losses|
 
 
 ### _authorizeUpgrade
 
-Authorize contract upgrade
+Authorizes contract upgrades through UUPS pattern with admin validation
+
+*Security-critical function controlling adapter upgrades. Only admin can authorize ensuring
+governance control over adapter evolution. Validates new implementation address preventing
+accidental upgrades to zero address. Part of UUPS upgrade pattern for gas-efficient upgrades.*
 
 
 ```solidity
@@ -240,12 +291,15 @@ function _authorizeUpgrade(address newImplementation) internal view override;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`newImplementation`|`address`|New implementation address|
+|`newImplementation`|`address`|The new adapter implementation contract address|
 
 
 ## Events
 ### VaultDestinationUpdated
-Emitted when a vault's custodial address is updated
+Emitted when a vault's custodial destination address is configured or updated
+
+*Custodial addresses represent off-chain destinations (CEX wallets, institutional accounts) where
+assets are sent for yield generation. Each vault can have its own destination for segregation.*
 
 
 ```solidity
@@ -256,12 +310,15 @@ event VaultDestinationUpdated(address indexed vault, address indexed oldAddress,
 
 |Name|Type|Description|
 |----|----|-----------|
-|`vault`|`address`|The vault address|
-|`oldAddress`|`address`|The old custodial address|
-|`newAddress`|`address`|The new custodial address|
+|`vault`|`address`|The vault address whose custodial destination is being updated|
+|`oldAddress`|`address`|The previous custodial address (address(0) if first configuration)|
+|`newAddress`|`address`|The new custodial address for this vault's assets|
 
 ### TotalAssetsUpdated
-Emitted when a vault's total assets are updated
+Emitted when total assets are updated to reflect off-chain yields or losses
+
+*This update mechanism allows the protocol to account for yields generated in custodial accounts.
+The kAssetRouter uses these values during settlement to calculate and distribute yields.*
 
 
 ```solidity
@@ -272,11 +329,14 @@ event TotalAssetsUpdated(address indexed vault, uint256 totalAssets);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`vault`|`address`|The vault address|
-|`totalAssets`|`uint256`|The new total assets|
+|`vault`|`address`|The vault address whose total assets are being updated|
+|`totalAssets`|`uint256`|The new total asset value including any yields or losses|
 
 ### Deposited
-Emitted when assets are deposited
+Emitted when assets are virtually deposited for custodial yield generation
+
+*Marks the virtual accounting update when kAssetRouter routes assets to this adapter.
+Actual transfer to custodial address happens separately through manual processes.*
 
 
 ```solidity
@@ -287,12 +347,15 @@ event Deposited(address indexed asset, uint256 amount, address indexed onBehalfO
 
 |Name|Type|Description|
 |----|----|-----------|
-|`asset`|`address`|The asset address|
-|`amount`|`uint256`|The amount deposited|
-|`onBehalfOf`|`address`|The vault address this deposit is for|
+|`asset`|`address`|The underlying asset being deposited (USDC, WBTC, etc.)|
+|`amount`|`uint256`|The quantity of assets being virtually deposited|
+|`onBehalfOf`|`address`|The vault address that owns these deposited assets|
 
 ### RedemptionRequested
-Emitted when a redemption is requested
+Emitted when redemption is requested from custodial holdings
+
+*Initiates the redemption process by updating virtual balances. Actual asset return
+from custodial address happens through manual processes coordinated off-chain.*
 
 
 ```solidity
@@ -303,9 +366,9 @@ event RedemptionRequested(address indexed asset, uint256 amount, address indexed
 
 |Name|Type|Description|
 |----|----|-----------|
-|`asset`|`address`|The asset address|
-|`amount`|`uint256`|The amount requested|
-|`onBehalfOf`|`address`|The vault address this redemption is for|
+|`asset`|`address`|The underlying asset being redeemed|
+|`amount`|`uint256`|The quantity requested for redemption|
+|`onBehalfOf`|`address`|The vault requesting the redemption|
 
 ### RedemptionProcessed
 Emitted when a redemption is processed
@@ -354,6 +417,8 @@ event Initialised(address indexed registry);
 
 ## Structs
 ### CustodialAdapterStorage
+*Storage layout using ERC-7201 pattern for upgrade safety and collision prevention*
+
 **Note:**
 storage-location: erc7201:kam.storage.CustodialAdapter
 

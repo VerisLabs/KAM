@@ -1,19 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity 0.8.30;
 
 /// @notice Library for managing enumerable sets in storage.
-/// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/EnumerableSetLib.sol)
-///
-/// @dev Note:
-/// In many applications, the number of elements in an enumerable set is small.
-/// This enumerable set implementation avoids storing the length and indices
-/// for up to 3 elements. Once the length exceeds 3 for the first time, the length
-/// and indices will be initialized. The amortized cost of adding elements is O(1).
-///
-/// The AddressSet implementation packs the length with the 0th entry.
-///
-/// All enumerable sets except Uint8Set use a pop and swap mechanism to remove elements.
-/// This means that the iteration order of elements can change between element removals.
+/// @author Originally by Solady (https://github.com/vectorized/solady/blob/main/src/utils/EnumerableSetLib.sol)
+/// @dev NOTE: This is a reduced version of the original Solady library.
+/// We have extracted only the necessary functionality to optimize contract size.
+/// Original code by Solady, modified for size optimization.
 library OptimizedAddressEnumerableSetLib {
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       CUSTOM ERRORS                        */

@@ -38,8 +38,17 @@ import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 
 /// @title kAssetRouter
-/// @notice Router contract for managing all the money flows between protocol actors
-/// @dev Inherits from kBase and Multicallable
+/// @notice Central money flow coordinator for the KAM protocol, orchestrating all asset movements and yield
+/// distribution
+/// @dev This contract serves as the heart of the KAM protocol's financial infrastructure, coordinating complex
+/// interactions between institutional flows (kMinter), retail flows (kStakingVaults), and yield generation (DN vaults).
+/// Key responsibilities include: (1) Managing asset pushes from kMinter institutional deposits to DN vaults for yield
+/// generation, (2) Coordinating virtual asset transfers between kStakingVaults for optimal capital allocation,
+/// (3) Processing batch settlements with yield distribution through precise kToken minting/burning operations,
+/// (4) Maintaining virtual balance tracking across all vaults for accurate accounting, (5) Implementing security
+/// cooldown periods for settlement proposals, (6) Executing peg protection mechanisms during market stress.
+/// The contract ensures protocol integrity by maintaining the 1:1 backing guarantee through carefully orchestrated
+/// money flows while enabling efficient capital utilization across the entire vault network.
 contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, Multicallable {
     using OptimizedFixedPointMathLib for uint256;
     using SafeTransferLib for address;
@@ -51,25 +60,40 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Default cooldown period for vault settlements
+    /// @notice Default cooldown period for vault settlement proposals (1 hour)
+    /// @dev Provides initial security delay between proposal creation and execution, allowing guardians
+    /// to verify yield calculations and detect potential errors before irreversible yield distribution
     uint256 private constant DEFAULT_VAULT_SETTLEMENT_COOLDOWN = 1 hours;
 
-    /// @notice Maximum cooldown period for vault settlements
+    /// @notice Maximum allowed cooldown period for vault settlement proposals (1 day)
+    /// @dev Caps the maximum security delay to balance protocol safety with operational efficiency.
+    /// Prevents excessive delays that could harm user experience while maintaining security standards
     uint256 private constant MAX_VAULT_SETTLEMENT_COOLDOWN = 1 days;
 
     /*//////////////////////////////////////////////////////////////
                             STORAGE LAYOUT
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Core storage structure for kAssetRouter using ERC-7201 namespaced storage pattern
+    /// @dev This structure manages all state for money flow coordination and settlement operations.
+    /// Uses the diamond storage pattern to avoid storage collisions in upgradeable contracts.
     /// @custom:storage-location erc7201:kam.storage.kAssetRouter
     struct kAssetRouterStorage {
+        /// @dev Monotonically increasing counter for generating unique settlement proposal IDs
         uint256 proposalCounter;
+        /// @dev Current cooldown period in seconds before settlement proposals can be executed
         uint256 vaultSettlementCooldown;
+        /// @dev Set of proposal IDs that have been executed to prevent double-execution
         OptimizedBytes32EnumerableSetLib.Bytes32Set executedProposalIds;
+        /// @dev Set of all batch IDs processed by the router for tracking and management
         OptimizedBytes32EnumerableSetLib.Bytes32Set batchIds;
+        /// @dev Maps each vault to its set of pending settlement proposal IDs awaiting execution
         mapping(address vault => OptimizedBytes32EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;
+        /// @dev Virtual balance tracking for each vault-batch combination (deposited/requested amounts)
         mapping(address account => mapping(bytes32 batchId => Balances)) vaultBatchBalances;
+        /// @dev Tracks requested shares for each vault-batch combination in share-based accounting
         mapping(address vault => mapping(bytes32 batchId => uint256)) vaultRequestedShares;
+        /// @dev Complete settlement proposal data indexed by unique proposal ID
         mapping(bytes32 proposalId => VaultSettlementProposal) settlementProposals;
     }
 
@@ -77,7 +101,11 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     bytes32 private constant KASSETROUTER_STORAGE_LOCATION =
         0x72fdaf6608fcd614cdab8afd23d0b707bfc44e685019cc3a5ace611655fe7f00;
 
-    /// @dev Returns the kAssetRouter storage pointer
+    /// @notice Retrieves the kAssetRouter storage struct from its designated storage slot
+    /// @dev Uses ERC-7201 namespaced storage pattern to access the storage struct at a deterministic location.
+    /// This approach prevents storage collisions in upgradeable contracts and allows safe addition of new
+    /// storage variables in future upgrades without affecting existing storage layout.
+    /// @return $ The kAssetRouterStorage struct reference for state modifications
     function _getkAssetRouterStorage() private pure returns (kAssetRouterStorage storage $) {
         assembly {
             $.slot := KASSETROUTER_STORAGE_LOCATION
@@ -88,12 +116,17 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Disables initializers to prevent implementation contract initialization
+    /// @dev Ensures the implementation contract cannot be initialized directly, only through proxies
     constructor() {
         _disableInitializers();
     }
 
-    /// @notice Initialize the kAssetRouter with asset and admin configuration
-    /// @param registry_ Address of the kRegistry contract
+    /// @notice Initializes the kAssetRouter with protocol configuration and default parameters
+    /// @dev Sets up the contract with protocol registry connection and default settlement cooldown.
+    /// Must be called immediately after proxy deployment to establish connection with the protocol
+    /// registry and initialize the money flow coordination system.
+    /// @param registry_ Address of the kRegistry contract that manages protocol configuration
     function initialize(address registry_) external initializer {
         __kBase_init(registry_);
 
@@ -107,10 +140,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                             kMINTER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Push assets from kMinter to designated DN vault
-    /// @param _asset The asset being deposited
-    /// @param amount Amount of assets being pushed
-    /// @param batchId The batch ID from the DN vault
+    /// @inheritdoc IkAssetRouter
     function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable {
         _unlockReentrant();
         address kMinter = msg.sender;
@@ -126,10 +156,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _lockReentrant();
     }
 
-    /// @notice Request to pull assets for kMinter redemptions
-    /// @param _asset The asset to redeem
-    /// @param amount Amount requested for redemption
-    /// @param batchId The batch ID for this redemption
+    /// @inheritdoc IkAssetRouter
     function kAssetRequestPull(address _asset, address _vault, uint256 amount, bytes32 batchId) external payable {
         _unlockReentrant();
         _checkPaused();
@@ -157,13 +184,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                             kSTAKING VAULT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Transfer assets between kStakingVaults
-    /// @param sourceVault The vault to transfer assets from
-    /// @param targetVault The vault to transfer assets to
-    /// @param _asset The asset to transfer
-    /// @param amount Amount of assets to transfer
-    /// @param batchId The batch ID for this transfer
-    /// @notice It's only a virtual transfer, no assets are moved
+    /// @inheritdoc IkAssetRouter
     function kAssetTransfer(
         address sourceVault,
         address targetVault,
@@ -196,10 +217,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _lockReentrant();
     }
 
-    /// @notice Request to pull shares for kStakingVault redemptions
-    /// @param sourceVault The vault to redeem shares from
-    /// @param amount Amount requested for redemption
-    /// @param batchId The batch ID for this redemption
+    /// @inheritdoc IkAssetRouter
     function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable {
         _unlockReentrant();
         _checkPaused();
@@ -215,10 +233,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _lockReentrant();
     }
 
-    /// @notice Request to pull shares for kStakingVault redemptions
-    /// @param sourceVault The vault to redeem shares from
-    /// @param amount Amount requested for redemption
-    /// @param batchId The batch ID for this redemption
+    /// @inheritdoc IkAssetRouter
     function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable {
         _unlockReentrant();
         _checkPaused();
@@ -238,15 +253,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                             SETTLEMENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Propose a settlement for a vault's batch, including all new accounting
-    /// @param asset Asset address
-    /// @param vault Vault address to settle
-    /// @param batchId Batch ID to settle
-    /// @param totalAssets_ Total assets in the vault with Deposited and Requested and Shares
-    /// @param netted Netted amount in current batch
-    /// @param yield Yield in current batch
-    /// @param profit Whether the batch is profitable
-    /// @return proposalId The unique identifier for this proposal
+    /// @inheritdoc IkAssetRouter
     function proposeSettleBatch(
         address asset,
         address vault,
@@ -305,8 +312,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         emit SettlementProposed(proposalId, vault, batchId, totalAssets_, netted, yield, profit, executeAfter);
     }
 
-    /// @notice Execute a settlement proposal after cooldown period
-    /// @param proposalId The proposal ID to execute
+    /// @inheritdoc IkAssetRouter
     function executeSettleBatch(bytes32 proposalId) external payable {
         _lockReentrant();
         _checkPaused();
@@ -332,9 +338,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _unlockReentrant();
     }
 
-    /// @notice Cancel a settlement proposal before execution
-    /// @notice Guardian can cancel a settlement proposal if some data is wrong
-    /// @param proposalId The proposal ID to cancel
+    /// @inheritdoc IkAssetRouter
     function cancelProposal(bytes32 proposalId) external {
         _lockReentrant();
         _checkPaused();
@@ -356,8 +360,12 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _unlockReentrant();
     }
 
-    /// @notice Internal function to execute settlement logic
-    /// @param proposal The settlement proposal to execute
+    /// @notice Internal function to execute the core settlement logic with yield distribution
+    /// @dev This function performs the critical yield distribution process: (1) mints or burns kTokens
+    /// to reflect yield gains/losses, (2) updates vault accounting and batch tracking, (3) coordinates
+    /// the 1:1 backing maintenance. This is where the protocol's fundamental promise is maintained -
+    /// the kToken supply is adjusted to precisely match underlying asset changes plus distributed yield.
+    /// @param proposal The settlement proposal storage reference containing all settlement parameters
     function _executeSettlement(VaultSettlementProposal storage proposal) private {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
@@ -445,8 +453,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                           ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Set the cooldown period for settlement proposals
-    /// @param cooldown New cooldown period in seconds
+    /// @inheritdoc IkAssetRouter
     function setSettlementCooldown(uint256 cooldown) external {
         _checkAdmin(msg.sender);
         require(cooldown <= MAX_VAULT_SETTLEMENT_COOLDOWN, KASSETROUTER_INVALID_COOLDOWN);
@@ -462,17 +469,14 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Get All the pendingProposals
-    /// @return pendingProposals An array of proposalIds
+    /// @inheritdoc IkAssetRouter
     function getPendingProposals(address vault) external view returns (bytes32[] memory pendingProposals) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         pendingProposals = $.vaultPendingProposalIds[vault].values();
         require(pendingProposals.length > 0, KASSETROUTER_NO_PROPOSAL);
     }
 
-    /// @notice Get details of a settlement proposal
-    /// @param proposalId The proposal ID
-    /// @return proposal The settlement proposal details
+    /// @inheritdoc IkAssetRouter
     function getSettlementProposal(bytes32 proposalId)
         external
         view
@@ -482,10 +486,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         proposal = $.settlementProposals[proposalId];
     }
 
-    /// @notice Check if a proposal can be executed
-    /// @param proposalId The proposal ID
-    /// @return canExecute Whether the proposal can be executed
-    /// @return reason Reason if cannot execute
+    /// @inheritdoc IkAssetRouter
     function canExecuteProposal(bytes32 proposalId) external view returns (bool canExecute, string memory reason) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
@@ -500,17 +501,20 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         return (true, "");
     }
 
-    /// @notice Get the current settlement cooldown period
-    /// @return cooldown The cooldown period in seconds
+    /// @inheritdoc IkAssetRouter
     function getSettlementCooldown() external view returns (uint256) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         return $.vaultSettlementCooldown;
     }
 
-    /// @notice gets the virtual balance of a vault
-    /// @param vault the vault address
-    /// @param asset the asset address
-    /// @return balance the balance of the vault in all adapters.
+    /// @notice Calculates the virtual balance of assets for a vault across all its adapters
+    /// @dev This function aggregates asset balances across all adapters connected to a vault to determine
+    /// the total virtual balance available for operations. Essential for coordination between physical
+    /// asset locations and protocol accounting. Used for settlement calculations and ensuring sufficient
+    /// assets are available for redemptions and transfers within the money flow system.
+    /// @param vault The vault address to calculate virtual balance for
+    /// @param asset The asset address to query balance for
+    /// @return balance The total virtual asset balance across all vault adapters
     function _virtualBalance(address vault, address asset) private view returns (uint256 balance) {
         address[] memory assets = _getVaultAssets(vault);
         address[] memory adapters = _registry().getAdapters(vault);
@@ -522,26 +526,32 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         }
     }
 
-    // @notice Check if caller is kMinter
-    /// @param user Address to check
+    /// @notice Validates that the caller is an authorized kMinter contract
+    /// @dev Ensures only kMinter can push assets and request pulls for institutional operations.
+    /// Critical for maintaining proper access control in the money flow coordination system.
+    /// @param user Address to validate as authorized kMinter
     function _checkKMinter(address user) private view {
         require(_isKMinter(user), KASSETROUTER_ONLY_KMINTER);
     }
 
-    /// @notice Check if caller is a vault
-    /// @param user Address to check
+    /// @notice Validates that the caller is an authorized kStakingVault contract
+    /// @dev Ensures only registered vaults can request share operations and asset transfers.
+    /// Essential for maintaining protocol security and preventing unauthorized money flows.
+    /// @param user Address to validate as authorized vault
     function _checkVault(address user) private view {
         require(_isVault(user), KASSETROUTER_ONLY_KSTAKING_VAULT);
     }
 
-    /// @notice Check if amount is not zero
-    /// @param amount Amount to check
+    /// @notice Validates that an amount parameter is not zero to prevent invalid operations
+    /// @dev Prevents zero-amount operations that could cause accounting errors or waste gas
+    /// @param amount The amount value to validate
     function _checkAmountNotZero(uint256 amount) private pure {
         require(amount != 0, KASSETROUTER_ZERO_AMOUNT);
     }
 
-    /// @notice Check if address is not zero
-    /// @param addr Address to check
+    /// @notice Validates that an address parameter is not the zero address
+    /// @dev Prevents operations with invalid zero addresses that could cause loss of funds
+    /// @param addr The address to validate
     function _checkAddressNotZero(address addr) private pure {
         require(addr != address(0), KASSETROUTER_ZERO_ADDRESS);
     }
@@ -571,26 +581,18 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         return _getkAssetRouterStorage().vaultPendingProposalIds[vault].contains(proposalId);
     }
 
-    /// @notice Check if contract is paused
-    /// @return True if paused
+    /// @inheritdoc IkAssetRouter
     function isPaused() external view returns (bool) {
         return _isPaused();
     }
 
-    /// @notice Gets the DN vault address for a given asset
-    /// @param asset The asset address
-    /// @return vault The corresponding DN vault address
-    /// @dev Reverts if asset not supported
+    /// @inheritdoc IkAssetRouter
     function getDNVaultByAsset(address asset) external view returns (address vault) {
         vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN));
         _checkAddressNotZero(vault);
     }
 
-    /// @notice Get batch balances for a vault
-    /// @param vault Vault address
-    /// @param batchId Batch ID
-    /// @return deposited Amount deposited in this batch
-    /// @return requested Amount requested in this batch
+    /// @inheritdoc IkAssetRouter
     function getBatchIdBalances(
         address vault,
         bytes32 batchId
@@ -604,10 +606,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         return (balances.deposited, balances.requested);
     }
 
-    /// @notice Get requested shares for a vault batch
-    /// @param vault Vault address
-    /// @param batchId Batch ID
-    /// @return Requested shares amount
+    /// @inheritdoc IkAssetRouter
     function getRequestedShares(address vault, bytes32 batchId) external view returns (uint256) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         return $.vaultRequestedShares[vault][batchId];
@@ -635,14 +634,12 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the contract name
-    /// @return Contract name
+    /// @inheritdoc IkAssetRouter
     function contractName() external pure returns (string memory) {
         return "kAssetRouter";
     }
 
-    /// @notice Returns the contract version
-    /// @return Contract version
+    /// @inheritdoc IkAssetRouter
     function contractVersion() external pure returns (string memory) {
         return "1.0.0";
     }

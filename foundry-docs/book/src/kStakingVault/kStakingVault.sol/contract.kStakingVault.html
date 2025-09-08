@@ -157,19 +157,35 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="kstakingvault"><a class="header" href="#kstakingvault">kStakingVault</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/kStakingVault.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/kStakingVault/kStakingVault.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
-Initializable, UUPSUpgradeable, Ownable, <a href="/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.html">BaseVaultModule</a>, <a href="/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.html">MultiFacetProxy</a>, <a href="/src/kStakingVault/base/VaultFees.sol/contract.VaultFees.html">VaultFees</a>, <a href="/src/kStakingVault/base/VaultClaims.sol/contract.VaultClaims.html">VaultClaims</a>, <a href="/src/kStakingVault/base/VaultBatches.sol/contract.VaultBatches.html">VaultBatches</a></p>
-<p>Pure ERC20 vault with dual accounting for minter and user pools</p>
-<p><em>Implements automatic yield distribution from minter to user pools with modular architecture</em></p>
+<a href="/src/interfaces/IVault.sol/interface.IVault.html">IVault</a>, <a href="/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.html">BaseVault</a>, <a href="/src/vendor/Initializable.sol/abstract.Initializable.html">Initializable</a>, <a href="/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.html">UUPSUpgradeable</a>, <a href="/src/vendor/Ownable.sol/abstract.Ownable.html">Ownable</a>, <a href="/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.html">MultiFacetProxy</a></p>
+<p>Retail staking vault enabling kToken holders to earn yield through batch-processed share tokens</p>
+<p><em>This contract implements the complete retail staking system for the KAM protocol, providing individual
+kToken holders access to institutional-grade yield opportunities through a share-based mechanism. The implementation
+combines several architectural patterns: (1) Dual-token system where kTokens convert to yield-bearing stkTokens,
+(2) Batch processing for gas-efficient operations and fair pricing across multiple users, (3) Virtual balance
+coordination with kAssetRouter for cross-vault yield optimization, (4) Two-phase operations (request → claim)
+ensuring accurate settlement and preventing MEV attacks, (5) Fee management system supporting both management
+and performance fees with hurdle rate mechanisms. The vault integrates with the broader protocol through
+kAssetRouter for asset flow coordination and yield distribution. Gas optimizations include packed storage,
+minimal proxy deployment for batch receivers, and efficient batch settlement processing. The modular architecture
+enables upgrades while maintaining state integrity through UUPS pattern and ERC-7201 storage.</em></p>
 <h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
 <h3 id="constructor"><a class="header" href="#constructor">constructor</a></h3>
 <p>Disables initializers to prevent implementation contract initialization</p>
 <pre><code class="language-solidity">constructor();
 </code></pre>
 <h3 id="initialize"><a class="header" href="#initialize">initialize</a></h3>
-<p>Initializes the kStakingVault contract (stack optimized)</p>
-<p><em>Phase 1: Core initialization without strings to avoid stack too deep</em></p>
+<p>Initializes the kStakingVault with complete protocol integration and share token configuration</p>
+<p><em>This function establishes the vault's integration with the KAM protocol ecosystem. The initialization
+process: (1) Validates asset address to prevent deployment with invalid configuration, (2) Initializes
+BaseVault foundation with registry and operational state, (3) Sets up ownership and access control through
+Ownable pattern, (4) Configures share token metadata and decimals for ERC20 functionality, (5) Establishes
+kToken integration through registry lookup for asset-to-token mapping, (6) Sets initial share price watermark
+for performance fee calculations, (7) Deploys BatchReceiver implementation for settlement asset distribution.
+The initialization creates a complete retail staking solution integrated with the protocol's institutional
+flows.</em></p>
 <pre><code class="language-solidity">function initialize(
     address owner_,
     address registry_,
@@ -177,7 +193,6 @@ Initializable, UUPSUpgradeable, Ownable, <a href="/src/kStakingVault/base/BaseVa
     string memory name_,
     string memory symbol_,
     uint8 decimals_,
-    uint128 dustAmount_,
     address asset_
 )
     external
@@ -185,50 +200,65 @@ Initializable, UUPSUpgradeable, Ownable, <a href="/src/kStakingVault/base/BaseVa
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>owner_</code></td><td><code>address</code></td><td></td></tr>
-<tr><td><code>registry_</code></td><td><code>address</code></td><td>The registry address</td></tr>
-<tr><td><code>paused_</code></td><td><code>bool</code></td><td>If the vault is paused_</td></tr>
-<tr><td><code>name_</code></td><td><code>string</code></td><td>Token name</td></tr>
-<tr><td><code>symbol_</code></td><td><code>string</code></td><td>Token symbol</td></tr>
-<tr><td><code>decimals_</code></td><td><code>uint8</code></td><td>Token decimals</td></tr>
-<tr><td><code>dustAmount_</code></td><td><code>uint128</code></td><td>Minimum amount threshold</td></tr>
-<tr><td><code>asset_</code></td><td><code>address</code></td><td>Underlying asset address</td></tr>
+<tr><td><code>owner_</code></td><td><code>address</code></td><td>The address that will have administrative control over the vault</td></tr>
+<tr><td><code>registry_</code></td><td><code>address</code></td><td>The kRegistry contract address for protocol configuration integration</td></tr>
+<tr><td><code>paused_</code></td><td><code>bool</code></td><td>Initial operational state (true = paused, false = active)</td></tr>
+<tr><td><code>name_</code></td><td><code>string</code></td><td>ERC20 token name for the stkToken (e.g., "Staked kUSDC")</td></tr>
+<tr><td><code>symbol_</code></td><td><code>string</code></td><td>ERC20 token symbol for the stkToken (e.g., "stkUSDC")</td></tr>
+<tr><td><code>decimals_</code></td><td><code>uint8</code></td><td>Token decimals matching the underlying asset precision</td></tr>
+<tr><td><code>asset_</code></td><td><code>address</code></td><td>Underlying asset address that this vault will generate yield on</td></tr>
 </tbody></table>
 </div>
 <h3 id="requeststake"><a class="header" href="#requeststake">requestStake</a></h3>
-<p>Request to stake kTokens for stkTokens (rebase token)</p>
-<pre><code class="language-solidity">function requestStake(address to, uint256 amount) external payable nonReentrant returns (bytes32 requestId);
+<p>Initiates kToken staking request for yield-generating stkToken shares in a batch processing system</p>
+<p><em>This function begins the retail staking process by: (1) Validating user has sufficient kToken balance
+and vault is not paused, (2) Creating a pending stake request with user-specified recipient and current
+batch ID for fair settlement, (3) Transferring kTokens from user to vault while updating pending stake
+tracking for accurate share calculations, (4) Coordinating with kAssetRouter to virtually move underlying
+assets from DN vault to staking vault, enabling proper asset allocation across the protocol. The request
+enters pending state until batch settlement, when the final share price is calculated based on vault
+performance. Users must later call claimStakedShares() after settlement to receive their stkTokens at
+the settled price. This two-phase approach ensures fair pricing for all users within a batch period.</em></p>
+<pre><code class="language-solidity">function requestStake(address to, uint256 amount) external payable returns (bytes32 requestId);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>to</code></td><td><code>address</code></td><td>Address to receive the stkTokens</td></tr>
-<tr><td><code>amount</code></td><td><code>uint256</code></td><td>Amount of kTokens to stake</td></tr>
+<tr><td><code>to</code></td><td><code>address</code></td><td>The recipient address that will receive the stkTokens after successful settlement and claiming</td></tr>
+<tr><td><code>amount</code></td><td><code>uint256</code></td><td></td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>requestId</code></td><td><code>bytes32</code></td><td>Request ID for this staking request</td></tr>
+<tr><td><code>requestId</code></td><td><code>bytes32</code></td><td>Unique identifier for tracking this staking request through settlement and claiming</td></tr>
 </tbody></table>
 </div>
 <h3 id="requestunstake"><a class="header" href="#requestunstake">requestUnstake</a></h3>
-<p>Request to unstake stkTokens for kTokens + yield</p>
-<p><em>Works with both claimed and unclaimed stkTokens (can unstake immediately after settlement)</em></p>
-<pre><code class="language-solidity">function requestUnstake(address to, uint256 stkTokenAmount) external payable nonReentrant returns (bytes32 requestId);
+<p>Initiates stkToken unstaking request for kToken redemption plus accrued yield through batch processing</p>
+<p><em>This function begins the retail unstaking process by: (1) Validating user has sufficient stkToken balance
+and vault is operational, (2) Creating pending unstake request with current batch ID for settlement
+coordination,
+(3) Transferring stkTokens from user to vault contract to maintain stable share price during settlement period,
+(4) Notifying kAssetRouter of share redemption request for proper accounting across vault network. The stkTokens
+remain locked in the vault until settlement when they are burned and equivalent kTokens (including yield) are
+made available. Users must later call claimUnstakedAssets() after settlement to receive their kTokens from
+the batch receiver contract. This two-phase design ensures accurate yield calculations and prevents share
+price manipulation during the settlement process.</em></p>
+<pre><code class="language-solidity">function requestUnstake(address to, uint256 stkTokenAmount) external payable returns (bytes32 requestId);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>to</code></td><td><code>address</code></td><td></td></tr>
-<tr><td><code>stkTokenAmount</code></td><td><code>uint256</code></td><td>Amount of stkTokens to unstake</td></tr>
+<tr><td><code>to</code></td><td><code>address</code></td><td>The recipient address that will receive the kTokens after successful settlement and claiming</td></tr>
+<tr><td><code>stkTokenAmount</code></td><td><code>uint256</code></td><td>The quantity of stkTokens to unstake (must not exceed user balance, cannot be zero)</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>requestId</code></td><td><code>bytes32</code></td><td>Request ID for this unstaking request</td></tr>
+<tr><td><code>requestId</code></td><td><code>bytes32</code></td><td>Unique identifier for tracking this unstaking request through settlement and claiming</td></tr>
 </tbody></table>
 </div>
 <h3 id="cancelstakerequest"><a class="header" href="#cancelstakerequest">cancelStakeRequest</a></h3>
 <p>Cancels a staking request</p>
-<pre><code class="language-solidity">function cancelStakeRequest(bytes32 requestId) external payable nonReentrant;
+<pre><code class="language-solidity">function cancelStakeRequest(bytes32 requestId) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -237,16 +267,267 @@ Initializable, UUPSUpgradeable, Ownable, <a href="/src/kStakingVault/base/BaseVa
 </div>
 <h3 id="cancelunstakerequest"><a class="header" href="#cancelunstakerequest">cancelUnstakeRequest</a></h3>
 <p>Cancels an unstaking request</p>
-<pre><code class="language-solidity">function cancelUnstakeRequest(bytes32 requestId) external payable nonReentrant;
+<pre><code class="language-solidity">function cancelUnstakeRequest(bytes32 requestId) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>requestId</code></td><td><code>bytes32</code></td><td>Request ID to cancel</td></tr>
 </tbody></table>
 </div>
+<h3 id="createnewbatch"><a class="header" href="#createnewbatch">createNewBatch</a></h3>
+<p>Creates a new batch to begin aggregating user requests for the next settlement period</p>
+<p><em>This function initializes a fresh batch period for collecting staking and unstaking requests. Process:
+(1) Increments internal batch counter for unique identification, (2) Generates deterministic batch ID using
+chain-specific parameters (vault address, batch number, chainid, timestamp, asset) for collision resistance,
+(3) Initializes batch storage with open state enabling new request acceptance, (4) Updates vault's current
+batch tracking for request routing. Only relayers can call this function as part of the automated settlement
+schedule. The timing is typically coordinated with institutional settlement cycles to optimize capital
+efficiency
+across the protocol. Each batch remains open until explicitly closed by relayers or governance.</em></p>
+<pre><code class="language-solidity">function createNewBatch() external returns (bytes32);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bytes32</code></td><td>batchId Unique deterministic identifier for the newly created batch period</td></tr>
+</tbody></table>
+</div>
+<h3 id="closebatch"><a class="header" href="#closebatch">closeBatch</a></h3>
+<p>Closes a batch to prevent new requests and prepare for settlement processing</p>
+<p><em>This function transitions a batch from open to closed state, finalizing the request set for settlement.
+Process: (1) Validates batch exists and is currently open to prevent double-closing, (2) Marks batch as closed
+preventing new stake/unstake requests from joining, (3) Optionally creates new batch for continued operations
+if _create flag is true, enabling seamless transitions. Once closed, the batch awaits settlement by kAssetRouter
+which will calculate final share prices and distribute yields. Only relayers can execute batch closure as part
+of the coordinated settlement schedule across all protocol vaults. The timing typically aligns with DN vault
+yield calculations to ensure accurate price discovery.</em></p>
+<pre><code class="language-solidity">function closeBatch(bytes32 _batchId, bool _create) external;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>_batchId</code></td><td><code>bytes32</code></td><td>The specific batch identifier to close (must be currently open)</td></tr>
+<tr><td><code>_create</code></td><td><code>bool</code></td><td>Whether to immediately create a new batch after closing for continued operations</td></tr>
+</tbody></table>
+</div>
+<h3 id="settlebatch"><a class="header" href="#settlebatch">settleBatch</a></h3>
+<p>Marks a batch as settled after yield distribution and enables user claiming</p>
+<p><em>This function finalizes batch settlement by recording final asset values and enabling claims. Process:
+(1) Validates batch is closed and not already settled to prevent duplicate processing, (2) Snapshots both
+gross and net share prices at settlement time for accurate reward calculations, (3) Marks batch as settled
+enabling users to claim their staked shares or unstaked assets, (4) Completes the batch lifecycle allowing
+reward distribution through the claiming mechanism. Only kAssetRouter can settle batches as it coordinates
+yield calculations across DN vaults and manages cross-vault asset flows. Settlement triggers share price
+finalization based on vault performance during the batch period.</em></p>
+<pre><code class="language-solidity">function settleBatch(bytes32 _batchId) external;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>_batchId</code></td><td><code>bytes32</code></td><td>The batch identifier to mark as settled (must be closed, not previously settled)</td></tr>
+</tbody></table>
+</div>
+<h3 id="createbatchreceiver"><a class="header" href="#createbatchreceiver">createBatchReceiver</a></h3>
+<p>Deploys a minimal proxy BatchReceiver for isolated asset distribution to unstaking users</p>
+<p><em>This function creates batch-specific receivers for secure unstaking asset distribution. Process:
+(1) Checks if receiver already exists for batch to prevent duplicate deployments, (2) Clones minimal proxy
+from receiver implementation to minimize gas costs while maintaining isolation, (3) Initializes receiver with
+batch ID and asset type for proper operation, (4) Stores receiver address in batch info for claiming access.
+The receiver pattern provides several benefits: asset isolation between batches preventing cross-contamination,
+gas-efficient deployment through EIP-1167 minimal proxies, security through single-batch operation scope,
+and simplified distribution logic for unstaking claims. Only kAssetRouter can create receivers as part of
+settlement coordination.</em></p>
+<pre><code class="language-solidity">function createBatchReceiver(bytes32 _batchId) external returns (address);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>_batchId</code></td><td><code>bytes32</code></td><td>The batch identifier requiring a receiver for asset distribution</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The address of the deployed BatchReceiver contract for this specific batch</td></tr>
+</tbody></table>
+</div>
+<h3 id="_createnewbatch"><a class="header" href="#_createnewbatch">_createNewBatch</a></h3>
+<p>Internal function to create deterministic batch IDs with collision resistance</p>
+<p><em>This function generates unique batch identifiers using multiple entropy sources for security. The ID
+generation process: (1) Increments internal batch counter to ensure uniqueness within the vault, (2) Combines
+vault address, batch number, chain ID, timestamp, and asset address for collision resistance, (3) Uses
+optimized hashing function for gas efficiency, (4) Initializes batch storage with default state for new
+requests. The deterministic approach enables consistent batch identification across different contexts while
+the multiple entropy sources prevent prediction or collision attacks. Each batch starts in open state ready
+to accept user requests until explicitly closed by relayers.</em></p>
+<pre><code class="language-solidity">function _createNewBatch() private returns (bytes32);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bytes32</code></td><td>Deterministic batch identifier for the newly created batch period</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkpaused"><a class="header" href="#_checkpaused">_checkPaused</a></h3>
+<p>Validates vault operational state preventing actions during emergency pause</p>
+<p><em>This internal validation function ensures vault safety by blocking operations when paused. Emergency
+pause can be triggered by emergency admins during security incidents or market anomalies. The function
+provides consistent pause checking across all vault operations while maintaining gas efficiency through
+direct storage access. When paused, users cannot create new requests but can still query vault state.</em></p>
+<pre><code class="language-solidity">function _checkPaused(BaseVaultStorage storage $) private view;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>$</code></td><td><code>BaseVaultStorage</code></td><td>Direct storage pointer for gas-efficient pause state access</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkamountnotzero"><a class="header" href="#_checkamountnotzero">_checkAmountNotZero</a></h3>
+<p>Validates non-zero amounts preventing invalid operations</p>
+<p><em>This utility function prevents zero-amount operations that would waste gas or create invalid state.
+Zero amounts are rejected for staking, unstaking, and fee operations to maintain data integrity and
+prevent operational errors. The pure function enables gas-efficient validation without state access.</em></p>
+<pre><code class="language-solidity">function _checkAmountNotZero(uint256 amount) private pure;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>amount</code></td><td><code>uint256</code></td><td>The amount value to validate (must be greater than zero)</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkvalidbps"><a class="header" href="#_checkvalidbps">_checkValidBPS</a></h3>
+<p>Validates basis point values preventing excessive fee configuration</p>
+<p><em>This function ensures fee parameters remain within acceptable bounds (0-10000 bp = 0-100%) to
+protect users from excessive fee extraction. The 10000 bp limit enforces the maximum fee cap while
+enabling flexible fee configuration within reasonable ranges. Used for both management and performance
+fee validation to maintain consistent fee bounds across all fee types.</em></p>
+<pre><code class="language-solidity">function _checkValidBPS(uint256 bps) private pure;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>bps</code></td><td><code>uint256</code></td><td>The basis point value to validate (must be &lt;= 10000)</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkrelayer"><a class="header" href="#_checkrelayer">_checkRelayer</a></h3>
+<p>Validates relayer role authorization for batch management operations</p>
+<p><em>This access control function ensures only authorized relayers can execute batch lifecycle operations.
+Relayers are responsible for automated batch creation, closure, and coordination with settlement processes.
+The role-based access prevents unauthorized manipulation of batch timing while enabling protocol automation.</em></p>
+<pre><code class="language-solidity">function _checkRelayer(address relayer) private view;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>relayer</code></td><td><code>address</code></td><td>The address to validate against registered relayer roles</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkrouter"><a class="header" href="#_checkrouter">_checkRouter</a></h3>
+<p>Validates kAssetRouter authorization for settlement and asset coordination</p>
+<p><em>This critical access control ensures only the protocol's kAssetRouter can trigger settlement operations
+and coordinate cross-vault asset flows. The router manages complex settlement logic including yield distribution
+and virtual balance coordination, making this validation essential for protocol integrity and security.</em></p>
+<pre><code class="language-solidity">function _checkRouter(address router) private view;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>router</code></td><td><code>address</code></td><td>The address to validate against the registered kAssetRouter contract</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkadmin"><a class="header" href="#_checkadmin">_checkAdmin</a></h3>
+<p>Validates admin role authorization for vault configuration changes</p>
+<p><em>This access control function restricts administrative operations to authorized admin addresses.
+Admins can modify fee parameters, update vault settings, and execute emergency functions requiring
+elevated privileges. The role validation maintains security while enabling necessary governance operations.</em></p>
+<pre><code class="language-solidity">function _checkAdmin(address admin) private view;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>admin</code></td><td><code>address</code></td><td>The address to validate against registered admin roles</td></tr>
+</tbody></table>
+</div>
+<h3 id="_validatetimestamp"><a class="header" href="#_validatetimestamp">_validateTimestamp</a></h3>
+<p>Validates timestamp progression preventing manipulation and ensuring logical sequence</p>
+<p><em>This function ensures fee timestamp updates follow logical progression and remain within valid ranges.
+Validation checks: (1) New timestamp must be &gt;= last timestamp to prevent backwards time manipulation,
+(2) New timestamp must be &lt;= current block time to prevent future-dating. These validations are critical
+for accurate fee calculations and preventing temporal manipulation attacks on the fee system.</em></p>
+<pre><code class="language-solidity">function _validateTimestamp(uint256 timestamp, uint256 lastTimestamp) private view;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>timestamp</code></td><td><code>uint256</code></td><td>The new timestamp being set for fee tracking</td></tr>
+<tr><td><code>lastTimestamp</code></td><td><code>uint256</code></td><td>The previous timestamp for progression validation</td></tr>
+</tbody></table>
+</div>
+<h3 id="claimstakedshares"><a class="header" href="#claimstakedshares">claimStakedShares</a></h3>
+<p>Claims stkTokens from a settled staking batch</p>
+<pre><code class="language-solidity">function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>Batch ID to claim from</td></tr>
+<tr><td><code>requestId</code></td><td><code>bytes32</code></td><td>Request ID to claim</td></tr>
+</tbody></table>
+</div>
+<h3 id="claimunstakedassets"><a class="header" href="#claimunstakedassets">claimUnstakedAssets</a></h3>
+<p>Claims kTokens from a settled unstaking batch (simplified implementation)</p>
+<pre><code class="language-solidity">function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>Batch ID to claim from</td></tr>
+<tr><td><code>requestId</code></td><td><code>bytes32</code></td><td>Request ID to claim</td></tr>
+</tbody></table>
+</div>
+<h3 id="sethardhurdlerate"><a class="header" href="#sethardhurdlerate">setHardHurdleRate</a></h3>
+<p>Sets the hard hurdle rate</p>
+<p><em>If true, performance fees will only be charged to the excess return</em></p>
+<pre><code class="language-solidity">function setHardHurdleRate(bool _isHard) external;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>_isHard</code></td><td><code>bool</code></td><td>Whether the hard hurdle rate is enabled</td></tr>
+</tbody></table>
+</div>
+<h3 id="setmanagementfee"><a class="header" href="#setmanagementfee">setManagementFee</a></h3>
+<p>Sets the management fee</p>
+<p><em>Fee is a basis point (1% = 100)</em></p>
+<pre><code class="language-solidity">function setManagementFee(uint16 _managementFee) external;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>_managementFee</code></td><td><code>uint16</code></td><td>The new management fee</td></tr>
+</tbody></table>
+</div>
+<h3 id="setperformancefee"><a class="header" href="#setperformancefee">setPerformanceFee</a></h3>
+<p>Sets the performance fee</p>
+<p><em>Fee is a basis point (1% = 100)</em></p>
+<pre><code class="language-solidity">function setPerformanceFee(uint16 _performanceFee) external;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>_performanceFee</code></td><td><code>uint16</code></td><td>The new performance fee</td></tr>
+</tbody></table>
+</div>
+<h3 id="notifymanagementfeescharged"><a class="header" href="#notifymanagementfeescharged">notifyManagementFeesCharged</a></h3>
+<p>Notifies the module that management fees have been charged from backend</p>
+<p><em>Should only be called by the vault</em></p>
+<pre><code class="language-solidity">function notifyManagementFeesCharged(uint64 _timestamp) external;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>_timestamp</code></td><td><code>uint64</code></td><td>The timestamp of the fee charge</td></tr>
+</tbody></table>
+</div>
+<h3 id="notifyperformancefeescharged"><a class="header" href="#notifyperformancefeescharged">notifyPerformanceFeesCharged</a></h3>
+<p>Notifies the module that performance fees have been charged from backend</p>
+<p><em>Should only be called by the vault</em></p>
+<pre><code class="language-solidity">function notifyPerformanceFeesCharged(uint64 _timestamp) external;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>_timestamp</code></td><td><code>uint64</code></td><td>The timestamp of the fee charge</td></tr>
+</tbody></table>
+</div>
+<h3 id="_updateglobalwatermark"><a class="header" href="#_updateglobalwatermark">_updateGlobalWatermark</a></h3>
+<p>Updates the share price watermark</p>
+<p><em>Updates the high water mark if the current share price exceeds the previous mark</em></p>
+<pre><code class="language-solidity">function _updateGlobalWatermark() private;
+</code></pre>
 <h3 id="_createstakerequestid"><a class="header" href="#_createstakerequestid">_createStakeRequestId</a></h3>
 <p>Creates a unique request ID for a staking request</p>
-<pre><code class="language-solidity">function _createStakeRequestId(address user, uint256 amount, uint256 timestamp) internal returns (bytes32);
+<pre><code class="language-solidity">function _createStakeRequestId(address user, uint256 amount, uint256 timestamp) private returns (bytes32);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -270,52 +551,6 @@ Initializable, UUPSUpgradeable, Ownable, <a href="/src/kStakingVault/base/BaseVa
 <tr><td><code>paused_</code></td><td><code>bool</code></td><td>New pause state</td></tr>
 </tbody></table>
 </div>
-<h3 id="shareprice"><a class="header" href="#shareprice">sharePrice</a></h3>
-<p>Calculates the price of stkTokens in underlying asset terms</p>
-<p><em>Uses the last total assets and total supply to calculate the price</em></p>
-<pre><code class="language-solidity">function sharePrice() external view returns (uint256);
-</code></pre>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>price Price per stkToken in underlying asset terms</td></tr>
-</tbody></table>
-</div>
-<h3 id="totalassets"><a class="header" href="#totalassets">totalAssets</a></h3>
-<p>Returns the current total assets</p>
-<pre><code class="language-solidity">function totalAssets() external view returns (uint256);
-</code></pre>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>Total assets currently deployed in strategies</td></tr>
-</tbody></table>
-</div>
-<h3 id="totalnetassets"><a class="header" href="#totalnetassets">totalNetAssets</a></h3>
-<p>Returns the current total assets after fees</p>
-<pre><code class="language-solidity">function totalNetAssets() external view returns (uint256);
-</code></pre>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>Total net assets currently deployed in strategies</td></tr>
-</tbody></table>
-</div>
-<h3 id="getbatchid"><a class="header" href="#getbatchid">getBatchId</a></h3>
-<p>Returns the current batch</p>
-<pre><code class="language-solidity">function getBatchId() public view returns (bytes32);
-</code></pre>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bytes32</code></td><td>Batch</td></tr>
-</tbody></table>
-</div>
-<h3 id="getsafebatchid"><a class="header" href="#getsafebatchid">getSafeBatchId</a></h3>
-<p>Returns the safe batch</p>
-<pre><code class="language-solidity">function getSafeBatchId() external view returns (bytes32);
-</code></pre>
-<p><strong>Returns</strong></p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bytes32</code></td><td>Batch</td></tr>
-</tbody></table>
-</div>
 <h3 id="_authorizeupgrade"><a class="header" href="#_authorizeupgrade">_authorizeUpgrade</a></h3>
 <p>Authorize upgrade (only owner can upgrade)</p>
 <p><em>This allows upgrading the main contract while keeping modules separate</em></p>
@@ -326,33 +561,131 @@ Initializable, UUPSUpgradeable, Ownable, <a href="/src/kStakingVault/base/BaseVa
 <p><em>This allows modifying functions while keeping modules separate</em></p>
 <pre><code class="language-solidity">function _authorizeModifyFunctions(address sender) internal override;
 </code></pre>
-<h3 id="contractname"><a class="header" href="#contractname">contractName</a></h3>
-<p>Returns the contract name</p>
-<pre><code class="language-solidity">function contractName() external pure returns (string memory);
+<h2 id="events"><a class="header" href="#events">Events</a></h2>
+<h3 id="batchcreated"><a class="header" href="#batchcreated">BatchCreated</a></h3>
+<p>Emitted when a new batch is created</p>
+<pre><code class="language-solidity">event BatchCreated(bytes32 indexed batchId);
 </code></pre>
-<p><strong>Returns</strong></p>
+<p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>string</code></td><td>Contract name</td></tr>
+<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch ID of the new batch</td></tr>
 </tbody></table>
 </div>
-<h3 id="contractversion"><a class="header" href="#contractversion">contractVersion</a></h3>
-<p>Returns the contract version</p>
-<pre><code class="language-solidity">function contractVersion() external pure returns (string memory);
+<h3 id="batchsettled"><a class="header" href="#batchsettled">BatchSettled</a></h3>
+<p>Emitted when a batch is settled</p>
+<pre><code class="language-solidity">event BatchSettled(bytes32 indexed batchId);
 </code></pre>
-<p><strong>Returns</strong></p>
+<p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>string</code></td><td>Contract version</td></tr>
+<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch ID of the settled batch</td></tr>
+</tbody></table>
+</div>
+<h3 id="batchclosed"><a class="header" href="#batchclosed">BatchClosed</a></h3>
+<p>Emitted when a batch is closed</p>
+<pre><code class="language-solidity">event BatchClosed(bytes32 indexed batchId);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch ID of the closed batch</td></tr>
+</tbody></table>
+</div>
+<h3 id="batchreceivercreated"><a class="header" href="#batchreceivercreated">BatchReceiverCreated</a></h3>
+<p>Emitted when a BatchReceiver is created</p>
+<pre><code class="language-solidity">event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>receiver</code></td><td><code>address</code></td><td>The address of the created BatchReceiver</td></tr>
+<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch ID of the BatchReceiver</td></tr>
+</tbody></table>
+</div>
+<h3 id="stakingsharesclaimed"><a class="header" href="#stakingsharesclaimed">StakingSharesClaimed</a></h3>
+<p>Emitted when a user claims staking shares</p>
+<pre><code class="language-solidity">event StakingSharesClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 shares);
+</code></pre>
+<h3 id="unstakingassetsclaimed"><a class="header" href="#unstakingassetsclaimed">UnstakingAssetsClaimed</a></h3>
+<p>Emitted when a user claims unstaking assets</p>
+<pre><code class="language-solidity">event UnstakingAssetsClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 assets);
+</code></pre>
+<h3 id="ktokenunstaked"><a class="header" href="#ktokenunstaked">KTokenUnstaked</a></h3>
+<p>Emitted when kTokens are unstaked</p>
+<pre><code class="language-solidity">event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
+</code></pre>
+<h3 id="managementfeeupdated"><a class="header" href="#managementfeeupdated">ManagementFeeUpdated</a></h3>
+<p>Emitted when the management fee is updated</p>
+<pre><code class="language-solidity">event ManagementFeeUpdated(uint16 oldFee, uint16 newFee);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>oldFee</code></td><td><code>uint16</code></td><td>Previous management fee in basis points</td></tr>
+<tr><td><code>newFee</code></td><td><code>uint16</code></td><td>New management fee in basis points</td></tr>
+</tbody></table>
+</div>
+<h3 id="performancefeeupdated"><a class="header" href="#performancefeeupdated">PerformanceFeeUpdated</a></h3>
+<p>Emitted when the performance fee is updated</p>
+<pre><code class="language-solidity">event PerformanceFeeUpdated(uint16 oldFee, uint16 newFee);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>oldFee</code></td><td><code>uint16</code></td><td>Previous performance fee in basis points</td></tr>
+<tr><td><code>newFee</code></td><td><code>uint16</code></td><td>New performance fee in basis points</td></tr>
+</tbody></table>
+</div>
+<h3 id="feesassesed"><a class="header" href="#feesassesed">FeesAssesed</a></h3>
+<p>Emitted when fees are charged to the vault</p>
+<pre><code class="language-solidity">event FeesAssesed(uint256 managementFees, uint256 performanceFees);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>managementFees</code></td><td><code>uint256</code></td><td>Amount of management fees collected</td></tr>
+<tr><td><code>performanceFees</code></td><td><code>uint256</code></td><td>Amount of performance fees collected</td></tr>
+</tbody></table>
+</div>
+<h3 id="hurdlerateupdated"><a class="header" href="#hurdlerateupdated">HurdleRateUpdated</a></h3>
+<p>Emitted when the hurdle rate is updated</p>
+<pre><code class="language-solidity">event HurdleRateUpdated(uint16 newRate);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>newRate</code></td><td><code>uint16</code></td><td>New hurdle rate in basis points</td></tr>
+</tbody></table>
+</div>
+<h3 id="hardhurdlerateupdated"><a class="header" href="#hardhurdlerateupdated">HardHurdleRateUpdated</a></h3>
+<p>Emitted when the hard hurdle rate is updated</p>
+<pre><code class="language-solidity">event HardHurdleRateUpdated(bool newRate);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>newRate</code></td><td><code>bool</code></td><td>New hard hurdle rate in basis points</td></tr>
+</tbody></table>
+</div>
+<h3 id="managementfeescharged"><a class="header" href="#managementfeescharged">ManagementFeesCharged</a></h3>
+<p>Emitted when management fees are charged</p>
+<pre><code class="language-solidity">event ManagementFeesCharged(uint256 timestamp);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>timestamp</code></td><td><code>uint256</code></td><td>Timestamp of the fee charge</td></tr>
+</tbody></table>
+</div>
+<h3 id="performancefeescharged"><a class="header" href="#performancefeescharged">PerformanceFeesCharged</a></h3>
+<p>Emitted when performance fees are charged</p>
+<pre><code class="language-solidity">event PerformanceFeesCharged(uint256 timestamp);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>timestamp</code></td><td><code>uint256</code></td><td>Timestamp of the fee charge</td></tr>
 </tbody></table>
 </div>
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../../src/kStakingVault/types/BaseVaultModuleTypes.sol/library.BaseVaultModuleTypes.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../../src/kStakingVault/types/BaseVaultTypes.sol/library.BaseVaultTypes.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../../src/kAssetRouter.sol/contract.kAssetRouter.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../../src/libraries/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -362,11 +695,11 @@ Initializable, UUPSUpgradeable, Ownable, <a href="/src/kStakingVault/base/BaseVa
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../../src/kStakingVault/types/BaseVaultModuleTypes.sol/library.BaseVaultModuleTypes.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../../src/kStakingVault/types/BaseVaultTypes.sol/library.BaseVaultTypes.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../../src/kAssetRouter.sol/contract.kAssetRouter.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../../src/libraries/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

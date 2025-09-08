@@ -5,8 +5,16 @@ import { IVault } from "./IVault.sol";
 import { IVaultReader } from "./modules/IVaultReader.sol";
 
 /// @title IkStakingVault
-/// @notice Interface for kStakingVault(single vault + reader module) that manages minter operations and user staking
-/// @dev Matches kStakingVault implementation
+/// @notice Comprehensive interface combining retail staking operations with ERC20 share tokens and vault state reading
+/// @dev This interface aggregates all kStakingVault functionality by extending IVault (staking/batch/claims/fees) and
+/// IVaultReader (state queries) while adding standard ERC20 operations for stkToken management. The interface provides
+/// a complete view of vault capabilities: (1) Staking Operations: Full request/claim lifecycle for retail users,
+/// (2) Batch Management: Lifecycle control for settlement periods, (3) Share Tokens: Standard ERC20 functionality for
+/// stkTokens that accrue yield, (4) State Reading: Comprehensive vault metrics and calculations, (5) Fee Management:
+/// Performance and management fee configuration. This unified interface enables complete vault interaction through a
+/// single contract, simplifying integration for front-ends and external protocols while maintaining modularity through
+/// interface composition. The combination of vault-specific operations with standard ERC20 compatibility ensures
+/// stkTokens work seamlessly with existing DeFi infrastructure while providing specialized staking functionality.
 interface IkStakingVault is IVault, IVaultReader {
     /// @notice Returns the owner of the contract
     function owner() external view returns (address);

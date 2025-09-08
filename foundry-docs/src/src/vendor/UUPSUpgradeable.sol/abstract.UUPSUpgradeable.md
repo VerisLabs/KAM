@@ -1,5 +1,5 @@
 # UUPSUpgradeable
-[Git Source](https://github.com/VerisLabs/KAM/blob/670f05acf8766190fcaa1d272341611f065917de/src/vendor/UUPSUpgradeable.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/vendor/UUPSUpgradeable.sol)
 
 **Inherits:**
 [CallContextChecker](/src/vendor/UUPSUpgradeable.sol/contract.CallContextChecker.md)

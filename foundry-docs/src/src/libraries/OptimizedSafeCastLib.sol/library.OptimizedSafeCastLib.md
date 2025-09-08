@@ -1,13 +1,15 @@
 # OptimizedSafeCastLib
-[Git Source](https://github.com/VerisLabs/KAM/blob/670f05acf8766190fcaa1d272341611f065917de/src/libraries/OptimizedSafeCastLib.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/libraries/OptimizedSafeCastLib.sol)
 
 **Authors:**
-Solady (https://github.com/vectorized/solady/blob/main/src/utils/SafeCastLib.sol), Modified from OpenZeppelin
+Originally by Solady (https://github.com/vectorized/solady/blob/main/src/utils/SafeCastLib.sol), Modified from OpenZeppelin
 (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeCast.sol)
 
 Safe integer casting library that reverts on overflow.
 
-*Optimized for runtime gas for very high number of optimizer runs (i.e. >= 1000000).*
+*NOTE: This is a reduced version of the original Solady library.
+We have extracted only the necessary safe casting functionality to optimize contract size.
+Original code by Solady, modified for size optimization.*
 
 
 ## Functions

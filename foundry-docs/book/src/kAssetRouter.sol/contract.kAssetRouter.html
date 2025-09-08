@@ -157,14 +157,31 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="kassetrouter"><a class="header" href="#kassetrouter">kAssetRouter</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kAssetRouter.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/kAssetRouter.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
-<a href="/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.html">IkAssetRouter</a>, Initializable, UUPSUpgradeable, <a href="/src/base/kBase.sol/contract.kBase.html">kBase</a>, Multicallable</p>
+<a href="/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.html">IkAssetRouter</a>, <a href="/src/vendor/Initializable.sol/abstract.Initializable.html">Initializable</a>, <a href="/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.html">UUPSUpgradeable</a>, <a href="/src/base/kBase.sol/contract.kBase.html">kBase</a>, <a href="/src/vendor/Multicallable.sol/abstract.Multicallable.html">Multicallable</a></p>
+<p>Central money flow coordinator for the KAM protocol, orchestrating all asset movements and yield
+distribution</p>
+<p><em>This contract serves as the heart of the KAM protocol's financial infrastructure, coordinating complex
+interactions between institutional flows (kMinter), retail flows (kStakingVaults), and yield generation (DN vaults).
+Key responsibilities include: (1) Managing asset pushes from kMinter institutional deposits to DN vaults for yield
+generation, (2) Coordinating virtual asset transfers between kStakingVaults for optimal capital allocation,
+(3) Processing batch settlements with yield distribution through precise kToken minting/burning operations,
+(4) Maintaining virtual balance tracking across all vaults for accurate accounting, (5) Implementing security
+cooldown periods for settlement proposals, (6) Executing peg protection mechanisms during market stress.
+The contract ensures protocol integrity by maintaining the 1:1 backing guarantee through carefully orchestrated
+money flows while enabling efficient capital utilization across the entire vault network.</em></p>
 <h2 id="state-variables"><a class="header" href="#state-variables">State Variables</a></h2>
 <h3 id="default_vault_settlement_cooldown"><a class="header" href="#default_vault_settlement_cooldown">DEFAULT_VAULT_SETTLEMENT_COOLDOWN</a></h3>
+<p>Default cooldown period for vault settlement proposals (1 hour)</p>
+<p><em>Provides initial security delay between proposal creation and execution, allowing guardians
+to verify yield calculations and detect potential errors before irreversible yield distribution</em></p>
 <pre><code class="language-solidity">uint256 private constant DEFAULT_VAULT_SETTLEMENT_COOLDOWN = 1 hours;
 </code></pre>
 <h3 id="max_vault_settlement_cooldown"><a class="header" href="#max_vault_settlement_cooldown">MAX_VAULT_SETTLEMENT_COOLDOWN</a></h3>
+<p>Maximum allowed cooldown period for vault settlement proposals (1 day)</p>
+<p><em>Caps the maximum security delay to balance protocol safety with operational efficiency.
+Prevents excessive delays that could harm user experience while maintaining security standards</em></p>
 <pre><code class="language-solidity">uint256 private constant MAX_VAULT_SETTLEMENT_COOLDOWN = 1 days;
 </code></pre>
 <h3 id="kassetrouter_storage_location"><a class="header" href="#kassetrouter_storage_location">KASSETROUTER_STORAGE_LOCATION</a></h3>
@@ -173,53 +190,76 @@
 </code></pre>
 <h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
 <h3 id="_getkassetrouterstorage"><a class="header" href="#_getkassetrouterstorage">_getkAssetRouterStorage</a></h3>
+<p>Retrieves the kAssetRouter storage struct from its designated storage slot</p>
+<p><em>Uses ERC-7201 namespaced storage pattern to access the storage struct at a deterministic location.
+This approach prevents storage collisions in upgradeable contracts and allows safe addition of new
+storage variables in future upgrades without affecting existing storage layout.</em></p>
 <pre><code class="language-solidity">function _getkAssetRouterStorage() private pure returns (kAssetRouterStorage storage $);
 </code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>$</code></td><td><code>kAssetRouterStorage</code></td><td>The kAssetRouterStorage struct reference for state modifications</td></tr>
+</tbody></table>
+</div>
 <h3 id="constructor"><a class="header" href="#constructor">constructor</a></h3>
+<p>Disables initializers to prevent implementation contract initialization</p>
+<p><em>Ensures the implementation contract cannot be initialized directly, only through proxies</em></p>
 <pre><code class="language-solidity">constructor();
 </code></pre>
 <h3 id="initialize"><a class="header" href="#initialize">initialize</a></h3>
-<p>Initialize the kAssetRouter with asset and admin configuration</p>
+<p>Initializes the kAssetRouter with protocol configuration and default parameters</p>
+<p><em>Sets up the contract with protocol registry connection and default settlement cooldown.
+Must be called immediately after proxy deployment to establish connection with the protocol
+registry and initialize the money flow coordination system.</em></p>
 <pre><code class="language-solidity">function initialize(address registry_) external initializer;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>registry_</code></td><td><code>address</code></td><td>Address of the kRegistry contract</td></tr>
+<tr><td><code>registry_</code></td><td><code>address</code></td><td>Address of the kRegistry contract that manages protocol configuration</td></tr>
 </tbody></table>
 </div>
 <h3 id="kassetpush"><a class="header" href="#kassetpush">kAssetPush</a></h3>
-<p>Push assets from kMinter to designated DN vault</p>
-<pre><code class="language-solidity">function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable nonReentrant;
+<p>Pushes assets from kMinter institutional deposits to the designated DN vault for yield generation</p>
+<p><em>This function is called by kMinter when institutional users deposit underlying assets. The process
+involves: (1) receiving assets already transferred from kMinter, (2) forwarding them to the appropriate
+DN vault for the asset type, (3) updating virtual balance tracking for accurate accounting. This enables
+immediate kToken minting (1:1 with deposits) while assets begin generating yield in the vault system.
+The assets enter the current batch for eventual settlement and yield distribution back to kToken holders.</em></p>
+<pre><code class="language-solidity">function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>_asset</code></td><td><code>address</code></td><td>The asset being deposited</td></tr>
-<tr><td><code>amount</code></td><td><code>uint256</code></td><td>Amount of assets being pushed</td></tr>
-<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch ID from the DN vault</td></tr>
+<tr><td><code>_asset</code></td><td><code>address</code></td><td>The underlying asset address being deposited (must be registered in protocol)</td></tr>
+<tr><td><code>amount</code></td><td><code>uint256</code></td><td>The quantity of assets being pushed to the vault for yield generation</td></tr>
+<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The current batch identifier from the DN vault for tracking and settlement</td></tr>
 </tbody></table>
 </div>
 <h3 id="kassetrequestpull"><a class="header" href="#kassetrequestpull">kAssetRequestPull</a></h3>
-<p>Request to pull assets for kMinter redemptions</p>
-<pre><code class="language-solidity">function kAssetRequestPull(
-    address _asset,
-    address _vault,
-    uint256 amount,
-    bytes32 batchId
-)
-    external
-    payable
-    nonReentrant;
+<p>Requests asset withdrawal from vault to fulfill institutional redemption through kMinter</p>
+<p><em>This function initiates the first phase of the institutional redemption process. The workflow
+involves: (1) registering the redemption request with the vault, (2) creating a kBatchReceiver minimal
+proxy to hold assets for distribution, (3) updating virtual balance accounting, (4) preparing for
+batch settlement. The actual asset transfer occurs later during batch settlement when the vault
+processes all pending requests together. This two-phase approach optimizes gas costs and ensures
+fair settlement across all institutional redemption requests in the batch.</em></p>
+<pre><code class="language-solidity">function kAssetRequestPull(address _asset, address _vault, uint256 amount, bytes32 batchId) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>_asset</code></td><td><code>address</code></td><td>The asset to redeem</td></tr>
-<tr><td><code>_vault</code></td><td><code>address</code></td><td></td></tr>
-<tr><td><code>amount</code></td><td><code>uint256</code></td><td>Amount requested for redemption</td></tr>
-<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch ID for this redemption</td></tr>
+<tr><td><code>_asset</code></td><td><code>address</code></td><td>The underlying asset address being redeemed</td></tr>
+<tr><td><code>_vault</code></td><td><code>address</code></td><td>The DN vault address from which assets will be withdrawn</td></tr>
+<tr><td><code>amount</code></td><td><code>uint256</code></td><td>The quantity of assets requested for redemption</td></tr>
+<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch identifier for coordinating this redemption with other requests</td></tr>
 </tbody></table>
 </div>
 <h3 id="kassettransfer"><a class="header" href="#kassettransfer">kAssetTransfer</a></h3>
-<p>Transfer assets between kStakingVaults</p>
+<p>Transfers assets between kStakingVaults for optimal capital allocation and yield optimization</p>
+<p><em>This function enables dynamic rebalancing of assets across the vault network to optimize yields
+and manage capacity. The transfer is virtual in nature - actual underlying assets may remain in the
+same physical vault while accounting balances are updated. This mechanism allows for: (1) moving
+assets from lower-yield to higher-yield opportunities, (2) rebalancing vault capacity during high
+demand periods, (3) optimizing capital efficiency across the protocol. The batch system ensures
+all transfers are processed fairly during settlement periods.</em></p>
 <pre><code class="language-solidity">function kAssetTransfer(
     address sourceVault,
     address targetVault,
@@ -228,42 +268,58 @@
     bytes32 batchId
 )
     external
-    payable
-    nonReentrant;
+    payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>sourceVault</code></td><td><code>address</code></td><td>The vault to transfer assets from</td></tr>
-<tr><td><code>targetVault</code></td><td><code>address</code></td><td>The vault to transfer assets to</td></tr>
-<tr><td><code>_asset</code></td><td><code>address</code></td><td>The asset to transfer</td></tr>
-<tr><td><code>amount</code></td><td><code>uint256</code></td><td>Amount of assets to transfer</td></tr>
-<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch ID for this transfer</td></tr>
+<tr><td><code>sourceVault</code></td><td><code>address</code></td><td>The kStakingVault address transferring assets (will lose virtual balance)</td></tr>
+<tr><td><code>targetVault</code></td><td><code>address</code></td><td>The kStakingVault address receiving assets (will gain virtual balance)</td></tr>
+<tr><td><code>_asset</code></td><td><code>address</code></td><td>The underlying asset address being transferred between vaults</td></tr>
+<tr><td><code>amount</code></td><td><code>uint256</code></td><td>The quantity of assets to transfer for rebalancing</td></tr>
+<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch identifier for coordinating this transfer with settlement</td></tr>
 </tbody></table>
 </div>
 <h3 id="ksharesrequestpush"><a class="header" href="#ksharesrequestpush">kSharesRequestPush</a></h3>
-<p>Request to pull shares for kStakingVault redemptions</p>
-<pre><code class="language-solidity">function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant;
+<p>Requests shares to be pushed for kStakingVault staking operations and batch processing</p>
+<p><em>This function is part of the share-based accounting system for retail users in kStakingVaults.
+When users stake kTokens, the vault requests shares to be pushed to track their ownership. The
+process coordinates: (1) conversion of kTokens to vault shares at current share price, (2) updating
+user balances in the vault system, (3) preparing for batch settlement. Share requests are batched
+to optimize gas costs and ensure fair pricing across all users in the same settlement period.</em></p>
+<pre><code class="language-solidity">function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>sourceVault</code></td><td><code>address</code></td><td>The vault to redeem shares from</td></tr>
-<tr><td><code>amount</code></td><td><code>uint256</code></td><td>Amount requested for redemption</td></tr>
-<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch ID for this redemption</td></tr>
+<tr><td><code>sourceVault</code></td><td><code>address</code></td><td>The kStakingVault address requesting share push operations</td></tr>
+<tr><td><code>amount</code></td><td><code>uint256</code></td><td>The quantity of shares being requested for push to users</td></tr>
+<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch identifier for coordinating share operations with settlement</td></tr>
 </tbody></table>
 </div>
 <h3 id="ksharesrequestpull"><a class="header" href="#ksharesrequestpull">kSharesRequestPull</a></h3>
-<p>Request to pull shares for kStakingVault redemptions</p>
-<pre><code class="language-solidity">function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable nonReentrant;
+<p>Requests shares to be pulled for kStakingVault redemption operations</p>
+<p><em>This function handles the share-based redemption process for retail users withdrawing from
+kStakingVaults. The process involves: (1) calculating share amounts to redeem based on user
+requests, (2) preparing for conversion back to kTokens at settlement time, (3) coordinating
+with the batch settlement system for fair pricing. Unlike institutional redemptions through
+kMinter, this uses share-based accounting to handle smaller, more frequent retail operations
+efficiently through the vault's batch processing system.</em></p>
+<pre><code class="language-solidity">function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>sourceVault</code></td><td><code>address</code></td><td>The vault to redeem shares from</td></tr>
-<tr><td><code>amount</code></td><td><code>uint256</code></td><td>Amount requested for redemption</td></tr>
-<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch ID for this redemption</td></tr>
+<tr><td><code>sourceVault</code></td><td><code>address</code></td><td>The kStakingVault address requesting share pull for redemptions</td></tr>
+<tr><td><code>amount</code></td><td><code>uint256</code></td><td>The quantity of shares being requested for pull from users</td></tr>
+<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch identifier for coordinating share redemptions with settlement</td></tr>
 </tbody></table>
 </div>
 <h3 id="proposesettlebatch"><a class="header" href="#proposesettlebatch">proposeSettleBatch</a></h3>
-<p>Propose a settlement for a vault's batch</p>
+<p>Proposes a batch settlement for a vault with yield distribution through kToken minting/burning</p>
+<p><em>This is the core function that initiates yield distribution in the KAM protocol. The settlement
+process involves: (1) calculating final yields after a batch period, (2) determining net new deposits/
+redemptions, (3) creating a proposal with cooldown period for security verification, (4) preparing for
+kToken supply adjustment to maintain 1:1 backing. Positive yields result in kToken minting (distributing
+gains to all holders), while losses result in kToken burning (socializing losses). The cooldown period
+allows guardians to verify calculations before execution, ensuring protocol integrity.</em></p>
 <pre><code class="language-solidity">function proposeSettleBatch(
     address asset,
     address vault,
@@ -275,130 +331,237 @@
 )
     external
     payable
-    nonReentrant
     returns (bytes32 proposalId);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>asset</code></td><td><code>address</code></td><td>Asset address</td></tr>
-<tr><td><code>vault</code></td><td><code>address</code></td><td>Vault address to settle</td></tr>
-<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>Batch ID to settle</td></tr>
-<tr><td><code>totalAssets_</code></td><td><code>uint256</code></td><td>Total assets in the vault with Deposited and Requested and Shares</td></tr>
-<tr><td><code>netted</code></td><td><code>uint256</code></td><td>Netted amount in current batch</td></tr>
-<tr><td><code>yield</code></td><td><code>uint256</code></td><td>Yield in current batch</td></tr>
-<tr><td><code>profit</code></td><td><code>bool</code></td><td>Whether the batch is profitable</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The underlying asset address being settled (USDC, WBTC, etc.)</td></tr>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The DN vault address where yield was generated</td></tr>
+<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch identifier for this settlement period</td></tr>
+<tr><td><code>totalAssets_</code></td><td><code>uint256</code></td><td></td></tr>
+<tr><td><code>netted</code></td><td><code>uint256</code></td><td>Net amount of new deposits minus redemptions in this batch</td></tr>
+<tr><td><code>yield</code></td><td><code>uint256</code></td><td>Absolute amount of yield generated (positive) or lost (negative)</td></tr>
+<tr><td><code>profit</code></td><td><code>bool</code></td><td>True if yield is positive (will mint kTokens), false if negative (will burn kTokens)</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>The unique identifier for this proposal</td></tr>
+<tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>Unique identifier for this settlement proposal for tracking and execution</td></tr>
 </tbody></table>
 </div>
 <h3 id="executesettlebatch"><a class="header" href="#executesettlebatch">executeSettleBatch</a></h3>
-<p>Execute a settlement proposal after cooldown period</p>
-<pre><code class="language-solidity">function executeSettleBatch(bytes32 proposalId) external payable nonReentrant;
+<p>Executes a settlement proposal after the security cooldown period has elapsed</p>
+<p><em>This function completes the yield distribution process by: (1) verifying the cooldown period has
+passed, (2) executing the actual kToken minting/burning to distribute yield or account for losses,
+(3) updating all vault balances and user accounting, (4) processing any pending redemption requests
+from the batch. This is where the 1:1 backing is maintained - the kToken supply is adjusted to exactly
+reflect the underlying asset changes, ensuring every kToken remains backed by real assets plus distributed
+yield.</em></p>
+<pre><code class="language-solidity">function executeSettleBatch(bytes32 proposalId) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>The proposal ID to execute</td></tr>
+<tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>The unique identifier of the settlement proposal to execute</td></tr>
 </tbody></table>
 </div>
 <h3 id="cancelproposal"><a class="header" href="#cancelproposal">cancelProposal</a></h3>
-<p>Cancel a settlement proposal before execution</p>
-<pre><code class="language-solidity">function cancelProposal(bytes32 proposalId) external nonReentrant;
+<p>Cancels a settlement proposal before execution if errors are detected</p>
+<p><em>Provides a safety mechanism for guardians to cancel potentially incorrect settlement proposals.
+This can be used when: (1) yield calculations appear incorrect, (2) system errors are detected,
+(3) market conditions require recalculation. Cancellation allows for proposal correction and
+resubmission with accurate data, preventing incorrect yield distribution that could affect the
+protocol's 1:1 backing guarantee. Only callable before the proposal execution.</em></p>
+<pre><code class="language-solidity">function cancelProposal(bytes32 proposalId) external;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>The proposal ID to cancel</td></tr>
+<tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>The unique identifier of the settlement proposal to cancel</td></tr>
 </tbody></table>
 </div>
 <h3 id="_executesettlement"><a class="header" href="#_executesettlement">_executeSettlement</a></h3>
-<p>Internal function to execute settlement logic</p>
+<p>Internal function to execute the core settlement logic with yield distribution</p>
+<p><em>This function performs the critical yield distribution process: (1) mints or burns kTokens
+to reflect yield gains/losses, (2) updates vault accounting and batch tracking, (3) coordinates
+the 1:1 backing maintenance. This is where the protocol's fundamental promise is maintained -
+the kToken supply is adjusted to precisely match underlying asset changes plus distributed yield.</em></p>
 <pre><code class="language-solidity">function _executeSettlement(VaultSettlementProposal storage proposal) private;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>proposal</code></td><td><code>VaultSettlementProposal</code></td><td>The settlement proposal to execute</td></tr>
+<tr><td><code>proposal</code></td><td><code>VaultSettlementProposal</code></td><td>The settlement proposal storage reference containing all settlement parameters</td></tr>
 </tbody></table>
 </div>
 <h3 id="setsettlementcooldown"><a class="header" href="#setsettlementcooldown">setSettlementCooldown</a></h3>
-<p>Set the cooldown period for settlement proposals</p>
+<p>Sets the security cooldown period for settlement proposals</p>
+<p><em>The cooldown period provides critical security by requiring a delay between proposal creation
+and execution. This allows: (1) protocol guardians to verify yield calculations, (2) detection of
+potential errors or malicious proposals, (3) emergency intervention if needed. The cooldown should
+balance security (longer is safer) with operational efficiency (shorter enables faster yield
+distribution). Only admin roles can modify this parameter as it affects protocol safety.</em></p>
 <pre><code class="language-solidity">function setSettlementCooldown(uint256 cooldown) external;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>cooldown</code></td><td><code>uint256</code></td><td>New cooldown period in seconds</td></tr>
+<tr><td><code>cooldown</code></td><td><code>uint256</code></td><td>The new cooldown period in seconds before settlement proposals can be executed</td></tr>
 </tbody></table>
 </div>
 <h3 id="getpendingproposals"><a class="header" href="#getpendingproposals">getPendingProposals</a></h3>
-<p>Get All the pendingProposals</p>
+<p>Retrieves all pending settlement proposals for a specific vault</p>
+<p><em>Returns proposal IDs that have been created but not yet executed or cancelled.
+Used for monitoring and management of the settlement queue. Essential for guardians
+to track proposals awaiting verification during the cooldown period.</em></p>
 <pre><code class="language-solidity">function getPendingProposals(address vault) external view returns (bytes32[] memory pendingProposals);
 </code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td></td></tr>
+</tbody></table>
+</div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>pendingProposals</code></td><td><code>bytes32[]</code></td><td>An array of proposalIds</td></tr>
+<tr><td><code>pendingProposals</code></td><td><code>bytes32[]</code></td><td>Array of proposal IDs currently pending execution</td></tr>
 </tbody></table>
 </div>
 <h3 id="getsettlementproposal"><a class="header" href="#getsettlementproposal">getSettlementProposal</a></h3>
-<p>Get details of a settlement proposal</p>
+<p>Retrieves complete details of a specific settlement proposal</p>
+<p><em>Returns the full VaultSettlementProposal struct containing all parameters needed
+for yield distribution verification. Essential for guardians to review proposal accuracy
+during the cooldown period before execution. Contains asset amounts, yield calculations,
+and timing information for comprehensive proposal analysis.</em></p>
 <pre><code class="language-solidity">function getSettlementProposal(bytes32 proposalId) external view returns (VaultSettlementProposal memory proposal);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>The proposal ID</td></tr>
+<tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>The unique identifier of the settlement proposal to query</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>proposal</code></td><td><code>VaultSettlementProposal</code></td><td>The settlement proposal details</td></tr>
+<tr><td><code>proposal</code></td><td><code>VaultSettlementProposal</code></td><td>The complete settlement proposal struct with all details</td></tr>
 </tbody></table>
 </div>
 <h3 id="canexecuteproposal"><a class="header" href="#canexecuteproposal">canExecuteProposal</a></h3>
-<p>Check if a proposal can be executed</p>
+<p>Checks if a settlement proposal is ready for execution with detailed status</p>
+<p><em>Validates all execution requirements: (1) proposal exists and is pending, (2) cooldown
+period has elapsed, (3) proposal hasn't been cancelled. Returns both boolean result and
+human-readable reason for failures, enabling better error handling and user feedback.</em></p>
 <pre><code class="language-solidity">function canExecuteProposal(bytes32 proposalId) external view returns (bool canExecute, string memory reason);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>The proposal ID</td></tr>
+<tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>The unique identifier of the proposal to check</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>canExecute</code></td><td><code>bool</code></td><td>Whether the proposal can be executed</td></tr>
-<tr><td><code>reason</code></td><td><code>string</code></td><td>Reason if cannot execute</td></tr>
+<tr><td><code>canExecute</code></td><td><code>bool</code></td><td>True if the proposal can be executed immediately</td></tr>
+<tr><td><code>reason</code></td><td><code>string</code></td><td>Descriptive message explaining why execution is blocked (if applicable)</td></tr>
 </tbody></table>
 </div>
 <h3 id="getsettlementcooldown"><a class="header" href="#getsettlementcooldown">getSettlementCooldown</a></h3>
-<p>Get the current settlement cooldown period</p>
+<p>Gets the current security cooldown period for settlement proposals</p>
+<p><em>The cooldown period determines how long proposals must wait before execution.
+This security mechanism allows guardians to verify yield calculations and prevents
+immediate execution of potentially malicious or incorrect proposals. Critical for
+maintaining protocol integrity during yield distribution processes.</em></p>
 <pre><code class="language-solidity">function getSettlementCooldown() external view returns (uint256);
 </code></pre>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>cooldown The cooldown period in seconds</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>cooldown The current cooldown period in seconds</td></tr>
 </tbody></table>
 </div>
 <h3 id="_virtualbalance"><a class="header" href="#_virtualbalance">_virtualBalance</a></h3>
-<p>gets the virtual balance of a vault</p>
-<pre><code class="language-solidity">function _virtualBalance(address vault, address asset) internal view returns (uint256 balance);
+<p>Calculates the virtual balance of assets for a vault across all its adapters</p>
+<p><em>This function aggregates asset balances across all adapters connected to a vault to determine
+the total virtual balance available for operations. Essential for coordination between physical
+asset locations and protocol accounting. Used for settlement calculations and ensuring sufficient
+assets are available for redemptions and transfers within the money flow system.</em></p>
+<pre><code class="language-solidity">function _virtualBalance(address vault, address asset) private view returns (uint256 balance);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vault</code></td><td><code>address</code></td><td>the vault address</td></tr>
-<tr><td><code>asset</code></td><td><code>address</code></td><td>the asset address</td></tr>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address to calculate virtual balance for</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The asset address to query balance for</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>balance</code></td><td><code>uint256</code></td><td>the balance of the vault in all adapters.</td></tr>
+<tr><td><code>balance</code></td><td><code>uint256</code></td><td>The total virtual asset balance across all vault adapters</td></tr>
 </tbody></table>
 </div>
-<h3 id="_ispendingproposal"><a class="header" href="#_ispendingproposal">_isPendingProposal</a></h3>
-<p>verifies if a proposal is pending or not</p>
-<pre><code class="language-solidity">function _isPendingProposal(address vault, bytes32 proposalId) internal view returns (bool);
+<h3 id="_checkkminter"><a class="header" href="#_checkkminter">_checkKMinter</a></h3>
+<p>Validates that the caller is an authorized kMinter contract</p>
+<p><em>Ensures only kMinter can push assets and request pulls for institutional operations.
+Critical for maintaining proper access control in the money flow coordination system.</em></p>
+<pre><code class="language-solidity">function _checkKMinter(address user) private view;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vault</code></td><td><code>address</code></td><td>the vault address</td></tr>
+<tr><td><code>user</code></td><td><code>address</code></td><td>Address to validate as authorized kMinter</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkvault"><a class="header" href="#_checkvault">_checkVault</a></h3>
+<p>Validates that the caller is an authorized kStakingVault contract</p>
+<p><em>Ensures only registered vaults can request share operations and asset transfers.
+Essential for maintaining protocol security and preventing unauthorized money flows.</em></p>
+<pre><code class="language-solidity">function _checkVault(address user) private view;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>user</code></td><td><code>address</code></td><td>Address to validate as authorized vault</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkamountnotzero"><a class="header" href="#_checkamountnotzero">_checkAmountNotZero</a></h3>
+<p>Validates that an amount parameter is not zero to prevent invalid operations</p>
+<p><em>Prevents zero-amount operations that could cause accounting errors or waste gas</em></p>
+<pre><code class="language-solidity">function _checkAmountNotZero(uint256 amount) private pure;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>amount</code></td><td><code>uint256</code></td><td>The amount value to validate</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkaddressnotzero"><a class="header" href="#_checkaddressnotzero">_checkAddressNotZero</a></h3>
+<p>Validates that an address parameter is not the zero address</p>
+<p><em>Prevents operations with invalid zero addresses that could cause loss of funds</em></p>
+<pre><code class="language-solidity">function _checkAddressNotZero(address addr) private pure;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>addr</code></td><td><code>address</code></td><td>The address to validate</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checksufficientvirtualbalance"><a class="header" href="#_checksufficientvirtualbalance">_checkSufficientVirtualBalance</a></h3>
+<p>Check if virtual balance is sufficient</p>
+<pre><code class="language-solidity">function _checkSufficientVirtualBalance(address vault, address asset, uint256 requiredAmount) private view;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>Vault address</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>Asset address</td></tr>
+<tr><td><code>requiredAmount</code></td><td><code>uint256</code></td><td>Required amount</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkadmin"><a class="header" href="#_checkadmin">_checkAdmin</a></h3>
+<p>Check if caller is an admin</p>
+<pre><code class="language-solidity">function _checkAdmin(address user) private view;
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>user</code></td><td><code>address</code></td><td>Address to check</td></tr>
+</tbody></table>
+</div>
+<h3 id="_checkpaused"><a class="header" href="#_checkpaused">_checkPaused</a></h3>
+<p>Verifies contract is not paused</p>
+<pre><code class="language-solidity">function _checkPaused() private view;
+</code></pre>
+<h3 id="_ispendingproposal"><a class="header" href="#_ispendingproposal">_isPendingProposal</a></h3>
+<pre><code class="language-solidity">function _isPendingProposal(address vault, bytes32 proposalId) private view returns (bool);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td></td></tr>
 <tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>the proposalId to verify</td></tr>
 </tbody></table>
 </div>
@@ -408,31 +571,40 @@
 </tbody></table>
 </div>
 <h3 id="ispaused"><a class="header" href="#ispaused">isPaused</a></h3>
-<p>Check if contract is paused</p>
+<p>Checks if the kAssetRouter contract is currently paused</p>
+<p><em>When paused, all critical functions (asset movements, settlements) are halted
+for emergency protection. This affects the entire protocol's money flow coordination,
+preventing new deposits, redemptions, and yield distributions until unpaused.</em></p>
 <pre><code class="language-solidity">function isPaused() external view returns (bool);
 </code></pre>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if paused</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>True if the contract is paused and operations are halted</td></tr>
 </tbody></table>
 </div>
 <h3 id="getdnvaultbyasset"><a class="header" href="#getdnvaultbyasset">getDNVaultByAsset</a></h3>
-<p>Gets the DN vault address for a given asset</p>
-<p><em>Reverts if asset not supported</em></p>
+<p>Gets the DN vault address responsible for yield generation for a specific asset</p>
+<p><em>Each supported asset (USDC, WBTC, etc.) has a designated DN vault that handles
+yield farming strategies. This mapping is critical for routing institutional deposits
+and coordinating settlement processes across the protocol's vault network.</em></p>
 <pre><code class="language-solidity">function getDNVaultByAsset(address asset) external view returns (address vault);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>asset</code></td><td><code>address</code></td><td>The asset address</td></tr>
+<tr><td><code>asset</code></td><td><code>address</code></td><td>The underlying asset address to query</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vault</code></td><td><code>address</code></td><td>The corresponding DN vault address</td></tr>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The DN vault address that generates yield for this asset</td></tr>
 </tbody></table>
 </div>
 <h3 id="getbatchidbalances"><a class="header" href="#getbatchidbalances">getBatchIdBalances</a></h3>
-<p>Get batch balances for a vault</p>
+<p>Retrieves the virtual balance accounting for a specific batch in a vault</p>
+<p><em>Returns the deposited and requested amounts that are tracked virtually for batch
+processing. These balances coordinate institutional flows (kMinter) and retail flows
+(kStakingVault) within the same settlement period, ensuring fair processing and accurate
+yield distribution across all participants in the batch.</em></p>
 <pre><code class="language-solidity">function getBatchIdBalances(
     address vault,
     bytes32 batchId
@@ -443,29 +615,33 @@
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vault</code></td><td><code>address</code></td><td>Vault address</td></tr>
-<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>Batch ID</td></tr>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The vault address to query batch balances for</td></tr>
+<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch identifier to retrieve balance information</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>deposited</code></td><td><code>uint256</code></td><td>Amount deposited in this batch</td></tr>
-<tr><td><code>requested</code></td><td><code>uint256</code></td><td>Amount requested in this batch</td></tr>
+<tr><td><code>deposited</code></td><td><code>uint256</code></td><td>Total amount of assets deposited into this batch</td></tr>
+<tr><td><code>requested</code></td><td><code>uint256</code></td><td>Total amount of assets requested for redemption from this batch</td></tr>
 </tbody></table>
 </div>
 <h3 id="getrequestedshares"><a class="header" href="#getrequestedshares">getRequestedShares</a></h3>
-<p>Get requested shares for a vault batch</p>
+<p>Retrieves the total shares requested for redemption in a specific vault batch</p>
+<p><em>Tracks share-based redemption requests from retail users in kStakingVaults.
+This is separate from asset-based tracking and enables the protocol to coordinate
+both institutional (asset-based) and retail (share-based) operations within the
+same batch settlement process, ensuring consistent share price calculations.</em></p>
 <pre><code class="language-solidity">function getRequestedShares(address vault, bytes32 batchId) external view returns (uint256);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>vault</code></td><td><code>address</code></td><td>Vault address</td></tr>
-<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>Batch ID</td></tr>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>The kStakingVault address to query</td></tr>
+<tr><td><code>batchId</code></td><td><code>bytes32</code></td><td>The batch identifier for the redemption period</td></tr>
 </tbody></table>
 </div>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>Requested shares amount</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>The total amount of shares requested for redemption in this batch</td></tr>
 </tbody></table>
 </div>
 <h3 id="_authorizeupgrade"><a class="header" href="#_authorizeupgrade">_authorizeUpgrade</a></h3>
@@ -482,33 +658,42 @@
 <pre><code class="language-solidity">receive() external payable;
 </code></pre>
 <h3 id="contractname"><a class="header" href="#contractname">contractName</a></h3>
-<p>Returns the contract name</p>
+<p>Returns the standard name identifier for this contract type within the KAM protocol</p>
+<p><em>Used for protocol identification and registry management. Provides a consistent way
+to identify kAssetRouter contracts across the protocol ecosystem, enabling automated
+contract discovery and validation by other protocol components.</em></p>
 <pre><code class="language-solidity">function contractName() external pure returns (string memory);
 </code></pre>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>string</code></td><td>Contract name</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>string</code></td><td>The contract name as a string (typically "kAssetRouter")</td></tr>
 </tbody></table>
 </div>
 <h3 id="contractversion"><a class="header" href="#contractversion">contractVersion</a></h3>
-<p>Returns the contract version</p>
+<p>Returns the version identifier for this contract implementation</p>
+<p><em>Used for upgrade management and compatibility checking within the protocol. Enables
+the system to verify contract versions during upgrades and ensure compatibility between
+protocol components. Critical for protocol governance and maintenance procedures.</em></p>
 <pre><code class="language-solidity">function contractVersion() external pure returns (string memory);
 </code></pre>
 <p><strong>Returns</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>&lt;none&gt;</code></td><td><code>string</code></td><td>Contract version</td></tr>
+<tr><td><code>&lt;none&gt;</code></td><td><code>string</code></td><td>The contract version as a string (e.g., "1.0.0")</td></tr>
 </tbody></table>
 </div>
 <h2 id="structs"><a class="header" href="#structs">Structs</a></h2>
 <h3 id="kassetrouterstorage"><a class="header" href="#kassetrouterstorage">kAssetRouterStorage</a></h3>
+<p>Core storage structure for kAssetRouter using ERC-7201 namespaced storage pattern</p>
+<p><em>This structure manages all state for money flow coordination and settlement operations.
+Uses the diamond storage pattern to avoid storage collisions in upgradeable contracts.</em></p>
 <p><strong>Note:</strong>
 storage-location: erc7201:kam.storage.kAssetRouter</p>
 <pre><code class="language-solidity">struct kAssetRouterStorage {
     uint256 proposalCounter;
     uint256 vaultSettlementCooldown;
-    EnumerableSetLib.Bytes32Set executedProposalIds;
-    EnumerableSetLib.Bytes32Set batchIds;
-    mapping(address vault =&gt; EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;
+    OptimizedBytes32EnumerableSetLib.Bytes32Set executedProposalIds;
+    OptimizedBytes32EnumerableSetLib.Bytes32Set batchIds;
+    mapping(address vault =&gt; OptimizedBytes32EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;
     mapping(address account =&gt; mapping(bytes32 batchId =&gt; Balances)) vaultBatchBalances;
     mapping(address vault =&gt; mapping(bytes32 batchId =&gt; uint256)) vaultRequestedShares;
     mapping(bytes32 proposalId =&gt; VaultSettlementProposal) settlementProposals;
@@ -519,7 +704,7 @@ storage-location: erc7201:kam.storage.kAssetRouter</p>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../src/kStakingVault/kStakingVault.sol/contract.kStakingVault.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
@@ -533,7 +718,7 @@ storage-location: erc7201:kam.storage.kAssetRouter</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../src/kStakingVault/kStakingVault.sol/contract.kStakingVault.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
