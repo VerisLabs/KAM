@@ -1,4 +1,4 @@
 
 
 # Contents
-- [BaseVaultModuleTypes](BaseVaultModuleTypes.sol/library.BaseVaultModuleTypes.md)
+- [BaseVaultTypes](BaseVaultTypes.sol/library.BaseVaultTypes.md)

@@ -157,68 +157,131 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="kbatchreceiver"><a class="header" href="#kbatchreceiver">kBatchReceiver</a></h1>
-<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kBatchReceiver.sol">Git Source</a></p>
+<p><a href="https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/kBatchReceiver.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="/src/interfaces/IkBatchReceiver.sol/interface.IkBatchReceiver.html">IkBatchReceiver</a></p>
-<p>Minimal proxy contract that holds and distributes settled assets for batch redemptions</p>
-<p><em>Deployed per batch to isolate asset distribution and enable efficient settlement</em></p>
+<p>Minimal proxy contract implementation for isolated batch asset distribution in the KAM protocol</p>
+<p>*This contract implements the minimal proxy pattern where each batch redemption gets its own dedicated
+receiver instance for secure and efficient asset distribution. The implementation provides several key features:
+(1) Minimal Proxy Pattern: Uses EIP-1167 minimal proxy deployment to reduce gas costs per batch while maintaining
+full isolation between different settlement periods, (2) Batch Isolation: Each receiver handles exactly one batch,
+preventing cross-contamination and simplifying accounting, (3) Access Control: Only the originating kMinter can
+interact with receivers, ensuring strict security throughout the distribution process, (4) Asset Distribution:
+Manages the final step of redemption where settled assets flow from kMinter to individual users, (5) Emergency
+Recovery: Provides safety mechanisms for accidentally sent tokens while protecting settlement assets.
+Technical Implementation Notes:</p>
+<ul>
+<li>Uses immutable kMinter reference set at construction for gas efficiency</li>
+<li>Implements strict batch ID validation to prevent operational errors</li>
+<li>Supports both ERC20 and native ETH rescue operations</li>
+<li>Emits comprehensive events for off-chain tracking and reconciliation*</li>
+</ul>
 <h2 id="state-variables"><a class="header" href="#state-variables">State Variables</a></h2>
 <h3 id="kminter"><a class="header" href="#kminter">kMinter</a></h3>
+<p>Address of the kMinter contract authorized to interact with this receiver</p>
+<p><em>Immutable reference set at construction time for gas efficiency and security. This address
+has exclusive permission to call pullAssets() and rescueAssets(), ensuring only the originating
+kMinter can manage asset distribution for this specific batch. The immutable nature prevents
+modification and reduces gas costs for access control checks.</em></p>
 <pre><code class="language-solidity">address public immutable kMinter;
 </code></pre>
 <h3 id="asset"><a class="header" href="#asset">asset</a></h3>
+<p>Address of the underlying asset contract this receiver will distribute</p>
+<p><em>Set during initialization to specify which token type (USDC, WBTC, etc.) this receiver
+manages. Must match the asset type that was originally deposited and requested for redemption
+in the associated batch. Used for asset transfer operations and rescue validation.</em></p>
 <pre><code class="language-solidity">address public asset;
 </code></pre>
 <h3 id="batchid"><a class="header" href="#batchid">batchId</a></h3>
+<p>Unique batch identifier linking this receiver to a specific redemption batch</p>
+<p><em>Set during initialization to establish the connection between this receiver and the batch
+of redemption requests it serves. Used for validation in pullAssets() to ensure operations
+are performed on the correct batch, preventing cross-contamination between settlement periods.</em></p>
 <pre><code class="language-solidity">bytes32 public batchId;
 </code></pre>
 <h3 id="isinitialised"><a class="header" href="#isinitialised">isInitialised</a></h3>
+<p>Initialization state flag preventing duplicate configuration</p>
+<p><em>Boolean flag that prevents re-initialization after the receiver has been configured.
+Set to true during the initialize() call to ensure batch parameters can only be set once,
+maintaining the integrity of the receiver's purpose and preventing operational errors.</em></p>
 <pre><code class="language-solidity">bool public isInitialised;
 </code></pre>
 <h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
 <h3 id="constructor"><a class="header" href="#constructor">constructor</a></h3>
-<p>Sets the kMinter address immutably</p>
-<p><em>Sets kMinter as immutable variable</em></p>
+<p>Deploys a new kBatchReceiver with immutable kMinter authorization</p>
+<p><em>Constructor for minimal proxy implementation that establishes the sole authorized caller.
+The kMinter address is set as immutable during deployment to ensure gas efficiency and prevent
+unauthorized modifications. This constructor is called once per batch receiver deployment,
+establishing the security foundation for all subsequent operations. The address validation
+ensures no receiver can be deployed with invalid authorization.</em></p>
 <pre><code class="language-solidity">constructor(address _kMinter);
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>_kMinter</code></td><td><code>address</code></td><td>Address of the kMinter contract (only authorized caller)</td></tr>
+<tr><td><code>_kMinter</code></td><td><code>address</code></td><td>Address of the kMinter contract that will have exclusive interaction rights</td></tr>
 </tbody></table>
 </div>
 <h3 id="initialize"><a class="header" href="#initialize">initialize</a></h3>
-<p>Initializes the batch receiver with batch parameters</p>
-<p><em>Sets batch ID and asset, then emits initialization event</em></p>
+<p>Configures the receiver with batch-specific parameters after deployment</p>
+<p><em>Post-deployment initialization that links this receiver to a specific batch and asset type.
+This two-step deployment pattern (constructor + initialize) enables efficient minimal proxy usage
+where the implementation is deployed once and initialization customizes each instance. The function:
+(1) prevents duplicate initialization with isInitialised flag, (2) validates asset address,
+(3) stores batch parameters for operational use, (4) emits initialization event for tracking.
+Only callable once per receiver instance to maintain batch isolation integrity.</em></p>
 <pre><code class="language-solidity">function initialize(bytes32 _batchId, address _asset) external;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>_batchId</code></td><td><code>bytes32</code></td><td>The batch ID this receiver serves</td></tr>
-<tr><td><code>_asset</code></td><td><code>address</code></td><td>Address of the asset contract</td></tr>
+<tr><td><code>_batchId</code></td><td><code>bytes32</code></td><td>The unique batch identifier this receiver will serve</td></tr>
+<tr><td><code>_asset</code></td><td><code>address</code></td><td>Address of the underlying asset contract (USDC, WBTC, etc.) to distribute</td></tr>
 </tbody></table>
 </div>
 <h3 id="pullassets"><a class="header" href="#pullassets">pullAssets</a></h3>
-<p>Transfers assets from kMinter to the specified receiver</p>
-<p><em>Only callable by kMinter, transfers assets from caller to receiver</em></p>
+<p>Transfers settled assets from the receiver to a redemption user completing their withdrawal</p>
+<p><em>This is the core asset distribution function that fulfills redemption requests after batch settlement.
+The process works as follows: (1) kMinter calls this function with user's proportional share, (2) receiver
+validates the batch ID matches to prevent cross-batch contamination, (3) assets are transferred directly
+to the user completing their redemption. Only callable by the authorized kMinter contract to maintain strict
+access control. This function is typically called multiple times per batch as individual users claim their
+settled redemptions, ensuring fair and orderly asset distribution.</em></p>
 <pre><code class="language-solidity">function pullAssets(address receiver, uint256 amount, bytes32 _batchId) external;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>receiver</code></td><td><code>address</code></td><td>Address to receive the assets</td></tr>
-<tr><td><code>amount</code></td><td><code>uint256</code></td><td>Amount of assets to transfer</td></tr>
-<tr><td><code>_batchId</code></td><td><code>bytes32</code></td><td>Batch ID for validation (must match this receiver's batch)</td></tr>
+<tr><td><code>receiver</code></td><td><code>address</code></td><td>The address that will receive the settled assets (the user completing redemption)</td></tr>
+<tr><td><code>amount</code></td><td><code>uint256</code></td><td>The quantity of assets to transfer based on the user's proportional share</td></tr>
+<tr><td><code>_batchId</code></td><td><code>bytes32</code></td><td>The batch identifier for validation (must match this receiver's configured batch)</td></tr>
 </tbody></table>
 </div>
 <h3 id="rescueassets"><a class="header" href="#rescueassets">rescueAssets</a></h3>
-<p>Transfers assets from kMinter to the specified receiver</p>
-<p><em>Only callable by kMinter, transfers assets to kMinter</em></p>
+<p>Emergency recovery function for accidentally sent assets to prevent permanent loss</p>
+<p><em>Provides a safety mechanism for recovering tokens or ETH that were mistakenly sent to the receiver
+outside of normal settlement operations. The function handles both ERC20 tokens and native ETH recovery.
+For ERC20 tokens, it validates that the rescue asset is not the receiver's designated settlement asset
+(to prevent interfering with normal operations). Only the authorized kMinter can execute rescues, ensuring
+recovered assets return to the proper custodial system. Essential for maintaining protocol security while
+preventing accidental asset loss during the receiver contract's operational lifecycle.</em></p>
 <pre><code class="language-solidity">function rescueAssets(address asset_) external payable;
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>asset_</code></td><td><code>address</code></td><td>Asset address (use address(0) for ETH)</td></tr>
+<tr><td><code>asset_</code></td><td><code>address</code></td><td>The contract address of the asset to rescue (use address(0) for native ETH recovery)</td></tr>
 </tbody></table>
 </div>
+<h3 id="_checkminter"><a class="header" href="#_checkminter">_checkMinter</a></h3>
+<p><em>Only callable by kMinter</em></p>
+<pre><code class="language-solidity">function _checkMinter(address minter) private view;
+</code></pre>
+<h3 id="_checkaddressnotzero"><a class="header" href="#_checkaddressnotzero">_checkAddressNotZero</a></h3>
+<p><em>Checks address is not zero</em></p>
+<pre><code class="language-solidity">function _checkAddressNotZero(address address_) private pure;
+</code></pre>
+<h3 id="_checkamountnotzero"><a class="header" href="#_checkamountnotzero">_checkAmountNotZero</a></h3>
+<p><em>Checks amount is not zero</em></p>
+<pre><code class="language-solidity">function _checkAmountNotZero(uint256 amount) private pure;
+</code></pre>
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">

@@ -17,12 +17,13 @@ import {
     _1_USDC,
     _1_WBTC
 } from "./Constants.sol";
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
+import { OptimizedOwnableRoles } from "src/libraries/OptimizedOwnableRoles.sol";
+import { ERC1967Factory } from "src/vendor/ERC1967Factory.sol";
 
 // Protocol contracts
 import { kAssetRouter } from "src/kAssetRouter.sol";
 
+import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { kMinter } from "src/kMinter.sol";
 import { kRegistry } from "src/kRegistry.sol";
@@ -69,9 +70,9 @@ contract DeploymentBaseTest is BaseTest {
     kToken public kUSD;
     kToken public kBTC;
     kMinter public minter;
-    kStakingVault public dnVault; // DN vault (works with kMinter)
-    kStakingVault public alphaVault; // ALPHA vault
-    kStakingVault public betaVault; // BETA vault
+    IkStakingVault public dnVault; // DN vault (works with kMinter)
+    IkStakingVault public alphaVault; // ALPHA vault
+    IkStakingVault public betaVault; // BETA vault
     kBatchReceiver public batchReceiver;
 
     // Modules for kStakingVault
@@ -174,7 +175,13 @@ contract DeploymentBaseTest is BaseTest {
 
         // Deploy proxy with initialization
         bytes memory initData = abi.encodeWithSelector(
-            kRegistry.initialize.selector, users.owner, users.admin, users.emergencyAdmin, users.guardian, users.relayer
+            kRegistry.initialize.selector,
+            users.owner,
+            users.admin,
+            users.emergencyAdmin,
+            users.guardian,
+            users.relayer,
+            users.treasury
         );
 
         address registryProxy = factory.deployAndCall(address(registryImpl), users.admin, initData);
@@ -207,11 +214,15 @@ contract DeploymentBaseTest is BaseTest {
     function _deployTokens() internal {
         // Deploy kUSD through registry
         vm.startPrank(users.admin);
-        address kUSDAddress = registry.registerAsset(KUSD_NAME, KUSD_SYMBOL, USDC_MAINNET, registry.USDC());
+        address kUSDAddress = registry.registerAsset(
+            KUSD_NAME, KUSD_SYMBOL, USDC_MAINNET, registry.USDC(), type(uint256).max, type(uint256).max
+        );
         kUSD = kToken(payable(kUSDAddress));
         kUSD.grantEmergencyRole(users.emergencyAdmin);
 
-        address kBTCAddress = registry.registerAsset(KBTC_NAME, KBTC_SYMBOL, WBTC_MAINNET, registry.WBTC());
+        address kBTCAddress = registry.registerAsset(
+            KBTC_NAME, KBTC_SYMBOL, WBTC_MAINNET, registry.WBTC(), type(uint256).max, type(uint256).max
+        );
         kBTC = kToken(payable(kBTCAddress));
         kBTC.grantEmergencyRole(users.emergencyAdmin);
         vm.stopPrank();
@@ -265,7 +276,7 @@ contract DeploymentBaseTest is BaseTest {
         string memory label
     )
         internal
-        returns (kStakingVault vault)
+        returns (IkStakingVault vault)
     {
         // Deploy proxy with initialization
         bytes memory initData = abi.encodeWithSelector(
@@ -276,12 +287,11 @@ contract DeploymentBaseTest is BaseTest {
             name,
             symbol,
             6, // decimals
-            DEFAULT_DUST_AMOUNT,
             asset // underlying asset (USDC for now)
         );
 
         address vaultProxy = factory.deployAndCall(address(stakingVaultImpl), users.admin, initData);
-        vault = kStakingVault(payable(vaultProxy));
+        vault = IkStakingVault(payable(vaultProxy));
 
         // Label for debugging
         vm.label(address(vault), string(abi.encodePacked(label, "Vault")));
@@ -373,9 +383,9 @@ contract DeploymentBaseTest is BaseTest {
         vm.startPrank(users.owner);
 
         // Add reader module functions to all vaults
-        dnVault.addFunctions(readerSelectors, address(readerModule), true);
-        alphaVault.addFunctions(readerSelectors, address(readerModule), true);
-        betaVault.addFunctions(readerSelectors, address(readerModule), true);
+        kStakingVault(payable(address(dnVault))).addFunctions(readerSelectors, address(readerModule), true);
+        kStakingVault(payable(address(alphaVault))).addFunctions(readerSelectors, address(readerModule), true);
+        kStakingVault(payable(address(betaVault))).addFunctions(readerSelectors, address(readerModule), true);
 
         vm.stopPrank();
     }
@@ -466,7 +476,7 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Assert that contract has correct role
     function assertHasRole(address roleContract, address account, uint256 role) internal {
-        assertTrue(OwnableRoles(roleContract).hasAnyRole(account, role), "Account should have role");
+        assertTrue(OptimizedOwnableRoles(roleContract).hasAnyRole(account, role), "Account should have role");
     }
 
     /// @dev Assert asset balance equals expected
@@ -534,7 +544,7 @@ contract DeploymentBaseTest is BaseTest {
     }
 
     /// @dev Helper to get vault by type for testing
-    function getVaultByType(IkRegistry.VaultType vaultType) internal view returns (kStakingVault) {
+    function getVaultByType(IkRegistry.VaultType vaultType) internal view returns (IkStakingVault) {
         if (vaultType == IkRegistry.VaultType.DN) return dnVault;
         if (vaultType == IkRegistry.VaultType.ALPHA) return alphaVault;
         if (vaultType == IkRegistry.VaultType.BETA) return betaVault;

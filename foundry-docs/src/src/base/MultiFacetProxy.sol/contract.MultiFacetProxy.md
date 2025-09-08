@@ -2,7 +2,7 @@
 [Git Source](https://github.com/VerisLabs/KAM/blob/9795d1f125ce213b0546f9362ce72f5e0331817f/src/base/MultiFacetProxy.sol)
 
 **Inherits:**
-[Proxy](/src/abstracts/Proxy.sol/abstract.Proxy.md), OwnableRoles
+[Proxy](/src/abstracts/Proxy.sol/abstract.Proxy.md), OptimizedOwnableRoles
 
 A proxy contract that can route function calls to different implementation contracts
 

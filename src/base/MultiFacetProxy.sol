@@ -15,13 +15,13 @@ abstract contract MultiFacetProxy is Proxy {
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
+    /// @custom:storage-location erc7201:kam.storage.MultiFacetProxy
     struct MultiFacetProxyStorage {
         /// @notice Mapping of chain method selectors to implementation contracts
         mapping(bytes4 => address) selectorToImplementation;
     }
 
-    /// @notice Returns the MultiFacetProxy storage struct using ERC-7201 pattern
-    /// @return $ Storage reference for MultiFacetProxy state variables
+    /// @dev Returns the MultiFacetProxy storage pointer
     function _getMultiFacetProxyStorage() internal pure returns (MultiFacetProxyStorage storage $) {
         assembly {
             $.slot := MULTIFACET_PROXY_STORAGE_LOCATION

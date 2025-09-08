@@ -6,16 +6,20 @@ import { USDC_MAINNET, _1_USDC } from "../utils/Constants.sol";
 
 import { console2 } from "forge-std/console2.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
-import { BaseVaultModule } from "src/kStakingVault/base/BaseVaultModule.sol";
-
-import { VaultClaims } from "src/kStakingVault/base/VaultClaims.sol";
+import {
+    KSTAKINGVAULT_IS_PAUSED,
+    VAULTCLAIMS_BATCH_NOT_SETTLED,
+    VAULTCLAIMS_NOT_BENEFICIARY,
+    VAULTCLAIMS_REQUEST_NOT_PENDING
+} from "src/errors/Errors.sol";
+import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title kStakingVaultClaimsTest
 /// @notice Tests for claim functionality in kStakingVault
@@ -100,7 +104,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Try to claim without settling
         vm.prank(users.alice);
-        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_BATCH_NOT_SETTLED));
         vault.claimStakedShares(batchId, requestId);
     }
 
@@ -127,7 +131,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         // Try to claim with wrong batch ID
         bytes32 wrongBatchId = keccak256("wrong");
         vm.prank(users.alice);
-        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_BATCH_NOT_SETTLED));
         vault.claimStakedShares(wrongBatchId, requestId);
     }
 
@@ -157,7 +161,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Try to claim again
         vm.prank(users.alice);
-        vm.expectRevert(VaultClaims.RequestNotPending.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_REQUEST_NOT_PENDING));
         vault.claimStakedShares(batchId, requestId);
     }
 
@@ -183,7 +187,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Bob tries to claim Alice's request
         vm.prank(users.bob);
-        vm.expectRevert(VaultClaims.NotBeneficiary.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_NOT_BENEFICIARY));
         vault.claimStakedShares(batchId, requestId);
     }
 
@@ -213,7 +217,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Try to claim while paused
         vm.prank(users.alice);
-        vm.expectRevert(BaseVaultModule.IsPaused.selector);
+        vm.expectRevert(bytes(KSTAKINGVAULT_IS_PAUSED));
         vault.claimStakedShares(batchId, requestId);
     }
 
@@ -326,6 +330,70 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         assertEq(vault.balanceOf(address(vault)), 0);
     }
 
+    /// @dev Test successful claim of unstaked assets
+    function test_ClaimUnstakedAssets_WithFees_Success() public {
+        _setupTestFees();
+
+        // Setup: First stake to get stkTokens
+        _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
+
+        vm.prank(users.alice);
+        kUSD.approve(address(vault), 1000 * _1_USDC);
+
+        bytes32 stakeBatchId = vault.getBatchId();
+
+        vm.prank(users.alice);
+        bytes32 stakeRequestId = vault.requestStake(users.alice, 1000 * _1_USDC);
+
+        // Close and settle staking batch
+        vm.prank(users.relayer);
+        vault.closeBatch(stakeBatchId, true);
+
+        uint256 lastTotalAssets = vault.totalAssets();
+        _executeBatchSettlement(
+            address(vault), stakeBatchId, lastTotalAssets + 1000 * _1_USDC, 1000 * _1_USDC, 0, false
+        );
+
+        // Claim staked shares to get stkTokens
+        vm.prank(users.alice);
+        vault.claimStakedShares(stakeBatchId, stakeRequestId);
+
+        uint256 stkBalance = vault.balanceOf(users.alice);
+        assertEq(stkBalance, 1000 * _1_USDC);
+
+        // Now request unstaking
+        bytes32 unstakeBatchId = vault.getBatchId();
+
+        // Time passes and fees accumulate
+        vm.warp(block.timestamp + 30 days);
+
+        vm.prank(users.alice);
+        bytes32 unstakeRequestId = vault.requestUnstake(users.alice, stkBalance);
+
+        // Close and settle unstaking batch
+        vm.prank(users.relayer);
+        vault.closeBatch(unstakeBatchId, true);
+
+        lastTotalAssets = vault.totalAssets();
+        _executeBatchSettlement(address(vault), unstakeBatchId, lastTotalAssets, 0, 0, false);
+
+        // Get kToken balance before claim
+        uint256 kTokenBalanceBefore = kUSD.balanceOf(users.alice);
+
+        // Claim unstaked assets
+        vm.prank(users.alice);
+        vm.expectEmit(true, false, true, true);
+        emit UnstakingAssetsClaimed(unstakeBatchId, unstakeRequestId, users.alice, 999_178_000);
+        vault.claimUnstakedAssets(unstakeBatchId, unstakeRequestId);
+
+        // Verify user received kTokens back
+        uint256 kTokenBalanceAfter = kUSD.balanceOf(users.alice);
+        assertEq(kTokenBalanceAfter - kTokenBalanceBefore, 999_178_000);
+
+        // Verify stkTokens were burned from vault
+        assertEq(vault.balanceOf(address(vault)), 0);
+    }
+
     /// @dev Test claiming unstaked assets from non-settled batch
     function test_ClaimUnstakedAssets_BatchNotSettled() public {
         // Setup: Get stkTokens first
@@ -339,7 +407,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Try to claim without settling
         vm.prank(users.alice);
-        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_BATCH_NOT_SETTLED));
         vault.claimUnstakedAssets(batchId, requestId);
     }
 
@@ -363,7 +431,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         // Try to claim with wrong batch ID
         bytes32 wrongBatchId = keccak256("wrong");
         vm.prank(users.alice);
-        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_BATCH_NOT_SETTLED));
         vault.claimUnstakedAssets(wrongBatchId, requestId);
     }
 
@@ -390,7 +458,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Try to claim again
         vm.prank(users.alice);
-        vm.expectRevert(VaultClaims.RequestNotPending.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_REQUEST_NOT_PENDING));
         vault.claimUnstakedAssets(batchId, requestId);
     }
 
@@ -413,7 +481,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Bob tries to claim Alice's request
         vm.prank(users.bob);
-        vm.expectRevert(VaultClaims.NotBeneficiary.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_NOT_BENEFICIARY));
         vault.claimUnstakedAssets(batchId, requestId);
     }
 
@@ -440,7 +508,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Try to claim while paused
         vm.prank(users.alice);
-        vm.expectRevert(BaseVaultModule.IsPaused.selector);
+        vm.expectRevert(bytes(KSTAKINGVAULT_IS_PAUSED));
         vault.claimUnstakedAssets(batchId, requestId);
     }
 
@@ -564,7 +632,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Bob cannot claim yet (batch 2 not settled)
         vm.prank(users.bob);
-        vm.expectRevert(VaultClaims.BatchNotSettled.selector);
+        vm.expectRevert(bytes(VAULTCLAIMS_BATCH_NOT_SETTLED));
         vault.claimUnstakedAssets(batch2Id, request2Id);
 
         // Settle batch 2

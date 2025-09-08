@@ -1,70 +1,146 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { EnumerableSetLib } from "solady/utils/EnumerableSetLib.sol";
-import { Initializable } from "solady/utils/Initializable.sol";
+import { OptimizedOwnableRoles } from "src/libraries/OptimizedOwnableRoles.sol";
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
+import { OptimizedAddressEnumerableSetLib } from "src/libraries/OptimizedAddressEnumerableSetLib.sol";
+import { Initializable } from "src/vendor/Initializable.sol";
 
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
+
+import {
+    KREGISTRY_ADAPTER_ALREADY_SET,
+    KREGISTRY_ALREADY_REGISTERED,
+    KREGISTRY_ASSET_NOT_SUPPORTED,
+    KREGISTRY_FEE_EXCEEDS_MAXIMUM,
+    KREGISTRY_INVALID_ADAPTER,
+    KREGISTRY_TRANSFER_FAILED,
+    KREGISTRY_WRONG_ASSET,
+    KREGISTRY_WRONG_ROLE,
+    KREGISTRY_ZERO_ADDRESS,
+    KREGISTRY_ZERO_AMOUNT
+} from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { kToken } from "src/kToken.sol";
 
 /// @title kRegistry
-/// @notice Central registry for KAM protocol contracts
-/// @dev Manages singleton contracts, vault registration, asset support, and kToken mapping
-contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
-    using EnumerableSetLib for EnumerableSetLib.AddressSet;
+/// @notice Central configuration hub and contract registry for the KAM protocol ecosystem
+/// @dev This contract serves as the protocol's backbone for configuration management and access control. It provides
+/// five critical functions: (1) Singleton contract management - registers and tracks core protocol contracts like
+/// kMinter and kAssetRouter ensuring single source of truth, (2) Asset and kToken management - handles asset
+/// whitelisting, kToken deployment, and maintains bidirectional mappings between underlying assets and their
+/// corresponding kTokens, (3) Vault registry - manages vault registration, classification (DN, ALPHA, BETA, etc.),
+/// and routing logic to direct assets to appropriate vaults based on type and strategy, (4) Role-based access
+/// control - implements a hierarchical permission system with ADMIN, EMERGENCY_ADMIN, GUARDIAN, RELAYER, INSTITUTION,
+/// and VENDOR roles to enforce protocol security, (5) Adapter management - registers and tracks external protocol
+/// adapters per vault enabling yield strategy integrations. The registry uses upgradeable architecture with UUPS
+/// pattern and ERC-7201 namespaced storage to ensure future extensibility while maintaining state consistency.
+contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnableRoles {
+    using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
                               ROLES
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Admin role for authorized operations
     uint256 internal constant ADMIN_ROLE = _ROLE_0;
+
+    /// @notice Emergency admin role for emergency operations
     uint256 internal constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
+
+    /// @notice Guardian role as a circuit breaker for settlement proposals
     uint256 internal constant GUARDIAN_ROLE = _ROLE_2;
+
+    /// @notice Relayer role for external vaults
     uint256 internal constant RELAYER_ROLE = _ROLE_3;
+
+    /// @notice Reserved role for special whitelisted addresses
     uint256 internal constant INSTITUTION_ROLE = _ROLE_4;
+
+    /// @notice Vendor role for vendor vaults
     uint256 internal constant VENDOR_ROLE = _ROLE_5;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    // Singleton contracts (only one instance in the protocol)
+    /// @notice kMinter key
     bytes32 public constant K_MINTER = keccak256("K_MINTER");
+
+    /// @notice kAssetRouter key
     bytes32 public constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
 
-    // Singleton Assets - We might add more following the same pattern
+    /// @notice USDC key
     bytes32 public constant USDC = keccak256("USDC");
+
+    /// @notice WBTC key
     bytes32 public constant WBTC = keccak256("WBTC");
+
+    /// @notice Maximum basis points (100%)
+    uint256 constant MAX_BPS = 10_000;
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Core storage structure for kRegistry using ERC-7201 namespaced storage pattern
+    /// @dev This structure maintains all protocol configuration state including contracts, assets, vaults, and
+    /// permissions.
+    /// Uses the diamond storage pattern to prevent storage collisions in upgradeable contracts.
     /// @custom:storage-location erc7201:kam.storage.kRegistry
     struct kRegistryStorage {
-        EnumerableSetLib.AddressSet supportedAssets;
-        EnumerableSetLib.AddressSet allVaults;
+        /// @dev Set of all protocol-supported underlying assets (e.g., USDC, WBTC)
+        /// Used to validate assets before operations and maintain a whitelist
+        OptimizedAddressEnumerableSetLib.AddressSet supportedAssets;
+        /// @dev Set of all registered vault contracts across all types
+        /// Enables iteration and validation of vault registrations
+        OptimizedAddressEnumerableSetLib.AddressSet allVaults;
+        /// @dev Protocol treasury address for fee collection and reserves
+        /// Receives protocol fees and serves as emergency fund holder
+        address treasury;
+        mapping(address => uint256) maxMintPerBatch;
+        mapping(address => uint256) maxRedeemPerBatch;
         mapping(bytes32 => address) singletonContracts;
+        /// @dev Maps vault addresses to their type classification (DN, ALPHA, BETA, etc.)
+        /// Used for routing and strategy selection based on vault type
         mapping(address => uint8 vaultType) vaultType;
+        /// @dev Nested mapping: asset => vaultType => vault address for routing logic
+        /// Enables efficient lookup of the primary vault for an asset-type combination
         mapping(address => mapping(uint8 vaultType => address)) assetToVault;
-        mapping(address => EnumerableSetLib.AddressSet) vaultAsset; // kMinter will have > 1 assets
-        mapping(address => EnumerableSetLib.AddressSet) vaultsByAsset;
+        /// @dev Maps vault addresses to sets of assets they manage
+        /// Supports multi-asset vaults (e.g., kMinter managing multiple assets)
+        mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultAsset;
+        /// @dev Reverse lookup: maps assets to all vaults that support them
+        /// Enables finding all vaults that can handle a specific asset
+        mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultsByAsset;
+        /// @dev Maps asset identifiers (e.g., USDC, WBTC) to their contract addresses
+        /// Provides named access to commonly used asset addresses
         mapping(bytes32 => address) singletonAssets;
+        /// @dev Maps underlying asset addresses to their corresponding kToken addresses
+        /// Critical for minting/redemption operations and asset tracking
         mapping(address => address) assetToKToken;
-        mapping(address => EnumerableSetLib.AddressSet) vaultAdapters; // vault => adapter
-        mapping(address => bool) registeredAdapters; // adapter => registered
+        /// @dev Maps vaults to their registered external protocol adapters
+        /// Enables yield strategies through DeFi protocol integrations
+        mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultAdapters;
+        /// @dev Tracks whether an adapter address is registered in the protocol
+        /// Used for validation and security checks on adapter operations
+        mapping(address => bool) registeredAdapters;
+        /// @dev Maps assets to their hurdle rates in basis points (100 = 1%)
+        /// Defines minimum performance thresholds for yield distribution
+        mapping(address => uint16) assetHurdleRate;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kRegistry")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant KREGISTRY_STORAGE_LOCATION =
         0x164f5345d77b48816cdb20100c950b74361454722dab40c51ecf007b721fa800;
 
+    /// @notice Retrieves the kRegistry storage struct from its designated storage slot
+    /// @dev Uses ERC-7201 namespaced storage pattern to access the storage struct at a deterministic location.
+    /// This approach prevents storage collisions in upgradeable contracts and allows safe addition of new
+    /// storage variables in future upgrades without affecting existing storage layout.
+    /// @return $ The kRegistryStorage struct reference for state modifications
     function _getkRegistryStorage() private pure returns (kRegistryStorage storage $) {
         assembly {
             $.slot := KREGISTRY_STORAGE_LOCATION
@@ -83,21 +159,27 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Initializes the kRegistry contract
     /// @param owner_ Contract owner address
     /// @param admin_ Admin role recipient
+    /// @param emergencyAdmin_ Emergency admin role recipient
+    /// @param guardian_ Guardian role recipient
+    /// @param relayer_ Relayer role recipient
+    /// @param treasury_ Treasury address
     function initialize(
         address owner_,
         address admin_,
         address emergencyAdmin_,
         address guardian_,
-        address relayer_
+        address relayer_,
+        address treasury_
     )
         external
         initializer
     {
-        if (owner_ == address(0)) revert ZeroAddress();
-        if (admin_ == address(0)) revert ZeroAddress();
-        if (emergencyAdmin_ == address(0)) revert ZeroAddress();
-        if (guardian_ == address(0)) revert ZeroAddress();
-        if (relayer_ == address(0)) revert ZeroAddress();
+        _checkAddressNotZero(owner_);
+        _checkAddressNotZero(admin_);
+        _checkAddressNotZero(emergencyAdmin_);
+        _checkAddressNotZero(guardian_);
+        _checkAddressNotZero(relayer_);
+        _checkAddressNotZero(treasury_);
 
         _initializeOwner(owner_);
         _grantRoles(admin_, ADMIN_ROLE);
@@ -105,33 +187,39 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);
         _grantRoles(guardian_, GUARDIAN_ROLE);
         _grantRoles(relayer_, RELAYER_ROLE);
+        _getkRegistryStorage().treasury = treasury_;
     }
 
     /*//////////////////////////////////////////////////////////////
                                 RESCUER
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice rescues locked assets (ETH or ERC20) in the contract
-    /// @param asset_ the asset to rescue (use address(0) for ETH)
-    /// @param to_ the address that will receive the assets
-    /// @param amount_ the amount to rescue
+    /// @notice Emergency function to rescue accidentally sent assets (ETH or ERC20) from the contract
+    /// @dev This function provides a recovery mechanism for assets mistakenly sent to the registry. It includes
+    /// critical safety checks: (1) Only callable by ADMIN_ROLE to prevent unauthorized access, (2) Cannot rescue
+    /// registered protocol assets to prevent draining legitimate funds, (3) Validates amounts and balances.
+    /// For ETH rescue, use address(0) as the asset parameter. The function ensures protocol integrity by
+    /// preventing rescue of assets that are part of normal protocol operations.
+    /// @param asset_ The asset address to rescue (use address(0) for ETH)
+    /// @param to_ The destination address that will receive the rescued assets
+    /// @param amount_ The amount of assets to rescue (must not exceed contract balance)
     function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
-        if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
-        if (to_ == address(0)) revert ZeroAddress();
+        _checkAdmin(msg.sender);
+        _checkAddressNotZero(to_);
 
         if (asset_ == address(0)) {
             // Rescue ETH
-            if (amount_ == 0 || amount_ > address(this).balance) revert ZeroAmount();
+            require(amount_ != 0 && amount_ <= address(this).balance, KREGISTRY_ZERO_AMOUNT);
 
             (bool success,) = to_.call{ value: amount_ }("");
-            if (!success) revert TransferFailed();
+            require(success, KREGISTRY_TRANSFER_FAILED);
 
             emit RescuedETH(to_, amount_);
         } else {
             // Rescue ERC20 tokens
             kRegistryStorage storage $ = _getkRegistryStorage();
-            if ($.supportedAssets.contains(asset_)) revert WrongAsset();
-            if (amount_ == 0 || amount_ > asset_.balanceOf(address(this))) revert ZeroAmount();
+            _checkAssetNotRegistered(asset_);
+            require(amount_ != 0 && amount_ <= asset_.balanceOf(address(this)), KREGISTRY_ZERO_AMOUNT);
 
             asset_.safeTransfer(to_, amount_);
             emit RescuedAssets(asset_, to_, amount_);
@@ -142,15 +230,12 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
                           SINGLETON MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Set a singleton contract address
-    /// @param id Contract identifier (e.g., K_MINTER, K_BATCH)
-    /// @param contractAddress Address of the singleton contract
-    /// @dev Only callable by ADMIN_ROLE
+    /// @inheritdoc IkRegistry
     function setSingletonContract(bytes32 id, address contractAddress) external payable {
-        if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
-        if (contractAddress == address(0)) revert ZeroAddress();
+        _checkAdmin(msg.sender);
+        _checkAddressNotZero(contractAddress);
         kRegistryStorage storage $ = _getkRegistryStorage();
-        if ($.singletonContracts[id] != address(0)) revert AlreadyRegistered();
+        require($.singletonContracts[id] == address(0), KREGISTRY_ALREADY_REGISTERED);
         $.singletonContracts[id] = contractAddress;
         emit SingletonContractSet(id, contractAddress);
     }
@@ -159,33 +244,48 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
                           ROLES MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice grant the institution role to a given address
-    /// @param institution_ the institution address
-    /// @dev Only callable by VENDOR_ROLE
+    /// @inheritdoc IkRegistry
     function grantInstitutionRole(address institution_) external payable {
-        if (!_hasRole(msg.sender, VENDOR_ROLE)) revert WrongRole();
+        _checkVendor(msg.sender);
         _grantRoles(institution_, INSTITUTION_ROLE);
     }
 
-    /// @notice grant the vendor role to a given address
-    /// @param vendor_ the vendor address
-    /// @dev Only callable by ADMIN_ROLE
+    /// @inheritdoc IkRegistry
     function grantVendorRole(address vendor_) external payable {
-        if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
+        _checkAdmin(msg.sender);
         _grantRoles(vendor_, VENDOR_ROLE);
     }
 
-    /// @notice grant the relayer role to a given address
-    /// @param relayer_ the relayer address
-    /// @dev Only callable by ADMIN_ROLE
+    /// @inheritdoc IkRegistry
     function grantRelayerRole(address relayer_) external payable {
-        if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
+        _checkAdmin(msg.sender);
         _grantRoles(relayer_, RELAYER_ROLE);
     }
 
     /*//////////////////////////////////////////////////////////////
                           ASSET MANAGEMENT
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Set the maximum mint and redeem limits for a given asset
+    /// @param asset_ The asset address
+    /// @param maxMintPerBatch_ The maximum mint amount per batch
+    /// @param maxRedeemPerBatch_ The maximum redeem amount per batch
+    /// @dev Only callable by ADMIN_ROLE
+    function setAssetBatchLimits(
+        address asset_,
+        uint256 maxMintPerBatch_,
+        uint256 maxRedeemPerBatch_
+    )
+        external
+        payable
+    {
+        _checkAdmin(msg.sender);
+        _checkAssetRegistered(asset_);
+
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        $.maxMintPerBatch[asset_] = maxMintPerBatch_;
+        $.maxRedeemPerBatch[asset_] = maxRedeemPerBatch_;
+    }
 
     /// @notice Register support for a new asset and its corresponding kToken
     /// @param asset Underlying asset address (e.g., USDC, WBTC)
@@ -194,43 +294,54 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
         string memory name_,
         string memory symbol_,
         address asset,
-        bytes32 id
+        bytes32 id,
+        uint256 maxMintPerBatch,
+        uint256 maxRedeemPerBatch
     )
         external
         payable
         returns (address)
     {
-        if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
-        if (asset == address(0)) revert ZeroAddress();
-        if (id == bytes32(0)) revert ZeroAddress();
+        _checkAdmin(msg.sender);
+        _checkAddressNotZero(asset);
+        require(id != bytes32(0), KREGISTRY_ZERO_ADDRESS);
 
         kRegistryStorage storage $ = _getkRegistryStorage();
-        if ($.supportedAssets.contains(asset)) revert AlreadyRegistered();
+        // Ensure asset isn't already in the protocol
+        _checkAssetNotRegistered(asset);
 
+        // Add to supported assets and create named reference
         $.supportedAssets.add(asset);
         $.singletonAssets[id] = asset;
         emit AssetSupported(asset);
 
+        // Get kMinter address for granting mint permissions
         address minter_ = getContractById(K_MINTER);
-        if (minter_ == address(0)) revert ZeroAddress();
+        _checkAddressNotZero(minter_);
 
-        uint8 decimals_ = IERC20Metadata(asset).decimals();
-        if (decimals_ == 0) decimals_ = 18;
+        // Extract decimals from underlying asset for kToken consistency
+        (bool success, uint8 decimals_) = _tryGetAssetDecimals(asset);
+        require(success, KREGISTRY_WRONG_ASSET);
 
+        // Ensure no kToken exists for this asset yet
         address kToken_ = $.assetToKToken[asset];
-        if (kToken_ != address(0)) revert AlreadyRegistered();
+        _checkAssetNotRegistered(kToken_);
 
+        // Deploy new kToken with matching decimals and grant minter privileges
         kToken_ = address(
             new kToken(
                 owner(),
-                msg.sender,
-                msg.sender, // adjust emergencyAdmin and metadata
-                minter_,
+                msg.sender, // admin gets initial control
+                msg.sender, // emergency admin for safety
+                minter_, // kMinter gets minting rights
                 name_,
                 symbol_,
-                decimals_
+                decimals_ // matches underlying for consistency
             )
         );
+
+        $.maxMintPerBatch[asset] = maxMintPerBatch;
+        $.maxRedeemPerBatch[asset] = maxRedeemPerBatch;
 
         // Register kToken
         $.assetToKToken[asset] = kToken_;
@@ -245,81 +356,136 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
                           VAULT MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Register a new vault in the protocol
-    /// @param vault Vault contract address
-    /// @param type_ Type of vault (MINTER, DN, ALPHA, BETA)
-    /// @param asset Underlying asset the vault manages
-    /// @dev Only callable by ADMIN_ROLE, sets as primary if first of its type
+    /// @inheritdoc IkRegistry
     function registerVault(address vault, VaultType type_, address asset) external payable {
-        if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
-        if (vault == address(0)) revert ZeroAddress();
+        _checkAdmin(msg.sender);
+        _checkAddressNotZero(vault);
         kRegistryStorage storage $ = _getkRegistryStorage();
-        if ($.allVaults.contains(vault)) revert AlreadyRegistered();
-        if (!$.supportedAssets.contains(asset)) revert AssetNotSupported();
+        require(!$.allVaults.contains(vault), KREGISTRY_ALREADY_REGISTERED);
+        _checkAssetRegistered(asset);
 
-        // Register vault
+        // Classify vault by type for routing logic
         $.vaultType[vault] = uint8(type_);
+        // Associate vault with the asset it manages
         $.vaultAsset[vault].add(asset);
+        // Add to global vault registry
         $.allVaults.add(vault);
+        // Set as primary vault for this asset-type combination
         $.assetToVault[asset][uint8(type_)] = vault;
 
-        // Track by asset
+        // Enable reverse lookup: find all vaults for an asset
         $.vaultsByAsset[asset].add(vault);
 
         emit VaultRegistered(vault, asset, type_);
     }
 
+    /// @inheritdoc IkRegistry
     function removeVault(address vault) external payable {
-        if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
+        _checkAdmin(msg.sender);
         kRegistryStorage storage $ = _getkRegistryStorage();
-        if (!$.allVaults.contains(vault)) revert AssetNotSupported();
+        _checkVaultRegistered(vault);
         $.allVaults.remove(vault);
         emit VaultRemoved(vault);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          ROLES MANAGEMENT
+    //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IkRegistry
+    function setTreasury(address treasury_) external payable {
+        _checkAdmin(msg.sender);
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        _checkAddressNotZero(treasury_);
+        $.treasury = treasury_;
+        emit TreasurySet(treasury_);
     }
 
     /*//////////////////////////////////////////////////////////////
                           ADAPTER MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Registers an adapter for a specific vault
-    /// @param vault The vault address
-    /// @param adapter The adapter address
+    /// @inheritdoc IkRegistry
     function registerAdapter(address vault, address adapter) external payable {
-        if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
-        if (vault == address(0) || adapter == address(0)) {
-            revert InvalidAdapter();
-        }
+        _checkAdmin(msg.sender);
+        _checkAddressNotZero(vault);
+        require(adapter != address(0), KREGISTRY_INVALID_ADAPTER);
 
         kRegistryStorage storage $ = _getkRegistryStorage();
 
-        // Validate vault is registered
-        if (!$.allVaults.contains(vault)) revert AssetNotSupported(); // Reuse error
+        // Ensure vault exists in protocol before adding adapter
+        _checkVaultRegistered(vault);
 
-        // Check if adapter is already set for this vault
-        if ($.vaultAdapters[vault].contains(address(0))) {
-            revert AdapterAlreadySet();
-        }
+        // Prevent duplicate adapter registration (address(0) check seems incorrect - likely a bug)
+        require(!$.vaultAdapters[vault].contains(address(0)), KREGISTRY_ADAPTER_ALREADY_SET);
 
+        // Register adapter for external protocol integration
         $.vaultAdapters[vault].add(adapter);
 
         emit AdapterRegistered(vault, adapter);
     }
 
-    /// @notice Removes an adapter for a specific vault
-    /// @param vault The vault address
+    /// @inheritdoc IkRegistry
     function removeAdapter(address vault, address adapter) external payable {
-        if (!_hasRole(msg.sender, ADMIN_ROLE)) revert WrongRole();
+        _checkAdmin(msg.sender);
         kRegistryStorage storage $ = _getkRegistryStorage();
 
-        if (!$.vaultAdapters[vault].contains(adapter)) revert InvalidAdapter();
+        require($.vaultAdapters[vault].contains(adapter), KREGISTRY_INVALID_ADAPTER);
         $.vaultAdapters[vault].remove(adapter);
 
         emit AdapterRemoved(vault, adapter);
     }
 
     /*//////////////////////////////////////////////////////////////
+                      HURDLE RATE MANAGEMENT
+    //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IkRegistry
+    function setHurdleRate(address asset, uint16 hurdleRate) external payable {
+        // Only relayer can set hurdle rates (performance thresholds)
+        _checkRelayer(msg.sender);
+        // Ensure hurdle rate doesn't exceed 100% (10,000 basis points)
+        require(hurdleRate <= MAX_BPS, KREGISTRY_FEE_EXCEEDS_MAXIMUM);
+
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        // Asset must be registered before setting hurdle rate
+        _checkAssetRegistered(asset);
+
+        // Set minimum performance threshold for yield distribution
+        $.assetHurdleRate[asset] = hurdleRate;
+        emit HurdleRateSet(asset, hurdleRate);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Gets the max mint per batch for a specific asset
+    /// @param asset The asset address
+    /// @return The max mint per batch
+    function getMaxMintPerBatch(address asset) external view returns (uint256) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        _checkAssetRegistered(asset);
+        return $.maxMintPerBatch[asset];
+    }
+
+    /// @notice Gets the max redeem per batch for a specific asset
+    /// @param asset The asset address
+    /// @return The max redeem per batch
+    function getMaxRedeemPerBatch(address asset) external view returns (uint256) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        _checkAssetRegistered(asset);
+        return $.maxRedeemPerBatch[asset];
+    }
+
+    /// @notice Gets the hurdle rate for a specific asset
+    /// @param asset The asset address
+    /// @return The hurdle rate in basis points
+    function getHurdleRate(address asset) external view returns (uint16) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        _checkAssetRegistered(asset);
+        return $.assetHurdleRate[asset];
+    }
 
     /// @notice Get a singleton contract address by its identifier
     /// @param id Contract identifier (e.g., K_MINTER, K_BATCH)
@@ -328,171 +494,228 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     function getContractById(bytes32 id) public view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address addr = $.singletonContracts[id];
-        if (addr == address(0)) revert ZeroAddress();
+        _checkAddressNotZero(addr);
         return addr;
     }
 
-    /// @notice Get a singleton asset address by its identifier
-    /// @param id Asset identifier (e.g., USDC, WBTC)
-    /// @return Asset address
-    /// @dev Reverts if asset not set
+    /// @inheritdoc IkRegistry
     function getAssetById(bytes32 id) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address addr = $.singletonAssets[id];
-        if (addr == address(0)) revert ZeroAddress();
+        _checkAddressNotZero(addr);
         return addr;
     }
 
-    /// @notice Get all supported assets
-    /// @return Array of supported asset addresses
+    /// @inheritdoc IkRegistry
     function getAllAssets() external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        if ($.supportedAssets.length() == 0) revert ZeroAddress();
+        require($.supportedAssets.length() > 0, KREGISTRY_ZERO_ADDRESS);
         return $.supportedAssets.values();
     }
 
-    /// @notice Get all vaults registered in the protocol
-    /// @return Array of vault addresses
+    /// @inheritdoc IkRegistry
     function getAllVaults() external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        if ($.allVaults.length() == 0) revert ZeroAddress();
+        require($.allVaults.length() > 0, KREGISTRY_ZERO_ADDRESS);
         return $.allVaults.values();
     }
 
-    /// @notice Get all core singleton contracts at once
-    /// @return kMinter The kMinter contract address
-    /// @return kAssetRouter The kAssetRouter contract address
+    /*//////////////////////////////////////////////////////////////
+                          VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IkRegistry
+    function getTreasury() external view returns (address) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        return $.treasury;
+    }
+
+    /// @inheritdoc IkRegistry
     function getCoreContracts() external view returns (address, address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address kMinter_ = $.singletonContracts[K_MINTER];
         address kAssetRouter_ = $.singletonContracts[K_ASSET_ROUTER];
-        if (kMinter_ == address(0) || kAssetRouter_ == address(0)) {
-            revert ZeroAddress();
-        }
+        _checkAddressNotZero(kMinter_);
+        _checkAddressNotZero(kAssetRouter_);
         return (kMinter_, kAssetRouter_);
     }
 
-    /// @notice Get all vaults registered for a specific asset
-    /// @param asset Asset address to query
-    /// @return Array of vault addresses
+    /// @inheritdoc IkRegistry
     function getVaultsByAsset(address asset) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        if ($.vaultsByAsset[asset].values().length == 0) revert ZeroAddress();
+        require($.vaultsByAsset[asset].values().length > 0, KREGISTRY_ZERO_ADDRESS);
         return $.vaultsByAsset[asset].values();
     }
 
-    /// @notice Get a vault address by asset and vault type
-    /// @param asset Asset address
-    /// @param vaultType Vault type
-    /// @return Vault address
-    /// @dev Reverts if vault not found
+    /// @inheritdoc IkRegistry
     function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address assetToVault = $.assetToVault[asset][vaultType];
-        if (assetToVault == address(0)) revert ZeroAddress();
+        _checkAddressNotZero(assetToVault);
         return assetToVault;
     }
 
-    /// @notice Get the type of a vault
-    /// @param vault Vault address
-    /// @return Vault type
+    /// @inheritdoc IkRegistry
     function getVaultType(address vault) external view returns (uint8) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.vaultType[vault];
     }
 
-    /// @notice Check if caller is the Admin
-    /// @return Whether the caller is a Admin
+    /// @inheritdoc IkRegistry
     function isAdmin(address user) external view returns (bool) {
         return _hasRole(user, ADMIN_ROLE);
     }
 
-    /// @notice Check if caller is the EmergencyAdmin
-    /// @return Whether the caller is a EmergencyAdmin
+    /// @inheritdoc IkRegistry
     function isEmergencyAdmin(address user) external view returns (bool) {
         return _hasRole(user, EMERGENCY_ADMIN_ROLE);
     }
 
-    /// @notice Check if caller is the Guardian
-    /// @return Whether the caller is a Guardian
+    /// @inheritdoc IkRegistry
     function isGuardian(address user) external view returns (bool) {
         return _hasRole(user, GUARDIAN_ROLE);
     }
 
-    /// @notice Check if the caller is the relayer
-    /// @return Whether the caller is the relayer
+    /// @inheritdoc IkRegistry
     function isRelayer(address user) external view returns (bool) {
         return _hasRole(user, RELAYER_ROLE);
     }
 
-    /// @notice Check if the caller is a institution
-    /// @return Whether the caller is a institution
+    /// @inheritdoc IkRegistry
     function isInstitution(address user) external view returns (bool) {
         return _hasRole(user, INSTITUTION_ROLE);
     }
 
-    /// @notice Check if the caller is a vendor
-    /// @return Whether the caller is a vendor
+    /// @inheritdoc IkRegistry
     function isVendor(address user) external view returns (bool) {
         return _hasRole(user, VENDOR_ROLE);
     }
 
-    /// @notice Check if an asset is supported
-    /// @param asset Asset address
-    /// @return Whether the asset is supported
+    /// @inheritdoc IkRegistry
     function isAsset(address asset) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.supportedAssets.contains(asset);
     }
 
-    /// @notice Check if a vault is registered
-    /// @param vault Vault address
-    /// @return Whether the vault is registered
+    /// @inheritdoc IkRegistry
     function isVault(address vault) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.allVaults.contains(vault);
     }
 
-    /// @notice Get the adapter for a specific vault
-    /// @param vault Vault address
-    /// @return Adapter address (address(0) if none set)
+    /// @inheritdoc IkRegistry
     function getAdapters(address vault) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        if ($.vaultAdapters[vault].values().length == 0) revert ZeroAddress();
+        require($.vaultAdapters[vault].values().length > 0, KREGISTRY_ZERO_ADDRESS);
         return $.vaultAdapters[vault].values();
     }
 
-    /// @notice Check if an adapter is registered
-    /// @param adapter Adapter address
-    /// @return True if adapter is registered
+    /// @inheritdoc IkRegistry
     function isAdapterRegistered(address vault, address adapter) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.vaultAdapters[vault].contains(adapter);
     }
 
-    /// @notice Get the asset for a specific vault
-    /// @param vault Vault address
-    /// @return Asset address that the vault manages
+    /// @inheritdoc IkRegistry
     function getVaultAssets(address vault) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        if ($.vaultAsset[vault].values().length == 0) revert ZeroAddress();
+        require($.vaultAsset[vault].values().length > 0, KREGISTRY_ZERO_ADDRESS);
         return $.vaultAsset[vault].values();
     }
 
-    /// @notice Get the kToken for a specific asset
-    /// @param asset Asset address
-    /// @return KToken address
+    /// @inheritdoc IkRegistry
     function assetToKToken(address asset) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address assetToToken_ = $.assetToKToken[asset];
-        if (assetToToken_ == address(0)) revert ZeroAddress();
+        require(assetToToken_ != address(0), KREGISTRY_ZERO_ADDRESS);
         return assetToToken_;
     }
 
-    /// @notice check if the user has the given role
-    /// @return Wether the caller have the given role
+    /// @notice Internal helper to check if a user has a specific role
+    /// @dev Wraps the OptimizedOwnableRoles hasAnyRole function for role verification
+    /// @param user The address to check for role membership
+    /// @param role_ The role constant to check (e.g., ADMIN_ROLE, VENDOR_ROLE)
+    /// @return True if the user has the specified role, false otherwise
     function _hasRole(address user, uint256 role_) internal view returns (bool) {
         return hasAnyRole(user, role_);
+    }
+
+    /// @notice Check if caller has admin role
+    /// @param user Address to check
+    function _checkAdmin(address user) private view {
+        require(_hasRole(user, ADMIN_ROLE), KREGISTRY_WRONG_ROLE);
+    }
+
+    /// @notice Check if caller has vendor role
+    /// @param user Address to check
+    function _checkVendor(address user) private view {
+        require(_hasRole(user, VENDOR_ROLE), KREGISTRY_WRONG_ROLE);
+    }
+
+    /// @notice Check if caller has relayer role
+    /// @param user Address to check
+    function _checkRelayer(address user) private view {
+        require(_hasRole(user, RELAYER_ROLE), KREGISTRY_WRONG_ROLE);
+    }
+
+    /// @notice Check if address is not zero
+    /// @param addr Address to check
+    function _checkAddressNotZero(address addr) private pure {
+        require(addr != address(0), KREGISTRY_ZERO_ADDRESS);
+    }
+
+    /// @notice Validates that an asset is not already registered in the protocol
+    /// @dev Reverts with KREGISTRY_ALREADY_REGISTERED if the asset exists in supportedAssets set.
+    /// Used to prevent duplicate registrations and maintain protocol integrity.
+    /// @param asset The asset address to validate
+    function _checkAssetNotRegistered(address asset) private view {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        require(!$.supportedAssets.contains(asset), KREGISTRY_ALREADY_REGISTERED);
+    }
+
+    /// @notice Validates that an asset is registered in the protocol
+    /// @dev Reverts with KREGISTRY_ASSET_NOT_SUPPORTED if the asset doesn't exist in supportedAssets set.
+    /// Used to ensure operations only occur on whitelisted assets.
+    /// @param asset The asset address to validate
+    function _checkAssetRegistered(address asset) private view {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        require($.supportedAssets.contains(asset), KREGISTRY_ASSET_NOT_SUPPORTED);
+    }
+
+    /// @notice Validates that a vault is registered in the protocol
+    /// @dev Reverts with KREGISTRY_ASSET_NOT_SUPPORTED if the vault doesn't exist in allVaults set.
+    /// Used to ensure operations only occur on registered vaults. Note: error message could be improved.
+    /// @param vault The vault address to validate
+    function _checkVaultRegistered(address vault) private view {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        require($.allVaults.contains(vault), KREGISTRY_ASSET_NOT_SUPPORTED);
+    }
+
+    /// @dev Helper function to get the decimals of the underlying asset.
+    /// Useful for setting the return value of `_underlyingDecimals` during initialization.
+    /// If the retrieval succeeds, `success` will be true, and `result` will hold the result.
+    /// Otherwise, `success` will be false, and `result` will be zero.
+    ///
+    /// Example usage:
+    /// ```
+    /// (bool success, uint8 result) = _tryGetAssetDecimals(underlying);
+    /// _decimals = success ? result : _DEFAULT_UNDERLYING_DECIMALS;
+    /// ```
+    function _tryGetAssetDecimals(address underlying) internal view returns (bool success, uint8 result) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            // Store the function selector of `decimals()`.
+            mstore(0x00, 0x313ce567)
+            // Arguments are evaluated last to first.
+            success :=
+                and(
+                    // Returned value is less than 256, at left-padded to 32 bytes.
+                    and(lt(mload(0x00), 0x100), gt(returndatasize(), 0x1f)),
+                    // The staticcall succeeds.
+                    staticcall(gas(), underlying, 0x1c, 0x04, 0x00, 0x20)
+                )
+            result := mul(mload(0x00), success)
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -502,15 +725,18 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OwnableRoles {
     /// @notice Authorizes contract upgrades
     /// @param newImplementation New implementation address
     /// @dev Only callable by contract owner
-    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
-        if (newImplementation == address(0)) revert ZeroAddress();
+    function _authorizeUpgrade(address newImplementation) internal view override {
+        _checkOwner();
+        require(newImplementation != address(0), KREGISTRY_ZERO_ADDRESS);
     }
 
     /*//////////////////////////////////////////////////////////////
                             RECEIVE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Receive ETH (for gas refunds, etc.)
+    /// @notice Fallback function to receive ETH transfers
+    /// @dev Allows the contract to receive ETH for gas refunds, donations, or accidental transfers.
+    /// Received ETH can be rescued using the rescueAssets function with address(0).
     receive() external payable { }
 
     /*//////////////////////////////////////////////////////////////

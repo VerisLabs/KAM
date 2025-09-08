@@ -24,9 +24,8 @@ help:
 	@echo "make deploy-tokens      - Deploy kTokens (05)"
 	@echo "make deploy-modules     - Deploy vault modules (06)"
 	@echo "make deploy-vaults      - Deploy vaults (07)"
-	@echo "make setup-modules      - Register modules (08)"
-	@echo "make deploy-adapters    - Deploy adapters (09)"
-	@echo "make configure          - Configure protocol (10)"
+	@echo "make deploy-adapters    - Deploy adapters (08)"
+	@echo "make configure          - Configure protocol (09)"
 
 # Network-specific deployments
 deploy-mainnet:
@@ -44,7 +43,7 @@ deploy-localhost:
 	@$(MAKE) deploy-all FORGE_ARGS="--rpc-url http://localhost:8545 --broadcast --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 # Complete deployment sequence
-deploy-all: deploy-core setup-singletons deploy-tokens deploy-modules deploy-vaults setup-modules deploy-adapters configure
+deploy-all: deploy-core setup-singletons deploy-tokens deploy-modules deploy-vaults deploy-adapters configure
 	@echo "✅ Complete protocol deployment finished!"
 
 # Mock assets (00) - Only for testnets
@@ -81,22 +80,15 @@ deploy-vaults:
 	@echo "🏛️  Deploying vaults..."
 	forge script script/deployment/07_DeployVaults.s.sol $(FORGE_ARGS)
 
-# Module registration (08)
-setup-modules:
-	@echo "🔗 Module registration setup..."
-	forge script script/deployment/08_RegisterModules.s.sol $(FORGE_ARGS)
-	@echo "⚠️  Execute the displayed admin calls via admin account"
-
-# Adapters (09)
+# Adapters (08)
 deploy-adapters:
 	@echo "🔌 Deploying adapters..."
-	forge script script/deployment/09_DeployAdapters.s.sol $(FORGE_ARGS)
+	forge script script/deployment/08_DeployAdapters.s.sol $(FORGE_ARGS)
 
-# Final configuration (10)
+# Final configuration (09)
 configure:
-	@echo "⚙️  Protocol configuration setup..."
-	forge script script/deployment/10_ConfigureProtocol.s.sol $(FORGE_ARGS)
-	@echo "⚠️  Execute the displayed admin calls via admin account"
+	@echo "⚙️  Executing protocol configuration..."
+	forge script script/deployment/09_ConfigureProtocol.s.sol $(FORGE_ARGS)
 
 # Verification
 verify:

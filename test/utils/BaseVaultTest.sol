@@ -6,17 +6,17 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { console } from "forge-std/console.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { OptimizedFixedPointMathLib } from "src/libraries/OptimizedFixedPointMathLib.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title BaseVaultTest
 /// @notice Base test contract for shared functionality
 contract BaseVaultTest is DeploymentBaseTest {
-    using FixedPointMathLib for uint256;
+    using OptimizedFixedPointMathLib for uint256;
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////
@@ -82,9 +82,11 @@ contract BaseVaultTest is DeploymentBaseTest {
         vm.startPrank(users.admin);
         vault.setManagementFee(TEST_MANAGEMENT_FEE);
         vault.setPerformanceFee(TEST_PERFORMANCE_FEE);
-        vault.setHurdleRate(TEST_HURDLE_RATE);
         vault.setHardHurdleRate(false); // Soft hurdle by default
         vm.stopPrank();
+
+        vm.prank(users.relayer);
+        registry.setHurdleRate(USDC_MAINNET, TEST_HURDLE_RATE);
     }
 
     function _mintKTokensToUsers() internal {

@@ -4,10 +4,18 @@ pragma solidity 0.8.30;
 import { BaseTest } from "../utils/BaseTest.sol";
 import { USDC_MAINNET, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
 
-import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
 import { CustodialAdapter } from "src/adapters/CustodialAdapter.sol";
+import { OptimizedLibClone } from "src/libraries/OptimizedLibClone.sol";
+
+import {
+    ADAPTER_INVALID_REGISTRY,
+    CUSTODIAL_INVALID_CUSTODIAL_ADDRESS,
+    CUSTODIAL_VAULT_DESTINATION_NOT_SET,
+    CUSTODIAL_WRONG_ROLE,
+    CUSTODIAL_ZERO_AMOUNT
+} from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 contract CustodialAdapterTest is BaseTest {
@@ -35,7 +43,7 @@ contract CustodialAdapterTest is BaseTest {
         adapterImpl = address(new CustodialAdapter());
 
         // Deploy proxy and initialize
-        address proxy = Clones.clone(adapterImpl);
+        address proxy = OptimizedLibClone.clone(adapterImpl);
         adapter = CustodialAdapter(proxy);
 
         // Initialize with mock registry
@@ -59,7 +67,7 @@ contract CustodialAdapterTest is BaseTest {
     /// @dev Test successful initialization
     function test_Initialize_Success() public {
         // Deploy new proxy for testing
-        address newProxy = Clones.clone(adapterImpl);
+        address newProxy = OptimizedLibClone.clone(adapterImpl);
         CustodialAdapter newAdapter = CustodialAdapter(newProxy);
 
         newAdapter.initialize(mockRegistry);
@@ -71,10 +79,10 @@ contract CustodialAdapterTest is BaseTest {
 
     /// @dev Test initialization with zero registry reverts
     function test_Initialize_ZeroRegistry() public {
-        address newProxy = Clones.clone(adapterImpl);
+        address newProxy = OptimizedLibClone.clone(adapterImpl);
         CustodialAdapter newAdapter = CustodialAdapter(newProxy);
 
-        vm.expectRevert(BaseAdapter.InvalidRegistry.selector);
+        vm.expectRevert(bytes(ADAPTER_INVALID_REGISTRY));
         newAdapter.initialize(address(0));
     }
 
@@ -99,13 +107,13 @@ contract CustodialAdapterTest is BaseTest {
 
     /// @dev Test setting vault destination with zero vault reverts
     function test_SetVaultDestination_ZeroVault() public {
-        vm.expectRevert(CustodialAdapter.InvalidCustodialAddress.selector);
+        vm.expectRevert(bytes(CUSTODIAL_INVALID_CUSTODIAL_ADDRESS));
         adapter.setVaultDestination(address(0), custodialAddress);
     }
 
     /// @dev Test setting vault destination with zero custodial address reverts
     function test_SetVaultDestination_ZeroCustodialAddress() public {
-        vm.expectRevert(CustodialAdapter.InvalidCustodialAddress.selector);
+        vm.expectRevert(bytes(CUSTODIAL_INVALID_CUSTODIAL_ADDRESS));
         adapter.setVaultDestination(testVault, address(0));
     }
 
@@ -151,7 +159,7 @@ contract CustodialAdapterTest is BaseTest {
         uint256 depositAmount = _100_USDC;
 
         vm.startPrank(mockAssetRouter);
-        vm.expectRevert(CustodialAdapter.VaultDestinationNotSet.selector);
+        vm.expectRevert(bytes(CUSTODIAL_VAULT_DESTINATION_NOT_SET));
         adapter.deposit(USDC_MAINNET, depositAmount, testVault);
         vm.stopPrank();
     }
@@ -163,7 +171,7 @@ contract CustodialAdapterTest is BaseTest {
         adapter.setVaultDestination(testVault, custodialAddress);
 
         vm.startPrank(mockAssetRouter);
-        vm.expectRevert(BaseAdapter.InvalidAmount.selector);
+        vm.expectRevert(bytes(CUSTODIAL_ZERO_AMOUNT));
         adapter.deposit(USDC_MAINNET, 0, testVault);
         vm.stopPrank();
     }
@@ -247,7 +255,7 @@ contract CustodialAdapterTest is BaseTest {
         address nonAdmin = address(0xBEEF);
 
         vm.startPrank(nonAdmin);
-        vm.expectRevert(BaseAdapter.WrongRole.selector);
+        vm.expectRevert(bytes(CUSTODIAL_WRONG_ROLE));
         adapter.setVaultDestination(testVault, custodialAddress);
         vm.stopPrank();
     }
@@ -261,13 +269,13 @@ contract CustodialAdapterTest is BaseTest {
 
         vm.startPrank(nonRouter);
 
-        vm.expectRevert(BaseAdapter.WrongRole.selector);
+        vm.expectRevert(bytes(CUSTODIAL_WRONG_ROLE));
         adapter.deposit(USDC_MAINNET, _100_USDC, testVault);
 
-        vm.expectRevert(BaseAdapter.WrongRole.selector);
+        vm.expectRevert(bytes(CUSTODIAL_WRONG_ROLE));
         adapter.redeem(USDC_MAINNET, _100_USDC, testVault);
 
-        vm.expectRevert(BaseAdapter.WrongRole.selector);
+        vm.expectRevert(bytes(CUSTODIAL_WRONG_ROLE));
         adapter.setTotalAssets(testVault, USDC_MAINNET, _1000_USDC);
 
         vm.stopPrank();

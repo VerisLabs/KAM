@@ -6,18 +6,18 @@ import { USDC_MAINNET, _1_USDC } from "../utils/Constants.sol";
 
 import { console } from "forge-std/console.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { OptimizedFixedPointMathLib } from "src/libraries/OptimizedFixedPointMathLib.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-import { BaseVaultModuleTypes } from "src/kStakingVault/types/BaseVaultModuleTypes.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title kStakingVaultFlowsTest
 /// @notice Tests for fee mechanics in kStakingVault
 /// @dev Focuses on fee calculations and asset conversions
 contract kStakingVaultFlowsTest is BaseVaultTest {
-    using FixedPointMathLib for uint256;
+    using OptimizedFixedPointMathLib for uint256;
     using SafeTransferLib for address;
 
     /*//////////////////////////////////////////////////////////////

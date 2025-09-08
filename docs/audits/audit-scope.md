@@ -17,7 +17,7 @@ The scope of audit involves the complete KAM protocol implementation in `src/`:
 │   │   ├── BaseAdapter.sol
 │   │   └── CustodialAdapter.sol
 │   ├── base/
-│   │   ├── MultiFacetProxy.sol       [NOT IN SCOPE - Diamond proxy base]
+│   │   ├── MultiFacetProxy.sol       [NOT IN SCOPE - Proxy base]
 │   │   └── kBase.sol
 │   ├── interfaces/
 │   │   ├── IAdapter.sol
@@ -28,28 +28,30 @@ The scope of audit involves the complete KAM protocol implementation in `src/`:
 │   │   ├── IkRegistry.sol
 │   │   ├── IkStakingVault.sol
 │   │   ├── IkToken.sol
+│   │   ├── IVault.sol
 │   │   └── modules/
 │   │       ├── IVaultBatch.sol
 │   │       ├── IVaultClaim.sol
-│   │       └── IVaultFees.sol
+│   │       ├── IVaultFees.sol
+│   │       └── IVaultReader.sol
 │   ├── kAssetRouter.sol
 │   ├── kBatchReceiver.sol
 │   ├── kMinter.sol
 │   ├── kRegistry.sol
 │   ├── kStakingVault/
 │   │   ├── base/
-│   │   │   └── BaseVaultModule.sol
+│   │   │   └── BaseVault.sol
 │   │   ├── kStakingVault.sol
 │   │   ├── modules/
-│   │   │   ├── VaultBatches.sol
-│   │   │   ├── VaultClaims.sol
-│   │   │   └── VaultFees.sol
+│   │   │   └── ReaderModule.sol
 │   │   └── types/
-│   │       └── BaseVaultModuleTypes.sol
+│   │       └── BaseVaultTypes.sol
+│   ├── libraries/                    [NOT IN SCOPE - Optimized libraries]
+│   ├── vendor/                       [NOT IN SCOPE - External dependencies]
 │   └── kToken.sol
 ```
 
-**Out of scope**: External dependencies (Solady, OpenZeppelin), test contracts, and deployment scripts.
+**Out of scope**: Libraries (`libraries/`), vendor dependencies (`vendor/`), external dependencies (Solady, OpenZeppelin), test contracts, and deployment scripts.
 
 ## Core Protocol Components
 
@@ -59,7 +61,7 @@ The scope of audit involves the complete KAM protocol implementation in `src/`:
 
 **kRegistry** - Protocol registry managing singleton contracts, asset support, vault registration, and adapter coordination. Maintains bidirectional asset-kToken mappings and enforces protocol-wide access control.
 
-**kStakingVault** - ERC20 vault with dual accounting implementing automatic yield distribution. Features modular architecture through diamond pattern, batch request processing, and CREATE2 deterministic deployment of batch receivers.
+**kStakingVault** - ERC20 vault with dual accounting implementing automatic yield distribution. Features modular architecture through MultiFacetProxy pattern with ReaderModule, batch request processing, and CREATE2 deterministic deployment of batch receivers.
 
 **kBatchReceiver** - Minimal proxy contracts deployed per batch for isolated asset distribution. Implements one-time initialization and secure asset distribution with batch ID validation.
 
@@ -75,7 +77,7 @@ The scope of audit involves the complete KAM protocol implementation in `src/`:
 
 **Explicit Approval Pattern** - Adapters receive temporary approvals only during settlement execution, immediately revoked afterward for security.
 
-**Role-Based Access Control** - Comprehensive role system implemented through Solady's OwnableRoles including:
+**Role-Based Access Control** - Comprehensive role system implemented through Solady's OptimizedOwnableRoles including:
 - Owner: Protocol ownership and ultimate control
 - Admin: Administrative functions and upgrades  
 - Emergency Admin: Pause functionality and emergency operations
@@ -84,7 +86,7 @@ The scope of audit involves the complete KAM protocol implementation in `src/`:
 - Relayer: Settlement proposal creation
 - Guardian: Settlement proposal cancellation
 
-**Modular Vault System** - Vaults implement diamond pattern with separate modules for batch processing, claim management, and fee collection.
+**Modular Vault System** - Vaults implement MultiFacetProxy pattern with ReaderModule for state queries, while core functionality remains in the main contract.
 
 ## Technical Architecture
 
@@ -95,9 +97,9 @@ The scope of audit involves the complete KAM protocol implementation in `src/`:
 **Solady Dependencies** - Protocol extensively uses Solady library for gas optimization and security:
 - `SafeTransferLib` for secure token transfers
 - `ReentrancyGuardTransient` for gas-efficient reentrancy protection  
-- `FixedPointMathLib` for precision arithmetic
-- `EnumerableSetLib` for efficient set operations
-- `OwnableRoles` for role-based access control
+- `OptimizedFixedPointMathLib` for precision arithmetic
+- `OptimizedBytes32EnumerableSetLib` for efficient set operations
+- `OptimizedOwnableRoles` for role-based access control
 
 **Extsload Pattern** - `kMinter` implements Extsload for storage reading optimization, allowing efficient cross-contract storage access without additional SLOAD operations.
 
@@ -115,7 +117,7 @@ The scope of audit involves the complete KAM protocol implementation in `src/`:
 
 **ERC-7201 Storage Collision Risks** - While ERC-7201 prevents most storage collisions, incorrect namespace calculations or implementation errors could lead to storage overwrites during upgrades.
 
-**Diamond Pattern Security** - The modular vault architecture using MultiFacetProxy requires careful validation of function selector conflicts and delegation call security. Malicious or incorrectly implemented modules could compromise the entire vault.
+**MultiFacetProxy Security** - The modular vault architecture using MultiFacetProxy requires careful validation of function selector conflicts and delegation call security. The ReaderModule integration must maintain proper access controls and state consistency.
 
 **Transient Storage Dependencies** - The protocol's reliance on Solidity 0.8.30's transient storage for reentrancy protection creates a hard dependency on specific compiler behavior and EVM implementations that support TSTORE/TLOAD.
 

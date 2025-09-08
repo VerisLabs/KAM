@@ -103,9 +103,8 @@ deployments/
 3. **05**: Deploy kTokens (admin calls required)
 4. **06**: Deploy vault modules
 5. **07**: Deploy vaults (DN, Alpha, Beta)
-6. **08**: Register modules (admin calls required)
-7. **09**: Deploy adapters
-8. **10**: Configure protocol (admin calls required)
+6. **08**: Deploy adapters
+7. **09**: Configure protocol (executes vault registration)
 
 Scripts automatically read previous deployment addresses and validate dependencies.
 
@@ -129,12 +128,9 @@ forge script script/deployment/05_DeployTokens.s.sol --rpc-url mainnet
 forge script script/deployment/06_DeployVaultModules.s.sol --rpc-url mainnet
 forge script script/deployment/07_DeployVaults.s.sol --rpc-url mainnet
 
-# Module registration (requires admin calls)
-forge script script/deployment/08_RegisterModules.s.sol --rpc-url mainnet
-
-# Adapters and final config (requires admin calls)
-forge script script/deployment/09_DeployAdapters.s.sol --rpc-url mainnet
-forge script script/deployment/10_ConfigureProtocol.s.sol --rpc-url mainnet
+# Adapters and final config (executes automatically)
+forge script script/deployment/08_DeployAdapters.s.sol --rpc-url mainnet
+forge script script/deployment/09_ConfigureProtocol.s.sol --rpc-url mainnet
 ```
 
 ## Post-Deployment Configuration

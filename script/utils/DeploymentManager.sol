@@ -121,70 +121,70 @@ abstract contract DeploymentManager is Script {
         output.network = json.readString(".network");
         output.timestamp = json.readUint(".timestamp");
 
-        // Parse contract addresses (use try/catch pattern for missing addresses)
-        try vm.parseJson(json, ".contracts.ERC1967Factory") returns (bytes memory data) {
-            output.contracts.ERC1967Factory = abi.decode(data, (address));
-        } catch { }
+        // Parse contract addresses (check if keys exist before reading)
+        if (json.keyExists(".contracts.ERC1967Factory")) {
+            output.contracts.ERC1967Factory = json.readAddress(".contracts.ERC1967Factory");
+        }
 
-        try vm.parseJson(json, ".contracts.kRegistryImpl") returns (bytes memory data) {
-            output.contracts.kRegistryImpl = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.kRegistryImpl")) {
+            output.contracts.kRegistryImpl = json.readAddress(".contracts.kRegistryImpl");
+        }
 
-        try vm.parseJson(json, ".contracts.kRegistry") returns (bytes memory data) {
-            output.contracts.kRegistry = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.kRegistry")) {
+            output.contracts.kRegistry = json.readAddress(".contracts.kRegistry");
+        }
 
-        try vm.parseJson(json, ".contracts.kMinterImpl") returns (bytes memory data) {
-            output.contracts.kMinterImpl = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.kMinterImpl")) {
+            output.contracts.kMinterImpl = json.readAddress(".contracts.kMinterImpl");
+        }
 
-        try vm.parseJson(json, ".contracts.kMinter") returns (bytes memory data) {
-            output.contracts.kMinter = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.kMinter")) {
+            output.contracts.kMinter = json.readAddress(".contracts.kMinter");
+        }
 
-        try vm.parseJson(json, ".contracts.kAssetRouterImpl") returns (bytes memory data) {
-            output.contracts.kAssetRouterImpl = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.kAssetRouterImpl")) {
+            output.contracts.kAssetRouterImpl = json.readAddress(".contracts.kAssetRouterImpl");
+        }
 
-        try vm.parseJson(json, ".contracts.kAssetRouter") returns (bytes memory data) {
-            output.contracts.kAssetRouter = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.kAssetRouter")) {
+            output.contracts.kAssetRouter = json.readAddress(".contracts.kAssetRouter");
+        }
 
-        try vm.parseJson(json, ".contracts.kUSD") returns (bytes memory data) {
-            output.contracts.kUSD = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.kUSD")) {
+            output.contracts.kUSD = json.readAddress(".contracts.kUSD");
+        }
 
-        try vm.parseJson(json, ".contracts.kBTC") returns (bytes memory data) {
-            output.contracts.kBTC = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.kBTC")) {
+            output.contracts.kBTC = json.readAddress(".contracts.kBTC");
+        }
 
-        try vm.parseJson(json, ".contracts.readerModule") returns (bytes memory data) {
-            output.contracts.readerModule = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.readerModule")) {
+            output.contracts.readerModule = json.readAddress(".contracts.readerModule");
+        }
 
-        try vm.parseJson(json, ".contracts.kStakingVaultImpl") returns (bytes memory data) {
-            output.contracts.kStakingVaultImpl = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.kStakingVaultImpl")) {
+            output.contracts.kStakingVaultImpl = json.readAddress(".contracts.kStakingVaultImpl");
+        }
 
-        try vm.parseJson(json, ".contracts.dnVault") returns (bytes memory data) {
-            output.contracts.dnVault = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.dnVault")) {
+            output.contracts.dnVault = json.readAddress(".contracts.dnVault");
+        }
 
-        try vm.parseJson(json, ".contracts.alphaVault") returns (bytes memory data) {
-            output.contracts.alphaVault = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.alphaVault")) {
+            output.contracts.alphaVault = json.readAddress(".contracts.alphaVault");
+        }
 
-        try vm.parseJson(json, ".contracts.betaVault") returns (bytes memory data) {
-            output.contracts.betaVault = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.betaVault")) {
+            output.contracts.betaVault = json.readAddress(".contracts.betaVault");
+        }
 
-        try vm.parseJson(json, ".contracts.custodialAdapterImpl") returns (bytes memory data) {
-            output.contracts.custodialAdapterImpl = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.custodialAdapterImpl")) {
+            output.contracts.custodialAdapterImpl = json.readAddress(".contracts.custodialAdapterImpl");
+        }
 
-        try vm.parseJson(json, ".contracts.custodialAdapter") returns (bytes memory data) {
-            output.contracts.custodialAdapter = abi.decode(data, (address));
-        } catch { }
+        if (json.keyExists(".contracts.custodialAdapter")) {
+            output.contracts.custodialAdapter = json.readAddress(".contracts.custodialAdapter");
+        }
 
         return output;
     }
