@@ -1,5 +1,5 @@
 # IkRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/interfaces/IkRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/interfaces/IkRegistry.sol)
 
 
 ## Functions
@@ -37,7 +37,9 @@ function registerAsset(
     string memory name,
     string memory symbol,
     address asset,
-    bytes32 id
+    bytes32 id,
+    uint256 maxMintPerBatch,
+    uint256 maxRedeemPerBatch
 )
     external
     payable
@@ -51,6 +53,8 @@ function registerAsset(
 |`symbol`|`string`|The symbol for the kToken (e.g., "kUSDC")|
 |`asset`|`address`|The underlying asset contract address to register|
 |`id`|`bytes32`|The unique identifier for singleton asset storage (e.g., USDC, WBTC)|
+|`maxMintPerBatch`|`uint256`||
+|`maxRedeemPerBatch`|`uint256`||
 
 **Returns**
 
@@ -711,6 +715,71 @@ function setTreasury(address treasury_) external payable;
 |Name|Type|Description|
 |----|----|-----------|
 |`treasury_`|`address`|The new treasury address|
+
+
+### setAssetBatchLimits
+
+Sets maximum mint and redeem amounts per batch for an asset
+
+*Only callable by ADMIN_ROLE. Helps manage liquidity and risk for high-volume assets*
+
+
+```solidity
+function setAssetBatchLimits(address asset, uint256 maxMintPerBatch_, uint256 maxRedeemPerBatch_) external payable;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The asset address to set limits for|
+|`maxMintPerBatch_`|`uint256`|Maximum amount of the asset that can be minted in a single batch|
+|`maxRedeemPerBatch_`|`uint256`|Maximum amount of the asset that can be redeemed in a single batch|
+
+
+### getMaxMintPerBatch
+
+Gets the maximum mint amount per batch for an asset
+
+*Used to enforce minting limits for liquidity and risk management*
+
+
+```solidity
+function getMaxMintPerBatch(address asset) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The asset address to query|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|The maximum mint amount per batch|
+
+
+### getMaxRedeemPerBatch
+
+Gets the maximum redeem amount per batch for an asset
+
+*Used to enforce redemption limits for liquidity and risk management*
+
+
+```solidity
+function getMaxRedeemPerBatch(address asset) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The asset address to query|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|The maximum redeem amount per batch|
 
 
 ## Events

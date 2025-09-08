@@ -1,5 +1,5 @@
 # Constants
-[Git Source](https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/errors/Errors.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/errors/Errors.sol)
 
 ### KASSETROUTER_ALREADY_REGISTERED
 *All error codes use contract-specific prefixes for easier debugging:
@@ -416,6 +416,18 @@ string constant KMINTER_ZERO_ADDRESS = "M10";
 
 ```solidity
 string constant KMINTER_ZERO_AMOUNT = "M11";
+```
+
+### KMINTER_BATCH_MINT_REACHED
+
+```solidity
+string constant KMINTER_BATCH_MINT_REACHED = "M12";
+```
+
+### KMINTER_BATCH_REDEEM_REACHED
+
+```solidity
+string constant KMINTER_BATCH_REDEEM_REACHED = "M13";
 ```
 
 ### KREGISTRY_ADAPTER_ALREADY_SET

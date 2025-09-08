@@ -1,5 +1,5 @@
 # kRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/kRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/kRegistry.sol)
 
 **Inherits:**
 [IkRegistry](/src/interfaces/IkRegistry.sol/interface.IkRegistry.md), [Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [OptimizedOwnableRoles](/src/libraries/OptimizedOwnableRoles.sol/abstract.OptimizedOwnableRoles.md)
@@ -275,15 +275,30 @@ function grantRelayerRole(address relayer_) external payable;
 |`relayer_`|`address`|The address to grant relayer privileges|
 
 
+### setAssetBatchLimits
+
+Set the maximum mint and redeem limits for a given asset
+
+*Only callable by ADMIN_ROLE*
+
+
+```solidity
+function setAssetBatchLimits(address asset_, uint256 maxMintPerBatch_, uint256 maxRedeemPerBatch_) external payable;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset_`|`address`|The asset address|
+|`maxMintPerBatch_`|`uint256`|The maximum mint amount per batch|
+|`maxRedeemPerBatch_`|`uint256`|The maximum redeem amount per batch|
+
+
 ### registerAsset
 
-Registers a new underlying asset in the protocol and deploys its corresponding kToken
+Register support for a new asset and its corresponding kToken
 
-*This function performs critical asset onboarding: (1) Validates the asset isn't already registered,
-(2) Adds asset to the supported set and singleton registry, (3) Deploys a new kToken contract with
-matching decimals, (4) Establishes bidirectional asset-kToken mapping, (5) Grants minting privileges
-to kMinter. The function automatically inherits decimals from the underlying asset for consistency.
-Only callable by ADMIN_ROLE to maintain protocol security and prevent unauthorized token creation.*
+*Only callable by ADMIN_ROLE, establishes bidirectional mapping*
 
 
 ```solidity
@@ -291,7 +306,9 @@ function registerAsset(
     string memory name_,
     string memory symbol_,
     address asset,
-    bytes32 id
+    bytes32 id,
+    uint256 maxMintPerBatch,
+    uint256 maxRedeemPerBatch
 )
     external
     payable
@@ -303,14 +320,10 @@ function registerAsset(
 |----|----|-----------|
 |`name_`|`string`||
 |`symbol_`|`string`||
-|`asset`|`address`|The underlying asset contract address to register|
-|`id`|`bytes32`|The unique identifier for singleton asset storage (e.g., USDC, WBTC)|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|The deployed kToken contract address|
+|`asset`|`address`|Underlying asset address (e.g., USDC, WBTC)|
+|`id`|`bytes32`||
+|`maxMintPerBatch`|`uint256`||
+|`maxRedeemPerBatch`|`uint256`||
 
 
 ### registerVault
@@ -429,12 +442,51 @@ function setHurdleRate(address asset, uint16 hurdleRate) external payable;
 |`hurdleRate`|`uint16`|The hurdle rate in basis points (100 = 1%)|
 
 
+### getMaxMintPerBatch
+
+Gets the max mint per batch for a specific asset
+
+
+```solidity
+function getMaxMintPerBatch(address asset) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The asset address|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|The max mint per batch|
+
+
+### getMaxRedeemPerBatch
+
+Gets the max redeem per batch for a specific asset
+
+
+```solidity
+function getMaxRedeemPerBatch(address asset) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The asset address|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|The max redeem per batch|
+
+
 ### getHurdleRate
 
 Gets the hurdle rate for a specific asset
-
-*Returns minimum performance threshold in basis points for yield distribution.
-Asset must be registered to query hurdle rate.*
 
 
 ```solidity
@@ -444,7 +496,7 @@ function getHurdleRate(address asset) external view returns (uint16);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`asset`|`address`|The asset address to query|
+|`asset`|`address`|The asset address|
 
 **Returns**
 
@@ -455,9 +507,9 @@ function getHurdleRate(address asset) external view returns (uint16);
 
 ### getContractById
 
-Retrieves a singleton contract address by identifier
+Get a singleton contract address by its identifier
 
-*Reverts if contract not registered. Used for protocol contract discovery.*
+*Reverts if contract not set*
 
 
 ```solidity
@@ -467,13 +519,13 @@ function getContractById(bytes32 id) public view returns (address);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`id`|`bytes32`|Contract identifier (e.g., K_MINTER, K_ASSET_ROUTER)|
+|`id`|`bytes32`|Contract identifier (e.g., K_MINTER, K_BATCH)|
 
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`address`|The contract address|
+|`<none>`|`address`|Contract address|
 
 
 ### getAssetById
@@ -1147,6 +1199,8 @@ struct kRegistryStorage {
     OptimizedAddressEnumerableSetLib.AddressSet supportedAssets;
     OptimizedAddressEnumerableSetLib.AddressSet allVaults;
     address treasury;
+    mapping(address => uint256) maxMintPerBatch;
+    mapping(address => uint256) maxRedeemPerBatch;
     mapping(bytes32 => address) singletonContracts;
     mapping(address => uint8 vaultType) vaultType;
     mapping(address => mapping(uint8 vaultType => address)) assetToVault;

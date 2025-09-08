@@ -1,11 +1,14 @@
 # OptimizedFixedPointMathLib
-[Git Source](https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/libraries/OptimizedFixedPointMathLib.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/libraries/OptimizedFixedPointMathLib.sol)
 
 **Authors:**
-Solady (https://github.com/vectorized/solady/blob/main/src/utils/OptimizedFixedPointMathLib.sol), Modified from Solmate
-(https://github.com/transmissions11/solmate/blob/main/src/utils/OptimizedFixedPointMathLib.sol)
+Originally by Solady (https://github.com/vectorized/solady/blob/main/src/utils/FixedPointMathLib.sol), Modified from Solmate (https://github.com/transmissions11/solmate/blob/main/src/utils/FixedPointMathLib.sol)
 
 Arithmetic library with operations for fixed-point numbers.
+
+*NOTE: This is a reduced version of the original Solady library.
+We have extracted only the necessary fixed-point math functionality to optimize contract size.
+Original code by Solady, modified for size optimization.*
 
 
 ## Functions

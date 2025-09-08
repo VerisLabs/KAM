@@ -1,20 +1,17 @@
 # OptimizedOwnableRoles
-[Git Source](https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/libraries/OptimizedOwnableRoles.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/libraries/OptimizedOwnableRoles.sol)
 
 **Inherits:**
 [Ownable](/src/vendor/Ownable.sol/abstract.Ownable.md)
 
 **Author:**
-Solady (https://github.com/vectorized/solady/blob/main/src/auth/OptimizedOwnableRoles.sol)
+Originally by Solady (https://github.com/vectorized/solady/blob/main/src/auth/OwnableRoles.sol)
 
 Simple single owner and multiroles authorization mixin.
 
-*Note:
-This implementation does NOT auto-initialize the owner to `msg.sender`.
-You MUST call the `_initializeOwner` in the constructor / initializer.
-While the ownable portion follows
-[EIP-173](https://eips.ethereum.org/EIPS/eip-173) for compatibility,
-the nomenclature for the 2-step ownership handover may be unique to this codebase.*
+*NOTE: This is a reduced version of the original Solady library.
+We have extracted only the necessary roles functionality to optimize contract size.
+Original code by Solady, modified for size optimization.*
 
 
 ## State Variables

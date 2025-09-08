@@ -1,19 +1,14 @@
 # OptimizedAddressEnumerableSetLib
-[Git Source](https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/libraries/OptimizedAddressEnumerableSetLib.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/libraries/OptimizedAddressEnumerableSetLib.sol)
 
 **Author:**
-Solady (https://github.com/vectorized/solady/blob/main/src/utils/EnumerableSetLib.sol)
+Originally by Solady (https://github.com/vectorized/solady/blob/main/src/utils/EnumerableSetLib.sol)
 
 Library for managing enumerable sets in storage.
 
-*Note:
-In many applications, the number of elements in an enumerable set is small.
-This enumerable set implementation avoids storing the length and indices
-for up to 3 elements. Once the length exceeds 3 for the first time, the length
-and indices will be initialized. The amortized cost of adding elements is O(1).
-The AddressSet implementation packs the length with the 0th entry.
-All enumerable sets except Uint8Set use a pop and swap mechanism to remove elements.
-This means that the iteration order of elements can change between element removals.*
+*NOTE: This is a reduced version of the original Solady library.
+We have extracted only the necessary functionality to optimize contract size.
+Original code by Solady, modified for size optimization.*
 
 
 ## State Variables

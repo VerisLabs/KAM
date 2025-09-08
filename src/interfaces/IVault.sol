@@ -63,7 +63,7 @@ interface IVault is IVaultBatch, IVaultClaim, IVaultFees {
     /// the open batch period before closure by relayers.
     /// @param requestId The unique identifier of the stake request to cancel (must be owned by caller)
     function cancelStakeRequest(bytes32 requestId) external payable;
-    
+
     /// @notice Cancels a pending unstake request and returns stkTokens to the user before batch settlement
     /// @dev This function allows users to reverse their unstaking request before batch processing by: (1) Validating
     /// the request exists, belongs to the caller, and remains in pending status, (2) Checking the associated batch
@@ -77,14 +77,14 @@ interface IVault is IVaultBatch, IVaultClaim, IVaultFees {
     /// @param requestId The unique identifier of the unstake request to cancel (must be owned by caller)
     function cancelUnstakeRequest(bytes32 requestId) external payable;
 
-    
     /// @notice Controls the vault's operational state for emergency situations and maintenance periods
     /// @dev This function provides critical safety controls for vault operations by: (1) Enabling emergency admins
     /// to pause all user-facing operations during security incidents, market anomalies, or critical upgrades,
     /// (2) Preventing new stake/unstake requests and claims while preserving existing vault state and user balances,
     /// (3) Maintaining read-only access to vault data and view functions during pause periods for transparency,
     /// (4) Allowing authorized emergency admins to resume operations once issues are resolved or maintenance completed.
-    /// When paused, all state-changing functions (requestStake, requestUnstake, cancelStakeRequest, cancelUnstakeRequest,
+    /// When paused, all state-changing functions (requestStake, requestUnstake, cancelStakeRequest,
+    /// cancelUnstakeRequest,
     /// claimStakedShares, claimUnstakedAssets) will revert with KSTAKINGVAULT_IS_PAUSED error. The pause mechanism
     /// serves as a circuit breaker protecting user funds during unexpected events while maintaining protocol integrity.
     /// Only emergency admins have permission to toggle this state, ensuring rapid response capabilities during critical

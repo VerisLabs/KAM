@@ -1,5 +1,5 @@
 # kStakingVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/kStakingVault/kStakingVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/kStakingVault/kStakingVault.sol)
 
 **Inherits:**
 [IVault](/src/interfaces/IVault.sol/interface.IVault.md), [BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md), [Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [Ownable](/src/vendor/Ownable.sol/abstract.Ownable.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.md)
@@ -133,7 +133,17 @@ function requestUnstake(address to, uint256 stkTokenAmount) external payable ret
 
 ### cancelStakeRequest
 
-Cancels a staking request
+Cancels a pending stake request and returns kTokens to the user before batch settlement
+
+*This function allows users to reverse their staking request before batch processing by: (1) Validating
+the request exists, belongs to the caller, and remains in pending status, (2) Checking the associated batch
+hasn't been closed or settled to prevent manipulation of finalized operations, (3) Updating request status
+to cancelled and removing from user's active requests tracking, (4) Reducing total pending stake amount
+to maintain accurate vault accounting, (5) Notifying kAssetRouter to reverse the virtual asset movement
+from staking vault back to DN vault, ensuring proper asset allocation, (6) Returning the originally deposited
+kTokens to the user's address. This cancellation mechanism provides flexibility for users who change their
+mind or need immediate liquidity before the batch settlement occurs. The operation is only valid during
+the open batch period before closure by relayers.*
 
 
 ```solidity
@@ -143,12 +153,22 @@ function cancelStakeRequest(bytes32 requestId) external payable;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`requestId`|`bytes32`|Request ID to cancel|
+|`requestId`|`bytes32`|The unique identifier of the stake request to cancel (must be owned by caller)|
 
 
 ### cancelUnstakeRequest
 
-Cancels an unstaking request
+Cancels a pending unstake request and returns stkTokens to the user before batch settlement
+
+*This function allows users to reverse their unstaking request before batch processing by: (1) Validating
+the request exists, belongs to the caller, and remains in pending status, (2) Checking the associated batch
+hasn't been closed or settled to prevent reversal of finalized operations, (3) Updating request status
+to cancelled and removing from user's active requests tracking, (4) Notifying kAssetRouter to reverse the
+share redemption request, maintaining proper share accounting across the protocol, (5) Returning the originally
+transferred stkTokens from the vault back to the user's address. This cancellation mechanism enables users
+to maintain their staked position if market conditions change or they reconsider their unstaking decision.
+The stkTokens are returned without any yield impact since the batch hasn't settled. The operation is only
+valid during the open batch period before closure by relayers.*
 
 
 ```solidity
@@ -158,7 +178,7 @@ function cancelUnstakeRequest(bytes32 requestId) external payable;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`requestId`|`bytes32`|Request ID to cancel|
+|`requestId`|`bytes32`|The unique identifier of the unstake request to cancel (must be owned by caller)|
 
 
 ### createNewBatch
@@ -424,7 +444,16 @@ function _validateTimestamp(uint256 timestamp, uint256 lastTimestamp) private vi
 
 ### claimStakedShares
 
-Claims stkTokens from a settled staking batch
+Claims stkTokens from a settled staking batch at the finalized share price
+
+*This function completes the staking process by distributing stkTokens to users after batch settlement.
+Process: (1) Validates batch has been settled and share prices are finalized to ensure accurate distribution,
+(2) Verifies request ownership and pending status to prevent unauthorized or duplicate claims, (3) Calculates
+stkToken amount based on original kToken deposit and settled net share price (after fees), (4) Mints stkTokens
+to specified recipient reflecting their proportional vault ownership, (5) Marks request as claimed to prevent
+future reprocessing. The net share price accounts for management and performance fees, ensuring users receive
+their accurate yield-adjusted position. stkTokens are ERC20-compatible shares that continue accruing yield
+through share price appreciation until unstaking.*
 
 
 ```solidity
@@ -434,13 +463,23 @@ function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`batchId`|`bytes32`|Batch ID to claim from|
-|`requestId`|`bytes32`|Request ID to claim|
+|`batchId`|`bytes32`|The settled batch identifier containing this staking request|
+|`requestId`|`bytes32`|The specific staking request identifier to claim rewards for|
 
 
 ### claimUnstakedAssets
 
-Claims kTokens from a settled unstaking batch (simplified implementation)
+Claims kTokens plus accrued yield from a settled unstaking batch through batch receiver distribution
+
+*This function completes the unstaking process by distributing redeemed assets to users after settlement.
+Process: (1) Validates batch settlement and asset distribution readiness through batch receiver verification,
+(2) Confirms request ownership and pending status to ensure authorized claiming, (3) Calculates kToken amount
+based on original stkToken redemption and settled share price including yield, (4) Burns locked stkTokens
+that were held during settlement period, (5) Triggers batch receiver to transfer calculated kTokens to
+recipient,
+(6) Marks request as claimed completing the unstaking cycle. The batch receiver pattern ensures asset isolation
+between settlement periods while enabling efficient distribution. Users receive their original investment plus
+proportional share of vault yields earned during their staking period.*
 
 
 ```solidity
@@ -450,15 +489,22 @@ function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payabl
 
 |Name|Type|Description|
 |----|----|-----------|
-|`batchId`|`bytes32`|Batch ID to claim from|
-|`requestId`|`bytes32`|Request ID to claim|
+|`batchId`|`bytes32`|The settled batch identifier containing this unstaking request|
+|`requestId`|`bytes32`|The specific unstaking request identifier to claim assets for|
 
 
 ### setHardHurdleRate
 
-Sets the hard hurdle rate
+Configures the hurdle rate fee calculation mechanism for performance fee determination
 
-*If true, performance fees will only be charged to the excess return*
+*This function switches between soft and hard hurdle rate modes affecting performance fee calculations.
+Hurdle Rate Modes: (1) Soft Hurdle (_isHard = false): Performance fees are charged on all profits when returns
+exceed the hurdle rate threshold, providing simpler fee calculation while maintaining performance incentives,
+(2) Hard Hurdle (_isHard = true): Performance fees are only charged on the excess return above the hurdle rate,
+ensuring users keep the full hurdle rate return before any performance fees. The hurdle rate itself is set
+globally in the registry per asset, providing consistent benchmarks across vaults. This mechanism ensures
+vault operators are only rewarded for generating returns above market expectations, protecting user interests
+while incentivizing superior performance.*
 
 
 ```solidity
@@ -468,14 +514,20 @@ function setHardHurdleRate(bool _isHard) external;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_isHard`|`bool`|Whether the hard hurdle rate is enabled|
+|`_isHard`|`bool`|True for hard hurdle (fees only on excess), false for soft hurdle (fees on all profits)|
 
 
 ### setManagementFee
 
-Sets the management fee
+Sets the annual management fee rate charged on assets under management
 
-*Fee is a basis point (1% = 100)*
+*This function configures the periodic fee charged regardless of vault performance, compensating operators
+for ongoing vault management, risk monitoring, and operational costs. Management fees are calculated based on
+time elapsed since last fee charge and total assets under management. Process: (1) Validates fee rate does not
+exceed maximum allowed to protect users from excessive fees, (2) Updates stored management fee rate for future
+calculations, (3) Emits event for transparency and off-chain tracking. The fee accrues continuously and is
+realized during batch settlements, ensuring users see accurate net returns. Management fees are deducted from
+vault assets before performance fee calculations, following traditional fund management practices.*
 
 
 ```solidity
@@ -485,14 +537,20 @@ function setManagementFee(uint16 _managementFee) external;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_managementFee`|`uint16`|The new management fee|
+|`_managementFee`|`uint16`|Annual management fee rate in basis points (1% = 100 bp, max 10000 bp)|
 
 
 ### setPerformanceFee
 
-Sets the performance fee
+Sets the performance fee rate charged on vault returns above hurdle rates
 
-*Fee is a basis point (1% = 100)*
+*This function configures the success fee charged when vault performance exceeds benchmark hurdle rates,
+aligning operator incentives with user returns. Performance fees are calculated during settlement based on
+share price appreciation above the watermark (highest previous share price) and hurdle rate requirements.
+Process: (1) Validates fee rate is within acceptable bounds for user protection, (2) Updates performance fee
+rate for future calculations, (3) Emits tracking event for transparency. The fee applies only to new high
+watermarks, preventing double-charging on recovered losses. Combined with hurdle rates, this ensures operators
+are rewarded for generating superior risk-adjusted returns while protecting users from excessive fee extraction.*
 
 
 ```solidity
@@ -502,14 +560,20 @@ function setPerformanceFee(uint16 _performanceFee) external;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_performanceFee`|`uint16`|The new performance fee|
+|`_performanceFee`|`uint16`|Performance fee rate in basis points charged on excess returns (max 10000 bp)|
 
 
 ### notifyManagementFeesCharged
 
-Notifies the module that management fees have been charged from backend
+Updates the timestamp tracking for management fee calculations after backend fee processing
 
-*Should only be called by the vault*
+*This function maintains accurate management fee accrual by recording when fees were last processed.
+Backend Coordination: (1) Off-chain systems calculate and process management fees based on time elapsed and
+assets under management, (2) Fees are deducted from vault assets through settlement mechanisms, (3) This
+function
+updates the tracking timestamp to prevent double-charging in future calculations. The timestamp validation
+ensures logical progression and prevents manipulation. Management fees accrue continuously, and proper timestamp
+tracking is essential for accurate pro-rata fee calculations across all vault participants.*
 
 
 ```solidity
@@ -519,14 +583,21 @@ function notifyManagementFeesCharged(uint64 _timestamp) external;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_timestamp`|`uint64`|The timestamp of the fee charge|
+|`_timestamp`|`uint64`|The timestamp when management fees were processed (must be >= last timestamp, <= current time)|
 
 
 ### notifyPerformanceFeesCharged
 
-Notifies the module that performance fees have been charged from backend
+Updates the timestamp tracking for performance fee calculations after backend fee processing
 
-*Should only be called by the vault*
+*This function maintains accurate performance fee tracking by recording when performance fees were last
+calculated and charged. Backend Processing: (1) Off-chain systems evaluate vault performance against watermarks
+and hurdle rates, (2) Performance fees are calculated on excess returns and deducted during settlement,
+(3) This notification updates tracking timestamp and potentially adjusts watermark levels. The timestamp ensures
+proper sequencing of performance evaluations and prevents fee calculation errors. Performance fees are
+event-driven
+based on new high watermarks, making accurate timestamp tracking crucial for fair fee assessment across all
+users.*
 
 
 ```solidity
@@ -536,7 +607,7 @@ function notifyPerformanceFeesCharged(uint64 _timestamp) external;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_timestamp`|`uint64`|The timestamp of the fee charge|
+|`_timestamp`|`uint64`|The timestamp when performance fees were processed (must be >= last timestamp, <= current time)|
 
 
 ### _updateGlobalWatermark
@@ -575,9 +646,19 @@ function _createStakeRequestId(address user, uint256 amount, uint256 timestamp) 
 
 ### setPaused
 
-Sets the pause state of the contract
+Controls the vault's operational state for emergency situations and maintenance periods
 
-*Only callable internally by inheriting contracts*
+*This function provides critical safety controls for vault operations by: (1) Enabling emergency admins
+to pause all user-facing operations during security incidents, market anomalies, or critical upgrades,
+(2) Preventing new stake/unstake requests and claims while preserving existing vault state and user balances,
+(3) Maintaining read-only access to vault data and view functions during pause periods for transparency,
+(4) Allowing authorized emergency admins to resume operations once issues are resolved or maintenance completed.
+When paused, all state-changing functions (requestStake, requestUnstake, cancelStakeRequest,
+cancelUnstakeRequest,
+claimStakedShares, claimUnstakedAssets) will revert with KSTAKINGVAULT_IS_PAUSED error. The pause mechanism
+serves as a circuit breaker protecting user funds during unexpected events while maintaining protocol integrity.
+Only emergency admins have permission to toggle this state, ensuring rapid response capabilities during critical
+situations without compromising decentralization principles.*
 
 
 ```solidity
@@ -587,7 +668,7 @@ function setPaused(bool paused_) external;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`paused_`|`bool`|New pause state|
+|`paused_`|`bool`|The desired operational state (true = pause operations, false = resume operations)|
 
 
 ### _authorizeUpgrade

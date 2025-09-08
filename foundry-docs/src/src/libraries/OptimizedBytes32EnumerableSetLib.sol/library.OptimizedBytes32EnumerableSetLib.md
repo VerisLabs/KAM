@@ -1,12 +1,14 @@
 # OptimizedBytes32EnumerableSetLib
-[Git Source](https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/libraries/OptimizedBytes32EnumerableSetLib.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/libraries/OptimizedBytes32EnumerableSetLib.sol)
 
 **Author:**
-Solady(https://github.com/Vectorized/solady/blob/main/src/utils/OptimizedBytes32EnumerableSetLib.sol)
+Originally by Solady (https://github.com/Vectorized/solady/blob/main/src/utils/EnumerableSetLib.sol)
 
 Library for managing enumerable sets in storage.
 
-*The library size has been reduced to only use bytes32 sets*
+*NOTE: This is a reduced version of the original Solady library.
+We have extracted only the bytes32 set functionality to optimize contract size.
+Original code by Solady, modified for size optimization.*
 
 
 ## State Variables

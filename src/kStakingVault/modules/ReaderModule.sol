@@ -9,12 +9,14 @@ import {
     KSTAKINGVAULT_VAULT_CLOSED,
     KSTAKINGVAULT_VAULT_SETTLED
 } from "src/errors/Errors.sol";
+
+import { IVaultReader } from "src/interfaces/modules/IVaultReader.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title ReaderModule
 /// @notice Contains all the public getters for the Staking Vault
-contract ReaderModule is BaseVault, Extsload {
+contract ReaderModule is BaseVault, Extsload, IVaultReader {
     using OptimizedFixedPointMathLib for uint256;
 
     /// @notice Interval for management fee (1 month)
@@ -28,30 +30,26 @@ contract ReaderModule is BaseVault, Extsload {
     uint256 constant SECS_PER_YEAR = 31_556_952;
 
     /// GENERAL
+    /// @inheritdoc IVaultReader
     function registry() external view returns (address) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         require(_getInitialized($), KSTAKINGVAULT_NOT_INITIALIZED);
         return $.registry;
     }
 
-    /// @notice Returns the underlying asset address (for compatibility)
-    /// @return Asset address
+    /// @inheritdoc IVaultReader
     function asset() external view returns (address) {
         return _getBaseVaultStorage().kToken;
     }
 
-    /// @notice Returns the underlying asset address
-    /// @return Asset address
+    /// @inheritdoc IVaultReader
     function underlyingAsset() external view returns (address) {
         return _getBaseVaultStorage().underlyingAsset;
     }
 
     /// FEES
 
-    /// @notice Computes the last fee batch
-    /// @return managementFees The management fees for the last batch
-    /// @return performanceFees The performance fees for the last batch
-    /// @return totalFees The total fees for the last batch
+    /// @inheritdoc IVaultReader
     function computeLastBatchFees()
         external
         view
@@ -113,76 +111,62 @@ contract ReaderModule is BaseVault, Extsload {
         return (managementFees, performanceFees, totalFees);
     }
 
-    /// @notice Returns the last time management fees were charged
-    /// @return lastFeesChargedManagement Timestamp of last management fee charge
+    /// @inheritdoc IVaultReader
     function lastFeesChargedManagement() public view returns (uint256) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _getLastFeesChargedManagement($);
     }
 
-    /// @notice Returns the last time performance fees were charged
-    /// @return lastFeesChargedPerformance Timestamp of last performance fee charge
+    /// @inheritdoc IVaultReader
     function lastFeesChargedPerformance() public view returns (uint256) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _getLastFeesChargedPerformance($);
     }
 
-    /// @notice Returns the current hurdle rate used for performance fee calculations
-    /// @return The hurdle rate in basis points (e.g., 500 = 5%)
+    /// @inheritdoc IVaultReader
     function hurdleRate() external view returns (uint16) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _getHurdleRate($);
     }
 
-    /// @notice Returns the current performance fee percentage
-    /// @return The performance fee in basis points (e.g., 2000 = 20%)
+    /// @inheritdoc IVaultReader
     function performanceFee() external view returns (uint16) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _getPerformanceFee($);
     }
 
-    /// @notice Returns the next performance fee timestamp so the backend can schedule the fee collection
-    /// @return The next performance fee timestamp
+    /// @inheritdoc IVaultReader
     function nextPerformanceFeeTimestamp() external view returns (uint256) {
         return lastFeesChargedPerformance() + PERFORMANCE_FEE_INTERVAL;
     }
 
-    /// @notice Returns the next management fee timestamp so the backend can schedule the fee collection
-    /// @return The next management fee timestamp
+    /// @inheritdoc IVaultReader
     function nextManagementFeeTimestamp() external view returns (uint256) {
         return lastFeesChargedManagement() + MANAGEMENT_FEE_INTERVAL;
     }
 
-    /// @notice Returns the current management fee percentage
-    /// @return The management fee in basis points (e.g., 100 = 1%)
+    /// @inheritdoc IVaultReader
     function managementFee() external view returns (uint16) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _getManagementFee($);
     }
 
-    /// @notice Returns the high watermark for share price used in performance fee calculations
-    /// @return The share price watermark value
+    /// @inheritdoc IVaultReader
     function sharePriceWatermark() external view returns (uint256) {
         return _getBaseVaultStorage().sharePriceWatermark;
     }
 
-    /// @notice Returns whether the current batch is closed
-    /// @return Whether the current batch is closed
+    /// @inheritdoc IVaultReader
     function isBatchClosed() external view returns (bool) {
         return _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].isClosed;
     }
 
-    /// @notice Returns whether the current batch is settled
-    /// @return Whether the current batch is settled
+    /// @inheritdoc IVaultReader
     function isBatchSettled() external view returns (bool) {
         return _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].isSettled;
     }
 
-    /// @notice Returns the current batch ID, whether it is closed, and whether it is settled
-    /// @return batchId Current batch ID
-    /// @return batchReceiver Current batch receiver
-    /// @return isClosed Whether the current batch is closed
-    /// @return isSettled Whether the current batch is settled
+    /// @inheritdoc IVaultReader
     function getBatchIdInfo()
         external
         view
@@ -196,48 +180,39 @@ contract ReaderModule is BaseVault, Extsload {
         );
     }
 
-    /// @notice Returns the batch receiver for a given batch (alias for getBatchIdReceiver)
-    /// @return Batch receiver
+    /// @inheritdoc IVaultReader
     function getBatchReceiver(bytes32 batchId) external view returns (address) {
         return _getBaseVaultStorage().batches[batchId].batchReceiver;
     }
 
-    /// @notice Returns the batch receiver for a given batch (alias for getBatchIdReceiver)
-    /// @return Batch receiver
-    /// @dev Throws if the batch is settled
+    /// @inheritdoc IVaultReader
     function getSafeBatchReceiver(bytes32 batchId) external view returns (address) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         require(!$.batches[batchId].isSettled, KSTAKINGVAULT_VAULT_SETTLED);
         return $.batches[batchId].batchReceiver;
     }
 
-    /// @notice Calculates the price of stkTokens in underlying asset terms
-    /// @dev Uses the last total assets and total supply to calculate the price
-    /// @return price Price per stkToken in underlying asset terms
+    /// @inheritdoc IVaultReader
     function sharePrice() external view returns (uint256) {
         return _netSharePrice();
     }
 
-    /// @notice Returns the current total assets
-    /// @return Total assets currently deployed in strategies
+    /// @inheritdoc IVaultReader
     function totalAssets() external view returns (uint256) {
         return _totalAssets();
     }
 
-    /// @notice Returns the current total assets after fees
-    /// @return Total net assets currently deployed in strategies
+    /// @inheritdoc IVaultReader
     function totalNetAssets() external view returns (uint256) {
         return _totalNetAssets();
     }
 
-    /// @notice Returns the current batch
-    /// @return Batch
+    /// @inheritdoc IVaultReader
     function getBatchId() public view returns (bytes32) {
         return _getBaseVaultStorage().currentBatchId;
     }
 
-    /// @notice Returns the safe batch
-    /// @return Batch
+    /// @inheritdoc IVaultReader
     function getSafeBatchId() external view returns (bytes32) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         bytes32 batchId = getBatchId();
@@ -246,16 +221,12 @@ contract ReaderModule is BaseVault, Extsload {
         return batchId;
     }
 
-    /// @notice Converts a given amount of shares to assets
-    /// @param shares The amount of shares to convert
-    /// @return The equivalent amount of assets
+    /// @inheritdoc IVaultReader
     function convertToShares(uint256 shares) external view returns (uint256) {
         return _convertToShares(shares);
     }
 
-    /// @notice Converts a given amount of assets to shares
-    /// @param assets The amount of assets to convert
-    /// @return The equivalent amount of shares
+    /// @inheritdoc IVaultReader
     function convertToAssets(uint256 assets) external view returns (uint256) {
         return _convertToAssets(assets);
     }
@@ -263,14 +234,12 @@ contract ReaderModule is BaseVault, Extsload {
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the contract name
-    /// @return Contract name
+    /// @inheritdoc IVaultReader
     function contractName() external pure returns (string memory) {
         return "kStakingVault";
     }
 
-    /// @notice Returns the contract version
-    /// @return Contract version
+    /// @inheritdoc IVaultReader
     function contractVersion() external pure returns (string memory) {
         return "1.0.0";
     }

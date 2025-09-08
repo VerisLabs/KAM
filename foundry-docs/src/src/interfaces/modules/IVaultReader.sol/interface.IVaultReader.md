@@ -1,5 +1,5 @@
 # IVaultReader
-[Git Source](https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/interfaces/modules/IVaultReader.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/interfaces/modules/IVaultReader.sol)
 
 Read-only interface for querying vault state, calculations, and metrics without modifying contract state
 
@@ -381,6 +381,48 @@ function getSafeBatchId() external view returns (bytes32);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`bytes32`|Current batch ID (guaranteed to be valid and initialized)|
+
+
+### convertToShares
+
+Converts a given amount of shares to assets
+
+
+```solidity
+function convertToShares(uint256 shares) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`shares`|`uint256`|The amount of shares to convert|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|The equivalent amount of assets|
+
+
+### convertToAssets
+
+Converts a given amount of assets to shares
+
+
+```solidity
+function convertToAssets(uint256 assets) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`assets`|`uint256`|The amount of assets to convert|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|The equivalent amount of shares|
 
 
 ### contractName
