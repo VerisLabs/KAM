@@ -157,6 +157,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="kstakingvault"><a class="header" href="#kstakingvault">kStakingVault</a></h1>
+<<<<<<< HEAD
 <p><a href="https://github.com/VerisLabs/KAM/blob/39577197165fca22f4727dda301114283fca8759/src/kStakingVault/kStakingVault.sol">Git Source</a></p>
 <p><strong>Inherits:</strong>
 <a href="/src/interfaces/IVault.sol/interface.IVault.html">IVault</a>, <a href="/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.html">BaseVault</a>, <a href="/src/vendor/Initializable.sol/abstract.Initializable.html">Initializable</a>, <a href="/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.html">UUPSUpgradeable</a>, <a href="/src/vendor/Ownable.sol/abstract.Ownable.html">Ownable</a>, <a href="/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.html">MultiFacetProxy</a></p>
@@ -171,6 +172,13 @@ and performance fees with hurdle rate mechanisms. The vault integrates with the 
 kAssetRouter for asset flow coordination and yield distribution. Gas optimizations include packed storage,
 minimal proxy deployment for batch receivers, and efficient batch settlement processing. The modular architecture
 enables upgrades while maintaining state integrity through UUPS pattern and ERC-7201 storage.</em></p>
+=======
+<p><a href="https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/kStakingVault/kStakingVault.sol">Git Source</a></p>
+<p><strong>Inherits:</strong>
+Initializable, UUPSUpgradeable, Ownable, <a href="/src/kStakingVault/base/BaseVaultModule.sol/abstract.BaseVaultModule.html">BaseVaultModule</a>, <a href="/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.html">MultiFacetProxy</a>, <a href="/src/kStakingVault/base/VaultFees.sol/contract.VaultFees.html">VaultFees</a>, <a href="/src/kStakingVault/base/VaultClaims.sol/contract.VaultClaims.html">VaultClaims</a>, <a href="/src/kStakingVault/base/VaultBatches.sol/contract.VaultBatches.html">VaultBatches</a></p>
+<p>Pure ERC20 vault with dual accounting for minter and user pools</p>
+<p><em>Implements automatic yield distribution from minter to user pools with modular architecture</em></p>
+>>>>>>> main
 <h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
 <h3 id="constructor"><a class="header" href="#constructor">constructor</a></h3>
 <p>Disables initializers to prevent implementation contract initialization</p>
@@ -193,6 +201,10 @@ flows.</em></p>
     string memory name_,
     string memory symbol_,
     uint8 decimals_,
+<<<<<<< HEAD
+=======
+    uint128 dustAmount_,
+>>>>>>> main
     address asset_
 )
     external
@@ -200,6 +212,7 @@ flows.</em></p>
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<<<<<<< HEAD
 <tr><td><code>owner_</code></td><td><code>address</code></td><td>The address that will have administrative control over the vault</td></tr>
 <tr><td><code>registry_</code></td><td><code>address</code></td><td>The kRegistry contract address for protocol configuration integration</td></tr>
 <tr><td><code>paused_</code></td><td><code>bool</code></td><td>Initial operational state (true = paused, false = active)</td></tr>
@@ -220,6 +233,21 @@ enters pending state until batch settlement, when the final share price is calcu
 performance. Users must later call claimStakedShares() after settlement to receive their stkTokens at
 the settled price. This two-phase approach ensures fair pricing for all users within a batch period.</em></p>
 <pre><code class="language-solidity">function requestStake(address to, uint256 amount) external payable returns (bytes32 requestId);
+=======
+<tr><td><code>owner_</code></td><td><code>address</code></td><td></td></tr>
+<tr><td><code>registry_</code></td><td><code>address</code></td><td>The registry address</td></tr>
+<tr><td><code>paused_</code></td><td><code>bool</code></td><td>If the vault is paused_</td></tr>
+<tr><td><code>name_</code></td><td><code>string</code></td><td>Token name</td></tr>
+<tr><td><code>symbol_</code></td><td><code>string</code></td><td>Token symbol</td></tr>
+<tr><td><code>decimals_</code></td><td><code>uint8</code></td><td>Token decimals</td></tr>
+<tr><td><code>dustAmount_</code></td><td><code>uint128</code></td><td>Minimum amount threshold</td></tr>
+<tr><td><code>asset_</code></td><td><code>address</code></td><td>Underlying asset address</td></tr>
+</tbody></table>
+</div>
+<h3 id="requeststake"><a class="header" href="#requeststake">requestStake</a></h3>
+<p>Request to stake kTokens for stkTokens (rebase token)</p>
+<pre><code class="language-solidity">function requestStake(address to, uint256 amount) external payable nonReentrant returns (bytes32 requestId);
+>>>>>>> main
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -233,6 +261,7 @@ the settled price. This two-phase approach ensures fair pricing for all users wi
 </tbody></table>
 </div>
 <h3 id="requestunstake"><a class="header" href="#requestunstake">requestUnstake</a></h3>
+<<<<<<< HEAD
 <p>Initiates stkToken unstaking request for kToken redemption plus accrued yield through batch processing</p>
 <p><em>This function begins the retail unstaking process by: (1) Validating user has sufficient stkToken balance
 and vault is operational, (2) Creating pending unstake request with current batch ID for settlement
@@ -244,6 +273,11 @@ made available. Users must later call claimUnstakedAssets() after settlement to 
 the batch receiver contract. This two-phase design ensures accurate yield calculations and prevents share
 price manipulation during the settlement process.</em></p>
 <pre><code class="language-solidity">function requestUnstake(address to, uint256 stkTokenAmount) external payable returns (bytes32 requestId);
+=======
+<p>Request to unstake stkTokens for kTokens + yield</p>
+<p><em>Works with both claimed and unclaimed stkTokens (can unstake immediately after settlement)</em></p>
+<pre><code class="language-solidity">function requestUnstake(address to, uint256 stkTokenAmount) external payable nonReentrant returns (bytes32 requestId);
+>>>>>>> main
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -258,7 +292,11 @@ price manipulation during the settlement process.</em></p>
 </div>
 <h3 id="cancelstakerequest"><a class="header" href="#cancelstakerequest">cancelStakeRequest</a></h3>
 <p>Cancels a staking request</p>
+<<<<<<< HEAD
 <pre><code class="language-solidity">function cancelStakeRequest(bytes32 requestId) external payable;
+=======
+<pre><code class="language-solidity">function cancelStakeRequest(bytes32 requestId) external payable nonReentrant;
+>>>>>>> main
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -267,7 +305,11 @@ price manipulation during the settlement process.</em></p>
 </div>
 <h3 id="cancelunstakerequest"><a class="header" href="#cancelunstakerequest">cancelUnstakeRequest</a></h3>
 <p>Cancels an unstaking request</p>
+<<<<<<< HEAD
 <pre><code class="language-solidity">function cancelUnstakeRequest(bytes32 requestId) external payable;
+=======
+<pre><code class="language-solidity">function cancelUnstakeRequest(bytes32 requestId) external payable nonReentrant;
+>>>>>>> main
 </code></pre>
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
@@ -551,6 +593,55 @@ for accurate fee calculations and preventing temporal manipulation attacks on th
 <tr><td><code>paused_</code></td><td><code>bool</code></td><td>New pause state</td></tr>
 </tbody></table>
 </div>
+<<<<<<< HEAD
+=======
+<h3 id="shareprice"><a class="header" href="#shareprice">sharePrice</a></h3>
+<p>Calculates the price of stkTokens in underlying asset terms</p>
+<p><em>Uses the last total assets and total supply to calculate the price</em></p>
+<pre><code class="language-solidity">function sharePrice() external view returns (uint256);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>price Price per stkToken in underlying asset terms</td></tr>
+</tbody></table>
+</div>
+<h3 id="totalassets"><a class="header" href="#totalassets">totalAssets</a></h3>
+<p>Returns the current total assets</p>
+<pre><code class="language-solidity">function totalAssets() external view returns (uint256);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>Total assets currently deployed in strategies</td></tr>
+</tbody></table>
+</div>
+<h3 id="totalnetassets"><a class="header" href="#totalnetassets">totalNetAssets</a></h3>
+<p>Returns the current total assets after fees</p>
+<pre><code class="language-solidity">function totalNetAssets() external view returns (uint256);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>uint256</code></td><td>Total net assets currently deployed in strategies</td></tr>
+</tbody></table>
+</div>
+<h3 id="getbatchid"><a class="header" href="#getbatchid">getBatchId</a></h3>
+<p>Returns the current batch</p>
+<pre><code class="language-solidity">function getBatchId() public view returns (bytes32);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bytes32</code></td><td>Batch</td></tr>
+</tbody></table>
+</div>
+<h3 id="getsafebatchid"><a class="header" href="#getsafebatchid">getSafeBatchId</a></h3>
+<p>Returns the safe batch</p>
+<pre><code class="language-solidity">function getSafeBatchId() external view returns (bytes32);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bytes32</code></td><td>Batch</td></tr>
+</tbody></table>
+</div>
+>>>>>>> main
 <h3 id="_authorizeupgrade"><a class="header" href="#_authorizeupgrade">_authorizeUpgrade</a></h3>
 <p>Authorize upgrade (only owner can upgrade)</p>
 <p><em>This allows upgrading the main contract while keeping modules separate</em></p>

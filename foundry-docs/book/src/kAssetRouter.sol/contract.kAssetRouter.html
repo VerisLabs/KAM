@@ -422,6 +422,15 @@ to track proposals awaiting verification during the cooldown period.</em></p>
 <tr><td><code>pendingProposals</code></td><td><code>bytes32[]</code></td><td>Array of proposal IDs currently pending execution</td></tr>
 </tbody></table>
 </div>
+<h3 id="getpendingproposals"><a class="header" href="#getpendingproposals">getPendingProposals</a></h3>
+<p>Get All the pendingProposals</p>
+<pre><code class="language-solidity">function getPendingProposals(address vault) external view returns (bytes32[] memory pendingProposals);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>pendingProposals</code></td><td><code>bytes32[]</code></td><td>An array of proposalIds</td></tr>
+</tbody></table>
+</div>
 <h3 id="getsettlementproposal"><a class="header" href="#getsettlementproposal">getSettlementProposal</a></h3>
 <p>Retrieves complete details of a specific settlement proposal</p>
 <p><em>Returns the full VaultSettlementProposal struct containing all parameters needed
@@ -562,6 +571,21 @@ Essential for maintaining protocol security and preventing unauthorized money fl
 <p><strong>Parameters</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>vault</code></td><td><code>address</code></td><td></td></tr>
+<tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>the proposalId to verify</td></tr>
+</tbody></table>
+</div>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>bool</code></td><td>bool proposal exists or not</td></tr>
+</tbody></table>
+</div>
+<h3 id="_ispendingproposal"><a class="header" href="#_ispendingproposal">_isPendingProposal</a></h3>
+<p>verifies if a proposal is pending or not</p>
+<pre><code class="language-solidity">function _isPendingProposal(address vault, bytes32 proposalId) internal view returns (bool);
+</code></pre>
+<p><strong>Parameters</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>vault</code></td><td><code>address</code></td><td>the vault address</td></tr>
 <tr><td><code>proposalId</code></td><td><code>bytes32</code></td><td>the proposalId to verify</td></tr>
 </tbody></table>
 </div>

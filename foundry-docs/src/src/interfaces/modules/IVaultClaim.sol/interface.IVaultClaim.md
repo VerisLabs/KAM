@@ -1,5 +1,9 @@
 # IVaultClaim
+<<<<<<< HEAD
 [Git Source](https://github.com/VerisLabs/KAM/blob/670f05acf8766190fcaa1d272341611f065917de/src/interfaces/modules/IVaultClaim.sol)
+=======
+[Git Source](https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/interfaces/modules/IVaultClaim.sol)
+>>>>>>> main
 
 
 ## Functions

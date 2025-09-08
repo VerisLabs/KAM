@@ -214,6 +214,16 @@ ensures only inheriting contracts can initialize, preventing external manipulati
 <tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The kRegistry contract address</td></tr>
 </tbody></table>
 </div>
+<h3 id="registry"><a class="header" href="#registry">registry</a></h3>
+<p>Returns the registry contract address</p>
+<p><em>Reverts if contract not initialized</em></p>
+<pre><code class="language-solidity">function registry() external view returns (address);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The kRegistry contract address</td></tr>
+</tbody></table>
+</div>
 <h3 id="_registry"><a class="header" href="#_registry">_registry</a></h3>
 <p>Returns the registry contract interface</p>
 <pre><code class="language-solidity">function _registry() internal view returns (IkRegistry);

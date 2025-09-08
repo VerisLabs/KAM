@@ -497,6 +497,15 @@ Includes both active and inactive vaults. Used for protocol monitoring and manag
 <tr><td><code>&lt;none&gt;</code></td><td><code>address</code></td><td>The treasury address</td></tr>
 </tbody></table>
 </div>
+<h3 id="getallvaults"><a class="header" href="#getallvaults">getAllVaults</a></h3>
+<p>Get all vaults registered in the protocol</p>
+<pre><code class="language-solidity">function getAllVaults() external view returns (address[] memory);
+</code></pre>
+<p><strong>Returns</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&lt;none&gt;</code></td><td><code>address[]</code></td><td>Array of vault addresses</td></tr>
+</tbody></table>
+</div>
 <h3 id="getcorecontracts"><a class="header" href="#getcorecontracts">getCoreContracts</a></h3>
 <p>Retrieves core protocol contract addresses in one call</p>
 <p><em>Optimized getter for frequently accessed contracts. Reverts if either not set.</em></p>

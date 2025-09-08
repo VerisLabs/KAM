@@ -386,6 +386,13 @@ function setTreasury(address treasury_) external payable;
 |`treasury_`|`address`|The new treasury address|
 
 
+### removeVault
+
+
+```solidity
+function removeVault(address vault) external payable;
+```
+
 ### registerAdapter
 
 Registers an external protocol adapter for a vault
@@ -601,6 +608,21 @@ function getTreasury() external view returns (address);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`address`|The treasury address|
+
+
+### getAllVaults
+
+Get all vaults registered in the protocol
+
+
+```solidity
+function getAllVaults() external view returns (address[] memory);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`address[]`|Array of vault addresses|
 
 
 ### getCoreContracts

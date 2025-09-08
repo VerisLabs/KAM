@@ -1,5 +1,9 @@
 # kBase
+<<<<<<< HEAD
 [Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/base/kBase.sol)
+=======
+[Git Source](https://github.com/VerisLabs/KAM/blob/e655bf086c79b14fd5ccde0a4ddfa1609e381102/src/base/kBase.sol)
+>>>>>>> main
 
 **Inherits:**
 [OptimizedReentrancyGuardTransient](/src/abstracts/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)

@@ -806,6 +806,7 @@ Emitted when a new vault is registered in the protocol
 event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
 ```
 
+<<<<<<< HEAD
 **Parameters**
 
 |Name|Type|Description|
@@ -817,17 +818,23 @@ event VaultRegistered(address indexed vault, address indexed asset, VaultType in
 ### VaultRemoved
 Emitted when a vault is removed from the protocol
 
+=======
+### VaultRemoved
+>>>>>>> main
 
 ```solidity
 event VaultRemoved(address indexed vault);
 ```
 
+<<<<<<< HEAD
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`vault`|`address`|The vault contract address being removed|
 
+=======
+>>>>>>> main
 ### AssetRegistered
 Emitted when an asset and its kToken are registered
 
