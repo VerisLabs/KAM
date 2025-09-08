@@ -33,7 +33,9 @@ contract DeployTokensScript is Script, DeploymentManager {
             "KAM USD", // name
             "kUSD", // symbol
             config.assets.USDC, // underlying asset
-            registry.USDC() // asset type ID
+            registry.USDC(), // asset type ID
+            type(uint256).max, // maxMintPerBatch not limited by default
+            type(uint256).max // maxRedeemPerBatch not limited by default
         );
 
         // Grant emergency role to kUSD
@@ -44,7 +46,9 @@ contract DeployTokensScript is Script, DeploymentManager {
             "KAM BTC", // name
             "kBTC", // symbol
             config.assets.WBTC, // underlying asset
-            registry.WBTC() // asset type ID
+            registry.WBTC(), // asset type ID
+            type(uint256).max, // maxMintPerBatch not limited by default
+            type(uint256).max // maxRedeemPerBatch not limited by default
         );
 
         // Grant emergency role to kBTC

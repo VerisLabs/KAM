@@ -358,7 +358,9 @@ interface IkRegistry {
         string memory name,
         string memory symbol,
         address asset,
-        bytes32 id
+        bytes32 id,
+        uint256 maxMintPerBatch,
+        uint256 maxRedeemPerBatch
     )
         external
         payable
@@ -555,4 +557,29 @@ interface IkRegistry {
     /// @dev Treasury receives protocol fees and serves as emergency fund holder. Only callable by ADMIN_ROLE.
     /// @param treasury_ The new treasury address
     function setTreasury(address treasury_) external payable;
+
+    /// @notice Sets maximum mint and redeem amounts per batch for an asset
+    /// @dev Only callable by ADMIN_ROLE. Helps manage liquidity and risk for high-volume assets
+    /// @param asset The asset address to set limits for
+    /// @param maxMintPerBatch_ Maximum amount of the asset that can be minted in a single batch
+    /// @param maxRedeemPerBatch_ Maximum amount of the asset that can be redeemed in a single batch
+    function setAssetBatchLimits(
+        address asset,
+        uint256 maxMintPerBatch_,
+        uint256 maxRedeemPerBatch_
+    )
+        external
+        payable;
+
+    /// @notice Gets the maximum mint amount per batch for an asset
+    /// @dev Used to enforce minting limits for liquidity and risk management
+    /// @param asset The asset address to query
+    /// @return The maximum mint amount per batch
+    function getMaxMintPerBatch(address asset) external view returns (uint256);
+
+    /// @notice Gets the maximum redeem amount per batch for an asset
+    /// @dev Used to enforce redemption limits for liquidity and risk management
+    /// @param asset The asset address to query
+    /// @return The maximum redeem amount per batch
+    function getMaxRedeemPerBatch(address asset) external view returns (uint256);
 }

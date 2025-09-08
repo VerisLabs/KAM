@@ -16,6 +16,9 @@ import { IkBatchReceiver } from "src/interfaces/IkBatchReceiver.sol";
 
 import {
     KMINTER_BATCH_CLOSED,
+    KMINTER_BATCH_MINT_REACHED,
+    KMINTER_BATCH_MINT_REACHED,
+    KMINTER_BATCH_REDEEM_REACHED,
     KMINTER_BATCH_SETTLED,
     KMINTER_INSUFFICIENT_BALANCE,
     KMINTER_IS_PAUSED,
@@ -57,14 +60,14 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// Uses the diamond storage pattern to avoid storage collisions in upgradeable contracts.
     /// @custom:storage-location erc7201:kam.storage.kMinter
     struct kMinterStorage {
-        /// @dev Tracks the total amount of each asset deposited through mint operations
-        /// Used to maintain accurate accounting of assets backing kTokens
-        mapping(address => uint256) totalLockedAssets;
-        /// @dev Monotonically increasing counter used for generating unique redemption request IDs
-        /// Ensures each request has a globally unique identifier even with identical parameters
+        /// @dev Counter for generating unique request IDs
         uint64 requestCounter;
-        /// @dev Stores all redemption requests indexed by their unique request ID
-        /// Contains full request details including user, amount, status, and batch information
+        /// @dev Tracks total minted and redeemed amounts per batch to enforce limits
+        mapping(bytes32 => uint256) mintedInBatch;
+        /// @dev Tracks total redeemed amounts per batch to enforce limits
+        mapping(bytes32 => uint256) redeemedInBatch;
+        /// @dev Tracks total assets locked in pending redemption requests per asset
+        mapping(address => uint256) totalLockedAssets;
         mapping(bytes32 => RedeemRequest) redeemRequests;
         /// @dev Maps user addresses to their set of redemption request IDs for efficient lookup
         /// Enables quick retrieval of all requests associated with a specific user
@@ -126,10 +129,16 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         // Transfer underlying asset from sender directly to router for efficiency
         asset_.safeTransferFrom(msg.sender, router, amount_);
 
-        // Push assets to kAssetRouter which will forward them to the DN vault for yield generation
+        kMinterStorage storage $ = _getkMinterStorage();
+
+        // Make sure we dont exceed the max mint per batch
+        require(
+            ($.mintedInBatch[batchId] += amount_) <= _registry().getMaxMintPerBatch(asset_), KMINTER_BATCH_MINT_REACHED
+        );
+        $.totalLockedAssets[asset_] += amount_;
+
+        // Push assets to kAssetRouter
         IkAssetRouter(router).kAssetPush(asset_, amount_, batchId);
-        // Track total assets deposited for this asset type (important for protocol accounting)
-        _getkMinterStorage().totalLockedAssets[asset_] += amount_;
 
         // Mint kTokens 1:1 with deposited amount - immediate issuance for institutional users
         IkToken(kToken).mint(to_, amount_);
@@ -158,7 +167,13 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         kMinterStorage storage $ = _getkMinterStorage();
 
-        // Create and store redemption request with all necessary tracking information
+        // Make sure we dont exceed the max redeem per batch
+        require(
+            ($.redeemedInBatch[batchId] += amount_) <= _registry().getMaxRedeemPerBatch(asset_),
+            KMINTER_BATCH_REDEEM_REACHED
+        );
+
+        // Create redemption request
         $.redeemRequests[requestId] = RedeemRequest({
             user: msg.sender,
             amount: amount_,
@@ -250,6 +265,9 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         // Return escrowed kTokens to the original requester
         kToken.safeTransfer(redeemRequest.user, redeemRequest.amount);
+
+        // Remove request from batch
+        $.redeemedInBatch[redeemRequest.batchId] -= redeemRequest.amount;
 
         emit Cancelled(requestId);
 

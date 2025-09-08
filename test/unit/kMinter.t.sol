@@ -19,6 +19,8 @@ import { ERC1967Factory } from "src/vendor/ERC1967Factory.sol";
 
 import {
     KBASE_WRONG_ROLE,
+    KMINTER_BATCH_MINT_REACHED,
+    KMINTER_BATCH_REDEEM_REACHED,
     KMINTER_INSUFFICIENT_BALANCE,
     KMINTER_IS_PAUSED,
     KMINTER_REQUEST_NOT_ELIGIBLE,
@@ -132,6 +134,21 @@ contract kMinterTest is DeploymentBaseTest {
         );
     }
 
+    /// @dev Test mint reverts when batch limit reached
+    function test_Mint_LimitExceeded() public {
+        uint256 amount = TEST_AMOUNT;
+        vm.prank(users.admin);
+        registry.setAssetBatchLimits(USDC_MAINNET, 0, 0);
+
+        // Approve minter to spend kTokens
+        vm.prank(users.institution);
+        IERC20(USDC_MAINNET).approve(address(minter), amount);
+
+        vm.prank(users.institution);
+        vm.expectRevert(bytes(KMINTER_BATCH_MINT_REACHED));
+        minter.mint(USDC_MAINNET, users.alice, amount);
+    }
+
     /// @dev Test mint requires institution role
     function test_Mint_WrongRole() public {
         uint256 amount = TEST_AMOUNT;
@@ -224,6 +241,29 @@ contract kMinterTest is DeploymentBaseTest {
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_ZERO_ADDRESS));
         minter.requestRedeem(USDC_MAINNET, ZERO_ADDRESS, TEST_AMOUNT);
+    }
+
+    /// @dev Test redemption request reverts with batch limit reached
+    function test_RequestRedeem_RevertBatchLimitReached() public {
+        uint256 amount = TEST_AMOUNT;
+        address recipient = users.institution;
+
+        // First mint some kTokens to the institution
+        deal(USDC_MAINNET, users.institution, amount);
+        vm.prank(users.institution);
+        IERC20(USDC_MAINNET).approve(address(minter), amount);
+        vm.prank(users.institution);
+        minter.mint(USDC_MAINNET, recipient, amount);
+
+        vm.prank(users.admin);
+        registry.setAssetBatchLimits(USDC_MAINNET, 0, 0);
+
+        vm.prank(users.institution);
+        kUSD.approve(address(minter), amount);
+
+        vm.prank(users.institution);
+        vm.expectRevert(bytes(KMINTER_BATCH_REDEEM_REACHED));
+        minter.requestRedeem(USDC_MAINNET, recipient, amount);
     }
 
     /// @dev Test redemption request reverts with invalid asset

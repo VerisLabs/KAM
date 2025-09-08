@@ -100,8 +100,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         /// @dev Protocol treasury address for fee collection and reserves
         /// Receives protocol fees and serves as emergency fund holder
         address treasury;
-        /// @dev Maps unique identifiers to singleton contract addresses (e.g., K_MINTER => kMinter address)
-        /// Ensures single source of truth for core protocol contracts
+        mapping(address => uint256) maxMintPerBatch;
+        mapping(address => uint256) maxRedeemPerBatch;
         mapping(bytes32 => address) singletonContracts;
         /// @dev Maps vault addresses to their type classification (DN, ALPHA, BETA, etc.)
         /// Used for routing and strategy selection based on vault type
@@ -266,12 +266,37 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
                           ASSET MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IkRegistry
+    /// @notice Set the maximum mint and redeem limits for a given asset
+    /// @param asset_ The asset address
+    /// @param maxMintPerBatch_ The maximum mint amount per batch
+    /// @param maxRedeemPerBatch_ The maximum redeem amount per batch
+    /// @dev Only callable by ADMIN_ROLE
+    function setAssetBatchLimits(
+        address asset_,
+        uint256 maxMintPerBatch_,
+        uint256 maxRedeemPerBatch_
+    )
+        external
+        payable
+    {
+        _checkAdmin(msg.sender);
+        _checkAssetRegistered(asset_);
+
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        $.maxMintPerBatch[asset_] = maxMintPerBatch_;
+        $.maxRedeemPerBatch[asset_] = maxRedeemPerBatch_;
+    }
+
+    /// @notice Register support for a new asset and its corresponding kToken
+    /// @param asset Underlying asset address (e.g., USDC, WBTC)
+    /// @dev Only callable by ADMIN_ROLE, establishes bidirectional mapping
     function registerAsset(
         string memory name_,
         string memory symbol_,
         address asset,
-        bytes32 id
+        bytes32 id,
+        uint256 maxMintPerBatch,
+        uint256 maxRedeemPerBatch
     )
         external
         payable
@@ -315,7 +340,10 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
             )
         );
 
-        // Establish bidirectional mapping for asset-kToken relationship
+        $.maxMintPerBatch[asset] = maxMintPerBatch;
+        $.maxRedeemPerBatch[asset] = maxRedeemPerBatch;
+
+        // Register kToken
         $.assetToKToken[asset] = kToken_;
         emit AssetRegistered(asset, kToken_);
 
@@ -428,18 +456,41 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         emit HurdleRateSet(asset, hurdleRate);
     }
 
-    /// @inheritdoc IkRegistry
+    /*//////////////////////////////////////////////////////////////
+                          VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Gets the max mint per batch for a specific asset
+    /// @param asset The asset address
+    /// @return The max mint per batch
+    function getMaxMintPerBatch(address asset) external view returns (uint256) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        _checkAssetRegistered(asset);
+        return $.maxMintPerBatch[asset];
+    }
+
+    /// @notice Gets the max redeem per batch for a specific asset
+    /// @param asset The asset address
+    /// @return The max redeem per batch
+    function getMaxRedeemPerBatch(address asset) external view returns (uint256) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        _checkAssetRegistered(asset);
+        return $.maxRedeemPerBatch[asset];
+    }
+
+    /// @notice Gets the hurdle rate for a specific asset
+    /// @param asset The asset address
+    /// @return The hurdle rate in basis points
     function getHurdleRate(address asset) external view returns (uint16) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         _checkAssetRegistered(asset);
         return $.assetHurdleRate[asset];
     }
 
-    /*//////////////////////////////////////////////////////////////
-                          VIEW FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @inheritdoc IkRegistry
+    /// @notice Get a singleton contract address by its identifier
+    /// @param id Contract identifier (e.g., K_MINTER, K_BATCH)
+    /// @return Contract address
+    /// @dev Reverts if contract not set
     function getContractById(bytes32 id) public view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address addr = $.singletonContracts[id];

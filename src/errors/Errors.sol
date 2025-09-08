@@ -95,6 +95,8 @@ string constant KMINTER_WRONG_ASSET = "M8";
 string constant KMINTER_WRONG_ROLE = "M9";
 string constant KMINTER_ZERO_ADDRESS = "M10";
 string constant KMINTER_ZERO_AMOUNT = "M11";
+string constant KMINTER_BATCH_MINT_REACHED = "M12";
+string constant KMINTER_BATCH_REDEEM_REACHED = "M13";
 
 // kRegistry Errors
 string constant KREGISTRY_ADAPTER_ALREADY_SET = "R1";
