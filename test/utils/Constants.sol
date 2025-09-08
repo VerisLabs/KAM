@@ -19,14 +19,8 @@ uint256 constant _1_ETHER = 1 ether;
 uint256 constant _10_ETHER = 10 ether;
 uint256 constant _100_ETHER = 100 ether;
 
-// Mainnet token addresses (for forking)
-address constant USDC_MAINNET = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-address constant WBTC_MAINNET = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
-address constant WETH_MAINNET = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-address constant DAI_MAINNET = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-
-// Mainnet vault address
-address constant METAVAULT_USDC_MAINNET = 0x349c996C4a53208b6EB09c103782D86a3F1BB57E;
+// Mock vault address
+address constant METAVAULT_USDC = 0x349c996C4a53208b6EB09c103782D86a3F1BB57E;
 
 // Role constants (matching Solady OptimizedOwnableRoles pattern)
 uint256 constant ADMIN_ROLE = 1; // _ROLE_0
@@ -46,20 +40,3 @@ uint256 constant ONE_WEEK = 7 days;
 // Gas limits for testing
 uint256 constant DEPLOY_GAS_LIMIT = 10_000_000;
 uint256 constant CALL_GAS_LIMIT = 1_000_000;
-
-/// @dev Returns list of mainnet tokens for testing
-function getMainnetTokens() pure returns (address[] memory) {
-    address[] memory tokens = new address[](4);
-    tokens[0] = USDC_MAINNET;
-    tokens[1] = WBTC_MAINNET;
-    tokens[2] = WETH_MAINNET;
-    tokens[3] = DAI_MAINNET;
-    return tokens;
-}
-
-/// @dev Returns USDC token array for simplified testing
-function getUSDCToken() pure returns (address[] memory) {
-    address[] memory tokens = new address[](1);
-    tokens[0] = USDC_MAINNET;
-    return tokens;
-}

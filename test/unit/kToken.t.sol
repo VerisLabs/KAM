@@ -1,15 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {
-    ADMIN_ROLE,
-    EMERGENCY_ADMIN_ROLE,
-    MINTER_ROLE,
-    USDC_MAINNET,
-    _1000_USDC,
-    _100_USDC,
-    _1_USDC
-} from "../utils/Constants.sol";
+import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, MINTER_ROLE, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
@@ -368,27 +360,27 @@ contract kTokenTest is DeploymentBaseTest {
         uint256 amount = TEST_AMOUNT;
 
         // Send USDC to contract (simulating stuck tokens)
-        deal(USDC_MAINNET, address(kUSD), amount);
+        mockUSDC.mint(address(kUSD), amount);
 
         // Pause contract
         vm.prank(users.emergencyAdmin);
         kUSD.setPaused(true);
 
         // Emergency withdraw tokens
-        uint256 recipientBalanceBefore = IERC20(USDC_MAINNET).balanceOf(users.treasury);
+        uint256 recipientBalanceBefore = IERC20(getUSDC()).balanceOf(users.treasury);
 
         vm.prank(users.emergencyAdmin);
         vm.expectEmit(true, true, true, true);
-        emit EmergencyWithdrawal(USDC_MAINNET, users.treasury, amount, users.emergencyAdmin);
+        emit EmergencyWithdrawal(getUSDC(), users.treasury, amount, users.emergencyAdmin);
 
-        kUSD.emergencyWithdraw(USDC_MAINNET, users.treasury, amount);
+        kUSD.emergencyWithdraw(getUSDC(), users.treasury, amount);
 
         assertEq(
-            IERC20(USDC_MAINNET).balanceOf(users.treasury) - recipientBalanceBefore,
+            IERC20(getUSDC()).balanceOf(users.treasury) - recipientBalanceBefore,
             amount,
             "Tokens not withdrawn correctly"
         );
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(kUSD)), 0, "Contract should have no tokens");
+        assertEq(IERC20(getUSDC()).balanceOf(address(kUSD)), 0, "Contract should have no tokens");
     }
 
     /// @dev Test emergency withdrawal requires emergency admin role

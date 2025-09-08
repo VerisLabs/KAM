@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import { BaseVaultTest, DeploymentBaseTest } from "../utils/BaseVaultTest.sol";
-import { USDC_MAINNET, _1_USDC } from "../utils/Constants.sol";
+import { _1_USDC } from "../utils/Constants.sol";
 
 import { console2 } from "forge-std/console2.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";

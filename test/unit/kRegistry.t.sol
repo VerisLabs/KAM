@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ADMIN_ROLE, RELAYER_ROLE, USDC_MAINNET, WBTC_MAINNET, _1_USDC, _1_WBTC } from "../utils/Constants.sol";
+import { MockERC20 } from "../mocks/MockERC20.sol";
+import { ADMIN_ROLE, RELAYER_ROLE, _1_USDC, _1_WBTC } from "../utils/Constants.sol";
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
@@ -20,7 +21,7 @@ import { kRegistry } from "src/kRegistry.sol";
 contract kRegistryTest is DeploymentBaseTest {
     // Test addresses for non-deployed contracts
     address internal constant TEST_CONTRACT = 0x1111111111111111111111111111111111111111;
-    address internal constant TEST_ASSET = 0xdAC17F958D2ee523a2206206994597C13D831ec7; // MAINNET USDT
+    address internal TEST_ASSET;
     address internal constant TEST_KTOKEN = 0x3333333333333333333333333333333333333333;
     address internal constant TEST_VAULT = 0x4444444444444444444444444444444444444444;
     address internal constant TEST_ADAPTER = 0x5555555555555555555555555555555555555555;
@@ -32,6 +33,13 @@ contract kRegistryTest is DeploymentBaseTest {
 
     uint256 constant MAX_BPS = 10_000;
     uint16 constant TEST_HURDLE_RATE = 500; // 5%
+
+    function setUp() public override {
+        super.setUp();
+        // Deploy a mock token for TEST_ASSET
+        MockERC20 testToken = new MockERC20("Test USDT", "USDT", 6);
+        TEST_ASSET = address(testToken);
+    }
 
     /*//////////////////////////////////////////////////////////////
                         INITIALIZATION TESTS
@@ -376,8 +384,8 @@ contract kRegistryTest is DeploymentBaseTest {
         bool hasUSDC = false;
         bool hasWBTC = false;
         for (uint256 i = 0; i < assets.length; i++) {
-            if (assets[i] == USDC_MAINNET) hasUSDC = true;
-            if (assets[i] == WBTC_MAINNET) hasWBTC = true;
+            if (assets[i] == getUSDC()) hasUSDC = true;
+            if (assets[i] == getWBTC()) hasWBTC = true;
         }
 
         assertTrue(hasUSDC, "USDC should be in assets array");
@@ -386,7 +394,7 @@ contract kRegistryTest is DeploymentBaseTest {
 
     /// @dev Test getVaultsByAsset with deployed vaults
     function test_GetVaultsByAsset_DeployedVaults() public {
-        address[] memory usdcVaults = registry.getVaultsByAsset(USDC_MAINNET);
+        address[] memory usdcVaults = registry.getVaultsByAsset(getUSDC());
 
         // Should contain all three deployed vaults
         assertEq(usdcVaults.length, 4, "Should have 4 USDC vaults from deployment");
@@ -637,12 +645,12 @@ contract kRegistryTest is DeploymentBaseTest {
         assertTrue(allAssets.length >= 2, "Should have existing assets");
 
         // Verify USDC is registered correctly
-        assertTrue(registry.isAsset(USDC_MAINNET), "USDC should be registered");
+        assertTrue(registry.isAsset(getUSDC()), "getUSDC() should be registered");
 
         // Verify USDC appears in getAllAssets
         bool foundUSDC = false;
         for (uint256 i = 0; i < allAssets.length; i++) {
-            if (allAssets[i] == USDC_MAINNET) {
+            if (allAssets[i] == getUSDC()) {
                 foundUSDC = true;
                 break;
             }
@@ -693,7 +701,7 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.startPrank(users.admin);
 
         address vault1 = address(0x3001);
-        registry.registerVault(vault1, IkRegistry.VaultType.ALPHA, USDC_MAINNET);
+        registry.registerVault(vault1, IkRegistry.VaultType.ALPHA, getUSDC());
 
         vm.stopPrank();
 
@@ -702,7 +710,7 @@ contract kRegistryTest is DeploymentBaseTest {
         assertEq(registry.getVaultType(vault1), uint8(IkRegistry.VaultType.ALPHA), "Vault type should be ALPHA");
 
         // Verify vault appears in asset's vault list
-        address[] memory usdcVaults = registry.getVaultsByAsset(USDC_MAINNET);
+        address[] memory usdcVaults = registry.getVaultsByAsset(getUSDC());
 
         bool foundVault = false;
         for (uint256 i = 0; i < usdcVaults.length; i++) {
@@ -876,7 +884,7 @@ contract kRegistryTest is DeploymentBaseTest {
         assertTrue(allAssets.length >= 2, "Should have at least USDC and WBTC");
 
         // Test getVaultsByAsset with existing assets
-        address[] memory usdcVaults = registry.getVaultsByAsset(USDC_MAINNET);
+        address[] memory usdcVaults = registry.getVaultsByAsset(getUSDC());
         assertTrue(usdcVaults.length > 0, "USDC should have vaults");
 
         // Verify each returned vault is actually registered
@@ -905,11 +913,11 @@ contract kRegistryTest is DeploymentBaseTest {
         // Test that only admin can call rescue functions
         vm.prank(users.alice);
         vm.expectRevert();
-        registry.rescueAssets(USDC_MAINNET, users.admin, 1000);
+        registry.rescueAssets(getUSDC(), users.admin, 1000);
 
         // Admin should be able to call rescue (even if no assets to rescue)
         vm.prank(users.admin);
-        try registry.rescueAssets(USDC_MAINNET, users.admin, 0) {
+        try registry.rescueAssets(getUSDC(), users.admin, 0) {
             // Success is acceptable
         } catch {
             // Revert is also acceptable if no assets
@@ -960,26 +968,26 @@ contract kRegistryTest is DeploymentBaseTest {
 
         // Expect event emission
         vm.expectEmit(true, false, false, true);
-        emit IkRegistry.HurdleRateSet(USDC_MAINNET, TEST_HURDLE_RATE);
+        emit IkRegistry.HurdleRateSet(getUSDC(), TEST_HURDLE_RATE);
 
-        registry.setHurdleRate(USDC_MAINNET, TEST_HURDLE_RATE);
+        registry.setHurdleRate(getUSDC(), TEST_HURDLE_RATE);
 
         // Verify hurdle rate is set
-        assertEq(registry.getHurdleRate(USDC_MAINNET), TEST_HURDLE_RATE, "Hurdle rate not set correctly");
+        assertEq(registry.getHurdleRate(getUSDC()), TEST_HURDLE_RATE, "Hurdle rate not set correctly");
     }
 
     /// @dev Test setting hurdle rate requires relayer role
     function test_SetHurdleRate_OnlyRelayer() public {
         vm.prank(users.alice);
         vm.expectRevert();
-        registry.setHurdleRate(USDC_MAINNET, TEST_HURDLE_RATE);
+        registry.setHurdleRate(getUSDC(), TEST_HURDLE_RATE);
     }
 
     /// @dev Test hurdle rate exceeds maximum
     function test_SetHurdleRate_ExceedsMaximum() public {
         vm.expectRevert(bytes(KREGISTRY_FEE_EXCEEDS_MAXIMUM));
         vm.prank(users.relayer);
-        registry.setHurdleRate(USDC_MAINNET, uint16(MAX_BPS + 1));
+        registry.setHurdleRate(getUSDC(), uint16(MAX_BPS + 1));
     }
 
     /// @dev Test setting hurdle rate for unsupported asset
@@ -994,12 +1002,12 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.startPrank(users.relayer);
 
         // Set different rates for different assets
-        registry.setHurdleRate(USDC_MAINNET, TEST_HURDLE_RATE);
-        registry.setHurdleRate(WBTC_MAINNET, 750); // 7.5%
+        registry.setHurdleRate(getUSDC(), TEST_HURDLE_RATE);
+        registry.setHurdleRate(getWBTC(), 750); // 7.5%
 
         // Verify each asset has its own rate
-        assertEq(registry.getHurdleRate(USDC_MAINNET), TEST_HURDLE_RATE, "USDC hurdle rate incorrect");
-        assertEq(registry.getHurdleRate(WBTC_MAINNET), 750, "WBTC hurdle rate incorrect");
+        assertEq(registry.getHurdleRate(getUSDC()), TEST_HURDLE_RATE, "USDC hurdle rate incorrect");
+        assertEq(registry.getHurdleRate(getWBTC()), 750, "WBTC hurdle rate incorrect");
 
         vm.stopPrank();
     }

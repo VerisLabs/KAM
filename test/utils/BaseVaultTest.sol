@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { USDC_MAINNET, _1_USDC } from "../utils/Constants.sol";
+import { _1_USDC } from "../utils/Constants.sol";
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { console } from "forge-std/console.sol";
@@ -67,7 +67,7 @@ contract BaseVaultTest is DeploymentBaseTest {
 
         vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET, address(vault), batchId, lastTotalAssets + amount, amount, 0, false
+            getUSDC(), address(vault), batchId, lastTotalAssets + amount, amount, 0, false
         );
 
         vm.prank(users.relayer);
@@ -86,12 +86,12 @@ contract BaseVaultTest is DeploymentBaseTest {
         vm.stopPrank();
 
         vm.prank(users.relayer);
-        registry.setHurdleRate(USDC_MAINNET, TEST_HURDLE_RATE);
+        registry.setHurdleRate(getUSDC(), TEST_HURDLE_RATE);
     }
 
     function _mintKTokensToUsers() internal {
         vm.startPrank(users.institution);
-        USDC_MAINNET.safeApprove(address(minter), type(uint256).max);
+        getUSDC().safeApprove(address(minter), type(uint256).max);
         _mintKTokenToUser(users.alice, INITIAL_DEPOSIT * 3, false);
         _mintKTokenToUser(users.bob, LARGE_DEPOSIT, false);
         _mintKTokenToUser(users.charlie, INITIAL_DEPOSIT, false);
@@ -107,18 +107,18 @@ contract BaseVaultTest is DeploymentBaseTest {
     }
 
     function _mintKTokenToUser(address user, uint256 amount, bool settle) internal {
-        deal(USDC_MAINNET, users.institution, amount);
+        mockUSDC.mint(users.institution, amount);
         vm.startPrank(users.institution);
-        USDC_MAINNET.safeApprove(address(minter), type(uint256).max);
-        minter.mint(USDC_MAINNET, user, amount);
+        getUSDC().safeApprove(address(minter), type(uint256).max);
+        minter.mint(getUSDC(), user, amount);
         vm.stopPrank();
 
         if (settle) {
             bytes32 batchId = dnVault.getBatchId();
             vm.prank(users.relayer);
             IkStakingVault(address(dnVault)).closeBatch(batchId, true);
-            uint256 lastTotalAsets = minter.getTotalLockedAssets(USDC_MAINNET);
-            _executeBatchSettlement(address(minter), batchId, lastTotalAsets + amount, amount, 0, false);
+            uint256 lastTotalAssets = minter.getTotalLockedAssets(getUSDC());
+            _executeBatchSettlement(address(minter), batchId, lastTotalAssets + amount, amount, 0, false);
         }
     }
 
@@ -134,7 +134,7 @@ contract BaseVaultTest is DeploymentBaseTest {
     {
         vm.prank(users.relayer);
         bytes32 proposalId =
-            assetRouter.proposeSettleBatch(USDC_MAINNET, address(vault), batchId, totalAssets, netted, yield, profit);
+            assetRouter.proposeSettleBatch(getUSDC(), address(vault), batchId, totalAssets, netted, yield, profit);
 
         // Wait for cooldown period(0 for testing)
         assetRouter.executeSettleBatch(proposalId);

@@ -15,6 +15,7 @@
     - [Errors constants](src/errors/Errors.sol/constants.Errors.md)
   - [❱ interfaces](src/interfaces/README.md)
     - [❱ modules](src/interfaces/modules/README.md)
+      - [IVaultFees](src/interfaces/modules/IVaultFees.sol/interface.IVaultFees.md)
       - [IVaultReader](src/interfaces/modules/IVaultReader.sol/interface.IVaultReader.md)
     - [IAdapter](src/interfaces/IAdapter.sol/interface.IAdapter.md)
     - [IExtsload](src/interfaces/IExtsload.sol/interface.IExtsload.md)

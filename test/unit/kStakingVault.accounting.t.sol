@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import { BaseVaultTest, DeploymentBaseTest } from "../utils/BaseVaultTest.sol";
-import { USDC_MAINNET, _1_USDC } from "../utils/Constants.sol";
+import { _1_USDC } from "../utils/Constants.sol";
 
 import { console } from "forge-std/console.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
@@ -150,7 +150,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
         vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET, address(vault), batchId, INITIAL_DEPOSIT + bobDeposit, bobDeposit, 0, false
+            getUSDC(), address(vault), batchId, INITIAL_DEPOSIT + bobDeposit, bobDeposit, 0, false
         );
         vm.prank(users.relayer);
         assetRouter.executeSettleBatch(proposalId);

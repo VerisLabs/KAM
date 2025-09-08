@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import { BaseVaultTest, DeploymentBaseTest } from "../utils/BaseVaultTest.sol";
-import { USDC_MAINNET, _1_USDC } from "../utils/Constants.sol";
+import { _1_USDC } from "../utils/Constants.sol";
 
 import { console } from "forge-std/console.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
@@ -348,7 +348,13 @@ contract kStakingVaultFeesTest is BaseVaultTest {
     }
 
     function test_NotifyManagementFeesCharged_InvalidTimestamp() public {
-        // Try to set timestamp in the past
+        // set a management fee timestamp
+        // we warped so we can go back in time
+        vm.warp(5000);
+        vm.prank(users.admin);
+        vault.notifyManagementFeesCharged(uint64(block.timestamp));
+
+        // set timestamp in the past (before the last timestamp)
         uint64 pastTimestamp = uint64(block.timestamp - 1000);
 
         vm.expectRevert(bytes(VAULTFEES_INVALID_TIMESTAMP));
@@ -495,7 +501,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vault.setPerformanceFee(TEST_PERFORMANCE_FEE);
 
         vm.prank(users.relayer);
-        registry.setHurdleRate(USDC_MAINNET, 0); // No hurdle
+        registry.setHurdleRate(getUSDC(), 0); // No hurdle
 
         _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
 
@@ -520,7 +526,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vm.stopPrank();
 
         vm.prank(users.relayer);
-        registry.setHurdleRate(USDC_MAINNET, TEST_HURDLE_RATE);
+        registry.setHurdleRate(getUSDC(), TEST_HURDLE_RATE);
 
         _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
 

@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import { BaseTest } from "../utils/BaseTest.sol";
-import { USDC_MAINNET, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
+import { _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
@@ -31,7 +31,6 @@ contract CustodialAdapterTest is BaseTest {
     //////////////////////////////////////////////////////////////*/
 
     function setUp() public override {
-        enableMainnetFork();
         super.setUp();
 
         mockRegistry = address(0x1234);
@@ -56,8 +55,8 @@ contract CustodialAdapterTest is BaseTest {
         adapter.initialize(mockRegistry);
 
         // Fund test addresses
-        deal(USDC_MAINNET, address(this), _1000_USDC);
-        deal(USDC_MAINNET, address(adapter), _1000_USDC);
+        mockUSDC.mint(address(this), _1000_USDC);
+        mockUSDC.mint(address(adapter), _1000_USDC);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -147,9 +146,9 @@ contract CustodialAdapterTest is BaseTest {
 
         vm.startPrank(mockAssetRouter);
 
-        adapter.deposit(USDC_MAINNET, depositAmount, testVault);
+        adapter.deposit(getUSDC(), depositAmount, testVault);
 
-        assertEq(adapter.totalVirtualAssets(testVault, USDC_MAINNET), depositAmount, "Virtual balance not updated");
+        assertEq(adapter.totalVirtualAssets(testVault, getUSDC()), depositAmount, "Virtual balance not updated");
 
         vm.stopPrank();
     }
@@ -160,7 +159,7 @@ contract CustodialAdapterTest is BaseTest {
 
         vm.startPrank(mockAssetRouter);
         vm.expectRevert(bytes(CUSTODIAL_VAULT_DESTINATION_NOT_SET));
-        adapter.deposit(USDC_MAINNET, depositAmount, testVault);
+        adapter.deposit(getUSDC(), depositAmount, testVault);
         vm.stopPrank();
     }
 
@@ -172,7 +171,7 @@ contract CustodialAdapterTest is BaseTest {
 
         vm.startPrank(mockAssetRouter);
         vm.expectRevert(bytes(CUSTODIAL_ZERO_AMOUNT));
-        adapter.deposit(USDC_MAINNET, 0, testVault);
+        adapter.deposit(getUSDC(), 0, testVault);
         vm.stopPrank();
     }
 
@@ -192,14 +191,12 @@ contract CustodialAdapterTest is BaseTest {
         vm.startPrank(mockAssetRouter);
 
         // Deposit first
-        adapter.deposit(USDC_MAINNET, depositAmount, testVault);
+        adapter.deposit(getUSDC(), depositAmount, testVault);
 
         // Then redeem
-        adapter.redeem(USDC_MAINNET, redeemAmount, testVault);
+        adapter.redeem(getUSDC(), redeemAmount, testVault);
 
-        assertEq(
-            adapter.totalVirtualAssets(testVault, USDC_MAINNET), depositAmount - redeemAmount, "Redeem not tracked"
-        );
+        assertEq(adapter.totalVirtualAssets(testVault, getUSDC()), depositAmount - redeemAmount, "Redeem not tracked");
 
         vm.stopPrank();
     }
@@ -213,10 +210,10 @@ contract CustodialAdapterTest is BaseTest {
         uint256 totalAssets = _1000_USDC;
 
         vm.startPrank(mockAssetRouter);
-        adapter.setTotalAssets(testVault, USDC_MAINNET, totalAssets);
+        adapter.setTotalAssets(testVault, getUSDC(), totalAssets);
         vm.stopPrank();
 
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), totalAssets, "Total assets not set");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), totalAssets, "Total assets not set");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -230,16 +227,16 @@ contract CustodialAdapterTest is BaseTest {
         adapter.setVaultDestination(testVault, custodialAddress);
 
         uint256 custodialBalance = _100_USDC;
-        deal(USDC_MAINNET, custodialAddress, custodialBalance);
+        mockUSDC.mint(custodialAddress, custodialBalance);
 
-        assertEq(adapter.totalEstimatedAssets(testVault, USDC_MAINNET), custodialBalance, "Estimated assets incorrect");
+        assertEq(adapter.totalEstimatedAssets(testVault, getUSDC()), custodialBalance, "Estimated assets incorrect");
     }
 
     /// @dev Test view functions with unset values
     function test_ViewFunctions_UnsetValues() public view {
         assertEq(adapter.getVaultDestination(testVault), address(0), "Unset vault destination should be zero");
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), 0, "Unset total assets should be zero");
-        assertEq(adapter.totalVirtualAssets(testVault, USDC_MAINNET), 0, "Unset virtual assets should be zero");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), 0, "Unset total assets should be zero");
+        assertEq(adapter.totalVirtualAssets(testVault, getUSDC()), 0, "Unset virtual assets should be zero");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -270,13 +267,13 @@ contract CustodialAdapterTest is BaseTest {
         vm.startPrank(nonRouter);
 
         vm.expectRevert(bytes(CUSTODIAL_WRONG_ROLE));
-        adapter.deposit(USDC_MAINNET, _100_USDC, testVault);
+        adapter.deposit(getUSDC(), _100_USDC, testVault);
 
         vm.expectRevert(bytes(CUSTODIAL_WRONG_ROLE));
-        adapter.redeem(USDC_MAINNET, _100_USDC, testVault);
+        adapter.redeem(getUSDC(), _100_USDC, testVault);
 
         vm.expectRevert(bytes(CUSTODIAL_WRONG_ROLE));
-        adapter.setTotalAssets(testVault, USDC_MAINNET, _1000_USDC);
+        adapter.setTotalAssets(testVault, getUSDC(), _1000_USDC);
 
         vm.stopPrank();
     }
@@ -299,25 +296,25 @@ contract CustodialAdapterTest is BaseTest {
         vm.startPrank(mockAssetRouter);
 
         // Step 1: Initial deposit
-        adapter.deposit(USDC_MAINNET, initialDeposit, testVault);
-        assertEq(adapter.totalVirtualAssets(testVault, USDC_MAINNET), initialDeposit, "Initial deposit failed");
+        adapter.deposit(getUSDC(), initialDeposit, testVault);
+        assertEq(adapter.totalVirtualAssets(testVault, getUSDC()), initialDeposit, "Initial deposit failed");
 
         // Step 2: Additional deposit
-        adapter.deposit(USDC_MAINNET, additionalDeposit, testVault);
+        adapter.deposit(getUSDC(), additionalDeposit, testVault);
         uint256 expectedVirtual = initialDeposit + additionalDeposit;
-        assertEq(adapter.totalVirtualAssets(testVault, USDC_MAINNET), expectedVirtual, "Additional deposit failed");
+        assertEq(adapter.totalVirtualAssets(testVault, getUSDC()), expectedVirtual, "Additional deposit failed");
 
         // Step 3: Partial redeem
-        adapter.redeem(USDC_MAINNET, redeemAmount, testVault);
+        adapter.redeem(getUSDC(), redeemAmount, testVault);
         expectedVirtual -= redeemAmount;
-        assertEq(adapter.totalVirtualAssets(testVault, USDC_MAINNET), expectedVirtual, "Redeem failed");
+        assertEq(adapter.totalVirtualAssets(testVault, getUSDC()), expectedVirtual, "Redeem failed");
 
         // Step 4: Set total assets
-        adapter.setTotalAssets(testVault, USDC_MAINNET, finalTotal);
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), finalTotal, "Set total assets failed");
+        adapter.setTotalAssets(testVault, getUSDC(), finalTotal);
+        assertEq(adapter.totalAssets(testVault, getUSDC()), finalTotal, "Set total assets failed");
 
         // Verify virtual assets unchanged
-        assertEq(adapter.totalVirtualAssets(testVault, USDC_MAINNET), expectedVirtual, "Virtual assets corrupted");
+        assertEq(adapter.totalVirtualAssets(testVault, getUSDC()), expectedVirtual, "Virtual assets corrupted");
 
         vm.stopPrank();
     }
@@ -336,12 +333,12 @@ contract CustodialAdapterTest is BaseTest {
 
         // Test maximum uint256 value
         uint256 maxValue = type(uint256).max;
-        adapter.setTotalAssets(testVault, USDC_MAINNET, maxValue);
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), maxValue, "Max value not handled");
+        adapter.setTotalAssets(testVault, getUSDC(), maxValue);
+        assertEq(adapter.totalAssets(testVault, getUSDC()), maxValue, "Max value not handled");
 
         // Test 1 wei
-        adapter.deposit(USDC_MAINNET, 1, testVault);
-        assertEq(adapter.totalVirtualAssets(testVault, USDC_MAINNET), 1, "1 wei not handled");
+        adapter.deposit(getUSDC(), 1, testVault);
+        assertEq(adapter.totalVirtualAssets(testVault, getUSDC()), 1, "1 wei not handled");
 
         vm.stopPrank();
     }
@@ -356,18 +353,18 @@ contract CustodialAdapterTest is BaseTest {
         adapter.setVaultDestination(testVault, custodialAddress);
 
         vm.startPrank(mockAssetRouter);
-        adapter.deposit(USDC_MAINNET, amount, testVault);
+        adapter.deposit(getUSDC(), amount, testVault);
         vm.stopPrank();
 
-        assertEq(adapter.totalVirtualAssets(testVault, USDC_MAINNET), amount, "Fuzz deposit failed");
+        assertEq(adapter.totalVirtualAssets(testVault, getUSDC()), amount, "Fuzz deposit failed");
     }
 
     /// @dev Fuzz test total assets values
     function testFuzz_TotalAssetsValues(uint256 assets) public {
         vm.startPrank(mockAssetRouter);
-        adapter.setTotalAssets(testVault, USDC_MAINNET, assets);
+        adapter.setTotalAssets(testVault, getUSDC(), assets);
         vm.stopPrank();
 
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), assets, "Fuzz total assets failed");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), assets, "Fuzz total assets failed");
     }
 }

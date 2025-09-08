@@ -1,5 +1,5 @@
 # IkRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/interfaces/IkRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/interfaces/IkRegistry.sol)
 
 
 ## Functions
@@ -806,7 +806,6 @@ Emitted when a new vault is registered in the protocol
 event VaultRegistered(address indexed vault, address indexed asset, VaultType indexed vaultType);
 ```
 
-<<<<<<< HEAD
 **Parameters**
 
 |Name|Type|Description|
@@ -818,23 +817,17 @@ event VaultRegistered(address indexed vault, address indexed asset, VaultType in
 ### VaultRemoved
 Emitted when a vault is removed from the protocol
 
-=======
-### VaultRemoved
->>>>>>> main
 
 ```solidity
 event VaultRemoved(address indexed vault);
 ```
 
-<<<<<<< HEAD
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`vault`|`address`|The vault contract address being removed|
 
-=======
->>>>>>> main
 ### AssetRegistered
 Emitted when an asset and its kToken are registered
 

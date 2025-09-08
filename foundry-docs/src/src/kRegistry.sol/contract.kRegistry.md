@@ -1,5 +1,5 @@
 # kRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/kRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/kRegistry.sol)
 
 **Inherits:**
 [IkRegistry](/src/interfaces/IkRegistry.sol/interface.IkRegistry.md), [Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [OptimizedOwnableRoles](/src/libraries/OptimizedOwnableRoles.sol/abstract.OptimizedOwnableRoles.md)
@@ -386,13 +386,6 @@ function setTreasury(address treasury_) external payable;
 |`treasury_`|`address`|The new treasury address|
 
 
-### removeVault
-
-
-```solidity
-function removeVault(address vault) external payable;
-```
-
 ### registerAdapter
 
 Registers an external protocol adapter for a vault
@@ -608,21 +601,6 @@ function getTreasury() external view returns (address);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`address`|The treasury address|
-
-
-### getAllVaults
-
-Get all vaults registered in the protocol
-
-
-```solidity
-function getAllVaults() external view returns (address[] memory);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address[]`|Array of vault addresses|
 
 
 ### getCoreContracts

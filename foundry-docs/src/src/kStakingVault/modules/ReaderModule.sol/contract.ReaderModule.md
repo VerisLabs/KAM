@@ -1,5 +1,5 @@
 # ReaderModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/kStakingVault/modules/ReaderModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/kStakingVault/modules/ReaderModule.sol)
 
 **Inherits:**
 [BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md), [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md), [IVaultReader](/src/interfaces/modules/IVaultReader.sol/interface.IVaultReader.md)
