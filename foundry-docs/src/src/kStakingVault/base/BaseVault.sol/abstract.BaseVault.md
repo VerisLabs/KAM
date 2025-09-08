@@ -1,5 +1,5 @@
 # BaseVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/98bf94f655b7cb7ee02d37c9adf34075fa170b4b/src/kStakingVault/base/BaseVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/kStakingVault/base/BaseVault.sol)
 
 **Inherits:**
 [ERC20](/src/vendor/ERC20.sol/abstract.ERC20.md), [OptimizedReentrancyGuardTransient](/src/abstracts/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { MockERC20 } from "../mocks/MockERC20.sol";
 import {
     ADMIN_ROLE,
     BATCH_CUTOFF_TIME,
@@ -8,15 +9,11 @@ import {
     INSTITUTION_ROLE,
     MINTER_ROLE,
     SETTLEMENT_INTERVAL,
-    USDC_MAINNET,
-    WBTC_MAINNET,
     _1000_USDC,
     _100_USDC,
     _10_USDC,
     _1_USDC,
-    _1_WBTC,
-    getMainnetTokens,
-    getUSDCToken
+    _1_WBTC
 } from "./Constants.sol";
 import { Utilities } from "./Utilities.sol";
 import { Test } from "forge-std/Test.sol";
@@ -47,9 +44,9 @@ contract BaseTest is Test {
     address internal usdc;
     address internal wbtc;
 
-    // Fork setup
-    uint256 internal mainnetFork;
-    bool internal useMainnetFork;
+    // Mock tokens
+    MockERC20 internal mockUSDC;
+    MockERC20 internal mockWBTC;
 
     function setUp() public virtual {
         utils = new Utilities();
@@ -57,16 +54,36 @@ contract BaseTest is Test {
         // Create test users
         _createUsers();
 
-        // Setup fork if needed
-        _setupFork();
+        // Set up test assets
+        _setupAssets();
 
         // Label addresses for better trace output
         _labelAddresses();
     }
 
+    /// @dev Get USDC token address (for use in child contracts)
+    function getUSDC() internal view returns (address) {
+        return usdc;
+    }
+
+    /// @dev Get WBTC token address (for use in child contracts)
+    function getWBTC() internal view returns (address) {
+        return wbtc;
+    }
+
+    /// @dev Get mock USDC token instance (for minting in child contracts)
+    function getMockUSDC() internal view returns (MockERC20) {
+        return mockUSDC;
+    }
+
+    /// @dev Get mock WBTC token instance (for minting in child contracts)
+    function getMockWBTC() internal view returns (MockERC20) {
+        return mockWBTC;
+    }
+
     /// @dev Creates test users with appropriate funding
     function _createUsers() internal {
-        address[] memory tokens = useMainnetFork ? getUSDCToken() : new address[](0);
+        address[] memory tokens = new address[](0);
 
         users.alice = utils.createUser("Alice", tokens);
         users.bob = utils.createUser("Bob", tokens);
@@ -80,23 +97,21 @@ contract BaseTest is Test {
         users.owner = utils.createUser("Owner", tokens);
     }
 
-    /// @dev Setup mainnet fork for integration tests
-    function _setupFork() internal {
-        if (useMainnetFork) {
-            string memory rpcUrl = vm.envString("RPC_MAINNET");
-            mainnetFork = vm.createFork(rpcUrl, 22_847_000);
-            vm.selectFork(mainnetFork);
+    /// @dev Setup test assets (deploy mock tokens)
+    function _setupAssets() internal {
+        // Deploy mock tokens
+        mockUSDC = new MockERC20("Mock USDC", "USDC", 6);
+        mockWBTC = new MockERC20("Mock WBTC", "WBTC", 8);
 
-            // Use USDC as main test asset
-            asset = USDC_MAINNET;
-            usdc = USDC_MAINNET;
-            wbtc = WBTC_MAINNET;
+        // Set asset addresses to mock tokens
+        asset = address(mockUSDC);
+        usdc = address(mockUSDC);
+        wbtc = address(mockWBTC);
 
-            // Label
-            vm.label(asset, "USDC");
-            vm.label(usdc, "USDC");
-            vm.label(wbtc, "WBTC");
-        }
+        // Label
+        vm.label(asset, "USDC");
+        vm.label(usdc, "USDC");
+        vm.label(wbtc, "WBTC");
     }
 
     /// @dev Label addresses for better debugging
@@ -109,16 +124,5 @@ contract BaseTest is Test {
         vm.label(users.institution, "Institution");
         vm.label(users.relayer, "relayer");
         vm.label(users.treasury, "Treasury");
-
-        if (useMainnetFork) {
-            vm.label(USDC_MAINNET, "USDC");
-            vm.label(WBTC_MAINNET, "WBTC");
-        }
-    }
-
-    /// @dev Enable mainnet fork for specific tests
-    function enableMainnetFork() internal {
-        useMainnetFork = true;
-        _setupFork();
     }
 }

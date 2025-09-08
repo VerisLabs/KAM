@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import { BaseTest } from "../utils/BaseTest.sol";
-import { USDC_MAINNET, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
+import { _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
@@ -18,8 +18,6 @@ contract BaseAdapterTest is BaseTest {
     //////////////////////////////////////////////////////////////*/
 
     function setUp() public override {
-        // Enable mainnet fork for deal() to work
-        enableMainnetFork();
         super.setUp();
 
         // Use test contract as mock registry
@@ -27,8 +25,8 @@ contract BaseAdapterTest is BaseTest {
         adapter = new MockAdapter(mockRegistry);
 
         // Fund adapter with test tokens
-        deal(USDC_MAINNET, address(adapter), _1000_USDC);
-        deal(USDC_MAINNET, address(this), _1000_USDC);
+        mockUSDC.mint(address(adapter), _1000_USDC);
+        mockUSDC.mint(address(this), _1000_USDC);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -55,20 +53,20 @@ contract BaseAdapterTest is BaseTest {
         uint256 depositAmount = _100_USDC;
         address testVault = address(0x5678);
 
-        IERC20(USDC_MAINNET).approve(address(adapter), depositAmount);
+        IERC20(getUSDC()).approve(address(adapter), depositAmount);
 
-        uint256 adapterBalanceBefore = IERC20(USDC_MAINNET).balanceOf(address(adapter));
-        uint256 totalAssetsBefore = adapter.totalAssets(testVault, USDC_MAINNET);
+        uint256 adapterBalanceBefore = IERC20(getUSDC()).balanceOf(address(adapter));
+        uint256 totalAssetsBefore = adapter.totalAssets(testVault, getUSDC());
 
-        adapter.deposit(USDC_MAINNET, depositAmount, testVault);
+        adapter.deposit(getUSDC(), depositAmount, testVault);
 
         assertEq(
-            IERC20(USDC_MAINNET).balanceOf(address(adapter)),
+            IERC20(getUSDC()).balanceOf(address(adapter)),
             adapterBalanceBefore + depositAmount,
             "Tokens not transferred to adapter"
         );
         assertEq(
-            adapter.totalAssets(testVault, USDC_MAINNET), totalAssetsBefore + depositAmount, "Total assets not updated"
+            adapter.totalAssets(testVault, getUSDC()), totalAssetsBefore + depositAmount, "Total assets not updated"
         );
     }
 
@@ -78,21 +76,21 @@ contract BaseAdapterTest is BaseTest {
         address testVault = address(0x5678);
 
         // Setup: deposit first
-        IERC20(USDC_MAINNET).approve(address(adapter), withdrawAmount);
-        adapter.deposit(USDC_MAINNET, withdrawAmount, testVault);
+        IERC20(getUSDC()).approve(address(adapter), withdrawAmount);
+        adapter.deposit(getUSDC(), withdrawAmount, testVault);
 
-        uint256 vaultBalanceBefore = IERC20(USDC_MAINNET).balanceOf(testVault);
-        uint256 totalAssetsBefore = adapter.totalAssets(testVault, USDC_MAINNET);
+        uint256 vaultBalanceBefore = IERC20(getUSDC()).balanceOf(testVault);
+        uint256 totalAssetsBefore = adapter.totalAssets(testVault, getUSDC());
 
-        adapter.withdraw(USDC_MAINNET, withdrawAmount, testVault);
+        adapter.withdraw(getUSDC(), withdrawAmount, testVault);
 
         assertEq(
-            IERC20(USDC_MAINNET).balanceOf(testVault),
+            IERC20(getUSDC()).balanceOf(testVault),
             vaultBalanceBefore + withdrawAmount,
             "Tokens not transferred to vault"
         );
         assertEq(
-            adapter.totalAssets(testVault, USDC_MAINNET), totalAssetsBefore - withdrawAmount, "Total assets not updated"
+            adapter.totalAssets(testVault, getUSDC()), totalAssetsBefore - withdrawAmount, "Total assets not updated"
         );
     }
 
@@ -101,9 +99,9 @@ contract BaseAdapterTest is BaseTest {
         address testVault = address(0x5678);
         uint256 testAmount = _100_USDC;
 
-        adapter.setAssetsForTest(testAmount);
+        adapter.setAssetsForTest(getUSDC(), testAmount);
 
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), testAmount, "Total assets incorrect");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), testAmount, "Total assets incorrect");
     }
 
     /// @dev Test setTotalAssets function
@@ -111,9 +109,9 @@ contract BaseAdapterTest is BaseTest {
         address testVault = address(0x5678);
         uint256 newTotal = _100_USDC;
 
-        adapter.setTotalAssets(testVault, USDC_MAINNET, newTotal);
+        adapter.setTotalAssets(testVault, getUSDC(), newTotal);
 
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), newTotal, "Total assets not set correctly");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), newTotal, "Total assets not set correctly");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -127,7 +125,7 @@ contract BaseAdapterTest is BaseTest {
 
         // Try to withdraw without depositing
         vm.expectRevert(bytes(ADAPTER_INSUFFICIENT_BALANCE));
-        adapter.withdraw(USDC_MAINNET, withdrawAmount, testVault);
+        adapter.withdraw(getUSDC(), withdrawAmount, testVault);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -139,8 +137,8 @@ contract BaseAdapterTest is BaseTest {
         address testVault = address(0x5678);
 
         // These should not revert (depending on implementation)
-        adapter.deposit(USDC_MAINNET, 0, testVault);
-        adapter.withdraw(USDC_MAINNET, 0, testVault);
+        adapter.deposit(getUSDC(), 0, testVault);
+        adapter.withdraw(getUSDC(), 0, testVault);
     }
 
     /// @dev Test multiple deposits and withdrawals
@@ -150,18 +148,18 @@ contract BaseAdapterTest is BaseTest {
         uint256 amount2 = _100_USDC / 2;
 
         // Multiple deposits
-        IERC20(USDC_MAINNET).approve(address(adapter), amount1 + amount2);
-        adapter.deposit(USDC_MAINNET, amount1, testVault);
-        adapter.deposit(USDC_MAINNET, amount2, testVault);
+        IERC20(getUSDC()).approve(address(adapter), amount1 + amount2);
+        adapter.deposit(getUSDC(), amount1, testVault);
+        adapter.deposit(getUSDC(), amount2, testVault);
 
         assertEq(
-            adapter.totalAssets(testVault, USDC_MAINNET), amount1 + amount2, "Multiple deposits not tracked correctly"
+            adapter.totalAssets(testVault, getUSDC()), amount1 + amount2, "Multiple deposits not tracked correctly"
         );
 
         // Partial withdrawal
-        adapter.withdraw(USDC_MAINNET, amount2, testVault);
+        adapter.withdraw(getUSDC(), amount2, testVault);
 
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), amount1, "Partial withdrawal not tracked correctly");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), amount1, "Partial withdrawal not tracked correctly");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -186,24 +184,24 @@ contract BaseAdapterTest is BaseTest {
         address testVault = address(0x5678);
 
         // Deposit
-        IERC20(USDC_MAINNET).approve(address(adapter), amount);
-        adapter.deposit(USDC_MAINNET, amount, testVault);
+        IERC20(getUSDC()).approve(address(adapter), amount);
+        adapter.deposit(getUSDC(), amount, testVault);
 
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), amount, "Deposit amount incorrect");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), amount, "Deposit amount incorrect");
 
         // Withdraw
-        adapter.withdraw(USDC_MAINNET, amount, testVault);
+        adapter.withdraw(getUSDC(), amount, testVault);
 
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), 0, "Withdraw not complete");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), 0, "Withdraw not complete");
     }
 
     /// @dev Fuzz test setTotalAssets
     function testFuzz_SetTotalAssets(uint256 amount) public {
         address testVault = address(0x5678);
 
-        adapter.setTotalAssets(testVault, USDC_MAINNET, amount);
+        adapter.setTotalAssets(testVault, getUSDC(), amount);
 
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), amount, "SetTotalAssets failed");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), amount, "SetTotalAssets failed");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -213,14 +211,14 @@ contract BaseAdapterTest is BaseTest {
     /// @dev Test adapter with different assets (if supported)
     function test_MultipleAssets() public {
         // This test would need to be adapted based on whether the adapter supports multiple assets
-        // For now, just test with USDC which we know works
+        // For now, just test with getUSDC() which we know works
         address testVault = address(0x5678);
         uint256 amount = _100_USDC;
 
-        IERC20(USDC_MAINNET).approve(address(adapter), amount);
-        adapter.deposit(USDC_MAINNET, amount, testVault);
+        IERC20(getUSDC()).approve(address(adapter), amount);
+        adapter.deposit(getUSDC(), amount, testVault);
 
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), amount, "Multi-asset test failed");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), amount, "Multi-asset test failed");
     }
 
     /// @dev Test adapter state consistency
@@ -229,16 +227,16 @@ contract BaseAdapterTest is BaseTest {
         uint256 amount = _100_USDC;
 
         // Deposit
-        IERC20(USDC_MAINNET).approve(address(adapter), amount);
-        adapter.deposit(USDC_MAINNET, amount, testVault);
+        IERC20(getUSDC()).approve(address(adapter), amount);
+        adapter.deposit(getUSDC(), amount, testVault);
 
-        uint256 totalAfterDeposit = adapter.totalAssets(testVault, USDC_MAINNET);
+        uint256 totalAfterDeposit = adapter.totalAssets(testVault, getUSDC());
 
         // Set total assets directly
-        adapter.setTotalAssets(testVault, USDC_MAINNET, amount * 2);
+        adapter.setTotalAssets(testVault, getUSDC(), amount * 2);
 
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), amount * 2, "Direct set failed");
-        assertNotEq(adapter.totalAssets(testVault, USDC_MAINNET), totalAfterDeposit, "State not updated");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), amount * 2, "Direct set failed");
+        assertNotEq(adapter.totalAssets(testVault, getUSDC()), totalAfterDeposit, "State not updated");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -266,8 +264,8 @@ contract BaseAdapterTest is BaseTest {
 
         // Test deposit with zero vault address - MockAdapter allows this
         uint256 amount = _100_USDC;
-        IERC20(USDC_MAINNET).approve(address(adapter), amount);
-        adapter.deposit(USDC_MAINNET, amount, address(0));
+        IERC20(getUSDC()).approve(address(adapter), amount);
+        adapter.deposit(getUSDC(), amount, address(0));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -288,10 +286,10 @@ contract BaseAdapterTest is BaseTest {
         vm.startPrank(caller);
 
         uint256 amount = _100_USDC;
-        deal(USDC_MAINNET, caller, amount);
+        mockUSDC.mint(caller, amount);
 
-        IERC20(USDC_MAINNET).approve(address(adapter), amount);
-        adapter.deposit(USDC_MAINNET, amount, address(0x5678));
+        IERC20(getUSDC()).approve(address(adapter), amount);
+        adapter.deposit(getUSDC(), amount, address(0x5678));
 
         vm.stopPrank();
     }
@@ -307,25 +305,23 @@ contract BaseAdapterTest is BaseTest {
         uint256 depositAmount2 = _100_USDC / 2;
 
         // Initial balance should be zero
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), 0, "Initial balance should be zero");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), 0, "Initial balance should be zero");
 
         // First deposit
-        IERC20(USDC_MAINNET).approve(address(adapter), depositAmount1);
-        adapter.deposit(USDC_MAINNET, depositAmount1, testVault);
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), depositAmount1, "First deposit tracking failed");
+        IERC20(getUSDC()).approve(address(adapter), depositAmount1);
+        adapter.deposit(getUSDC(), depositAmount1, testVault);
+        assertEq(adapter.totalAssets(testVault, getUSDC()), depositAmount1, "First deposit tracking failed");
 
         // Second deposit
-        IERC20(USDC_MAINNET).approve(address(adapter), depositAmount2);
-        adapter.deposit(USDC_MAINNET, depositAmount2, testVault);
+        IERC20(getUSDC()).approve(address(adapter), depositAmount2);
+        adapter.deposit(getUSDC(), depositAmount2, testVault);
         assertEq(
-            adapter.totalAssets(testVault, USDC_MAINNET),
-            depositAmount1 + depositAmount2,
-            "Second deposit tracking failed"
+            adapter.totalAssets(testVault, getUSDC()), depositAmount1 + depositAmount2, "Second deposit tracking failed"
         );
 
         // Partial withdrawal
-        adapter.withdraw(USDC_MAINNET, depositAmount2, testVault);
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), depositAmount1, "Withdrawal tracking failed");
+        adapter.withdraw(getUSDC(), depositAmount2, testVault);
+        assertEq(adapter.totalAssets(testVault, getUSDC()), depositAmount1, "Withdrawal tracking failed");
     }
 
     /// @dev Test multiple asset management
@@ -334,10 +330,10 @@ contract BaseAdapterTest is BaseTest {
         uint256 amount = _100_USDC;
 
         // Test with USDC
-        IERC20(USDC_MAINNET).approve(address(adapter), amount);
-        adapter.deposit(USDC_MAINNET, amount, testVault);
+        IERC20(getUSDC()).approve(address(adapter), amount);
+        adapter.deposit(getUSDC(), amount, testVault);
 
-        uint256 usdcBalance = adapter.totalAssets(testVault, USDC_MAINNET);
+        uint256 usdcBalance = adapter.totalAssets(testVault, getUSDC());
         assertEq(usdcBalance, amount, "USDC balance incorrect");
 
         // Test setting different amounts for different assets
@@ -345,7 +341,7 @@ contract BaseAdapterTest is BaseTest {
         adapter.setTotalAssets(testVault, mockAsset, amount * 2);
 
         assertEq(adapter.totalAssets(testVault, mockAsset), amount * 2, "Mock asset balance incorrect");
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), amount, "USDC balance affected incorrectly");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), amount, "USDC balance affected incorrectly");
     }
 
     /// @dev Test asset balance overflow scenarios
@@ -354,9 +350,9 @@ contract BaseAdapterTest is BaseTest {
 
         // Test with maximum uint256 value
         uint256 maxAmount = type(uint256).max;
-        adapter.setTotalAssets(testVault, USDC_MAINNET, maxAmount);
+        adapter.setTotalAssets(testVault, getUSDC(), maxAmount);
 
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), maxAmount, "Max value not set correctly");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), maxAmount, "Max value not set correctly");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -371,23 +367,23 @@ contract BaseAdapterTest is BaseTest {
         uint256 amount2 = _100_USDC / 2;
 
         // Deposit to vault1
-        IERC20(USDC_MAINNET).approve(address(adapter), amount1);
-        adapter.deposit(USDC_MAINNET, amount1, vault1);
+        IERC20(getUSDC()).approve(address(adapter), amount1);
+        adapter.deposit(getUSDC(), amount1, vault1);
 
         // Deposit to vault2
-        IERC20(USDC_MAINNET).approve(address(adapter), amount2);
-        adapter.deposit(USDC_MAINNET, amount2, vault2);
+        IERC20(getUSDC()).approve(address(adapter), amount2);
+        adapter.deposit(getUSDC(), amount2, vault2);
 
         // Verify independent tracking
-        assertEq(adapter.totalAssets(vault1, USDC_MAINNET), amount1, "Vault1 balance incorrect");
-        assertEq(adapter.totalAssets(vault2, USDC_MAINNET), amount2, "Vault2 balance incorrect");
+        assertEq(adapter.totalAssets(vault1, getUSDC()), amount1, "Vault1 balance incorrect");
+        assertEq(adapter.totalAssets(vault2, getUSDC()), amount2, "Vault2 balance incorrect");
 
         // Withdraw from vault1
-        adapter.withdraw(USDC_MAINNET, amount1 / 2, vault1);
+        adapter.withdraw(getUSDC(), amount1 / 2, vault1);
 
         // Verify vault2 unaffected
-        assertEq(adapter.totalAssets(vault1, USDC_MAINNET), amount1 / 2, "Vault1 withdrawal failed");
-        assertEq(adapter.totalAssets(vault2, USDC_MAINNET), amount2, "Vault2 affected incorrectly");
+        assertEq(adapter.totalAssets(vault1, getUSDC()), amount1 / 2, "Vault1 withdrawal failed");
+        assertEq(adapter.totalAssets(vault2, getUSDC()), amount2, "Vault2 affected incorrectly");
     }
 
     /// @dev Test vault isolation
@@ -397,11 +393,11 @@ contract BaseAdapterTest is BaseTest {
         uint256 amount = _100_USDC;
 
         // Set assets for vault1
-        adapter.setTotalAssets(vault1, USDC_MAINNET, amount);
+        adapter.setTotalAssets(vault1, getUSDC(), amount);
 
         // Verify vault2 is unaffected
-        assertEq(adapter.totalAssets(vault1, USDC_MAINNET), amount, "Vault1 not set correctly");
-        assertEq(adapter.totalAssets(vault2, USDC_MAINNET), 0, "Vault2 affected incorrectly");
+        assertEq(adapter.totalAssets(vault1, getUSDC()), amount, "Vault1 not set correctly");
+        assertEq(adapter.totalAssets(vault2, getUSDC()), 0, "Vault2 affected incorrectly");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -411,13 +407,13 @@ contract BaseAdapterTest is BaseTest {
     /// @dev Test deposit with exact token balance
     function test_DepositWithExactBalance() public {
         address testVault = address(0x5678);
-        uint256 exactBalance = IERC20(USDC_MAINNET).balanceOf(address(this));
+        uint256 exactBalance = IERC20(getUSDC()).balanceOf(address(this));
 
-        IERC20(USDC_MAINNET).approve(address(adapter), exactBalance);
-        adapter.deposit(USDC_MAINNET, exactBalance, testVault);
+        IERC20(getUSDC()).approve(address(adapter), exactBalance);
+        adapter.deposit(getUSDC(), exactBalance, testVault);
 
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), exactBalance, "Exact balance deposit failed");
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(this)), 0, "Caller balance not zero");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), exactBalance, "Exact balance deposit failed");
+        assertEq(IERC20(getUSDC()).balanceOf(address(this)), 0, "Caller balance not zero");
     }
 
     /// @dev Test withdraw with insufficient balance edge cases
@@ -426,19 +422,19 @@ contract BaseAdapterTest is BaseTest {
         uint256 depositAmount = _100_USDC;
 
         // Deposit first
-        IERC20(USDC_MAINNET).approve(address(adapter), depositAmount);
-        adapter.deposit(USDC_MAINNET, depositAmount, testVault);
+        IERC20(getUSDC()).approve(address(adapter), depositAmount);
+        adapter.deposit(getUSDC(), depositAmount, testVault);
 
         // Try to withdraw more than deposited
         vm.expectRevert(bytes(ADAPTER_INSUFFICIENT_BALANCE));
-        adapter.withdraw(USDC_MAINNET, depositAmount + 1, testVault);
+        adapter.withdraw(getUSDC(), depositAmount + 1, testVault);
 
         // Try to withdraw exactly what was deposited (should work)
-        adapter.withdraw(USDC_MAINNET, depositAmount, testVault);
+        adapter.withdraw(getUSDC(), depositAmount, testVault);
 
         // Try to withdraw from empty balance
         vm.expectRevert(bytes(ADAPTER_INSUFFICIENT_BALANCE));
-        adapter.withdraw(USDC_MAINNET, 1, testVault);
+        adapter.withdraw(getUSDC(), 1, testVault);
     }
 
     /// @dev Test boundary conditions
@@ -446,13 +442,13 @@ contract BaseAdapterTest is BaseTest {
         address testVault = address(0x5678);
 
         // Test with 1 wei
-        adapter.setTotalAssets(testVault, USDC_MAINNET, 1);
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), 1, "1 wei not set correctly");
+        adapter.setTotalAssets(testVault, getUSDC(), 1);
+        assertEq(adapter.totalAssets(testVault, getUSDC()), 1, "1 wei not set correctly");
 
         // Test with maximum value
         uint256 maxVal = type(uint256).max;
-        adapter.setTotalAssets(testVault, USDC_MAINNET, maxVal);
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), maxVal, "Max value not set correctly");
+        adapter.setTotalAssets(testVault, getUSDC(), maxVal);
+        assertEq(adapter.totalAssets(testVault, getUSDC()), maxVal, "Max value not set correctly");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -466,31 +462,31 @@ contract BaseAdapterTest is BaseTest {
         uint256 additionalAmount = _100_USDC / 2;
 
         // Step 1: Initial deposit
-        IERC20(USDC_MAINNET).approve(address(adapter), initialAmount);
-        adapter.deposit(USDC_MAINNET, initialAmount, testVault);
+        IERC20(getUSDC()).approve(address(adapter), initialAmount);
+        adapter.deposit(getUSDC(), initialAmount, testVault);
 
-        uint256 balanceAfterFirstDeposit = adapter.totalAssets(testVault, USDC_MAINNET);
+        uint256 balanceAfterFirstDeposit = adapter.totalAssets(testVault, getUSDC());
         assertEq(balanceAfterFirstDeposit, initialAmount, "First deposit failed");
 
         // Step 2: Additional deposit
-        IERC20(USDC_MAINNET).approve(address(adapter), additionalAmount);
-        adapter.deposit(USDC_MAINNET, additionalAmount, testVault);
+        IERC20(getUSDC()).approve(address(adapter), additionalAmount);
+        adapter.deposit(getUSDC(), additionalAmount, testVault);
 
-        uint256 totalAfterSecondDeposit = adapter.totalAssets(testVault, USDC_MAINNET);
+        uint256 totalAfterSecondDeposit = adapter.totalAssets(testVault, getUSDC());
         assertEq(totalAfterSecondDeposit, initialAmount + additionalAmount, "Second deposit failed");
 
         // Step 3: Partial withdrawal
         uint256 withdrawAmount = initialAmount / 2;
-        adapter.withdraw(USDC_MAINNET, withdrawAmount, testVault);
+        adapter.withdraw(getUSDC(), withdrawAmount, testVault);
 
-        uint256 balanceAfterWithdraw = adapter.totalAssets(testVault, USDC_MAINNET);
+        uint256 balanceAfterWithdraw = adapter.totalAssets(testVault, getUSDC());
         assertEq(balanceAfterWithdraw, totalAfterSecondDeposit - withdrawAmount, "Withdrawal failed");
 
         // Step 4: Set total assets manually
         uint256 newTotal = _1000_USDC;
-        adapter.setTotalAssets(testVault, USDC_MAINNET, newTotal);
+        adapter.setTotalAssets(testVault, getUSDC(), newTotal);
 
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), newTotal, "Manual set failed");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), newTotal, "Manual set failed");
     }
 
     /// @dev Test concurrent operations
@@ -500,22 +496,22 @@ contract BaseAdapterTest is BaseTest {
         uint256 amount = _100_USDC;
 
         // Concurrent deposits to different vaults
-        IERC20(USDC_MAINNET).approve(address(adapter), amount * 2);
-        adapter.deposit(USDC_MAINNET, amount, vault1);
-        adapter.deposit(USDC_MAINNET, amount, vault2);
+        IERC20(getUSDC()).approve(address(adapter), amount * 2);
+        adapter.deposit(getUSDC(), amount, vault1);
+        adapter.deposit(getUSDC(), amount, vault2);
 
         // Verify both deposits recorded correctly
-        assertEq(adapter.totalAssets(vault1, USDC_MAINNET), amount, "Vault1 concurrent deposit failed");
-        assertEq(adapter.totalAssets(vault2, USDC_MAINNET), amount, "Vault2 concurrent deposit failed");
+        assertEq(adapter.totalAssets(vault1, getUSDC()), amount, "Vault1 concurrent deposit failed");
+        assertEq(adapter.totalAssets(vault2, getUSDC()), amount, "Vault2 concurrent deposit failed");
 
         // Concurrent operations: withdraw from vault1, deposit to vault1
-        adapter.withdraw(USDC_MAINNET, amount / 2, vault1);
-        IERC20(USDC_MAINNET).approve(address(adapter), amount / 4);
-        adapter.deposit(USDC_MAINNET, amount / 4, vault1);
+        adapter.withdraw(getUSDC(), amount / 2, vault1);
+        IERC20(getUSDC()).approve(address(adapter), amount / 4);
+        adapter.deposit(getUSDC(), amount / 4, vault1);
 
         uint256 expectedVault1Balance = amount - (amount / 2) + (amount / 4);
-        assertEq(adapter.totalAssets(vault1, USDC_MAINNET), expectedVault1Balance, "Concurrent operations failed");
-        assertEq(adapter.totalAssets(vault2, USDC_MAINNET), amount, "Vault2 affected by vault1 operations");
+        assertEq(adapter.totalAssets(vault1, getUSDC()), expectedVault1Balance, "Concurrent operations failed");
+        assertEq(adapter.totalAssets(vault2, getUSDC()), amount, "Vault2 affected by vault1 operations");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -530,12 +526,12 @@ contract BaseAdapterTest is BaseTest {
         vm.assume(amount2 > 0 && amount2 <= _1000_USDC);
 
         // Set assets for both vaults
-        adapter.setTotalAssets(vault1, USDC_MAINNET, amount1);
-        adapter.setTotalAssets(vault2, USDC_MAINNET, amount2);
+        adapter.setTotalAssets(vault1, getUSDC(), amount1);
+        adapter.setTotalAssets(vault2, getUSDC(), amount2);
 
         // Verify isolation
-        assertEq(adapter.totalAssets(vault1, USDC_MAINNET), amount1, "Vault1 fuzz test failed");
-        assertEq(adapter.totalAssets(vault2, USDC_MAINNET), amount2, "Vault2 fuzz test failed");
+        assertEq(adapter.totalAssets(vault1, getUSDC()), amount1, "Vault1 fuzz test failed");
+        assertEq(adapter.totalAssets(vault2, getUSDC()), amount2, "Vault2 fuzz test failed");
     }
 
     /// @dev Fuzz test deposit/withdraw cycles
@@ -548,18 +544,18 @@ contract BaseAdapterTest is BaseTest {
 
         for (uint256 i = 0; i < cycles; i++) {
             // Deposit
-            IERC20(USDC_MAINNET).approve(address(adapter), amount);
-            adapter.deposit(USDC_MAINNET, amount, testVault);
+            IERC20(getUSDC()).approve(address(adapter), amount);
+            adapter.deposit(getUSDC(), amount, testVault);
             runningBalance += amount;
 
-            assertEq(adapter.totalAssets(testVault, USDC_MAINNET), runningBalance, "Cycle deposit failed");
+            assertEq(adapter.totalAssets(testVault, getUSDC()), runningBalance, "Cycle deposit failed");
 
             // Withdraw half
             uint256 withdrawAmount = amount / 2;
-            adapter.withdraw(USDC_MAINNET, withdrawAmount, testVault);
+            adapter.withdraw(getUSDC(), withdrawAmount, testVault);
             runningBalance -= withdrawAmount;
 
-            assertEq(adapter.totalAssets(testVault, USDC_MAINNET), runningBalance, "Cycle withdraw failed");
+            assertEq(adapter.totalAssets(testVault, getUSDC()), runningBalance, "Cycle withdraw failed");
         }
     }
 
@@ -568,8 +564,8 @@ contract BaseAdapterTest is BaseTest {
         address testVault = address(0x5678);
 
         // Should handle any uint256 value
-        adapter.setTotalAssets(testVault, USDC_MAINNET, assetAmount);
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), assetAmount, "Asset bounds fuzz test failed");
+        adapter.setTotalAssets(testVault, getUSDC(), assetAmount);
+        assertEq(adapter.totalAssets(testVault, getUSDC()), assetAmount, "Asset bounds fuzz test failed");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -583,22 +579,22 @@ contract BaseAdapterTest is BaseTest {
         uint256 operations = 50;
 
         // Approve large amount upfront
-        IERC20(USDC_MAINNET).approve(address(adapter), smallAmount * operations);
+        IERC20(getUSDC()).approve(address(adapter), smallAmount * operations);
 
         // Perform many small deposits
         for (uint256 i = 0; i < operations; i++) {
-            adapter.deposit(USDC_MAINNET, smallAmount, testVault);
+            adapter.deposit(getUSDC(), smallAmount, testVault);
         }
 
         uint256 expectedTotal = smallAmount * operations;
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), expectedTotal, "Many small operations failed");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), expectedTotal, "Many small operations failed");
 
         // Perform many small withdrawals
         for (uint256 i = 0; i < operations; i++) {
-            adapter.withdraw(USDC_MAINNET, smallAmount, testVault);
+            adapter.withdraw(getUSDC(), smallAmount, testVault);
         }
 
-        assertEq(adapter.totalAssets(testVault, USDC_MAINNET), 0, "Many small withdrawals failed");
+        assertEq(adapter.totalAssets(testVault, getUSDC()), 0, "Many small withdrawals failed");
     }
 
     /// @dev Test registry consistency
@@ -615,18 +611,18 @@ contract BaseAdapterTest is BaseTest {
         assertEq(adapter2.registry(), registry2, "Adapter2 registry incorrect");
 
         // Fund both adapters
-        deal(USDC_MAINNET, address(adapter1), _1000_USDC);
-        deal(USDC_MAINNET, address(adapter2), _1000_USDC);
+        mockUSDC.mint(address(adapter1), _1000_USDC);
+        mockUSDC.mint(address(adapter2), _1000_USDC);
 
         // Verify operations don't interfere
         address testVault = address(0x5678);
         uint256 amount = _100_USDC;
 
-        adapter1.setTotalAssets(testVault, USDC_MAINNET, amount);
-        adapter2.setTotalAssets(testVault, USDC_MAINNET, amount * 2);
+        adapter1.setTotalAssets(testVault, getUSDC(), amount);
+        adapter2.setTotalAssets(testVault, getUSDC(), amount * 2);
 
-        assertEq(adapter1.totalAssets(testVault, USDC_MAINNET), amount, "Adapter1 state corrupted");
-        assertEq(adapter2.totalAssets(testVault, USDC_MAINNET), amount * 2, "Adapter2 state corrupted");
+        assertEq(adapter1.totalAssets(testVault, getUSDC()), amount, "Adapter1 state corrupted");
+        assertEq(adapter2.totalAssets(testVault, getUSDC()), amount * 2, "Adapter2 state corrupted");
     }
 }
 
@@ -663,9 +659,7 @@ contract MockAdapter {
     }
 
     // Test helper to set assets directly - for backward compatibility
-    function setAssetsForTest(uint256 assets) external {
-        _vaultAssetBalances[address(0x5678)][USDC_MAINNET] = assets;
+    function setAssetsForTest(address asset, uint256 assets) external {
+        _vaultAssetBalances[address(0x5678)][asset] = assets;
     }
-
-    // Registry getter already exists as public variable
 }

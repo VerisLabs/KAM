@@ -1,15 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {
-    ADMIN_ROLE,
-    INSTITUTION_ROLE,
-    MINTER_ROLE,
-    USDC_MAINNET,
-    WBTC_MAINNET,
-    _1_USDC,
-    _1_WBTC
-} from "../utils/Constants.sol";
+import { ADMIN_ROLE, INSTITUTION_ROLE, MINTER_ROLE, _1_USDC, _1_WBTC } from "../utils/Constants.sol";
 
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
@@ -103,12 +95,12 @@ contract DeploymentTest is DeploymentBaseTest {
     /// @dev Test asset registration
     function test_AssetRegistration() public {
         // Check USDC registration
-        assertTrue(registry.isAsset(USDC_MAINNET), "USDC not registered");
-        assertEq(registry.assetToKToken(USDC_MAINNET), address(kUSD), "USDC->kUSD mapping incorrect");
+        assertTrue(registry.isAsset(getUSDC()), "getUSDC() not registered");
+        assertEq(registry.assetToKToken(getUSDC()), address(kUSD), "USDC->kUSD mapping incorrect");
 
         // Check WBTC registration
-        assertTrue(registry.isAsset(WBTC_MAINNET), "WBTC not registered");
-        assertEq(registry.assetToKToken(WBTC_MAINNET), address(kBTC), "WBTC->kBTC mapping incorrect");
+        assertTrue(registry.isAsset(getWBTC()), "WBTC not registered");
+        assertEq(registry.assetToKToken(getWBTC()), address(kBTC), "WBTC->kBTC mapping incorrect");
     }
 
     /// @dev Test vault registration
@@ -120,9 +112,9 @@ contract DeploymentTest is DeploymentBaseTest {
         assertTrue(registry.isVault(address(betaVault)), "Beta Vault not registered");
 
         // Check vault asset mappings
-        assertEq(registry.getVaultAssets(address(dnVault))[0], USDC_MAINNET, "DN Vault asset mapping incorrect");
-        assertEq(registry.getVaultAssets(address(alphaVault))[0], USDC_MAINNET, "Alpha Vault asset mapping incorrect");
-        assertEq(registry.getVaultAssets(address(betaVault))[0], USDC_MAINNET, "Beta Vault asset mapping incorrect");
+        assertEq(registry.getVaultAssets(address(dnVault))[0], getUSDC(), "DN Vault asset mapping incorrect");
+        assertEq(registry.getVaultAssets(address(alphaVault))[0], getUSDC(), "Alpha Vault asset mapping incorrect");
+        assertEq(registry.getVaultAssets(address(betaVault))[0], getUSDC(), "Beta Vault asset mapping incorrect");
 
         // Check vault types
         assertEq(registry.getVaultType(address(minter)), uint8(0), "Minter Vault type incorrect"); // Minter = 0
@@ -133,23 +125,19 @@ contract DeploymentTest is DeploymentBaseTest {
 
     /// @dev Test user funding
     function test_UserFunding() public {
-        if (useMainnetFork) {
-            // Check USDC balances
-            assertEq(getAssetBalance(USDC_MAINNET, users.alice), 1_000_000 * _1_USDC, "Alice USDC balance incorrect");
-            assertEq(getAssetBalance(USDC_MAINNET, users.bob), 500_000 * _1_USDC, "Bob USDC balance incorrect");
-            assertEq(
-                getAssetBalance(USDC_MAINNET, users.institution),
-                10_000_000 * _1_USDC,
-                "Institution USDC balance incorrect"
-            );
+        // Check USDC balances
+        assertEq(getAssetBalance(getUSDC(), users.alice), 1_000_000 * _1_USDC, "Alice USDC balance incorrect");
+        assertEq(getAssetBalance(getUSDC(), users.bob), 500_000 * _1_USDC, "Bob USDC balance incorrect");
+        assertEq(
+            getAssetBalance(getUSDC(), users.institution),
+            10_000_000 * _1_USDC,
+            "Institution getUSDC() balance incorrect"
+        );
 
-            // Check WBTC balances
-            assertEq(getAssetBalance(WBTC_MAINNET, users.alice), 100 * _1_WBTC, "Alice WBTC balance incorrect");
-            assertEq(getAssetBalance(WBTC_MAINNET, users.bob), 50 * _1_WBTC, "Bob WBTC balance incorrect");
-            assertEq(
-                getAssetBalance(WBTC_MAINNET, users.institution), 1000 * _1_WBTC, "Institution WBTC balance incorrect"
-            );
-        }
+        // Check WBTC balances
+        assertEq(getAssetBalance(getWBTC(), users.alice), 100 * _1_WBTC, "Alice WBTC balance incorrect");
+        assertEq(getAssetBalance(getWBTC(), users.bob), 50 * _1_WBTC, "Bob WBTC balance incorrect");
+        assertEq(getAssetBalance(getWBTC(), users.institution), 1000 * _1_WBTC, "Institution WBTC balance incorrect");
     }
 
     /// @dev Test basic minting functionality

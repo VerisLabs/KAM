@@ -9,8 +9,6 @@ import {
     INSTITUTION_ROLE,
     MINTER_ROLE,
     RELAYER_ROLE,
-    USDC_MAINNET,
-    WBTC_MAINNET,
     _1000_USDC,
     _100_USDC,
     _10_USDC,
@@ -45,7 +43,6 @@ import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 /// @title DeploymentBaseTest
 /// @notice Comprehensive base test contract that deploys the complete KAM protocol
-/// @dev Follows DeFi best practices with fork-first testing and minimal mocks
 ///
 /// @dev VAULT ARCHITECTURE:
 /// - kMinter (MINTER type = 0): Institutional gateway for 1:1 minting/redemption
@@ -112,11 +109,8 @@ contract DeploymentBaseTest is BaseTest {
     //////////////////////////////////////////////////////////////*/
 
     function setUp() public virtual override {
-        // Call parent setup (creates users, fork setup, etc.)
+        // Call parent setup (creates users, etc.)
         super.setUp();
-
-        // Enable mainnet fork for realistic testing
-        enableMainnetFork();
 
         // Deploy factory for the proxies
         factory = new ERC1967Factory();
@@ -212,17 +206,15 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Deploy kToken contracts (kUSD and kBTC)
     function _deployTokens() internal {
-        // Deploy kUSD through registry
+        // Deploy kUSD through registry using mock USDC address
         vm.startPrank(users.admin);
-        address kUSDAddress = registry.registerAsset(
-            KUSD_NAME, KUSD_SYMBOL, USDC_MAINNET, registry.USDC(), type(uint256).max, type(uint256).max
-        );
+        address kUSDAddress =
+            registry.registerAsset(KUSD_NAME, KUSD_SYMBOL, usdc, registry.USDC(), type(uint256).max, type(uint256).max);
         kUSD = kToken(payable(kUSDAddress));
         kUSD.grantEmergencyRole(users.emergencyAdmin);
 
-        address kBTCAddress = registry.registerAsset(
-            KBTC_NAME, KBTC_SYMBOL, WBTC_MAINNET, registry.WBTC(), type(uint256).max, type(uint256).max
-        );
+        address kBTCAddress =
+            registry.registerAsset(KBTC_NAME, KBTC_SYMBOL, wbtc, registry.WBTC(), type(uint256).max, type(uint256).max);
         kBTC = kToken(payable(kBTCAddress));
         kBTC.grantEmergencyRole(users.emergencyAdmin);
         vm.stopPrank();
@@ -325,10 +317,10 @@ contract DeploymentBaseTest is BaseTest {
     function _configureProtocol() internal {
         // Register Vaults
         vm.startPrank(users.admin);
-        registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, USDC_MAINNET);
-        registry.registerVault(address(dnVault), IkRegistry.VaultType.DN, USDC_MAINNET);
-        registry.registerVault(address(alphaVault), IkRegistry.VaultType.ALPHA, USDC_MAINNET);
-        registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, USDC_MAINNET);
+        registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, usdc);
+        registry.registerVault(address(dnVault), IkRegistry.VaultType.DN, usdc);
+        registry.registerVault(address(alphaVault), IkRegistry.VaultType.ALPHA, usdc);
+        registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, usdc);
 
         // Register adapters for vaults (if adapters were deployed)
         if (address(custodialAdapter) != address(0)) {
@@ -408,20 +400,18 @@ contract DeploymentBaseTest is BaseTest {
         vm.stopPrank();
     }
 
-    /// @dev Fund test users with mainnet assets
+    /// @dev Fund test users with test assets
     function _fundUsers() internal {
-        if (useMainnetFork) {
-            // Fund users with USDC using deal() cheatcode
-            deal(USDC_MAINNET, users.alice, 1_000_000 * _1_USDC);
-            deal(USDC_MAINNET, users.bob, 500_000 * _1_USDC);
-            deal(USDC_MAINNET, users.charlie, 250_000 * _1_USDC);
-            deal(USDC_MAINNET, users.institution, 10_000_000 * _1_USDC);
+        // Fund users with USDC using mint function on mock tokens
+        mockUSDC.mint(users.alice, 1_000_000 * _1_USDC);
+        mockUSDC.mint(users.bob, 500_000 * _1_USDC);
+        mockUSDC.mint(users.charlie, 250_000 * _1_USDC);
+        mockUSDC.mint(users.institution, 10_000_000 * _1_USDC);
 
-            // Fund users with WBTC
-            deal(WBTC_MAINNET, users.alice, 100 * _1_WBTC);
-            deal(WBTC_MAINNET, users.bob, 50 * _1_WBTC);
-            deal(WBTC_MAINNET, users.institution, 1000 * _1_WBTC);
-        }
+        // Fund users with WBTC
+        mockWBTC.mint(users.alice, 100 * _1_WBTC);
+        mockWBTC.mint(users.bob, 50 * _1_WBTC);
+        mockWBTC.mint(users.institution, 1000 * _1_WBTC);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -500,12 +490,12 @@ contract DeploymentBaseTest is BaseTest {
         assertEq(registry.getContractById(registry.K_MINTER()), address(minter));
 
         // Check assets are registered
-        assertTrue(registry.isAsset(USDC_MAINNET));
-        assertTrue(registry.isAsset(WBTC_MAINNET));
+        assertTrue(registry.isAsset(usdc));
+        assertTrue(registry.isAsset(wbtc));
 
         // Check kTokens are registered
-        assertEq(registry.assetToKToken(USDC_MAINNET), address(kUSD));
-        assertEq(registry.assetToKToken(WBTC_MAINNET), address(kBTC));
+        assertEq(registry.assetToKToken(usdc), address(kUSD));
+        assertEq(registry.assetToKToken(wbtc), address(kBTC));
 
         // Check all vaults are registered
         assertTrue(registry.isVault(address(dnVault)));

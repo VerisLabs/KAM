@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import { BaseVaultTest, DeploymentBaseTest } from "../utils/BaseVaultTest.sol";
-import { USDC_MAINNET, _1_USDC } from "../utils/Constants.sol";
+import { _1_USDC } from "../utils/Constants.sol";
 
 import { console2 } from "forge-std/console2.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
@@ -168,7 +168,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET, address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 1000 * _1_USDC, 0, false
+            getUSDC(), address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 1000 * _1_USDC, 0, false
         );
 
         // Execute settlement which internally calls settleBatch
@@ -219,7 +219,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vm.prank(users.relayer);
         vm.expectRevert(bytes(KASSETROUTER_BATCH_ID_PROPOSED));
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            USDC_MAINNET, address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 1000 * _1_USDC, 0, false
+            getUSDC(), address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 1000 * _1_USDC, 0, false
         );
 
         // Should revert with Settled error
@@ -251,7 +251,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         // Verify receiver is initialized correctly
         kBatchReceiver batchReceiver = kBatchReceiver(receiver);
         assertEq(batchReceiver.batchId(), batchId);
-        assertEq(batchReceiver.asset(), USDC_MAINNET);
+        assertEq(batchReceiver.asset(), getUSDC());
     }
 
     /// @dev Test createBatchReceiver returns existing if already deployed
