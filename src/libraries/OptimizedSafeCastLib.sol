@@ -2,10 +2,12 @@
 pragma solidity 0.8.30;
 
 /// @notice Safe integer casting library that reverts on overflow.
-/// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/SafeCastLib.sol)
+/// @author Originally by Solady (https://github.com/vectorized/solady/blob/main/src/utils/SafeCastLib.sol)
 /// @author Modified from OpenZeppelin
 /// (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeCast.sol)
-/// @dev Optimized for runtime gas for very high number of optimizer runs (i.e. >= 1000000).
+/// @dev NOTE: This is a reduced version of the original Solady library.
+/// We have extracted only the necessary safe casting functionality to optimize contract size.
+/// Original code by Solady, modified for size optimization.
 library OptimizedSafeCastLib {
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                       CUSTOM ERRORS                        */
