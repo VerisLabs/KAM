@@ -17,7 +17,7 @@ import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 
-import { IVault, IVaultBatch } from "src/interfaces/IVault.sol";
+import { IVault, IVaultBatch, IVaultClaim, IVaultFees } from "src/interfaces/IVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 
 import {
@@ -285,8 +285,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         return requestId;
     }
 
-    /// @notice Cancels a staking request
-    /// @param requestId Request ID to cancel
+    /// @inheritdoc IVault
     function cancelStakeRequest(bytes32 requestId) external payable {
         // Open `nonReentrant`
         _lockReentrant();
@@ -318,8 +317,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _unlockReentrant();
     }
 
-    /// @notice Cancels an unstaking request
-    /// @param requestId Request ID to cancel
+    /// @inheritdoc IVault
     function cancelUnstakeRequest(bytes32 requestId) external payable {
         // Open `nonReentrant`
         _lockReentrant();
@@ -514,9 +512,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
                           VAULT CLAIMS FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Claims stkTokens from a settled staking batch
-    /// @param batchId Batch ID to claim from
-    /// @param requestId Request ID to claim
+    /// @inheritdoc IVaultClaim
     function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable {
         // Open `nonRentrant`
         _lockReentrant();
@@ -551,9 +547,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _unlockReentrant();
     }
 
-    /// @notice Claims kTokens from a settled unstaking batch (simplified implementation)
-    /// @param batchId Batch ID to claim from
-    /// @param requestId Request ID to claim
+    /// @inheritdoc IVaultClaim
     function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable {
         // Open `nonRentrant`
         _lockReentrant();
@@ -601,9 +595,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
                           VAULT FEES FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Sets the hard hurdle rate
-    /// @param _isHard Whether the hard hurdle rate is enabled
-    /// @dev If true, performance fees will only be charged to the excess return
+    /// @inheritdoc IVaultFees
     function setHardHurdleRate(bool _isHard) external {
         _checkAdmin(msg.sender);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
@@ -611,9 +603,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit HardHurdleRateUpdated(_isHard);
     }
 
-    /// @notice Sets the management fee
-    /// @param _managementFee The new management fee
-    /// @dev Fee is a basis point (1% = 100)
+    /// @inheritdoc IVaultFees
     function setManagementFee(uint16 _managementFee) external {
         _checkAdmin(msg.sender);
         _checkValidBPS(_managementFee);
@@ -623,9 +613,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit ManagementFeeUpdated(oldFee, _managementFee);
     }
 
-    /// @notice Sets the performance fee
-    /// @param _performanceFee The new performance fee
-    /// @dev Fee is a basis point (1% = 100)
+    /// @inheritdoc IVaultFees
     function setPerformanceFee(uint16 _performanceFee) external {
         _checkAdmin(msg.sender);
         _checkValidBPS(_performanceFee);
@@ -635,9 +623,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit PerformanceFeeUpdated(oldFee, _performanceFee);
     }
 
-    /// @notice Notifies the module that management fees have been charged from backend
-    /// @param _timestamp The timestamp of the fee charge
-    /// @dev Should only be called by the vault
+    /// @inheritdoc IVaultFees
     function notifyManagementFeesCharged(uint64 _timestamp) external {
         _checkAdmin(msg.sender);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
@@ -647,9 +633,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit ManagementFeesCharged(_timestamp);
     }
 
-    /// @notice Notifies the module that performance fees have been charged from backend
-    /// @param _timestamp The timestamp of the fee charge
-    /// @dev Should only be called by the vault
+    /// @inheritdoc IVaultFees
     function notifyPerformanceFeesCharged(uint64 _timestamp) external {
         _checkAdmin(msg.sender);
         BaseVaultStorage storage $ = _getBaseVaultStorage();
@@ -691,9 +675,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
                             PAUSE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Sets the pause state of the contract
-    /// @param paused_ New pause state
-    /// @dev Only callable internally by inheriting contracts
+    /// @inheritdoc IVault
     function setPaused(bool paused_) external {
         require(_isEmergencyAdmin(msg.sender), KSTAKINGVAULT_WRONG_ROLE);
         _setPaused(paused_);

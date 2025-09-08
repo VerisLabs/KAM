@@ -50,4 +50,45 @@ interface IVault is IVaultBatch, IVaultClaim, IVaultFees {
     /// @param stkTokenAmount The quantity of stkTokens to unstake (must not exceed user balance, cannot be zero)
     /// @return requestId Unique identifier for tracking this unstaking request through settlement and claiming
     function requestUnstake(address to, uint256 stkTokenAmount) external payable returns (bytes32 requestId);
+
+    /// @notice Cancels a pending stake request and returns kTokens to the user before batch settlement
+    /// @dev This function allows users to reverse their staking request before batch processing by: (1) Validating
+    /// the request exists, belongs to the caller, and remains in pending status, (2) Checking the associated batch
+    /// hasn't been closed or settled to prevent manipulation of finalized operations, (3) Updating request status
+    /// to cancelled and removing from user's active requests tracking, (4) Reducing total pending stake amount
+    /// to maintain accurate vault accounting, (5) Notifying kAssetRouter to reverse the virtual asset movement
+    /// from staking vault back to DN vault, ensuring proper asset allocation, (6) Returning the originally deposited
+    /// kTokens to the user's address. This cancellation mechanism provides flexibility for users who change their
+    /// mind or need immediate liquidity before the batch settlement occurs. The operation is only valid during
+    /// the open batch period before closure by relayers.
+    /// @param requestId The unique identifier of the stake request to cancel (must be owned by caller)
+    function cancelStakeRequest(bytes32 requestId) external payable;
+    
+    /// @notice Cancels a pending unstake request and returns stkTokens to the user before batch settlement
+    /// @dev This function allows users to reverse their unstaking request before batch processing by: (1) Validating
+    /// the request exists, belongs to the caller, and remains in pending status, (2) Checking the associated batch
+    /// hasn't been closed or settled to prevent reversal of finalized operations, (3) Updating request status
+    /// to cancelled and removing from user's active requests tracking, (4) Notifying kAssetRouter to reverse the
+    /// share redemption request, maintaining proper share accounting across the protocol, (5) Returning the originally
+    /// transferred stkTokens from the vault back to the user's address. This cancellation mechanism enables users
+    /// to maintain their staked position if market conditions change or they reconsider their unstaking decision.
+    /// The stkTokens are returned without any yield impact since the batch hasn't settled. The operation is only
+    /// valid during the open batch period before closure by relayers.
+    /// @param requestId The unique identifier of the unstake request to cancel (must be owned by caller)
+    function cancelUnstakeRequest(bytes32 requestId) external payable;
+
+    
+    /// @notice Controls the vault's operational state for emergency situations and maintenance periods
+    /// @dev This function provides critical safety controls for vault operations by: (1) Enabling emergency admins
+    /// to pause all user-facing operations during security incidents, market anomalies, or critical upgrades,
+    /// (2) Preventing new stake/unstake requests and claims while preserving existing vault state and user balances,
+    /// (3) Maintaining read-only access to vault data and view functions during pause periods for transparency,
+    /// (4) Allowing authorized emergency admins to resume operations once issues are resolved or maintenance completed.
+    /// When paused, all state-changing functions (requestStake, requestUnstake, cancelStakeRequest, cancelUnstakeRequest,
+    /// claimStakedShares, claimUnstakedAssets) will revert with KSTAKINGVAULT_IS_PAUSED error. The pause mechanism
+    /// serves as a circuit breaker protecting user funds during unexpected events while maintaining protocol integrity.
+    /// Only emergency admins have permission to toggle this state, ensuring rapid response capabilities during critical
+    /// situations without compromising decentralization principles.
+    /// @param paused_ The desired operational state (true = pause operations, false = resume operations)
+    function setPaused(bool paused_) external;
 }

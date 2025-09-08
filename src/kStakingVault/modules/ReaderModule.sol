@@ -246,6 +246,19 @@ contract ReaderModule is BaseVault, Extsload {
         return batchId;
     }
 
+    /// @notice Converts a given amount of shares to assets
+    /// @param shares The amount of shares to convert
+    /// @return The equivalent amount of assets
+    function convertToShares(uint256 shares) external view returns (uint256) {
+        return _convertToShares(shares);
+    }
+
+    /// @notice Converts a given amount of assets to shares
+    /// @param assets The amount of assets to convert
+    /// @return The equivalent amount of shares
+    function convertToAssets(uint256 assets) external view returns (uint256) {
+        return _convertToAssets(assets);
+    }
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
@@ -265,7 +278,7 @@ contract ReaderModule is BaseVault, Extsload {
     /// @notice Returns the selectors for functions in this module
     /// @return selectors Array of function selectors
     function selectors() public pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](24);
+        bytes4[] memory moduleSelectors = new bytes4[](26);
         moduleSelectors[0] = this.registry.selector;
         moduleSelectors[1] = this.asset.selector;
         moduleSelectors[2] = this.underlyingAsset.selector;
@@ -288,8 +301,10 @@ contract ReaderModule is BaseVault, Extsload {
         moduleSelectors[19] = this.totalNetAssets.selector;
         moduleSelectors[20] = this.getBatchId.selector;
         moduleSelectors[21] = this.getSafeBatchId.selector;
-        moduleSelectors[22] = this.contractName.selector;
-        moduleSelectors[23] = this.contractVersion.selector;
+        moduleSelectors[22] = this.convertToShares.selector;
+        moduleSelectors[23] = this.convertToAssets.selector;
+        moduleSelectors[24] = this.contractName.selector;
+        moduleSelectors[25] = this.contractVersion.selector;
         return moduleSelectors;
     }
 }
