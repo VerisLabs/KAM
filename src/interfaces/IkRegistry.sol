@@ -291,7 +291,9 @@ interface IkRegistry {
         string memory name,
         string memory symbol,
         address asset,
-        bytes32 id
+        bytes32 id,
+        uint256 maxMintPerBatch,
+        uint256 maxRedeemPerBatch
     )
         external
         payable
@@ -324,4 +326,13 @@ interface IkRegistry {
     function getTreasury() external view returns (address);
     function setHurdleRate(address asset, uint16 hurdleRate) external payable;
     function getHurdleRate(address asset) external view returns (uint16);
+    function setAssetBatchLimits(
+        address asset,
+        uint256 maxMintPerBatch_,
+        uint256 maxRedeemPerBatch_
+    )
+        external
+        payable;
+    function getMaxMintPerBatch(address asset) external view returns (uint256);
+    function getMaxRedeemPerBatch(address asset) external view returns (uint256);
 }

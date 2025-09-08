@@ -81,6 +81,8 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         OptimizedAddressEnumerableSetLib.AddressSet supportedAssets;
         OptimizedAddressEnumerableSetLib.AddressSet allVaults;
         address treasury;
+        mapping(address => uint256) maxMintPerBatch;
+        mapping(address => uint256) maxRedeemPerBatch;
         mapping(bytes32 => address) singletonContracts;
         mapping(address => uint8 vaultType) vaultType;
         mapping(address => mapping(uint8 vaultType => address)) assetToVault;
@@ -227,6 +229,27 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
                           ASSET MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Set the maximum mint and redeem limits for a given asset
+    /// @param asset_ The asset address
+    /// @param maxMintPerBatch_ The maximum mint amount per batch
+    /// @param maxRedeemPerBatch_ The maximum redeem amount per batch
+    /// @dev Only callable by ADMIN_ROLE
+    function setAssetBatchLimits(
+        address asset_,
+        uint256 maxMintPerBatch_,
+        uint256 maxRedeemPerBatch_
+    )
+        external
+        payable
+    {
+        _checkAdmin(msg.sender);
+        _checkAssetRegistered(asset_);
+
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        $.maxMintPerBatch[asset_] = maxMintPerBatch_;
+        $.maxRedeemPerBatch[asset_] = maxRedeemPerBatch_;
+    }
+
     /// @notice Register support for a new asset and its corresponding kToken
     /// @param asset Underlying asset address (e.g., USDC, WBTC)
     /// @dev Only callable by ADMIN_ROLE, establishes bidirectional mapping
@@ -234,7 +257,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         string memory name_,
         string memory symbol_,
         address asset,
-        bytes32 id
+        bytes32 id,
+        uint256 maxMintPerBatch,
+        uint256 maxRedeemPerBatch
     )
         external
         payable
@@ -271,6 +296,9 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
                 decimals_
             )
         );
+
+        $.maxMintPerBatch[asset] = maxMintPerBatch;
+        $.maxRedeemPerBatch[asset] = maxRedeemPerBatch;
 
         // Register kToken
         $.assetToKToken[asset] = kToken_;
@@ -386,6 +414,28 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         emit HurdleRateSet(asset, hurdleRate);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                          VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Gets the max mint per batch for a specific asset
+    /// @param asset The asset address
+    /// @return The max mint per batch
+    function getMaxMintPerBatch(address asset) external view returns (uint256) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        _checkAssetRegistered(asset);
+        return $.maxMintPerBatch[asset];
+    }
+
+    /// @notice Gets the max redeem per batch for a specific asset
+    /// @param asset The asset address
+    /// @return The max redeem per batch
+    function getMaxRedeemPerBatch(address asset) external view returns (uint256) {
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        _checkAssetRegistered(asset);
+        return $.maxRedeemPerBatch[asset];
+    }
+
     /// @notice Gets the hurdle rate for a specific asset
     /// @param asset The asset address
     /// @return The hurdle rate in basis points
@@ -394,10 +444,6 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         _checkAssetRegistered(asset);
         return $.assetHurdleRate[asset];
     }
-
-    /*//////////////////////////////////////////////////////////////
-                          VIEW FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
 
     /// @notice Get a singleton contract address by its identifier
     /// @param id Contract identifier (e.g., K_MINTER, K_BATCH)
