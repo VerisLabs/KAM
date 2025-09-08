@@ -16,6 +16,9 @@ import { IkBatchReceiver } from "src/interfaces/IkBatchReceiver.sol";
 
 import {
     KMINTER_BATCH_CLOSED,
+    KMINTER_BATCH_MINT_REACHED,
+    KMINTER_BATCH_MINT_REACHED,
+    KMINTER_BATCH_REDEEM_REACHED,
     KMINTER_BATCH_SETTLED,
     KMINTER_INSUFFICIENT_BALANCE,
     KMINTER_IS_PAUSED,
@@ -46,8 +49,10 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
     /// @custom:storage-location erc7201:kam.storage.kMinter
     struct kMinterStorage {
-        mapping(address => uint256) totalLockedAssets;
         uint64 requestCounter;
+        mapping(bytes32 => uint256) mintedInBatch;
+        mapping(bytes32 => uint256) redeemedInBatch;
+        mapping(address => uint256) totalLockedAssets;
         mapping(bytes32 => RedeemRequest) redeemRequests;
         mapping(address => OptimizedBytes32EnumerableSetLib.Bytes32Set) userRequests;
     }
@@ -106,9 +111,16 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         // Transfer underlying asset from sender to this contract
         asset_.safeTransferFrom(msg.sender, router, amount_);
 
+        kMinterStorage storage $ = _getkMinterStorage();
+
+        // Make sure we dont exceed the max mint per batch
+        require(
+            ($.mintedInBatch[batchId] += amount_) <= _registry().getMaxMintPerBatch(asset_), KMINTER_BATCH_MINT_REACHED
+        );
+        $.totalLockedAssets[asset_] += amount_;
+
         // Push assets to kAssetRouter
         IkAssetRouter(router).kAssetPush(asset_, amount_, batchId);
-        _getkMinterStorage().totalLockedAssets[asset_] += amount_;
 
         // Mint kTokens 1:1 with deposited amount (no batch ID in push model)
         IkToken(kToken).mint(to_, amount_);
@@ -141,6 +153,12 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         bytes32 batchId = _getBatchId(vault);
 
         kMinterStorage storage $ = _getkMinterStorage();
+
+        // Make sure we dont exceed the max redeem per batch
+        require(
+            ($.redeemedInBatch[batchId] += amount_) <= _registry().getMaxRedeemPerBatch(asset_),
+            KMINTER_BATCH_REDEEM_REACHED
+        );
 
         // Create redemption request
         $.redeemRequests[requestId] = RedeemRequest({
@@ -231,6 +249,9 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         // Transfer kTokens from this contract to user
         kToken.safeTransfer(redeemRequest.user, redeemRequest.amount);
+
+        // Remove request from batch
+        $.redeemedInBatch[redeemRequest.batchId] -= redeemRequest.amount;
 
         emit Cancelled(requestId);
 

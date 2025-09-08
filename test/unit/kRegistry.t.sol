@@ -114,7 +114,9 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.expectEmit(true, false, false, false);
         emit IkRegistry.AssetSupported(TEST_ASSET);
 
-        address testKToken = registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        address testKToken = registry.registerAsset(
+            TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max
+        );
 
         // Verify asset registration
         assertTrue(registry.isAsset(TEST_ASSET), "Asset not registered");
@@ -138,20 +140,24 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RegisterAsset_ExistingAsset_Revert() public {
         // First registration
         vm.prank(users.admin);
-        address newKToken = registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        address newKToken = registry.registerAsset(
+            TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max
+        );
         assertEq(registry.assetToKToken(TEST_ASSET), newKToken, "kToken mapping not updated");
 
         // Second registration
         vm.prank(users.admin);
         vm.expectRevert(bytes(KREGISTRY_ALREADY_REGISTERED));
-        newKToken = registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        newKToken = registry.registerAsset(
+            TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max
+        );
     }
 
     /// @dev Test asset registration requires admin role
     function test_RegisterAsset_OnlyAdmin() public {
         vm.prank(users.bob);
         vm.expectRevert();
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
     }
 
     /// @dev Test asset registration reverts with zero addresses
@@ -160,11 +166,11 @@ contract kRegistryTest is DeploymentBaseTest {
 
         // Zero asset address
         vm.expectRevert(bytes(KREGISTRY_ZERO_ADDRESS));
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, address(0), TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, address(0), TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         // Zero ID
         vm.expectRevert(bytes(KREGISTRY_ZERO_ADDRESS));
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, bytes32(0));
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, bytes32(0), type(uint256).max, type(uint256).max);
 
         vm.stopPrank();
     }
@@ -183,7 +189,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RegisterVault_Success() public {
         // Register asset first
         vm.prank(users.admin);
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         vm.prank(users.admin);
 
@@ -213,7 +219,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RegisterVault_OnlyFactory() public {
         // Register asset first
         vm.prank(users.admin);
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         // Test with a user who has no roles at all
         vm.prank(users.alice);
@@ -230,7 +236,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RegisterVault_RevertZeroAddress() public {
         // Register asset first
         vm.prank(users.admin);
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         vm.prank(users.admin);
         vm.expectRevert(bytes(KREGISTRY_ZERO_ADDRESS));
@@ -241,7 +247,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RegisterVault_RevertAlreadyRegistered() public {
         // Register asset first
         vm.prank(users.admin);
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         vm.startPrank(users.admin);
 
@@ -266,7 +272,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RegisterVault_MultipleTypes() public {
         // Register asset first
         vm.prank(users.admin);
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         address kMinter = address(0x6666666666666666666666666666666666666666);
         address dnVault = address(0x7777777777777777777777777777777777777777);
@@ -302,7 +308,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RegisterAdapter_OnlyAdmin() public {
         // Register vault first
         vm.prank(users.admin);
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         vm.prank(users.admin);
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
@@ -516,7 +522,7 @@ contract kRegistryTest is DeploymentBaseTest {
         // Test that only admin can register assets
         vm.prank(users.alice);
         vm.expectRevert();
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         // Test that only admin can register adapters
         vm.prank(users.bob);
@@ -525,7 +531,9 @@ contract kRegistryTest is DeploymentBaseTest {
 
         // Test that admin CAN perform these operations
         vm.startPrank(users.admin);
-        address kToken = registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        address kToken = registry.registerAsset(
+            TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max
+        );
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
         registry.registerAdapter(TEST_VAULT, TEST_ADAPTER);
         vm.stopPrank();
@@ -579,19 +587,21 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_AssetManagement_IdCollisions() public {
         // Register first asset
         vm.prank(users.admin);
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         // Try to register different asset with same ID (should revert)
         address differentAsset = address(0xDEADBEEF);
         vm.prank(users.admin);
         vm.expectRevert();
-        registry.registerAsset("DIFFERENT", "DIFF", differentAsset, TEST_ASSET_ID);
+        registry.registerAsset("DIFFERENT", "DIFF", differentAsset, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
     }
 
     /// @dev Test asset metadata and kToken relationship
     function test_AssetManagement_KTokenRelationship() public {
         vm.prank(users.admin);
-        address deployedKToken = registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        address deployedKToken = registry.registerAsset(
+            TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max
+        );
 
         // Verify kToken properties
         assertEq(registry.assetToKToken(TEST_ASSET), deployedKToken, "Asset->kToken mapping incorrect");
@@ -612,7 +622,9 @@ contract kRegistryTest is DeploymentBaseTest {
         string memory longSymbol = "VERYLONGSYMBOL";
 
         // Should work with long names/symbols
-        address longKToken = registry.registerAsset(longName, longSymbol, TEST_ASSET, TEST_ASSET_ID);
+        address longKToken = registry.registerAsset(
+            longName, longSymbol, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max
+        );
         assertTrue(longKToken != address(0), "Should handle long names/symbols");
 
         vm.stopPrank();
@@ -646,7 +658,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_VaultManagement_VaultTypeValidation() public {
         // Register asset first
         vm.prank(users.admin);
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         vm.startPrank(users.admin);
 
@@ -706,7 +718,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_VaultManagement_BoundaryConditions() public {
         // Register asset first
         vm.prank(users.admin);
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         vm.startPrank(users.admin);
 
@@ -724,7 +736,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_VaultManagement_StateConsistency() public {
         // Register asset and multiple vaults
         vm.prank(users.admin);
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         address[] memory testVaults = new address[](3);
         testVaults[0] = address(0x5001);
@@ -758,7 +770,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_AdapterManagement_CompleteWorkflow() public {
         // Setup: Register asset and vault
         vm.startPrank(users.admin);
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
 
         // Test adapter registration
@@ -781,7 +793,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_AdapterManagement_MultipleAdapters() public {
         // Setup vault
         vm.startPrank(users.admin);
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
 
         // Register multiple adapters
@@ -809,7 +821,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_AdapterManagement_RemovalWorkflow() public {
         // Setup vault with adapters
         vm.startPrank(users.admin);
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
         registry.registerAdapter(TEST_VAULT, TEST_ADAPTER);
 
@@ -828,7 +840,7 @@ contract kRegistryTest is DeploymentBaseTest {
     /// @dev Test adapter validation and security
     function test_AdapterManagement_ValidationAndSecurity() public {
         vm.startPrank(users.admin);
-        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
 
         // Test registering same adapter twice (should handle gracefully)
@@ -914,7 +926,9 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_CompleteAssetVaultWorkflow() public {
         // Step 1: Register new asset
         vm.startPrank(users.admin);
-        address test_kToken = registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID);
+        address test_kToken = registry.registerAsset(
+            TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max
+        );
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
         vm.stopPrank();
 
