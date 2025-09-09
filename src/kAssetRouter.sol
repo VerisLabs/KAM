@@ -142,7 +142,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @inheritdoc IkAssetRouter
     function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable {
-        _unlockReentrant();
+        _lockReentrant();
         address kMinter = msg.sender;
         _checkKMinter(kMinter);
         _checkAmountNotZero(amount);
@@ -153,12 +153,13 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         // Increase deposits in the batch for kMinter
         $.vaultBatchBalances[kMinter][batchId].deposited += amount.toUint128();
         emit AssetsPushed(kMinter, amount);
-        _lockReentrant();
+
+        _unlockReentrant();
     }
 
     /// @inheritdoc IkAssetRouter
     function kAssetRequestPull(address _asset, address _vault, uint256 amount, bytes32 batchId) external payable {
-        _unlockReentrant();
+        _lockReentrant();
         _checkPaused();
         _checkAmountNotZero(amount);
         address kMinter = msg.sender;
@@ -177,7 +178,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _checkAddressNotZero(batchReceiver);
 
         emit AssetsRequestPulled(kMinter, _asset, batchReceiver, amount);
-        _lockReentrant();
+        _unlockReentrant();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -195,7 +196,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         external
         payable
     {
-        _unlockReentrant();
+        _lockReentrant();
         _checkPaused();
         _checkAmountNotZero(amount);
         _checkVault(msg.sender);
@@ -214,12 +215,12 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         $.vaultBatchBalances[targetVault][batchId].deposited += amount.toUint128();
 
         emit AssetsTransfered(sourceVault, targetVault, _asset, amount);
-        _lockReentrant();
+        _unlockReentrant();
     }
 
     /// @inheritdoc IkAssetRouter
     function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable {
-        _unlockReentrant();
+        _lockReentrant();
         _checkPaused();
         _checkAmountNotZero(amount);
         _checkVault(msg.sender);
@@ -230,12 +231,12 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         $.vaultRequestedShares[sourceVault][batchId] += amount;
 
         emit SharesRequestedPushed(sourceVault, batchId, amount);
-        _lockReentrant();
+        _unlockReentrant();
     }
 
     /// @inheritdoc IkAssetRouter
     function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable {
-        _unlockReentrant();
+        _lockReentrant();
         _checkPaused();
         _checkAmountNotZero(amount);
         _checkVault(msg.sender);
@@ -246,7 +247,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         $.vaultRequestedShares[sourceVault][batchId] -= amount;
 
         emit SharesRequestedPulled(sourceVault, batchId, amount);
-        _lockReentrant();
+        _unlockReentrant();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -267,7 +268,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         payable
         returns (bytes32 proposalId)
     {
-        _unlockReentrant();
+        _lockReentrant();
         _checkPaused();
 
         require(_isRelayer(msg.sender), KASSETROUTER_WRONG_ROLE);
@@ -310,6 +311,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         });
 
         emit SettlementProposed(proposalId, vault, batchId, totalAssets_, netted, yield, profit, executeAfter);
+        _unlockReentrant();
     }
 
     /// @inheritdoc IkAssetRouter
