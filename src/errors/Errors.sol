@@ -109,6 +109,8 @@ string constant KREGISTRY_WRONG_ROLE = "R7";
 string constant KREGISTRY_ZERO_ADDRESS = "R8";
 string constant KREGISTRY_ZERO_AMOUNT = "R9";
 string constant KREGISTRY_FEE_EXCEEDS_MAXIMUM = "R10";
+string constant KREGISTRY_SELECTOR_ALREADY_SET = "R11";
+string constant KREGISTRY_SELECTOR_NOT_FOUND = "R12";
 
 // kStakingVault Errors
 string constant KSTAKINGVAULT_INSUFFICIENT_BALANCE = "SV1";
@@ -143,3 +145,18 @@ string constant VAULTCLAIMS_REQUEST_NOT_PENDING = "VC5";
 // VaultFees Errors
 string constant VAULTFEES_FEE_EXCEEDS_MAXIMUM = "VF1";
 string constant VAULTFEES_INVALID_TIMESTAMP = "VF2";
+
+// VaultAdapter Errors
+string constant VAULTADAPTER_EXPIRED_SIGNATURE = "VA1";
+string constant VAULTADAPTER_INVALID_SIGNATURE = "VA2";
+string constant VAULTADAPTER_ZERO_ADDRESS = "VA3";
+string constant VAULTADAPTER_WRONG_ROLE = "VA4";
+string constant VAULTADAPTER_IS_PAUSED = "VA5";
+string constant VAULTADAPTER_NOT_INITIALIZED = "VA6";
+string constant VAULTADAPTER_ZERO_AMOUNT = "VA7";
+string constant VAULTADAPTER_TRANSFER_FAILED = "VA8";
+string constant VAULTADAPTER_WRONG_ASSET = "VA9";
+string constant VAULTADAPTER_WRONG_SELECTOR = "VA10";
+string constant VAULTADAPTER_INVALID_NONCE = "VA11";
+string constant VAULTADAPTER_WRONG_TARGET = "VA12";
+string constant VAULTADAPTER_SELECTOR_NOT_ALLOWED = "VA13";
