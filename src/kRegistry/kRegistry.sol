@@ -8,6 +8,7 @@ import { Initializable } from "src/vendor/Initializable.sol";
 import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
+import { kRolesBase } from "src/base/kRolesBase.sol";
 import {
     KREGISTRY_ADAPTER_ALREADY_SET,
     KREGISTRY_ALREADY_REGISTERED,
@@ -24,7 +25,6 @@ import {
 } from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { kToken } from "src/kToken.sol";
-import { kRolesBase } from "src/base/kRolesBase.sol";
 
 /// @title kRegistry
 /// @notice Central configuration hub and contract registry for the KAM protocol ecosystem
@@ -98,9 +98,6 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
         /// @dev Reverse lookup: maps assets to all vaults that support them
         /// Enables finding all vaults that can handle a specific asset
         mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultsByAsset;
-        /// @dev Maps asset identifiers (e.g., USDC, WBTC) to their contract addresses
-        /// Provides named access to commonly used asset addresses
-        mapping(bytes32 => address) singletonAssets;
         /// @dev Maps underlying asset addresses to their corresponding kToken addresses
         /// Critical for minting/redemption operations and asset tracking
         mapping(address => address) assetToKToken;
@@ -164,14 +161,7 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
         _checkAddressNotZero(relayer_);
         _checkAddressNotZero(treasury_);
 
-        __kRolesBase_init(
-            owner_,
-            admin_,
-            emergencyAdmin_,
-            guardian_,
-            relayer_,
-            treasury_
-        );
+        __kRolesBase_init(owner_, admin_, emergencyAdmin_, guardian_, relayer_, treasury_);
 
         _getkRegistryStorage().treasury = treasury_;
     }
@@ -259,7 +249,7 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
             emit RescuedAssets(asset_, to_, amount_);
         }
     }
-    
+
     /*//////////////////////////////////////////////////////////////
                           ASSET MANAGEMENT
     //////////////////////////////////////////////////////////////*/
@@ -310,7 +300,6 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
 
         // Add to supported assets and create named reference
         $.supportedAssets.add(asset);
-        $.singletonAssets[id] = asset;
         emit AssetSupported(asset);
 
         // Get kMinter address for granting mint permissions
@@ -463,14 +452,6 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
     }
 
     /// @inheritdoc IkRegistry
-    function getAssetById(bytes32 id) external view returns (address) {
-        kRegistryStorage storage $ = _getkRegistryStorage();
-        address addr = $.singletonAssets[id];
-        _checkAddressNotZero(addr);
-        return addr;
-    }
-
-    /// @inheritdoc IkRegistry
     function getAllAssets() external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         require($.supportedAssets.length() > 0, KREGISTRY_ZERO_ADDRESS);
@@ -572,7 +553,7 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
     /// @inheritdoc IkRegistry
     function isAdapterRegistered(address vault, address adapter) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        if($.vaultAdapters[vault] != address(0)) return true;
+        if ($.vaultAdapters[vault] != address(0)) return true;
     }
 
     /// @inheritdoc IkRegistry

@@ -94,18 +94,6 @@ interface IVaultAdapter {
     /// @param value The amount of assets to send with the call.
     function execute(address target, bytes calldata data, uint256 value) external returns (bytes memory result);
 
-    /// @notice Allows the relayer to execute asset transfers on behalf of the protocol
-    /// @dev This function enables the relayer role to move assets as part of protocol operations.
-    /// Key aspects of this function include: (1) Authorization restricted to relayer role to prevent misuse,
-    /// (2) Pause state check to ensure operations are halted during emergencies, (3) Validates recipient address is
-    /// non-zero to prevent burning funds,
-    /// (4) Validates sufficient balance to prevent overdrafts, (5) Uses SafeTransferLib for secure ERC20 transfers and
-    /// low-level call for ETH transfers.
-    /// @param asset The asset to transfer (use address(0) for native ETH, otherwise ERC20 token address).
-    /// @param to The recipient address to send the assets to.
-    /// @param amount The amount of assets to transfer.
-    function executeTransfer(address asset, address to, uint256 amount) external;
-
     /// @notice Sets the last recorded total assets for vault accounting and performance tracking
     /// @dev This function allows the admin to update the lastTotalAssets variable, which is
     /// used for various accounting and performance metrics within the vault adapter. Key aspects

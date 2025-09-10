@@ -56,8 +56,8 @@ abstract contract DeploymentManager is Script {
         address dnVault;
         address alphaVault;
         address betaVault;
-        address custodialAdapterImpl;
-        address custodialAdapter;
+        address vaultAdapterImpl;
+        address vaultAdapter;
     }
 
     /// @notice Gets the current network name from foundry context
@@ -178,12 +178,12 @@ abstract contract DeploymentManager is Script {
             output.contracts.betaVault = json.readAddress(".contracts.betaVault");
         }
 
-        if (json.keyExists(".contracts.custodialAdapterImpl")) {
-            output.contracts.custodialAdapterImpl = json.readAddress(".contracts.custodialAdapterImpl");
+        if (json.keyExists(".contracts.vaultAdapterImpl")) {
+            output.contracts.vaultAdapterImpl = json.readAddress(".contracts.vaultAdapterImpl");
         }
 
-        if (json.keyExists(".contracts.custodialAdapter")) {
-            output.contracts.custodialAdapter = json.readAddress(".contracts.custodialAdapter");
+        if (json.keyExists(".contracts.vaultAdapter")) {
+            output.contracts.vaultAdapter = json.readAddress(".contracts.vaultAdapter");
         }
 
         return output;
@@ -231,10 +231,10 @@ abstract contract DeploymentManager is Script {
             output.contracts.alphaVault = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("betaVault"))) {
             output.contracts.betaVault = contractAddress;
-        } else if (keccak256(bytes(contractName)) == keccak256(bytes("custodialAdapterImpl"))) {
-            output.contracts.custodialAdapterImpl = contractAddress;
-        } else if (keccak256(bytes(contractName)) == keccak256(bytes("custodialAdapter"))) {
-            output.contracts.custodialAdapter = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("vaultAdapterImpl"))) {
+            output.contracts.vaultAdapterImpl = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("vaultAdapter"))) {
+            output.contracts.vaultAdapter = contractAddress;
         }
 
         // Write to JSON file
@@ -268,8 +268,8 @@ abstract contract DeploymentManager is Script {
         json = string.concat(json, '"dnVault":"', vm.toString(output.contracts.dnVault), '",');
         json = string.concat(json, '"alphaVault":"', vm.toString(output.contracts.alphaVault), '",');
         json = string.concat(json, '"betaVault":"', vm.toString(output.contracts.betaVault), '",');
-        json = string.concat(json, '"custodialAdapterImpl":"', vm.toString(output.contracts.custodialAdapterImpl), '",');
-        json = string.concat(json, '"custodialAdapter":"', vm.toString(output.contracts.custodialAdapter), '"');
+        json = string.concat(json, '"vaultAdapterImpl":"', vm.toString(output.contracts.vaultAdapterImpl), '",');
+        json = string.concat(json, '"vaultAdapter":"', vm.toString(output.contracts.vaultAdapter), '"');
 
         json = string.concat(json, "}}");
 

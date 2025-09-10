@@ -6,7 +6,7 @@ import { console } from "forge-std/console.sol";
 import { ERC1967Factory } from "src/vendor/ERC1967Factory.sol";
 
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
-import { CustodialAdapter } from "src/adapters/CustodialAdapter.sol";
+import { VaultAdapter } from "src/adapters/VaultAdapter.sol";
 
 contract DeployAdaptersScript is Script, DeploymentManager {
     function run() public {
@@ -29,27 +29,26 @@ contract DeployAdaptersScript is Script, DeploymentManager {
         ERC1967Factory factory = ERC1967Factory(existing.contracts.ERC1967Factory);
 
         // Deploy CustodialAdapter implementation
-        CustodialAdapter custodialAdapterImpl = new CustodialAdapter();
+        VaultAdapter vaultAdapterImpl = new VaultAdapter();
 
         // Deploy CustodialAdapter proxy with initialization
-        bytes memory custodialInitData =
-            abi.encodeWithSelector(CustodialAdapter.initialize.selector, existing.contracts.kRegistry);
-        address custodialAdapterProxy =
-            factory.deployAndCall(address(custodialAdapterImpl), msg.sender, custodialInitData);
+        bytes memory adapterInitData =
+            abi.encodeWithSelector(VaultAdapter.initialize.selector, existing.contracts.kRegistry);
+        address vaultAdapterProxy = factory.deployAndCall(address(vaultAdapterImpl), msg.sender, adapterInitData);
 
         vm.stopBroadcast();
 
         console.log("=== DEPLOYMENT COMPLETE ===");
-        console.log("CustodialAdapter implementation deployed at:", address(custodialAdapterImpl));
-        console.log("CustodialAdapter proxy deployed at:", custodialAdapterProxy);
+        console.log("VaultAdapter implementation deployed at:", address(vaultAdapterImpl));
+        console.log("VaultAdapter proxy deployed at:", vaultAdapterProxy);
         console.log("Registry:", existing.contracts.kRegistry);
         console.log("Network:", config.network);
         console.log("");
-        console.log("Note: CustodialAdapter inherits roles from registry");
+        console.log("Note: VaultAdapter inherits roles from registry");
         console.log("      Configure vault destinations in next script");
 
         // Auto-write contract addresses to deployment JSON
-        writeContractAddress("custodialAdapterImpl", address(custodialAdapterImpl));
-        writeContractAddress("custodialAdapter", custodialAdapterProxy);
+        writeContractAddress("vaultAdapterImpl", address(vaultAdapterImpl));
+        writeContractAddress("vaultAdapter", vaultAdapterProxy);
     }
 }

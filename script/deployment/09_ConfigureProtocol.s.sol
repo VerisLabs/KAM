@@ -5,7 +5,7 @@ import { DeploymentManager } from "../utils/DeploymentManager.sol";
 import { Script } from "forge-std/Script.sol";
 
 import { console } from "forge-std/console.sol";
-import { CustodialAdapter } from "src/adapters/CustodialAdapter.sol";
+import { VaultAdapter } from "src/adapters/VaultAdapter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { kRegistry } from "src/kRegistry/kRegistry.sol";
 import { kToken } from "src/kToken.sol";
@@ -23,7 +23,7 @@ contract ConfigureProtocolScript is Script, DeploymentManager {
         require(existing.contracts.dnVault != address(0), "dnVault not deployed");
         require(existing.contracts.alphaVault != address(0), "alphaVault not deployed");
         require(existing.contracts.betaVault != address(0), "betaVault not deployed");
-        require(existing.contracts.custodialAdapter != address(0), "custodialAdapter not deployed");
+        require(existing.contracts.vaultAdapter != address(0), "vaultAdapter not deployed");
 
         console.log("=== EXECUTING PROTOCOL CONFIGURATION ===");
         console.log("Network:", config.network);
@@ -32,7 +32,7 @@ contract ConfigureProtocolScript is Script, DeploymentManager {
         vm.startBroadcast();
 
         kRegistry registry = kRegistry(payable(existing.contracts.kRegistry));
-        CustodialAdapter custodialAdapter = CustodialAdapter(existing.contracts.custodialAdapter);
+        VaultAdapter vaultAdapter = VaultAdapter(existing.contracts.vaultAdapter);
 
         console.log("1. Registering vaults with kRegistry...");
 
@@ -56,23 +56,14 @@ contract ConfigureProtocolScript is Script, DeploymentManager {
         console.log("2. Registering adapters with vaults...");
 
         // Register custodial adapter for each vault
-        registry.registerAdapter(existing.contracts.kMinter, existing.contracts.custodialAdapter);
-        registry.registerAdapter(existing.contracts.dnVault, existing.contracts.custodialAdapter);
-        registry.registerAdapter(existing.contracts.alphaVault, existing.contracts.custodialAdapter);
-        registry.registerAdapter(existing.contracts.betaVault, existing.contracts.custodialAdapter);
+        registry.registerAdapter(existing.contracts.kMinter, existing.contracts.vaultAdapter);
+        registry.registerAdapter(existing.contracts.dnVault, existing.contracts.vaultAdapter);
+        registry.registerAdapter(existing.contracts.alphaVault, existing.contracts.vaultAdapter);
+        registry.registerAdapter(existing.contracts.betaVault, existing.contracts.vaultAdapter);
         console.log("   - Registered custodial adapter for all vaults");
 
         console.log("");
-        console.log("3. Configuring adapter destinations...");
-
-        // Configure custodial adapter destinations for each vault
-        custodialAdapter.setVaultDestination(existing.contracts.dnVault, config.roles.treasury);
-        custodialAdapter.setVaultDestination(existing.contracts.alphaVault, config.roles.treasury);
-        custodialAdapter.setVaultDestination(existing.contracts.betaVault, config.roles.treasury);
-        console.log("   - Configured vault destinations to treasury");
-
-        console.log("");
-        console.log("4. Granting roles...");
+        console.log("3. Granting roles...");
 
         // Grant MINTER_ROLE to kMinter and kAssetRouter on kTokens (if they exist)
         if (existing.contracts.kUSD != address(0)) {

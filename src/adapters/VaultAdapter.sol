@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { Initializable } from "src/vendor/Initializable.sol";
-import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
-import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 import {
     VAULTADAPTER_EXPIRED_SIGNATURE,
     VAULTADAPTER_INVALID_NONCE,
@@ -19,9 +16,12 @@ import {
     VAULTADAPTER_ZERO_ADDRESS,
     VAULTADAPTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
+import { Initializable } from "src/vendor/Initializable.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
 import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { IRegistry } from "src/interfaces/IRegistry.sol";
 
 import { OptimizedAddressEnumerableSetLib } from "src/libraries/OptimizedAddressEnumerableSetLib.sol";
 import { OptimizedLibCall } from "src/libraries/OptimizedLibCall.sol";
@@ -30,7 +30,7 @@ import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
 /// @title VaultAdapter
-abstract contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
+contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
     using SafeTransferLib for address;
     using OptimizedLibCall for address;
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
@@ -45,7 +45,7 @@ abstract contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable 
     /// @custom:storage-location erc7201:kam.storage.VaultAdapter
     struct VaultAdapterStorage {
         /// @dev Address of the kRegistry singleton that serves as the protocol's configuration hub
-        IkRegistry registry;
+        IRegistry registry;
         /// @dev Emergency pause state affecting all protocol operations in inheriting contracts
         bool paused;
         /// @dev Last recorded total assets for vault accounting and performance tracking
@@ -81,7 +81,7 @@ abstract contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable 
     function initialize(address registry_) external initializer {
         _checkZeroAddress(registry_);
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
-        $.registry = IkRegistry(registry_);
+        $.registry = IRegistry(registry_);
         emit ContractInitialized(registry_);
     }
 
@@ -190,10 +190,7 @@ abstract contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable 
     /// @param selector The function selector being called
     function _checkVaultCanCallSelector(address vault, address target, bytes4 selector) internal view {
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
-        //require(
-        //    $.registry.isVaultSelectorAllowed(vault, target, selector),
-        //    VAULTADAPTER_SELECTOR_NOT_ALLOWED
-        //);
+        // require
     }
 
     /// @notice Reverts if its a zero address

@@ -5,17 +5,16 @@ import { OptimizedOwnableRoles } from "src/libraries/OptimizedOwnableRoles.sol";
 
 import {
     KROLESBASE_ALREADY_INITIALIZED,
+    KROLESBASE_NOT_INITIALIZED,
+    KROLESBASE_TRANSFER_FAILED,
     KROLESBASE_WRONG_ROLE,
     KROLESBASE_ZERO_ADDRESS,
-    KROLESBASE_NOT_INITIALIZED,
-    KROLESBASE_ZERO_AMOUNT,
-    KROLESBASE_TRANSFER_FAILED
+    KROLESBASE_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
 
 /// @title kRolesBase
 /// @notice Foundation contract providing essential shared functionality and registry integration for all KAM protocol
 contract kRolesBase is OptimizedOwnableRoles {
-
     /*//////////////////////////////////////////////////////////////
                               ROLES
     //////////////////////////////////////////////////////////////*/
@@ -72,7 +71,8 @@ contract kRolesBase is OptimizedOwnableRoles {
     /// This specific slot is chosen to avoid any possible collision with standard storage layouts while maintaining
     /// deterministic addressing. The calculation ensures the storage location is unique to this namespace and won't
     /// conflict with other inherited contracts or future upgrades. The 0xff mask ensures proper alignment.
-    bytes32 private constant KROLESBASE_STORAGE_LOCATION = 0x1e01aba436cb905d0325f2b72fb71cd138ddb103e078b2159b8c98194797bd00;
+    bytes32 private constant KROLESBASE_STORAGE_LOCATION =
+        0x1e01aba436cb905d0325f2b72fb71cd138ddb103e078b2159b8c98194797bd00;
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE GETTER
@@ -100,7 +100,9 @@ contract kRolesBase is OptimizedOwnableRoles {
         address guardian_,
         address relayer_,
         address treasury_
-    ) internal {
+    )
+        internal
+    {
         kRolesBaseStorage storage $ = _getkRolesBaseStorage();
 
         require(!$.initialized, KROLESBASE_ALREADY_INITIALIZED);

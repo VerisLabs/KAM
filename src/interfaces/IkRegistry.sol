@@ -435,12 +435,6 @@ interface IkRegistry {
     /// @return The contract address
     function getContractById(bytes32 id) external view returns (address);
 
-    /// @notice Retrieves a singleton asset address by identifier
-    /// @dev Reverts if asset not registered. Provides named access to common assets.
-    /// @param id Asset identifier (e.g., USDC, WBTC)
-    /// @return The asset address
-    function getAssetById(bytes32 id) external view returns (address);
-
     /// @notice Gets all protocol-supported asset addresses
     /// @dev Returns the complete whitelist of supported underlying assets.
     /// @return Array of all supported asset addresses
