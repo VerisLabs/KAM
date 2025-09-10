@@ -4,10 +4,10 @@ pragma solidity 0.8.30;
 import { OptimizedAddressEnumerableSetLib } from "src/libraries/OptimizedAddressEnumerableSetLib.sol";
 import { kRolesBase } from "src/base/kRolesBase.sol";
 import {
-    KREGISTRY_INVALID_ADAPTER,
-    KREGISTRY_SELECTOR_ALREADY_SET,
-    KREGISTRY_SELECTOR_NOT_FOUND,
-    KREGISTRY_ZERO_ADDRESS,
+    GUARDIANMODULE_INVALID_ADAPTER,
+    GUARDIANMODULE_SELECTOR_ALREADY_SET,
+    GUARDIANMODULE_SELECTOR_NOT_FOUND,
+    GUARDIANMODULE_ZERO_ADDRESS,
     GUARDIANMODULE_UNAUTHORIZED,
     GUARDIANMODULE_NOT_ALLOWED
 } from "src/errors/Errors.sol";
@@ -94,14 +94,14 @@ contract AdapterGuardianModule is kRolesBase {
         _checkAddressNotZero(adapter);
         _checkAddressNotZero(target);
 
-        require(selector != bytes4(0), KREGISTRY_INVALID_ADAPTER);
+        require(selector != bytes4(0), GUARDIANMODULE_INVALID_ADAPTER);
 
         AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
         
         // Check if trying to set to the same value
         bool currentlyAllowed = $.adapterAllowedSelectors[adapter][target][selector];
         if (currentlyAllowed && isAllowed) {
-            revert(KREGISTRY_SELECTOR_ALREADY_SET);
+            revert(GUARDIANMODULE_SELECTOR_ALREADY_SET);
         }
 
         $.adapterAllowedSelectors[adapter][target][selector] = isAllowed;
@@ -135,7 +135,7 @@ contract AdapterGuardianModule is kRolesBase {
         AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
         
         // Selector must be allowed before setting a parameter checker
-        require($.adapterAllowedSelectors[adapter][target][selector], KREGISTRY_SELECTOR_NOT_FOUND);
+        require($.adapterAllowedSelectors[adapter][target][selector], GUARDIANMODULE_SELECTOR_NOT_FOUND);
 
         $.adapterParametersChecker[adapter][target][selector] = parametersChecker;
         emit ParametersCheckerSet(adapter, target, selector, parametersChecker);
@@ -209,14 +209,13 @@ contract AdapterGuardianModule is kRolesBase {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Returns the selectors for functions in this module
-    /// @return selectors Array of function selectors
-    function selectors() public pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](5);
+    /// @return moduleSelectors Array of function selectors
+    function selectors() public pure returns (bytes4[] memory moduleSelectors) {
+        moduleSelectors = new bytes4[](5);
         moduleSelectors[0] = this.setAdapterAllowedSelector.selector;
         moduleSelectors[1] = this.setAdapterParametersChecker.selector;
         moduleSelectors[2] = this.authorizeAdapterCall.selector;
         moduleSelectors[3] = this.isAdapterSelectorAllowed.selector;
         moduleSelectors[4] = this.getAdapterParametersChecker.selector;
-        return moduleSelectors;
     }
 }
