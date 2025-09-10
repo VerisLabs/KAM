@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { OptimizedAddressEnumerableSetLib } from "src/libraries/OptimizedAddressEnumerableSetLib.sol";
 import { Initializable } from "src/vendor/Initializable.sol";
 
@@ -37,7 +38,7 @@ import { kRolesBase } from "src/base/kRolesBase.sol";
 /// and VENDOR roles to enforce protocol security, (5) Adapter management - registers and tracks external protocol
 /// adapters per vault enabling yield strategy integrations. The registry uses upgradeable architecture with UUPS
 /// pattern and ERC-7201 namespaced storage to ensure future extensibility while maintaining state consistency.
-contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable {
+contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, MultiFacetProxy {
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
     using SafeTransferLib for address;
 
@@ -655,6 +656,16 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable {
     function _authorizeUpgrade(address newImplementation) internal view override {
         _checkOwner();
         require(newImplementation != address(0), KREGISTRY_ZERO_ADDRESS);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        FUNCTIONS UPGRADE
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Authorize function modification
+    /// @dev This allows modifying functions while keeping modules separate
+    function _authorizeModifyFunctions(address sender) internal override {
+        _checkOwner();
     }
 
     /*//////////////////////////////////////////////////////////////
