@@ -24,7 +24,7 @@ import { kAssetRouter } from "src/kAssetRouter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { kMinter } from "src/kMinter.sol";
-import { kRegistry } from "src/kRegistry.sol";
+import { kRegistry } from "src/kRegistry/kRegistry.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { kToken } from "src/kToken.sol";
 

@@ -5,7 +5,7 @@ import { Script } from "forge-std/Script.sol";
 import { console } from "forge-std/console.sol";
 
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
-import { kRegistry } from "src/kRegistry.sol";
+import { kRegistry } from "src/kRegistry/kRegistry.sol";
 
 contract RegisterSingletonsScript is Script, DeploymentManager {
     function run() public {

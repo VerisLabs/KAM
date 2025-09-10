@@ -14,7 +14,7 @@ import {
     KREGISTRY_ZERO_ADDRESS
 } from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { kRegistry } from "src/kRegistry.sol";
+import { kRegistry } from "src/kRegistry/kRegistry.sol";
 
 /// @title kRegistryTest
 /// @notice Comprehensive unit tests for kRegistry contract

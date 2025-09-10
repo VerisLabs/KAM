@@ -7,7 +7,7 @@ import { Script } from "forge-std/Script.sol";
 import { console } from "forge-std/console.sol";
 import { CustodialAdapter } from "src/adapters/CustodialAdapter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { kRegistry } from "src/kRegistry.sol";
+import { kRegistry } from "src/kRegistry/kRegistry.sol";
 import { kToken } from "src/kToken.sol";
 
 contract ConfigureProtocolScript is Script, DeploymentManager {

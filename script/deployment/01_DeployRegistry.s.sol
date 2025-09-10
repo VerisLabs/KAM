@@ -6,7 +6,7 @@ import { console } from "forge-std/console.sol";
 import { ERC1967Factory } from "src/vendor/ERC1967Factory.sol";
 
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
-import { kRegistry } from "src/kRegistry.sol";
+import { kRegistry } from "src/kRegistry/kRegistry.sol";
 
 contract DeployRegistryScript is Script, DeploymentManager {
     function run() public {

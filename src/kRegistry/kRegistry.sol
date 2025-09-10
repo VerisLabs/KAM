@@ -113,6 +113,12 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
         /// @dev Maps assets to their hurdle rates in basis points (100 = 1%)
         /// Defines minimum performance thresholds for yield distribution
         mapping(address => uint16) assetHurdleRate;
+        /// @dev Maps adapter address to target contract to allowed selectors
+        /// Used by AdapterGuardianModule for permission checking
+        mapping(address => mapping(address => mapping(bytes4 => bool))) adapterAllowedSelectors;
+        /// @dev Maps adapter address to target contract to selector to parameter checker
+        /// Enables fine-grained parameter validation for adapter calls
+        mapping(address => mapping(address => mapping(bytes4 => address))) adapterParametersChecker;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kRegistry")) - 1)) & ~bytes32(uint256(0xff))
