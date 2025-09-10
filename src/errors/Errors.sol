@@ -112,6 +112,10 @@ string constant KREGISTRY_FEE_EXCEEDS_MAXIMUM = "R10";
 string constant KREGISTRY_SELECTOR_ALREADY_SET = "R11";
 string constant KREGISTRY_SELECTOR_NOT_FOUND = "R12";
 
+
+string constant GUARDIANMODULE_UNAUTHORIZED = "GM1";
+string constant GUARDIANMODULE_NOT_ALLOWED = "GM1";
+
 // kRegistryBase Errors
 string constant KROLESBASE_ALREADY_INITIALIZED = "KB1";
 string constant KROLESBASE_WRONG_ROLE = "KB2";

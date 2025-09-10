@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { kRolesBase } from "src/base/kRolesBase.sol";
 import { OptimizedAddressEnumerableSetLib } from "src/libraries/OptimizedAddressEnumerableSetLib.sol";
-
+import { kRolesBase } from "src/base/kRolesBase.sol";
 import {
     KREGISTRY_INVALID_ADAPTER,
     KREGISTRY_SELECTOR_ALREADY_SET,
     KREGISTRY_SELECTOR_NOT_FOUND,
-    KREGISTRY_ZERO_ADDRESS
+    KREGISTRY_ZERO_ADDRESS,
+    GUARDIANMODULE_UNAUTHORIZED,
+    GUARDIANMODULE_NOT_ALLOWED
 } from "src/errors/Errors.sol";
+import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 interface IParametersChecker {
     function canAdapterCall(address adapter, address target, bytes4 selector, bytes calldata params) external view returns (bool);
@@ -47,9 +49,6 @@ contract AdapterGuardianModule is kRolesBase {
     /// @dev This structure maintains adapter permissions and parameter checkers
     /// @custom:storage-location erc7201:kam.storage.AdapterGuardianModule
     struct AdapterGuardianModuleStorage {
-        /// @dev Tracks whether an adapter address is registered in the protocol
-        /// Used for validation and security checks on adapter operations
-        mapping(address => bool) registeredAdapters;
         /// @dev Maps adapter address to target contract to allowed selectors
         /// Controls which functions an adapter can call on target contracts
         mapping(address => mapping(address => mapping(bytes4 => bool))) adapterAllowedSelectors;
@@ -77,58 +76,42 @@ contract AdapterGuardianModule is kRolesBase {
                               MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Register or unregister an adapter
-    /// @param adapter The adapter address
-    /// @param registered Whether the adapter should be registered
-    /// @dev Only callable by ADMIN_ROLE
-    function setAdapterRegistered(address adapter, bool registered) external {
-        _checkAdmin(msg.sender);
-        _checkAddressNotZero(adapter);
-
-        AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
-        $.registeredAdapters[adapter] = registered;
-        
-        emit AdapterRegistered(adapter, registered);
-    }
-
     /// @notice Set whether a selector is allowed for an adapter on a target contract
     /// @param adapter The adapter address
     /// @param target The target contract address
     /// @param selector The function selector
-    /// @param allowed Whether the selector is allowed
+    /// @param isAllowed Whether the selector is allowed
     /// @dev Only callable by ADMIN_ROLE
     function setAdapterAllowedSelector(
         address adapter,
         address target,
         bytes4 selector,
-        bool allowed
+        bool isAllowed
     )
         external
     {
         _checkAdmin(msg.sender);
         _checkAddressNotZero(adapter);
         _checkAddressNotZero(target);
+
         require(selector != bytes4(0), KREGISTRY_INVALID_ADAPTER);
 
         AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
         
-        // Check if adapter is registered
-        require($.registeredAdapters[adapter], KREGISTRY_INVALID_ADAPTER);
-
         // Check if trying to set to the same value
         bool currentlyAllowed = $.adapterAllowedSelectors[adapter][target][selector];
-        if (currentlyAllowed && allowed) {
+        if (currentlyAllowed && isAllowed) {
             revert(KREGISTRY_SELECTOR_ALREADY_SET);
         }
 
-        $.adapterAllowedSelectors[adapter][target][selector] = allowed;
+        $.adapterAllowedSelectors[adapter][target][selector] = isAllowed;
         
         // If disallowing, also remove any parameter checker
-        if (!allowed) {
+        if (!isAllowed) {
             delete $.adapterParametersChecker[adapter][target][selector];
         }
         
-        emit SelectorAllowed(adapter, target, selector, allowed);
+        emit SelectorAllowed(adapter, target, selector, isAllowed);
     }
 
     /// @notice Set a parameter checker for an adapter selector
@@ -151,9 +134,6 @@ contract AdapterGuardianModule is kRolesBase {
 
         AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
         
-        // Check if adapter is registered
-        require($.registeredAdapters[adapter], KREGISTRY_INVALID_ADAPTER);
-        
         // Selector must be allowed before setting a parameter checker
         require($.adapterAllowedSelectors[adapter][target][selector], KREGISTRY_SELECTOR_NOT_FOUND);
 
@@ -165,43 +145,27 @@ contract AdapterGuardianModule is kRolesBase {
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Check if an adapter can call a specific function on a target
-    /// @param adapter The adapter address
+    /// @notice Check if an adapter is authorized to call a specific function on a target
     /// @param target The target contract address
     /// @param selector The function selector
     /// @param params The function parameters
-    /// @return Whether the call is allowed
-    function canAdapterCall(
-        address adapter,
+    function authorizeAdapterCall(
         address target,
         bytes4 selector,
         bytes calldata params
     )
         external
         view
-        returns (bool)
     {
         AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
 
-        if (!$.registeredAdapters[adapter]) return false;
-        if (!$.adapterAllowedSelectors[adapter][target][selector]) return false;
+        address adapter = msg.sender;
+        require($.adapterAllowedSelectors[adapter][target][selector], GUARDIANMODULE_NOT_ALLOWED);
 
         address checker = $.adapterParametersChecker[adapter][target][selector];
-        if (checker == address(0)) return true;
+        if (checker == address(0)) return;
 
-        try IParametersChecker(checker).canAdapterCall(adapter, target, selector, params) returns (bool isAllowed) {
-            return isAllowed;
-        } catch {
-            return false;
-        }
-    }
-
-    /// @notice Check if an adapter is registered
-    /// @param adapter The adapter address to check
-    /// @return Whether the adapter is registered
-    function isAdapterRegistered(address adapter) external view returns (bool) {
-        AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
-        return $.registeredAdapters[adapter];
+        require(IParametersChecker(checker).canAdapterCall(adapter, target, selector, params), GUARDIANMODULE_UNAUTHORIZED);
     }
 
     /// @notice Check if a selector is allowed for an adapter
@@ -247,14 +211,12 @@ contract AdapterGuardianModule is kRolesBase {
     /// @notice Returns the selectors for functions in this module
     /// @return selectors Array of function selectors
     function selectors() public pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](7);
-        moduleSelectors[0] = this.setAdapterRegistered.selector;
-        moduleSelectors[1] = this.setAdapterAllowedSelector.selector;
-        moduleSelectors[2] = this.setAdapterParametersChecker.selector;
-        moduleSelectors[3] = this.canAdapterCall.selector;
-        moduleSelectors[4] = this.isAdapterRegistered.selector;
-        moduleSelectors[5] = this.isAdapterSelectorAllowed.selector;
-        moduleSelectors[6] = this.getAdapterParametersChecker.selector;
+        bytes4[] memory moduleSelectors = new bytes4[](5);
+        moduleSelectors[0] = this.setAdapterAllowedSelector.selector;
+        moduleSelectors[1] = this.setAdapterParametersChecker.selector;
+        moduleSelectors[2] = this.authorizeAdapterCall.selector;
+        moduleSelectors[3] = this.isAdapterSelectorAllowed.selector;
+        moduleSelectors[4] = this.getAdapterParametersChecker.selector;
         return moduleSelectors;
     }
 }
