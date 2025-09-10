@@ -48,10 +48,8 @@ interface IAdapter {
     function convertToAssets(address vault, uint256 shares) external view returns (uint256);
 
     /// @notice Returns the current total assets in the external strategy
-    /// @param vault The vault to query
-    /// @param asset The asset to query
     /// @return Total assets currently deployed in strategy
-    function totalAssets(address vault, address asset) external view returns (uint256);
+    function totalAssets() external view returns (uint256);
 
     /// @notice Returns the pending redemption for a request ID
     /// @param requestId The request ID to query

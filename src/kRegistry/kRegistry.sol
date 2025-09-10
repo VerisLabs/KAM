@@ -401,7 +401,7 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
         // Ensure vault exists in protocol before adding adapter
         _checkVaultRegistered(vault);
 
-        require(!$.vaultAdapters[vault] != address(0), KREGISTRY_ADAPTER_ALREADY_SET);
+        require($.vaultAdapters[vault] != address(0), KREGISTRY_ADAPTER_ALREADY_SET);
 
         // Register adapter for external protocol integration
         $.vaultAdapters[vault] = adapter;
@@ -414,8 +414,8 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
         _checkAdmin(msg.sender);
         kRegistryStorage storage $ = _getkRegistryStorage();
 
-        require($.vaultAdapters[vault].contains(adapter), KREGISTRY_INVALID_ADAPTER);
-        $.vaultAdapters[vault].remove(adapter);
+        require($.vaultAdapters[vault] == adapter, KREGISTRY_INVALID_ADAPTER);
+        delete $.vaultAdapters[vault];
 
         emit AdapterRemoved(vault, adapter);
     }
@@ -564,16 +564,15 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
     }
 
     /// @inheritdoc IkRegistry
-    function getAdapters(address vault) external view returns (address[] memory) {
+    function getAdapter(address vault) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        require($.vaultAdapters[vault].values().length > 0, KREGISTRY_ZERO_ADDRESS);
-        return $.vaultAdapters[vault].values();
+        return $.vaultAdapters[vault];
     }
 
     /// @inheritdoc IkRegistry
     function isAdapterRegistered(address vault, address adapter) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        return $.vaultAdapters[vault].contains(adapter);
+        if($.vaultAdapters[vault] != address(0)) return true;
     }
 
     /// @inheritdoc IkRegistry

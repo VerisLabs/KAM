@@ -345,7 +345,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_GetAdapter_RevertZeroAddress() public {
         vm.prank(users.admin);
         vm.expectRevert(bytes(KREGISTRY_ZERO_ADDRESS));
-        registry.getAdapters(TEST_VAULT);
+        registry.getAdapter(TEST_VAULT);
     }
 
     /// @dev Test isAdapterRegistered returns false for non-existent adapter
@@ -792,9 +792,8 @@ contract kRegistryTest is DeploymentBaseTest {
         assertTrue(registry.isAdapterRegistered(TEST_VAULT, TEST_ADAPTER), "Adapter should be registered");
 
         // Verify getAdapters returns correct adapter
-        address[] memory adapters = registry.getAdapters(TEST_VAULT);
-        assertEq(adapters.length, 1, "Should have 1 adapter");
-        assertEq(adapters[0], TEST_ADAPTER, "Adapter address incorrect");
+        address adapter = registry.getAdapter(TEST_VAULT);
+        assertEq(adapter, TEST_ADAPTER, "Adapter address incorrect");
     }
 
     /// @dev Test multiple adapters per vault

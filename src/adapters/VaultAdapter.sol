@@ -137,25 +137,17 @@ abstract contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable 
         emit Executed(msg.sender, target, data, value, result);
     }
 
-    // /// @inheritdoc IVaultAdapter
-    // function executeTransfer(address asset, address to, uint256 amount) external {
-    //     _checkRelayer(msg.sender);
-    //     _checkPaused();
-    //     _checkAsset(asset);
-
-    //     // Validate that this vault can call transfer on the target (to) address
-    //     bytes4 transferSelector = bytes4(keccak256("transfer(address,uint256)"));
-    //     _checkVaultCanCallSelector(address(this), to, transferSelector);
-
-    //     asset.safeTransfer(to, amount);
-    //     emit TransferExecuted(asset, to, amount);
-    // }
-
     /// @inheritdoc IVaultAdapter
     function setTotalAssets(uint256 totalAssets_) external {
         _checkAdmin(msg.sender);
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
         $.lastTotalAssets = totalAssets_;
+    }
+
+    /// @inheritdoc IVaultAdapter
+    function totalAssets() external view returns (uint256) {
+        VaultAdapterStorage storage $ = _getVaultAdapterStorage();
+        return $.lastTotalAssets;
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -165,7 +165,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         address kMinter = msg.sender;
         _checkKMinter(kMinter);
         address vault = _getDNVaultByAsset(_asset);
-        _checkSufficientVirtualBalance(vault, _asset, amount);
+        _checkSufficientVirtualBalance(vault, amount);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
@@ -205,9 +205,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         // Verify virtual balance
         if (sourceVault == _getKMinter()) {
-            _checkSufficientVirtualBalance(_getDNVaultByAsset(_asset), _asset, amount);
+            _checkSufficientVirtualBalance(_getDNVaultByAsset(_asset), amount);
         } else {
-            _checkSufficientVirtualBalance(sourceVault, _asset, amount);
+            _checkSufficientVirtualBalance(sourceVault, amount);
         }
 
         // Update batch tracking for settlement
@@ -277,7 +277,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         int256 netted;
         uint256 yield;
-        uint256 lastTotalAssets = _virtualBalance(vault, asset);
+        uint256 lastTotalAssets = _virtualBalance(vault);
         bool profit;
 
         // Increase the counter to generate unique proposal id
@@ -451,10 +451,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             }
         }
 
-        // Fetch adapters of the vault(Initially one adapter per vault)
-        // That might change in future upgrades
-        address[] memory adapters = _registry().getAdapters(vault);
-        IAdapter adapter = IAdapter(adapters[0]);
+        IAdapter adapter = IAdapter(_registry().getAdapter(vault));
 
         // If netted assets are positive(it means more deposits than withdrawals)
         if (netted > 0) {
@@ -465,7 +462,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             if (vault == dnVault && isKMinter) {
                 // at some point we will have multiple adapters for a vault
                 // for now we just use the first one
-                _checkAddressNotZero(adapters[0]);
+                _checkAddressNotZero(address(adapter));
                 asset.safeTransfer(address(adapter), uint256(netted));
                 adapter.deposit(asset, uint256(netted), vault);
             }
@@ -542,8 +539,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         return $.vaultSettlementCooldown;
     }
 
-    function virtualBalance(address vault, address asset) external view returns (uint256) {
-        return _virtualBalance(vault, asset);
+    function virtualBalance(address vault) external view returns (uint256) {
+        return _virtualBalance(vault);
     }
 
     /// @notice Calculates the virtual balance of assets for a vault across all its adapters
@@ -552,17 +549,11 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// asset locations and protocol accounting. Used for settlement calculations and ensuring sufficient
     /// assets are available for redemptions and transfers within the money flow system.
     /// @param vault The vault address to calculate virtual balance for
-    /// @param asset The asset address to query balance for
     /// @return balance The total virtual asset balance across all vault adapters
-    function _virtualBalance(address vault, address asset) private view returns (uint256 balance) {
-        address[] memory assets = _getVaultAssets(vault);
-        address[] memory adapters = _registry().getAdapters(vault);
-        uint256 length = adapters.length;
-        for (uint256 i; i < length; ++i) {
-            IAdapter adapter = IAdapter(adapters[i]);
-            // For now, assume single asset per vault (use first asset)
-            balance += adapter.totalAssets(vault, assets[0]);
-        }
+    function _virtualBalance(address vault) private view returns (uint256 balance) {
+        _isVault(vault);
+        IAdapter adapter = IAdapter(_registry().getAdapter(vault));
+        balance += adapter.totalAssets();
     }
 
     /// @notice Validates that the caller is an authorized kMinter contract
@@ -597,10 +588,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @notice Check if virtual balance is sufficient
     /// @param vault Vault address
-    /// @param asset Asset address
     /// @param requiredAmount Required amount
-    function _checkSufficientVirtualBalance(address vault, address asset, uint256 requiredAmount) private view {
-        require(_virtualBalance(vault, asset) >= requiredAmount, KASSETROUTER_INSUFFICIENT_VIRTUAL_BALANCE);
+    function _checkSufficientVirtualBalance(address vault, uint256 requiredAmount) private view {
+        require(_virtualBalance(vault) >= requiredAmount, KASSETROUTER_INSUFFICIENT_VIRTUAL_BALANCE);
     }
 
     /// @notice Check if caller is an admin

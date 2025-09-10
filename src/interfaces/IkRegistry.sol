@@ -523,7 +523,7 @@ interface IkRegistry {
     /// @dev Returns external protocol integrations enabling yield strategies.
     /// @param vault The vault address to query
     /// @return Array of adapter addresses for the vault
-    function getAdapters(address vault) external view returns (address[] memory);
+    function getAdapter(address vault) external view returns (address);
 
     /// @notice Checks if a specific adapter is registered for a vault
     /// @dev Used to validate adapter-vault relationships before operations.

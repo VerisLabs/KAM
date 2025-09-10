@@ -113,4 +113,6 @@ interface IVaultAdapter {
     /// (2) Directly updates the lastTotalAssets variable in storage.
     /// @param totalAssets_ The new total assets value to set.
     function setTotalAssets(uint256 totalAssets_) external;
+
+    function totalAssets() external view returns (uint256);
 }
