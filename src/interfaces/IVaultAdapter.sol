@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 interface IVaultAdapter {
-
     /*//////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -54,7 +53,7 @@ interface IVaultAdapter {
     /// @param to The recipient address that received the assets
     /// @param amount The quantity of assets transferred
     event TransferExecuted(address indexed asset, address indexed to, uint256 amount);
-    
+
     /*//////////////////////////////////////////////////////////////
                             CORE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -88,7 +87,8 @@ interface IVaultAdapter {
     /// @dev This function enables the relayer role to perform flexible interactions with external contracts
     /// as part of protocol operations. Key aspects of this function include: (1) Authorization restricted to relayer
     /// role to prevent misuse, (2) Pause state check to ensure operations are halted during emergencies, (3) Validates
-    /// target address is non-zero to prevent calls to the zero address, (4) Uses low-level call to enable arbitrary function execution
+    /// target address is non-zero to prevent calls to the zero address, (4) Uses low-level call to enable arbitrary
+    /// function execution
     /// @param target The target contract to make a call to.
     /// @param data The data to send to the target contract.
     /// @param value The amount of assets to send with the call.
@@ -97,8 +97,10 @@ interface IVaultAdapter {
     /// @notice Allows the relayer to execute asset transfers on behalf of the protocol
     /// @dev This function enables the relayer role to move assets as part of protocol operations.
     /// Key aspects of this function include: (1) Authorization restricted to relayer role to prevent misuse,
-    /// (2) Pause state check to ensure operations are halted during emergencies, (3) Validates recipient address is non-zero to prevent burning funds,
-    /// (4) Validates sufficient balance to prevent overdrafts, (5) Uses SafeTransferLib for secure ERC20 transfers and low-level call for ETH transfers.
+    /// (2) Pause state check to ensure operations are halted during emergencies, (3) Validates recipient address is
+    /// non-zero to prevent burning funds,
+    /// (4) Validates sufficient balance to prevent overdrafts, (5) Uses SafeTransferLib for secure ERC20 transfers and
+    /// low-level call for ETH transfers.
     /// @param asset The asset to transfer (use address(0) for native ETH, otherwise ERC20 token address).
     /// @param to The recipient address to send the assets to.
     /// @param amount The amount of assets to transfer.

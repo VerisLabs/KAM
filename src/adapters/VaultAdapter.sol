@@ -1,29 +1,30 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { Initializable } from "src/vendor/Initializable.sol";
-import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
-import { SignatureCheckerLib } from "src/vendor/SignatureCheckerLib.sol";
-import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 import {
     VAULTADAPTER_EXPIRED_SIGNATURE,
+    VAULTADAPTER_INVALID_NONCE,
     VAULTADAPTER_INVALID_SIGNATURE,
-    VAULTADAPTER_ZERO_ADDRESS,
-    VAULTADAPTER_WRONG_ROLE,
     VAULTADAPTER_IS_PAUSED,
     VAULTADAPTER_NOT_INITIALIZED,
+    VAULTADAPTER_SELECTOR_NOT_ALLOWED,
     VAULTADAPTER_TRANSFER_FAILED,
     VAULTADAPTER_WRONG_ASSET,
-    VAULTADAPTER_ZERO_AMOUNT,
+    VAULTADAPTER_WRONG_ROLE,
     VAULTADAPTER_WRONG_SELECTOR,
-    VAULTADAPTER_SELECTOR_NOT_ALLOWED,
-    VAULTADAPTER_INVALID_NONCE,
-    VAULTADAPTER_WRONG_TARGET
+    VAULTADAPTER_WRONG_TARGET,
+    VAULTADAPTER_ZERO_ADDRESS,
+    VAULTADAPTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+
 import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
-import { OptimizedLibCall } from "src/libraries/OptimizedLibCall.sol";
+import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+
 import { OptimizedAddressEnumerableSetLib } from "src/libraries/OptimizedAddressEnumerableSetLib.sol";
+import { OptimizedLibCall } from "src/libraries/OptimizedLibCall.sol";
+import { Initializable } from "src/vendor/Initializable.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
 /// @title VaultAdapter
 contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
@@ -119,16 +120,9 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
     /*///////////////////////////////////////////////////////////////
                             CORE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-    
+
     /// @inheritdoc IVaultAdapter
-    function execute(
-        address target,
-        bytes calldata data,
-        uint256 value
-    )
-        external
-        returns (bytes memory result)
-    {
+    function execute(address target, bytes calldata data, uint256 value) external returns (bytes memory result) {
         _checkRelayer(msg.sender);
         _checkPaused();
 
@@ -141,19 +135,15 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
     }
 
     /// @inheritdoc IVaultAdapter
-    function executeTransfer(
-        address asset,
-        address to,
-        uint256 amount
-    ) external {
+    function executeTransfer(address asset, address to, uint256 amount) external {
         _checkRelayer(msg.sender);
         _checkPaused();
         _checkAsset(asset);
-        
+
         // Validate that this vault can call transfer on the target (to) address
         bytes4 transferSelector = bytes4(keccak256("transfer(address,uint256)"));
         _checkVaultCanCallSelector(address(this), to, transferSelector);
-        
+
         asset.safeTransfer(to, amount);
         emit TransferExecuted(asset, to, amount);
     }
@@ -205,10 +195,7 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
     /// @param selector The function selector being called
     function _checkVaultCanCallSelector(address vault, address target, bytes4 selector) internal view {
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
-        require(
-            $.registry.isVaultSelectorAllowed(vault, target, selector),
-            VAULTADAPTER_SELECTOR_NOT_ALLOWED
-        );
+        require($.registry.isVaultSelectorAllowed(vault, target, selector), VAULTADAPTER_SELECTOR_NOT_ALLOWED);
     }
 
     /// @notice Reverts if its a zero address

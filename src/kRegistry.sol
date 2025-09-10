@@ -462,19 +462,19 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         _checkAdmin(msg.sender);
         _checkVaultRegistered(vault);
         _checkAddressNotZero(target);
-        
+
         kRegistryStorage storage $ = _getkRegistryStorage();
-        
+
         // Add target to vault's allowed set if first selector
         $.vaultAllowedTargets[vault].add(target);
-        
+
         // Prevent duplicate selector registration
         require(!$.vaultSelectorAllowed[vault][target][selector], KREGISTRY_SELECTOR_ALREADY_SET);
-        
+
         // Register the selector
         $.vaultSelectorAllowed[vault][target][selector] = true;
         $.vaultTargetSelectors[vault][target].push(selector);
-        
+
         emit VaultTargetSelectorRegistered(vault, target, selector);
     }
 
@@ -488,13 +488,13 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     /// @param selector The function selector to remove
     function removeVaultTargetSelector(address vault, address target, bytes4 selector) external payable {
         _checkAdmin(msg.sender);
-        
+
         kRegistryStorage storage $ = _getkRegistryStorage();
         require($.vaultSelectorAllowed[vault][target][selector], KREGISTRY_SELECTOR_NOT_FOUND);
-        
+
         // Remove selector permission
         $.vaultSelectorAllowed[vault][target][selector] = false;
-        
+
         // Remove from array (similar pattern to existing removeSelector)
         bytes4[] storage selectors = $.vaultTargetSelectors[vault][target];
         uint256 length = selectors.length;
@@ -505,12 +505,12 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
                 break;
             }
         }
-        
+
         // If no more selectors, remove target from allowed set
         if (selectors.length == 0) {
             $.vaultAllowedTargets[vault].remove(target);
         }
-        
+
         emit VaultTargetSelectorRemoved(vault, target, selector);
     }
 
@@ -547,7 +547,6 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.vaultTargetSelectors[vault][target];
     }
-
 
     /*//////////////////////////////////////////////////////////////
                       HURDLE RATE MANAGEMENT

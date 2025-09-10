@@ -24,10 +24,7 @@ library OptimizedLibCall {
     // They will bubble up the revert if the call fails.
 
     /// @dev Makes a call to `target`, with `data` and `value`.
-    function callContract(address target, uint256 value, bytes memory data)
-        internal
-        returns (bytes memory result)
-    {
+    function callContract(address target, uint256 value, bytes memory data) internal returns (bytes memory result) {
         /// @solidity memory-safe-assembly
         assembly {
             result := mload(0x40)
