@@ -4,17 +4,17 @@ pragma solidity 0.8.30;
 import { OptimizedOwnableRoles } from "src/libraries/OptimizedOwnableRoles.sol";
 
 import {
-    KREGISTRYBASE_ALREADY_INITIALIZED,
-    KREGISTRYBASE_WRONG_ROLE,
-    KREGISTRYBASE_ZERO_ADDRESS,
-    KREGISTRYBASE_NOT_INITIALIZED,
-    KREGISTRYBASE_ZERO_AMOUNT,
-    KREGISTRYBASE_TRANSFER_FAILED
+    KROLESBASE_ALREADY_INITIALIZED,
+    KROLESBASE_WRONG_ROLE,
+    KROLESBASE_ZERO_ADDRESS,
+    KROLESBASE_NOT_INITIALIZED,
+    KROLESBASE_ZERO_AMOUNT,
+    KROLESBASE_TRANSFER_FAILED
 } from "src/errors/Errors.sol";
 
-/// @title kRegistryBase
+/// @title kRolesBase
 /// @notice Foundation contract providing essential shared functionality and registry integration for all KAM protocol
-contract kRegistryBase is OptimizedOwnableRoles {
+contract kRolesBase is OptimizedOwnableRoles {
 
     /*//////////////////////////////////////////////////////////////
                               ROLES
@@ -56,23 +56,23 @@ contract kRegistryBase is OptimizedOwnableRoles {
                         STORAGE LAYOUT
     //////////////////////////////////////////////////////////////*/
 
-    /// @custom:storage-location erc7201:kam.storage.kRegistryBase
+    /// @custom:storage-location erc7201:kam.storage.kRolesBase
     /// @dev Storage struct following ERC-7201 namespaced storage pattern to prevent collisions during upgrades.
     /// This pattern ensures that storage layout remains consistent across proxy upgrades and prevents
     /// accidental overwriting when contracts inherit from multiple base contracts. The namespace
-    /// "kam.storage.kRegistryBase" uniquely identifies this storage area within the contract's storage space.
-    struct kRegistryBaseStorage {
+    /// "kam.storage.kRolesBase" uniquely identifies this storage area within the contract's storage space.
+    struct kRolesBaseStorage {
         /// @dev Initialization flag preventing multiple initialization calls (reentrancy protection)
         bool initialized;
         /// @dev Emergency pause state affecting all protocol operations in inheriting contracts
         bool paused;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("kam.storage.kRegistryBase")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("kam.storage.kRolesBase")) - 1)) & ~bytes32(uint256(0xff))
     /// This specific slot is chosen to avoid any possible collision with standard storage layouts while maintaining
     /// deterministic addressing. The calculation ensures the storage location is unique to this namespace and won't
     /// conflict with other inherited contracts or future upgrades. The 0xff mask ensures proper alignment.
-    bytes32 private constant KREGISTRYBASE_STORAGE_LOCATION = 0x1e01aba436cb905d0325f2b72fb71cd138ddb103e078b2159b8c98194797bd00;
+    bytes32 private constant KROLESBASE_STORAGE_LOCATION = 0x1e01aba436cb905d0325f2b72fb71cd138ddb103e078b2159b8c98194797bd00;
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE GETTER
@@ -83,9 +83,9 @@ contract kRegistryBase is OptimizedOwnableRoles {
     /// This function uses inline assembly to directly set the storage pointer to our namespaced location,
     /// ensuring efficient access to storage variables while maintaining upgrade safety. The pure modifier
     /// is used because we're only returning a storage pointer, not reading storage values.
-    function _getkRegistryBaseStorage() internal pure returns (kRegistryBaseStorage storage $) {
+    function _getkRolesBaseStorage() internal pure returns (kRolesBaseStorage storage $) {
         assembly {
-            $.slot := KREGISTRYBASE_STORAGE_LOCATION
+            $.slot := KROLESBASE_STORAGE_LOCATION
         }
     }
 
@@ -93,7 +93,7 @@ contract kRegistryBase is OptimizedOwnableRoles {
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    function __kRegistryBase_init(
+    function __kRolesBase_init(
         address owner_,
         address admin_,
         address emergencyAdmin_,
@@ -101,9 +101,9 @@ contract kRegistryBase is OptimizedOwnableRoles {
         address relayer_,
         address treasury_
     ) internal {
-        kRegistryBaseStorage storage $ = _getkRegistryBaseStorage();
+        kRolesBaseStorage storage $ = _getkRolesBaseStorage();
 
-        require(!$.initialized, KREGISTRYBASE_ALREADY_INITIALIZED);
+        require(!$.initialized, KROLESBASE_ALREADY_INITIALIZED);
 
         $.paused = false;
         $.initialized = true;
@@ -132,8 +132,8 @@ contract kRegistryBase is OptimizedOwnableRoles {
     /// @param paused_ The desired pause state (true = halt operations, false = resume normal operation)
     function setPaused(bool paused_) external {
         _checkEmergencyAdmin(msg.sender);
-        kRegistryBaseStorage storage $ = _getkRegistryBaseStorage();
-        require($.initialized, KREGISTRYBASE_NOT_INITIALIZED);
+        kRolesBaseStorage storage $ = _getkRolesBaseStorage();
+        require($.initialized, KROLESBASE_NOT_INITIALIZED);
         $.paused = paused_;
         emit Paused(paused_);
     }
@@ -154,48 +154,48 @@ contract kRegistryBase is OptimizedOwnableRoles {
     /// @notice Check if caller has Admin role
     /// @param user Address to check
     function _checkAdmin(address user) internal view {
-        require(_hasRole(user, ADMIN_ROLE), KREGISTRYBASE_WRONG_ROLE);
+        require(_hasRole(user, ADMIN_ROLE), KROLESBASE_WRONG_ROLE);
     }
 
     /// @notice Check if caller has Emergency Admin role
     /// @param user Address to check
     function _checkEmergencyAdmin(address user) internal view {
-        require(_hasRole(user, EMERGENCY_ADMIN_ROLE), KREGISTRYBASE_WRONG_ROLE);
+        require(_hasRole(user, EMERGENCY_ADMIN_ROLE), KROLESBASE_WRONG_ROLE);
     }
 
     /// @notice Check if caller has Guardian role
     /// @param user Address to check
     function _checkGuardian(address user) internal view {
-        require(_hasRole(user, RELAYER_ROLE), KREGISTRYBASE_WRONG_ROLE);
+        require(_hasRole(user, RELAYER_ROLE), KROLESBASE_WRONG_ROLE);
     }
 
     /// @notice Check if caller has relayer role
     /// @param user Address to check
     function _checkRelayer(address user) internal view {
-        require(_hasRole(user, RELAYER_ROLE), KREGISTRYBASE_WRONG_ROLE);
+        require(_hasRole(user, RELAYER_ROLE), KROLESBASE_WRONG_ROLE);
     }
 
     /// @notice Check if caller has Institution role
     /// @param user Address to check
     function _checkInstitution(address user) internal view {
-        require(_hasRole(user, INSTITUTION_ROLE), KREGISTRYBASE_WRONG_ROLE);
+        require(_hasRole(user, INSTITUTION_ROLE), KROLESBASE_WRONG_ROLE);
     }
 
     /// @notice Check if caller has Vendor role
     /// @param user Address to check
     function _checkVendor(address user) internal view {
-        require(_hasRole(user, VENDOR_ROLE), KREGISTRYBASE_WRONG_ROLE);
+        require(_hasRole(user, VENDOR_ROLE), KROLESBASE_WRONG_ROLE);
     }
 
     /// @notice Check if caller has Manager role
     /// @param user Address to check
     function _checkManager(address user) internal view {
-        require(_hasRole(user, MANAGER_ROLE), KREGISTRYBASE_WRONG_ROLE);
+        require(_hasRole(user, MANAGER_ROLE), KROLESBASE_WRONG_ROLE);
     }
 
     /// @notice Check if address is not zero
     /// @param addr Address to check
     function _checkAddressNotZero(address addr) internal pure {
-        require(addr != address(0), KREGISTRYBASE_ZERO_ADDRESS);
+        require(addr != address(0), KROLESBASE_ZERO_ADDRESS);
     }
 }

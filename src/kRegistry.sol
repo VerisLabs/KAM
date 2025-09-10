@@ -23,7 +23,7 @@ import {
 } from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { kToken } from "src/kToken.sol";
-import { kRegistryBase } from "src/base/kRegistryBase.sol";
+import { kRolesBase } from "src/base/kRolesBase.sol";
 
 /// @title kRegistry
 /// @notice Central configuration hub and contract registry for the KAM protocol ecosystem
@@ -37,7 +37,7 @@ import { kRegistryBase } from "src/base/kRegistryBase.sol";
 /// and VENDOR roles to enforce protocol security, (5) Adapter management - registers and tracks external protocol
 /// adapters per vault enabling yield strategy integrations. The registry uses upgradeable architecture with UUPS
 /// pattern and ERC-7201 namespaced storage to ensure future extensibility while maintaining state consistency.
-contract kRegistry is IkRegistry, kRegistryBase, Initializable, UUPSUpgradeable {
+contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable {
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
     using SafeTransferLib for address;
 
@@ -163,7 +163,7 @@ contract kRegistry is IkRegistry, kRegistryBase, Initializable, UUPSUpgradeable 
         _checkAddressNotZero(relayer_);
         _checkAddressNotZero(treasury_);
 
-        __kRegistryBase_init(
+        __kRolesBase_init(
             owner_,
             admin_,
             emergencyAdmin_,
@@ -236,15 +236,7 @@ contract kRegistry is IkRegistry, kRegistryBase, Initializable, UUPSUpgradeable 
         emit HurdleRateSet(asset, hurdleRate);
     }
 
-    /// @notice Emergency function to rescue accidentally sent assets (ETH or ERC20) from the contract
-    /// @dev This function provides a recovery mechanism for assets mistakenly sent to the registry. It includes
-    /// critical safety checks: (1) Only callable by ADMIN_ROLE to prevent unauthorized access, (2) Cannot rescue
-    /// registered protocol assets to prevent draining legitimate funds, (3) Validates amounts and balances.
-    /// For ETH rescue, use address(0) as the asset parameter. The function ensures protocol integrity by
-    /// preventing rescue of assets that are part of normal protocol operations.
-    /// @param asset_ The asset address to rescue (use address(0) for ETH)
-    /// @param to_ The destination address that will receive the rescued assets
-    /// @param amount_ The amount of assets to rescue (must not exceed contract balance)
+    /// @inheritdoc IkRegistry
     function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
         _checkAdmin(msg.sender);
         _checkAddressNotZero(to_);
@@ -259,7 +251,6 @@ contract kRegistry is IkRegistry, kRegistryBase, Initializable, UUPSUpgradeable 
             emit RescuedETH(to_, amount_);
         } else {
             // Rescue ERC20 tokens
-            kRegistryBaseStorage storage $ = _getkRegistryBaseStorage();
             _checkAssetNotRegistered(asset_);
             require(amount_ != 0 && amount_ <= asset_.balanceOf(address(this)), KREGISTRY_ZERO_AMOUNT);
 
