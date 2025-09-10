@@ -14,7 +14,7 @@ import {
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 interface IParametersChecker {
-    function canAdapterCall(address adapter, address target, bytes4 selector, bytes calldata params) external view returns (bool);
+    function authorizeAdapterCall(address adapter, address target, bytes4 selector, bytes calldata params) external view returns (bool);
 }
 
 /// @title AdapterGuardianModule
@@ -165,7 +165,7 @@ contract AdapterGuardianModule is kRolesBase {
         address checker = $.adapterParametersChecker[adapter][target][selector];
         if (checker == address(0)) return;
 
-        require(IParametersChecker(checker).canAdapterCall(adapter, target, selector, params), GUARDIANMODULE_UNAUTHORIZED);
+        require(IParametersChecker(checker).authorizeAdapterCall(adapter, target, selector, params), GUARDIANMODULE_UNAUTHORIZED);
     }
 
     /// @notice Check if a selector is allowed for an adapter
