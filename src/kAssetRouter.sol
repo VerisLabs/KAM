@@ -261,9 +261,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         bytes32 batchId,
         uint256 totalAssets_
     )
-        // uint256 netted,
-        // uint256 yield,
-        // bool profit
         external
         payable
         returns (bytes32 proposalId)
@@ -543,6 +540,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     function getSettlementCooldown() external view returns (uint256) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         return $.vaultSettlementCooldown;
+    }
+
+    function virtualBalance(address vault, address asset) external view returns (uint256) {
+        return _virtualBalance(vault, asset);
     }
 
     /// @notice Calculates the virtual balance of assets for a vault across all its adapters

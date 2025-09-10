@@ -423,6 +423,16 @@ interface IkAssetRouter {
     /// @return cooldown The current cooldown period in seconds
     function getSettlementCooldown() external view returns (uint256 cooldown);
 
+    /// @notice Retrieves the virtual balance of assets for a vault across all its adapters
+    /// @dev This function aggregates asset balances across all adapters connected to a vault to determine
+    /// the total virtual balance available for operations. Essential for coordination between physical
+    /// asset locations and protocol accounting. Used for settlement calculations and ensuring sufficient
+    /// assets are available for redemptions and transfers within the money flow system.
+    /// @param vault The vault address to calculate virtual balance for
+    /// @param asset The asset address to query balance for
+    /// @return balance The total virtual asset balance across all vault adapters
+    function virtualBalance(address vault, address asset) external view returns (uint256);
+
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
