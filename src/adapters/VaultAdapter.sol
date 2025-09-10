@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { Initializable } from "src/vendor/Initializable.sol";
+import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
+import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 import {
     VAULTADAPTER_EXPIRED_SIGNATURE,
     VAULTADAPTER_INVALID_NONCE,
@@ -195,7 +198,10 @@ abstract contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable 
     /// @param selector The function selector being called
     function _checkVaultCanCallSelector(address vault, address target, bytes4 selector) internal view {
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
-        require($.registry.isVaultSelectorAllowed(vault, target, selector), VAULTADAPTER_SELECTOR_NOT_ALLOWED);
+        //require(
+        //    $.registry.isVaultSelectorAllowed(vault, target, selector),
+        //    VAULTADAPTER_SELECTOR_NOT_ALLOWED
+        //);
     }
 
     /// @notice Reverts if its a zero address

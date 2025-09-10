@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import { OptimizedOwnableRoles } from "src/libraries/OptimizedOwnableRoles.sol";
-
 import { OptimizedAddressEnumerableSetLib } from "src/libraries/OptimizedAddressEnumerableSetLib.sol";
 import { Initializable } from "src/vendor/Initializable.sol";
 
@@ -25,6 +23,7 @@ import {
 } from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { kToken } from "src/kToken.sol";
+import { kRegistryBase } from "src/base/kRegistryBase.sol";
 
 /// @title kRegistry
 /// @notice Central configuration hub and contract registry for the KAM protocol ecosystem
@@ -38,31 +37,9 @@ import { kToken } from "src/kToken.sol";
 /// and VENDOR roles to enforce protocol security, (5) Adapter management - registers and tracks external protocol
 /// adapters per vault enabling yield strategy integrations. The registry uses upgradeable architecture with UUPS
 /// pattern and ERC-7201 namespaced storage to ensure future extensibility while maintaining state consistency.
-contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnableRoles {
+contract kRegistry is IkRegistry, kRegistryBase, Initializable, UUPSUpgradeable {
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
     using SafeTransferLib for address;
-
-    /*//////////////////////////////////////////////////////////////
-                              ROLES
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Admin role for authorized operations
-    uint256 internal constant ADMIN_ROLE = _ROLE_0;
-
-    /// @notice Emergency admin role for emergency operations
-    uint256 internal constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
-
-    /// @notice Guardian role as a circuit breaker for settlement proposals
-    uint256 internal constant GUARDIAN_ROLE = _ROLE_2;
-
-    /// @notice Relayer role for external vaults
-    uint256 internal constant RELAYER_ROLE = _ROLE_3;
-
-    /// @notice Reserved role for special whitelisted addresses
-    uint256 internal constant INSTITUTION_ROLE = _ROLE_4;
-
-    /// @notice Vendor role for vendor vaults
-    uint256 internal constant VENDOR_ROLE = _ROLE_5;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTANTS
@@ -108,15 +85,6 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         mapping(address => uint256) maxRedeemPerBatch;
         /// @dev Maps singleton contract identifiers to their deployed addresses
         mapping(bytes32 => address) singletonContracts;
-        /// @dev Maps vaults to their allowed target contracts (e.g., IERC7540, wallets)
-        /// Each vault maintains its own set of authorized targets for security isolation
-        mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultAllowedTargets;
-        /// @dev Nested mapping: vault => target => selector => allowed
-        /// Enables O(1) validation of vault-specific function call permissions
-        mapping(address => mapping(address => mapping(bytes4 => bool))) vaultSelectorAllowed;
-        /// @dev Maps vault-target pairs to arrays of allowed function selectors
-        /// Used for enumeration of permissions and audit purposes
-        mapping(address => mapping(address => bytes4[])) vaultTargetSelectors;
         /// @dev Maps vault addresses to their type classification (DN, ALPHA, BETA, etc.)
         /// Used for routing and strategy selection based on vault type
         mapping(address => uint8 vaultType) vaultType;
@@ -195,49 +163,16 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         _checkAddressNotZero(relayer_);
         _checkAddressNotZero(treasury_);
 
-        _initializeOwner(owner_);
-        _grantRoles(admin_, ADMIN_ROLE);
-        _grantRoles(admin_, VENDOR_ROLE);
-        _grantRoles(emergencyAdmin_, EMERGENCY_ADMIN_ROLE);
-        _grantRoles(guardian_, GUARDIAN_ROLE);
-        _grantRoles(relayer_, RELAYER_ROLE);
+        __kRegistryBase_init(
+            owner_,
+            admin_,
+            emergencyAdmin_,
+            guardian_,
+            relayer_,
+            treasury_
+        );
+
         _getkRegistryStorage().treasury = treasury_;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                                RESCUER
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Emergency function to rescue accidentally sent assets (ETH or ERC20) from the contract
-    /// @dev This function provides a recovery mechanism for assets mistakenly sent to the registry. It includes
-    /// critical safety checks: (1) Only callable by ADMIN_ROLE to prevent unauthorized access, (2) Cannot rescue
-    /// registered protocol assets to prevent draining legitimate funds, (3) Validates amounts and balances.
-    /// For ETH rescue, use address(0) as the asset parameter. The function ensures protocol integrity by
-    /// preventing rescue of assets that are part of normal protocol operations.
-    /// @param asset_ The asset address to rescue (use address(0) for ETH)
-    /// @param to_ The destination address that will receive the rescued assets
-    /// @param amount_ The amount of assets to rescue (must not exceed contract balance)
-    function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
-        _checkAdmin(msg.sender);
-        _checkAddressNotZero(to_);
-
-        if (asset_ == address(0)) {
-            // Rescue ETH
-            require(amount_ != 0 && amount_ <= address(this).balance, KREGISTRY_ZERO_AMOUNT);
-
-            (bool success,) = to_.call{ value: amount_ }("");
-            require(success, KREGISTRY_TRANSFER_FAILED);
-
-            emit RescuedETH(to_, amount_);
-        } else {
-            // Rescue ERC20 tokens
-            kRegistryStorage storage $ = _getkRegistryStorage();
-            _checkAssetNotRegistered(asset_);
-            require(amount_ != 0 && amount_ <= asset_.balanceOf(address(this)), KREGISTRY_ZERO_AMOUNT);
-
-            asset_.safeTransfer(to_, amount_);
-            emit RescuedAssets(asset_, to_, amount_);
-        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -276,6 +211,63 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         _grantRoles(relayer_, RELAYER_ROLE);
     }
 
+    /// @inheritdoc IkRegistry
+    function setTreasury(address treasury_) external payable {
+        _checkAdmin(msg.sender);
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        _checkAddressNotZero(treasury_);
+        $.treasury = treasury_;
+        emit TreasurySet(treasury_);
+    }
+
+    /// @inheritdoc IkRegistry
+    function setHurdleRate(address asset, uint16 hurdleRate) external payable {
+        // Only relayer can set hurdle rates (performance thresholds)
+        _checkRelayer(msg.sender);
+        // Ensure hurdle rate doesn't exceed 100% (10,000 basis points)
+        require(hurdleRate <= MAX_BPS, KREGISTRY_FEE_EXCEEDS_MAXIMUM);
+
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        // Asset must be registered before setting hurdle rate
+        _checkAssetRegistered(asset);
+
+        // Set minimum performance threshold for yield distribution
+        $.assetHurdleRate[asset] = hurdleRate;
+        emit HurdleRateSet(asset, hurdleRate);
+    }
+
+    /// @notice Emergency function to rescue accidentally sent assets (ETH or ERC20) from the contract
+    /// @dev This function provides a recovery mechanism for assets mistakenly sent to the registry. It includes
+    /// critical safety checks: (1) Only callable by ADMIN_ROLE to prevent unauthorized access, (2) Cannot rescue
+    /// registered protocol assets to prevent draining legitimate funds, (3) Validates amounts and balances.
+    /// For ETH rescue, use address(0) as the asset parameter. The function ensures protocol integrity by
+    /// preventing rescue of assets that are part of normal protocol operations.
+    /// @param asset_ The asset address to rescue (use address(0) for ETH)
+    /// @param to_ The destination address that will receive the rescued assets
+    /// @param amount_ The amount of assets to rescue (must not exceed contract balance)
+    function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
+        _checkAdmin(msg.sender);
+        _checkAddressNotZero(to_);
+
+        if (asset_ == address(0)) {
+            // Rescue ETH
+            require(amount_ != 0 && amount_ <= address(this).balance, KREGISTRY_ZERO_AMOUNT);
+
+            (bool success,) = to_.call{ value: amount_ }("");
+            require(success, KREGISTRY_TRANSFER_FAILED);
+
+            emit RescuedETH(to_, amount_);
+        } else {
+            // Rescue ERC20 tokens
+            kRegistryBaseStorage storage $ = _getkRegistryBaseStorage();
+            _checkAssetNotRegistered(asset_);
+            require(amount_ != 0 && amount_ <= asset_.balanceOf(address(this)), KREGISTRY_ZERO_AMOUNT);
+
+            asset_.safeTransfer(to_, amount_);
+            emit RescuedAssets(asset_, to_, amount_);
+        }
+    }
+    
     /*//////////////////////////////////////////////////////////////
                           ASSET MANAGEMENT
     //////////////////////////////////////////////////////////////*/
@@ -403,19 +395,6 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
     }
 
     /*//////////////////////////////////////////////////////////////
-                          ROLES MANAGEMENT
-    //////////////////////////////////////////////////////////////*/
-
-    /// @inheritdoc IkRegistry
-    function setTreasury(address treasury_) external payable {
-        _checkAdmin(msg.sender);
-        kRegistryStorage storage $ = _getkRegistryStorage();
-        _checkAddressNotZero(treasury_);
-        $.treasury = treasury_;
-        emit TreasurySet(treasury_);
-    }
-
-    /*//////////////////////////////////////////////////////////////
                           ADAPTER MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
@@ -448,124 +427,6 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         $.vaultAdapters[vault].remove(adapter);
 
         emit AdapterRemoved(vault, adapter);
-    }
-
-    /// @notice Registers a function selector that a vault can call on a target contract
-    /// @dev This function establishes vault-specific permissions for external protocol interactions. Only callable
-    /// by ADMIN_ROLE to ensure proper vetting of allowed operations. The vault must be registered in the protocol
-    /// before permissions can be granted. This granular permission model ensures each vault can only call
-    /// specific functions on specific targets, providing security isolation between vaults.
-    /// @param vault The vault address that will make the calls (e.g., VaultAdapter instance)
-    /// @param target The target contract address to be called (e.g., IERC7540, wallet)
-    /// @param selector The function selector (bytes4) allowed for this vault-target pair
-    function registerVaultTargetSelector(address vault, address target, bytes4 selector) external payable {
-        _checkAdmin(msg.sender);
-        _checkVaultRegistered(vault);
-        _checkAddressNotZero(target);
-
-        kRegistryStorage storage $ = _getkRegistryStorage();
-
-        // Add target to vault's allowed set if first selector
-        $.vaultAllowedTargets[vault].add(target);
-
-        // Prevent duplicate selector registration
-        require(!$.vaultSelectorAllowed[vault][target][selector], KREGISTRY_SELECTOR_ALREADY_SET);
-
-        // Register the selector
-        $.vaultSelectorAllowed[vault][target][selector] = true;
-        $.vaultTargetSelectors[vault][target].push(selector);
-
-        emit VaultTargetSelectorRegistered(vault, target, selector);
-    }
-
-    /// @notice Removes a function selector permission for a vault-target pair
-    /// @dev This function revokes a specific permission that was previously granted to a vault. Only callable by
-    /// ADMIN_ROLE to maintain proper governance over vault permissions. If this was the last selector for a
-    /// vault-target pair, the target is removed from the vault's allowed set. The function uses the same
-    /// array manipulation pattern as other removal functions in the contract for consistency.
-    /// @param vault The vault address to revoke permission from
-    /// @param target The target contract address
-    /// @param selector The function selector to remove
-    function removeVaultTargetSelector(address vault, address target, bytes4 selector) external payable {
-        _checkAdmin(msg.sender);
-
-        kRegistryStorage storage $ = _getkRegistryStorage();
-        require($.vaultSelectorAllowed[vault][target][selector], KREGISTRY_SELECTOR_NOT_FOUND);
-
-        // Remove selector permission
-        $.vaultSelectorAllowed[vault][target][selector] = false;
-
-        // Remove from array (similar pattern to existing removeSelector)
-        bytes4[] storage selectors = $.vaultTargetSelectors[vault][target];
-        uint256 length = selectors.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (selectors[i] == selector) {
-                selectors[i] = selectors[length - 1];
-                selectors.pop();
-                break;
-            }
-        }
-
-        // If no more selectors, remove target from allowed set
-        if (selectors.length == 0) {
-            $.vaultAllowedTargets[vault].remove(target);
-        }
-
-        emit VaultTargetSelectorRemoved(vault, target, selector);
-    }
-
-    /// @notice Checks if a vault can call a specific selector on a target
-    /// @dev Used for permission validation before executing external calls. Returns true only if the exact
-    /// vault-target-selector combination has been registered via registerVaultTargetSelector.
-    /// @param vault The vault address to check
-    /// @param target The target contract address
-    /// @param selector The function selector to validate
-    /// @return True if the vault is allowed to call this selector on the target
-    function isVaultSelectorAllowed(address vault, address target, bytes4 selector) external view returns (bool) {
-        kRegistryStorage storage $ = _getkRegistryStorage();
-        return $.vaultSelectorAllowed[vault][target][selector];
-    }
-
-    /// @notice Gets all allowed targets for a specific vault
-    /// @dev Returns the complete set of target contracts that have at least one allowed selector for this vault.
-    /// Reverts if the vault is not registered in the protocol. Used for auditing and permission discovery.
-    /// @param vault The vault address to query
-    /// @return Array of target contract addresses the vault can interact with
-    function getVaultAllowedTargets(address vault) external view returns (address[] memory) {
-        kRegistryStorage storage $ = _getkRegistryStorage();
-        _checkVaultRegistered(vault);
-        return $.vaultAllowedTargets[vault].values();
-    }
-
-    /// @notice Gets all allowed selectors for a vault-target pair
-    /// @dev Returns array of function selectors that the vault is permitted to call on the target.
-    /// Returns empty array if no permissions exist for this vault-target combination.
-    /// @param vault The vault address
-    /// @param target The target contract address
-    /// @return Array of allowed function selectors (bytes4)
-    function getVaultTargetSelectors(address vault, address target) external view returns (bytes4[] memory) {
-        kRegistryStorage storage $ = _getkRegistryStorage();
-        return $.vaultTargetSelectors[vault][target];
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                      HURDLE RATE MANAGEMENT
-    //////////////////////////////////////////////////////////////*/
-
-    /// @inheritdoc IkRegistry
-    function setHurdleRate(address asset, uint16 hurdleRate) external payable {
-        // Only relayer can set hurdle rates (performance thresholds)
-        _checkRelayer(msg.sender);
-        // Ensure hurdle rate doesn't exceed 100% (10,000 basis points)
-        require(hurdleRate <= MAX_BPS, KREGISTRY_FEE_EXCEEDS_MAXIMUM);
-
-        kRegistryStorage storage $ = _getkRegistryStorage();
-        // Asset must be registered before setting hurdle rate
-        _checkAssetRegistered(asset);
-
-        // Set minimum performance threshold for yield distribution
-        $.assetHurdleRate[asset] = hurdleRate;
-        emit HurdleRateSet(asset, hurdleRate);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -737,39 +598,6 @@ contract kRegistry is IkRegistry, Initializable, UUPSUpgradeable, OptimizedOwnab
         address assetToToken_ = $.assetToKToken[asset];
         require(assetToToken_ != address(0), KREGISTRY_ZERO_ADDRESS);
         return assetToToken_;
-    }
-
-    /// @notice Internal helper to check if a user has a specific role
-    /// @dev Wraps the OptimizedOwnableRoles hasAnyRole function for role verification
-    /// @param user The address to check for role membership
-    /// @param role_ The role constant to check (e.g., ADMIN_ROLE, VENDOR_ROLE)
-    /// @return True if the user has the specified role, false otherwise
-    function _hasRole(address user, uint256 role_) internal view returns (bool) {
-        return hasAnyRole(user, role_);
-    }
-
-    /// @notice Check if caller has admin role
-    /// @param user Address to check
-    function _checkAdmin(address user) private view {
-        require(_hasRole(user, ADMIN_ROLE), KREGISTRY_WRONG_ROLE);
-    }
-
-    /// @notice Check if caller has vendor role
-    /// @param user Address to check
-    function _checkVendor(address user) private view {
-        require(_hasRole(user, VENDOR_ROLE), KREGISTRY_WRONG_ROLE);
-    }
-
-    /// @notice Check if caller has relayer role
-    /// @param user Address to check
-    function _checkRelayer(address user) private view {
-        require(_hasRole(user, RELAYER_ROLE), KREGISTRY_WRONG_ROLE);
-    }
-
-    /// @notice Check if address is not zero
-    /// @param addr Address to check
-    function _checkAddressNotZero(address addr) private pure {
-        require(addr != address(0), KREGISTRY_ZERO_ADDRESS);
     }
 
     /// @notice Validates that an asset is not already registered in the protocol

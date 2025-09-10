@@ -403,49 +403,6 @@ interface IkRegistry {
     /// @param adapter The adapter address to remove
     function removeAdapter(address vault, address adapter) external payable;
 
-    /// @notice Registers a function selector that a vault can call on a target contract
-    /// @dev This function establishes vault-specific permissions for external protocol interactions. Only callable
-    /// by ADMIN_ROLE to ensure proper vetting of allowed operations. The vault must be registered in the protocol
-    /// before permissions can be granted. This granular permission model ensures each vault can only call
-    /// specific functions on specific targets, providing security isolation between vaults.
-    /// @param vault The vault address that will make the calls (e.g., VaultAdapter instance)
-    /// @param target The target contract address to be called (e.g., IERC7540, wallet)
-    /// @param selector The function selector (bytes4) allowed for this vault-target pair
-    function registerVaultTargetSelector(address vault, address target, bytes4 selector) external payable;
-
-    /// @notice Removes a function selector permission for a vault-target pair
-    /// @dev This function revokes a specific permission that was previously granted to a vault. Only callable by
-    /// ADMIN_ROLE to maintain proper governance over vault permissions. If this was the last selector for a
-    /// vault-target pair, the target is removed from the vault's allowed set.
-    /// @param vault The vault address to revoke permission from
-    /// @param target The target contract address
-    /// @param selector The function selector to remove
-    function removeVaultTargetSelector(address vault, address target, bytes4 selector) external payable;
-
-    /// @notice Checks if a vault can call a specific selector on a target
-    /// @dev Used for permission validation before executing external calls. Returns true only if the exact
-    /// vault-target-selector combination has been registered via registerVaultTargetSelector.
-    /// @param vault The vault address to check
-    /// @param target The target contract address
-    /// @param selector The function selector to validate
-    /// @return True if the vault is allowed to call this selector on the target
-    function isVaultSelectorAllowed(address vault, address target, bytes4 selector) external view returns (bool);
-
-    /// @notice Gets all allowed targets for a specific vault
-    /// @dev Returns the complete set of target contracts that have at least one allowed selector for this vault.
-    /// Reverts if the vault is not registered in the protocol. Used for auditing and permission discovery.
-    /// @param vault The vault address to query
-    /// @return Array of target contract addresses the vault can interact with
-    function getVaultAllowedTargets(address vault) external view returns (address[] memory);
-
-    /// @notice Gets all allowed selectors for a vault-target pair
-    /// @dev Returns array of function selectors that the vault is permitted to call on the target.
-    /// Returns empty array if no permissions exist for this vault-target combination.
-    /// @param vault The vault address
-    /// @param target The target contract address
-    /// @return Array of allowed function selectors (bytes4)
-    function getVaultTargetSelectors(address vault, address target) external view returns (bytes4[] memory);
-
     /// @notice Grants institution role to enable privileged protocol access
     /// @dev Only callable by VENDOR_ROLE. Institutions gain access to kMinter and other premium features.
     /// @param institution_ The address to grant institution privileges

@@ -112,6 +112,14 @@ string constant KREGISTRY_FEE_EXCEEDS_MAXIMUM = "R10";
 string constant KREGISTRY_SELECTOR_ALREADY_SET = "R11";
 string constant KREGISTRY_SELECTOR_NOT_FOUND = "R12";
 
+// kRegistryBase Errors
+string constant KREGISTRYBASE_ALREADY_INITIALIZED = "KB1";
+string constant KREGISTRYBASE_WRONG_ROLE = "KB2";
+string constant KREGISTRYBASE_ZERO_ADDRESS = "KB3";
+string constant KREGISTRYBASE_NOT_INITIALIZED = "KB4";
+string constant KREGISTRYBASE_ZERO_AMOUNT = "KB5";
+string constant KREGISTRYBASE_TRANSFER_FAILED = "KB6";
+
 // kStakingVault Errors
 string constant KSTAKINGVAULT_INSUFFICIENT_BALANCE = "SV1";
 string constant KSTAKINGVAULT_IS_PAUSED = "SV2";
