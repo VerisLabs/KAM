@@ -106,19 +106,13 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
         mapping(address => address) assetToKToken;
         /// @dev Maps vaults to their registered external protocol adapters
         /// Enables yield strategies through DeFi protocol integrations
-        mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) vaultAdapters;
+        mapping(address => address) vaultAdapters;
         /// @dev Tracks whether an adapter address is registered in the protocol
         /// Used for validation and security checks on adapter operations
         mapping(address => bool) registeredAdapters;
         /// @dev Maps assets to their hurdle rates in basis points (100 = 1%)
         /// Defines minimum performance thresholds for yield distribution
         mapping(address => uint16) assetHurdleRate;
-        /// @dev Maps adapter address to target contract to allowed selectors
-        /// Used by AdapterGuardianModule for permission checking
-        mapping(address => mapping(address => mapping(bytes4 => bool))) adapterAllowedSelectors;
-        /// @dev Maps adapter address to target contract to selector to parameter checker
-        /// Enables fine-grained parameter validation for adapter calls
-        mapping(address => mapping(address => mapping(bytes4 => address))) adapterParametersChecker;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kRegistry")) - 1)) & ~bytes32(uint256(0xff))
@@ -407,11 +401,10 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
         // Ensure vault exists in protocol before adding adapter
         _checkVaultRegistered(vault);
 
-        // Prevent duplicate adapter registration (address(0) check seems incorrect - likely a bug)
-        require(!$.vaultAdapters[vault].contains(address(0)), KREGISTRY_ADAPTER_ALREADY_SET);
+        require(!$.vaultAdapters[vault] != address(0), KREGISTRY_ADAPTER_ALREADY_SET);
 
         // Register adapter for external protocol integration
-        $.vaultAdapters[vault].add(adapter);
+        $.vaultAdapters[vault] = adapter;
 
         emit AdapterRegistered(vault, adapter);
     }
