@@ -2,12 +2,19 @@
 pragma solidity 0.8.30;
 
 interface IParametersChecker {
-    function authorizeAdapterCall(address adapter, address target, bytes4 selector, bytes calldata params) external view returns (bool);
+    function authorizeAdapterCall(
+        address adapter,
+        address target,
+        bytes4 selector,
+        bytes calldata params
+    )
+        external
+        view
+        returns (bool);
 }
 
 /// @title IAdapterGuardian
 interface IAdapterGuardian {
-
     /*//////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -20,10 +27,7 @@ interface IAdapterGuardian {
 
     /// @notice Emitted when a parameter checker is set for an adapter selector
     event ParametersCheckerSet(
-        address indexed adapter,
-        address indexed target,
-        bytes4 indexed selector,
-        address parametersChecker
+        address indexed adapter, address indexed target, bytes4 indexed selector, address parametersChecker
     );
 
     /*//////////////////////////////////////////////////////////////
@@ -36,7 +40,7 @@ interface IAdapterGuardian {
     /// @param selector The function selector
     /// @param isAllowed Whether the selector is allowed
     /// @dev Only callable by ADMIN_ROLE
-    function setAdapterAllowedSelector(address adapter,address target,bytes4 selector,bool isAllowed) external;
+    function setAdapterAllowedSelector(address adapter, address target, bytes4 selector, bool isAllowed) external;
 
     /// @notice Set a parameter checker for an adapter selector
     /// @param adapter The adapter address
@@ -44,7 +48,13 @@ interface IAdapterGuardian {
     /// @param selector The function selector
     /// @param parametersChecker The parameter checker contract address (0x0 to remove)
     /// @dev Only callable by ADMIN_ROLE
-    function setAdapterParametersChecker(address adapter, address target, bytes4 selector, address parametersChecker ) external;
+    function setAdapterParametersChecker(
+        address adapter,
+        address target,
+        bytes4 selector,
+        address parametersChecker
+    )
+        external;
 
     /*//////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
@@ -54,19 +64,26 @@ interface IAdapterGuardian {
     /// @param target The target contract address
     /// @param selector The function selector
     /// @param params The function parameters
-    function authorizeAdapterCall(address target,bytes4 selector,bytes calldata params) external view;
+    function authorizeAdapterCall(address target, bytes4 selector, bytes calldata params) external view;
 
     /// @notice Check if a selector is allowed for an adapter
     /// @param adapter The adapter address
     /// @param target The target contract address
     /// @param selector The function selector
     /// @return Whether the selector is allowed
-    function isAdapterSelectorAllowed(address adapter,address target,bytes4 selector) external view returns (bool);
+    function isAdapterSelectorAllowed(address adapter, address target, bytes4 selector) external view returns (bool);
 
     /// @notice Get the parameter checker for an adapter selector
     /// @param adapter The adapter address
     /// @param target The target contract address
     /// @param selector The function selector
     /// @return The parameter checker address (address(0) if none)
-    function getAdapterParametersChecker(address adapter,address target,bytes4 selector) external view returns (address);
+    function getAdapterParametersChecker(
+        address adapter,
+        address target,
+        bytes4 selector
+    )
+        external
+        view
+        returns (address);
 }

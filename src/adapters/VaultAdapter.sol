@@ -20,8 +20,8 @@ import { Initializable } from "src/vendor/Initializable.sol";
 import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
-import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
+import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
 
 import { OptimizedAddressEnumerableSetLib } from "src/libraries/OptimizedAddressEnumerableSetLib.sol";
 import { OptimizedLibCall } from "src/libraries/OptimizedLibCall.sol";
@@ -125,16 +125,20 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IVaultAdapter
-    function execute(address target, bytes calldata data, uint256 value) external returns (bytes memory result) {
-        _checkRelayer(msg.sender);
+    function execute(address target, bytes calldata params, uint256 value) external returns (bytes memory result) {
+        VaultAdapterStorage storage $ = _getVaultAdapterStorage();
+        IRegistry registry = $.registry;
+
+        registry.isRelayer(msg.sender);
         _checkPaused();
 
         // Extract selector and validate vault-specific permission
-        bytes4 functionSig = bytes4(data);
-        _checkVaultCanCallSelector(address(this), target, functionSig);
+        bytes4 functionSig = bytes4(params);
+        registry.isAdapterSelectorAllowed(address(this), target, functionSig);
+        registry.authorizeAdapterCall(target, functionSig, params);
 
-        result = target.callContract(value, data);
-        emit Executed(msg.sender, target, data, value, result);
+        result = target.callContract(value, params);
+        emit Executed(msg.sender, target, params, value, result);
     }
 
     /// @inheritdoc IVaultAdapter
@@ -185,12 +189,11 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
     /// @dev This function enforces the new vault-specific permission model where each vault
     /// has granular permissions for specific functions on specific targets. This replaces
     /// the old global allowedTargets approach with better security isolation.
-    /// @param vault The vault attempting the call (typically address(this))
     /// @param target The target contract to be called
     /// @param selector The function selector being called
-    function _checkVaultCanCallSelector(address vault, address target, bytes4 selector) internal view {
+    function _checkVaultCanCallSelector(address target, bytes4 selector) internal view {
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
-        // require
+        require($.registry.isAdapterSelectorAllowed(address(this), target, selector));
     }
 
     /// @notice Reverts if its a zero address
