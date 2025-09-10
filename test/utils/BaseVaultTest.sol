@@ -66,9 +66,8 @@ contract BaseVaultTest is DeploymentBaseTest {
         vault.closeBatch(batchId, true);
 
         vm.prank(users.relayer);
-        bytes32 proposalId = assetRouter.proposeSettleBatch(
-            getUSDC(), address(vault), batchId, lastTotalAssets + amount, amount, 0, false
-        );
+        bytes32 proposalId =
+            assetRouter.proposeSettleBatch(getUSDC(), address(vault), batchId, lastTotalAssets + amount);
 
         vm.prank(users.relayer);
         assetRouter.executeSettleBatch(proposalId);
@@ -133,8 +132,7 @@ contract BaseVaultTest is DeploymentBaseTest {
         internal
     {
         vm.prank(users.relayer);
-        bytes32 proposalId =
-            assetRouter.proposeSettleBatch(getUSDC(), address(vault), batchId, totalAssets, netted, yield, profit);
+        bytes32 proposalId = assetRouter.proposeSettleBatch(getUSDC(), address(vault), batchId, totalAssets);
 
         // Wait for cooldown period(0 for testing)
         assetRouter.executeSettleBatch(proposalId);

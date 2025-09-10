@@ -27,7 +27,7 @@ import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 
 /// @title VaultAdapter
-contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
+abstract contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
     using SafeTransferLib for address;
     using OptimizedLibCall for address;
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
@@ -134,19 +134,19 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
         emit Executed(msg.sender, target, data, value, result);
     }
 
-    /// @inheritdoc IVaultAdapter
-    function executeTransfer(address asset, address to, uint256 amount) external {
-        _checkRelayer(msg.sender);
-        _checkPaused();
-        _checkAsset(asset);
+    // /// @inheritdoc IVaultAdapter
+    // function executeTransfer(address asset, address to, uint256 amount) external {
+    //     _checkRelayer(msg.sender);
+    //     _checkPaused();
+    //     _checkAsset(asset);
 
-        // Validate that this vault can call transfer on the target (to) address
-        bytes4 transferSelector = bytes4(keccak256("transfer(address,uint256)"));
-        _checkVaultCanCallSelector(address(this), to, transferSelector);
+    //     // Validate that this vault can call transfer on the target (to) address
+    //     bytes4 transferSelector = bytes4(keccak256("transfer(address,uint256)"));
+    //     _checkVaultCanCallSelector(address(this), to, transferSelector);
 
-        asset.safeTransfer(to, amount);
-        emit TransferExecuted(asset, to, amount);
-    }
+    //     asset.safeTransfer(to, amount);
+    //     emit TransferExecuted(asset, to, amount);
+    // }
 
     /// @inheritdoc IVaultAdapter
     function setTotalAssets(uint256 totalAssets_) external {

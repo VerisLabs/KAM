@@ -259,11 +259,11 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         address asset,
         address vault,
         bytes32 batchId,
-        uint256 totalAssets_,
-        uint256 netted,
-        uint256 yield,
-        bool profit
+        uint256 totalAssets_
     )
+        // uint256 netted,
+        // uint256 yield,
+        // bool profit
         external
         payable
         returns (bytes32 proposalId)
@@ -278,9 +278,45 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         require(!$.batchIds.contains(batchId), KASSETROUTER_BATCH_ID_PROPOSED);
         $.batchIds.add(batchId);
 
+        int256 netted;
+        uint256 yield;
+        uint256 lastTotalAssets = _virtualBalance(vault, asset);
+        bool profit;
+
         // Increase the counter to generate unique proposal id
         unchecked {
             $.proposalCounter++;
+        }
+
+        // To calculate the strategy yield we need to discount the deposits and requests
+        // First to match last total assets
+
+        // Example : total assets were 1000 before and there was 200 deposits and 100 withdrawal requests
+        // New total assets is 1200, but this new total assets include settled deposits and withdrawals
+        // So it will be 1000 + (200 - 100) +/- profit = 1100 +/- profit
+        // So first we need to adjust the substract the netted as follows:
+        // 1200 - (200 - 100) = 1100
+        // And now we can calculate the profit as 1100 - 1000 = 100
+
+        if (_isKMinter(vault)) {
+            netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited))
+                - int256(uint256($.vaultBatchBalances[vault][batchId].requested));
+        } else {
+            uint256 totalSupply = IkStakingVault(vault).totalSupply();
+            uint256 requestedAssets = totalSupply == 0
+                ? $.vaultRequestedShares[vault][batchId]
+                : $.vaultRequestedShares[vault][batchId].fullMulDiv(totalAssets_, totalSupply);
+            netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited)) - int256(uint256(requestedAssets));
+        }
+
+        uint256 totalAssetsAdjusted = uint256(int256(totalAssets_) - netted);
+
+        if (totalAssetsAdjusted > lastTotalAssets) {
+            profit = true;
+            yield = totalAssetsAdjusted - lastTotalAssets;
+        } else {
+            profit = false;
+            yield = lastTotalAssets - totalAssetsAdjusted;
         }
 
         proposalId = OptimizedEfficientHashLib.hash(
@@ -376,7 +412,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         address vault = proposal.vault;
         bytes32 batchId = proposal.batchId;
         uint256 totalAssets_ = proposal.totalAssets;
-        uint256 netted = proposal.netted;
+        int256 netted = proposal.netted;
         uint256 yield = proposal.yield;
         bool profit = proposal.profit;
         uint256 requested = $.vaultBatchBalances[vault][batchId].requested;
@@ -433,11 +469,11 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                 // at some point we will have multiple adapters for a vault
                 // for now we just use the first one
                 _checkAddressNotZero(adapters[0]);
-                asset.safeTransfer(address(adapter), netted);
-                adapter.deposit(asset, netted, vault);
+                asset.safeTransfer(address(adapter), uint256(netted));
+                adapter.deposit(asset, uint256(netted), vault);
             }
 
-            emit Deposited(vault, asset, netted, isKMinter);
+            emit Deposited(vault, asset, uint256(netted), isKMinter);
         }
 
         // Update vault's total assets
