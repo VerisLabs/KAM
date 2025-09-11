@@ -182,7 +182,12 @@ interface IkMinter {
     function closeBatch(bytes32 _batchId, bool _create) external;
     function settleBatch(bytes32 _batchId) external;
     function createBatchReceiver(bytes32 _batchId) external returns (address);
-
+    function getCurrentBatchId(address asset_) external view returns (bytes32);
+    function getCurrentBatchNumber(address asset_) external view returns (uint256);
+    function hasActiveBatch(address asset_) external view returns (bool);
+    function getBatchInfo(bytes32 batchId_) external view returns (IkMinter.BatchInfo memory);
+    function getBatchReceiver(bytes32 batchId_) external view returns (address);
+    
     /// @notice Emergency admin function to recover stuck assets from a batch receiver contract
     /// @dev This function provides a recovery mechanism for assets that may become stuck in kBatchReceiver contracts
     /// due to failed redemptions or system errors. The process involves two steps: (1) calling rescueAssets on the
