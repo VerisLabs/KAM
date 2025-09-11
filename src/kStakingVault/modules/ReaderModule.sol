@@ -11,6 +11,7 @@ import {
 } from "src/errors/Errors.sol";
 
 import { IVaultReader } from "src/interfaces/modules/IVaultReader.sol";
+import { IVersioned } from "src/interfaces/IVersioned.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
@@ -234,12 +235,12 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader {
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IVaultReader
+    /// @inheritdoc IVersioned
     function contractName() external pure returns (string memory) {
         return "kStakingVault";
     }
 
-    /// @inheritdoc IVaultReader
+    /// @inheritdoc IVersioned
     function contractVersion() external pure returns (string memory) {
         return "1.0.0";
     }

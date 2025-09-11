@@ -25,6 +25,7 @@ import {
     KREGISTRY_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { IVersioned } from "src/interfaces/IVersioned.sol";
 import { kToken } from "src/kToken.sol";
 
 /// @title kRegistry
@@ -673,14 +674,12 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the contract name
-    /// @return Contract name
+    /// @inheritdoc IVersioned
     function contractName() external pure returns (string memory) {
         return "kRegistry";
     }
 
-    /// @notice Returns the contract version
-    /// @return Contract version
+    /// @inheritdoc IVersioned
     function contractVersion() external pure returns (string memory) {
         return "1.0.0";
     }

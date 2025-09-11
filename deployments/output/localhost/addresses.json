@@ -1,7 +1,7 @@
 {
   "chainId": 31337,
   "network": "localhost",
-  "timestamp": 1757619595,
+  "timestamp": 1757624043,
   "contracts": {
     "ERC1967Factory": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
     "kRegistryImpl": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",

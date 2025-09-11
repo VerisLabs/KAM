@@ -39,6 +39,7 @@ import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
+import { IVersioned } from "src/interfaces/IVersioned.sol";
 
 /// @title kAssetRouter
 /// @notice Central money flow coordinator for the KAM protocol, orchestrating all asset movements and yield
@@ -639,12 +640,12 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IkAssetRouter
+    /// @inheritdoc IVersioned
     function contractName() external pure returns (string memory) {
         return "kAssetRouter";
     }
 
-    /// @inheritdoc IkAssetRouter
+    /// @inheritdoc IVersioned
     function contractVersion() external pure returns (string memory) {
         return "1.0.0";
     }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import { IVersioned } from "src/interfaces/IVersioned.sol";
+
 interface ISettleBatch {
     function settleBatch(bytes32 _batchId) external;
 }
@@ -15,7 +17,7 @@ interface ISettleBatch {
 /// cooldown periods for security, (6) Executing peg protection mechanisms during market stress. The router acts as
 /// the central hub that enables efficient capital allocation while maintaining the 1:1 backing guarantee of kTokens
 /// through precise yield distribution and loss management across the protocol's vault network.
-interface IkAssetRouter {
+interface IkAssetRouter is IVersioned {
     /*/////////////////////////////////////////////////////////////// 
                                 STRUCTS
     ///////////////////////////////////////////////////////////////*/
@@ -432,21 +434,5 @@ interface IkAssetRouter {
     /// @return balance The total virtual asset balance across all vault adapters
     function virtualBalance(address vault, address asset) external view returns (uint256);
 
-    /*//////////////////////////////////////////////////////////////
-                        CONTRACT INFO
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Returns the standard name identifier for this contract type within the KAM protocol
-    /// @dev Used for protocol identification and registry management. Provides a consistent way
-    /// to identify kAssetRouter contracts across the protocol ecosystem, enabling automated
-    /// contract discovery and validation by other protocol components.
-    /// @return The contract name as a string (typically "kAssetRouter")
-    function contractName() external pure returns (string memory);
-
-    /// @notice Returns the version identifier for this contract implementation
-    /// @dev Used for upgrade management and compatibility checking within the protocol. Enables
-    /// the system to verify contract versions during upgrades and ensure compatibility between
-    /// protocol components. Critical for protocol governance and maintenance procedures.
-    /// @return The contract version as a string (e.g., "1.0.0")
-    function contractVersion() external pure returns (string memory);
+    // contractName() and contractVersion() functions are inherited from IVersioned
 }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { IVersioned } from "src/interfaces/IVersioned.sol";
+
 /// @title IVaultReader
 /// @notice Read-only interface for querying vault state, calculations, and metrics without modifying contract state
 /// @dev This interface provides comprehensive access to vault information for external integrations, front-ends, and
@@ -12,7 +14,7 @@ pragma solidity 0.8.30;
 /// and integration while maintaining clear separation from state-modifying operations. All calculations reflect current
 /// vault state including pending fees and accrued yields, providing accurate real-time vault metrics for users and
 /// integrations.
-interface IVaultReader {
+interface IVaultReader is IVersioned {
     /// @notice Returns the protocol registry address for configuration and role management
     /// @return Address of the kRegistry contract managing protocol-wide settings
     function registry() external view returns (address);
@@ -135,11 +137,5 @@ interface IVaultReader {
     /// @return The equivalent amount of shares
     function convertToAssets(uint256 assets) external view returns (uint256);
 
-    /// @notice Returns the human-readable contract name for identification
-    /// @return Contract name string for display and logging purposes
-    function contractName() external pure returns (string memory);
-
-    /// @notice Returns the contract version for upgrade tracking and compatibility
-    /// @return Version string indicating current implementation version
-    function contractVersion() external pure returns (string memory);
+    // contractName() and contractVersion() functions are inherited from IVersioned
 }

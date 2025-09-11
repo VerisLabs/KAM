@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import { IVersioned } from "src/interfaces/IVersioned.sol";
+
 /// @title IkToken
 /// @notice Interface for kToken with role-based minting and burning capabilities
 /// @dev Defines the standard interface for kToken implementations with ERC20 compatibility
-interface IkToken {
+interface IkToken is IVersioned {
     /*//////////////////////////////////////////////////////////////
                             CORE OPERATIONS
     //////////////////////////////////////////////////////////////*/
@@ -128,15 +130,5 @@ interface IkToken {
     /// @param minter The address to revoke minter role from
     function revokeMinterRole(address minter) external;
 
-    /*//////////////////////////////////////////////////////////////
-                        CONTRACT INFO
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Returns the name identifier for this contract type
-    /// @return The contract name as a string
-    function contractName() external pure returns (string memory);
-
-    /// @notice Returns the version identifier for this contract
-    /// @return The contract version as a string
-    function contractVersion() external pure returns (string memory);
+    // contractName() and contractVersion() functions are inherited from IVersioned
 }

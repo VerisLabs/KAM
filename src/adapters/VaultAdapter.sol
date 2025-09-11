@@ -18,6 +18,7 @@ import {
 } from "src/errors/Errors.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { IVersioned } from "src/interfaces/IVersioned.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { IRegistry } from "src/interfaces/IRegistry.sol";
@@ -209,14 +210,12 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the contract name
-    /// @return Contract name
+    /// @inheritdoc IVersioned
     function contractName() external pure returns (string memory) {
         return "VaultAdapter";
     }
 
-    /// @notice Returns the contract version
-    /// @return Contract version
+    /// @inheritdoc IVersioned
     function contractVersion() external pure returns (string memory) {
         return "1.0.0";
     }
