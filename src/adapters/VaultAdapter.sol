@@ -125,7 +125,7 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IVaultAdapter
-    function execute(address target, bytes calldata params, uint256 value) external returns (bytes memory result) {
+    function execute(address target, bytes calldata data, uint256 value) external returns (bytes memory result) {
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
         IRegistry registry = $.registry;
 
@@ -133,11 +133,12 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
         _checkPaused();
 
         // Extract selector and validate vault-specific permission
-        bytes4 functionSig = bytes4(params);
+        bytes4 functionSig = bytes4(data);
+        bytes memory params = data[4:];
         registry.authorizeAdapterCall(target, functionSig, params);
 
-        result = target.callContract(value, params);
-        emit Executed(msg.sender, target, params, value, result);
+        result = target.callContract(value, data);
+        emit Executed(msg.sender, target, data, value, result);
     }
 
     /// @inheritdoc IVaultAdapter

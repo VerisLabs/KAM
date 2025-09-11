@@ -11,6 +11,7 @@ import { MockWallet } from "test/mocks/MockWallet.sol";
 
 contract DeployMockAssetsScript is Script, DeploymentManager {
     function run() public {
+        require(!isProduction(), "This script is NOT for production");
         NetworkConfig memory config = readNetworkConfig();
 
         // Only deploy mock assets for testnets (localhost and sepolia)
