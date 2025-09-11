@@ -372,7 +372,7 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
         // Classify vault by type for routing logic
         $.vaultType[vault] = uint8(type_);
 
-        _checkVaultRegistered(vault);
+        require(!$.allVaults.contains(vault), KREGISTRY_ALREADY_REGISTERED);
         $.allVaults.add(vault);
         
         emit VaultRegistered(vault, asset, type_);
