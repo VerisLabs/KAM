@@ -97,6 +97,8 @@ string constant KMINTER_ZERO_ADDRESS = "M10";
 string constant KMINTER_ZERO_AMOUNT = "M11";
 string constant KMINTER_BATCH_MINT_REACHED = "M12";
 string constant KMINTER_BATCH_REDEEM_REACHED = "M13";
+string constant KMINTER_BATCH_NOT_CLOSED = "M14";
+string constant KMINTER_BATCH_NOT_SET = "M15";
 
 // kRegistry Errors
 string constant KREGISTRY_ADAPTER_ALREADY_SET = "R1";

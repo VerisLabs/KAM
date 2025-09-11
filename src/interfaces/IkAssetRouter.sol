@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+interface ISettleBatch {
+    function settleBatch(bytes32 _batchId) external;
+}
+
 /// @title IkAssetRouter
 /// @notice Central money flow coordinator for the KAM protocol managing all asset movements and settlements
 /// @dev This interface defines the core functionality for kAssetRouter, which serves as the primary coordinator
@@ -70,11 +74,8 @@ interface IkAssetRouter {
     /// after batch settlement. The batchReceiver is deployed to hold assets for distribution.
     /// @param vault The vault address from which assets are being requested
     /// @param asset The underlying asset address being requested for redemption
-    /// @param batchReceiver The minimal proxy contract that will receive and distribute assets
     /// @param amount The quantity of assets requested for redemption
-    event AssetsRequestPulled(
-        address indexed vault, address indexed asset, address indexed batchReceiver, uint256 amount
-    );
+    event AssetsRequestPulled(address indexed vault, address indexed asset, uint256 amount);
 
     /// @notice Emitted when assets are transferred between kStakingVaults for optimal allocation
     /// @dev This is a virtual transfer for accounting purposes - actual assets may remain in the same
@@ -149,8 +150,7 @@ interface IkAssetRouter {
     /// @param vault The vault address receiving the deposit
     /// @param asset The underlying asset address being deposited
     /// @param amount The quantity of assets deposited
-    /// @param isKMinter True if deposit originated from kMinter, false for other sources
-    event Deposited(address indexed vault, address indexed asset, uint256 amount, bool isKMinter);
+    event Deposited(address indexed vault, address indexed asset, uint256 amount);
 
     /// @notice Emitted when a new settlement proposal is created with cooldown period
     /// @dev Begins the settlement process with a security cooldown to allow verification
@@ -230,10 +230,9 @@ interface IkAssetRouter {
     /// processes all pending requests together. This two-phase approach optimizes gas costs and ensures
     /// fair settlement across all institutional redemption requests in the batch.
     /// @param _asset The underlying asset address being redeemed
-    /// @param _vault The DN vault address from which assets will be withdrawn
     /// @param amount The quantity of assets requested for redemption
     /// @param batchId The batch identifier for coordinating this redemption with other requests
-    function kAssetRequestPull(address _asset, address _vault, uint256 amount, bytes32 batchId) external payable;
+    function kAssetRequestPull(address _asset, uint256 amount, bytes32 batchId) external payable;
 
     /*//////////////////////////////////////////////////////////////
                         KSTAKING VAULT FUNCTIONS

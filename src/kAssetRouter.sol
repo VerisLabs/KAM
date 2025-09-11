@@ -31,8 +31,10 @@ import {
 } from "src/errors/Errors.sol";
 import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
 
-import { IAdapter } from "src/interfaces/IAdapter.sol";
-import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
+import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
+import { ISettleBatch, IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
+
+import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
@@ -143,10 +145,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @inheritdoc IkAssetRouter
     function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable {
         _lockReentrant();
+        _checkPaused();
+        _checkAmountNotZero(amount);
         address kMinter = msg.sender;
         _checkKMinter(kMinter);
-        _checkAmountNotZero(amount);
-        _checkPaused();
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
@@ -158,26 +160,20 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     }
 
     /// @inheritdoc IkAssetRouter
-    function kAssetRequestPull(address _asset, address _vault, uint256 amount, bytes32 batchId) external payable {
+    function kAssetRequestPull(address _asset, uint256 amount, bytes32 batchId) external payable {
         _lockReentrant();
         _checkPaused();
         _checkAmountNotZero(amount);
         address kMinter = msg.sender;
         _checkKMinter(kMinter);
-        address vault = _getDNVaultByAsset(_asset);
-        _checkSufficientVirtualBalance(vault, _asset, amount);
+        _checkSufficientVirtualBalance(kMinter, _asset, amount);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
         // Account the withdrawal requset in the batch for kMinter
         $.vaultBatchBalances[kMinter][batchId].requested += amount.toUint128();
 
-        // Set batch receiver for the vault, this contract will receive the assets
-        // requested in this batch
-        address batchReceiver = IkStakingVault(_vault).createBatchReceiver(batchId);
-        _checkAddressNotZero(batchReceiver);
-
-        emit AssetsRequestPulled(kMinter, _asset, batchReceiver, amount);
+        emit AssetsRequestPulled(kMinter, _asset, amount);
         _unlockReentrant();
     }
 
@@ -203,12 +199,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
-        // Verify virtual balance
-        if (sourceVault == _getKMinter()) {
-            _checkSufficientVirtualBalance(_getDNVaultByAsset(_asset), _asset, amount);
-        } else {
-            _checkSufficientVirtualBalance(sourceVault, _asset, amount);
-        }
+        _checkSufficientVirtualBalance(sourceVault, _asset, amount);
 
         // Update batch tracking for settlement
         $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
@@ -413,32 +404,31 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         uint256 yield = proposal.yield;
         bool profit = proposal.profit;
         uint256 requested = $.vaultBatchBalances[vault][batchId].requested;
-
+        address kMinter = _getKMinter();
         address kToken = _getKTokenForAsset(asset);
 
-        // Track wether it was originally a kMinter
-        // Since kMinters are treated as DN vaults in some operations
-        bool isKMinter; // for event Deposited
-
-        // Clear batch balances
-        delete $.vaultBatchBalances[vault][batchId];
-        delete $.vaultRequestedShares[vault][batchId];
+        IVaultAdapter adapter = IVaultAdapter(_registry().getAdapter(vault, asset));
+        _checkAddressNotZero(address(adapter));
 
         // kMinter settlement
-        if (vault == _getKMinter()) {
-            // kMinter settlement: handle institutional deposits and redemptions
-            isKMinter = true;
-
-            // Redirect to DN vault
-            vault = _getDNVaultByAsset(asset);
+        if (vault == kMinter) {
+            delete $.vaultBatchBalances[vault][batchId];
 
             if (requested > 0) {
                 // Transfer assets to batch receiver for redemptions
-                address receiver = IkStakingVault(vault).getSafeBatchReceiver(batchId);
+                address receiver = IkMinter(vault).getBatchReceiver(batchId);
                 _checkAddressNotZero(receiver);
                 asset.safeTransfer(receiver, requested);
             }
+
+            // If netted assets are positive(it means more deposits than withdrawals)
+            if (netted > 0) {
+                asset.safeTransfer(address(adapter), uint256(netted));
+                emit Deposited(vault, asset, uint256(netted));
+            }
         } else {
+            delete $.vaultRequestedShares[vault][batchId];
+
             // kMinter yield is sent to insuranceFund, cannot be minted.
             if (yield > 0) {
                 if (profit) {
@@ -449,34 +439,18 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                     emit YieldDistributed(vault, yield, false);
                 }
             }
+
+            IVaultAdapter kMinterAdapter = IVaultAdapter(kMinter);
+            _checkAddressNotZero(address(kMinterAdapter));
+            int256 kMinterTotalAssets = int256(kMinterAdapter.totalAssets()) - netted;
+            require(kMinterTotalAssets >= 0, KASSETROUTER_ZERO_AMOUNT);
+            kMinterAdapter.setTotalAssets(uint256(kMinterTotalAssets));
         }
 
-        IAdapter adapter = IAdapter(_registry().getAdapter(vault, asset));
-
-        // If netted assets are positive(it means more deposits than withdrawals)
-        if (netted > 0) {
-            // Deposit the net deposits into the DN strategy by default
-            address dnVault = _getDNVaultByAsset(asset);
-
-            // If it was originally the minter
-            if (vault == dnVault && isKMinter) {
-                // at some point we will have multiple adapters for a vault
-                // for now we just use the first one
-                _checkAddressNotZero(address(adapter));
-                asset.safeTransfer(address(adapter), uint256(netted));
-                adapter.deposit(asset, uint256(netted), vault);
-            }
-
-            emit Deposited(vault, asset, uint256(netted), isKMinter);
-        }
-
-        // Update vault's total assets
-        if (_registry().getVaultType(vault) > 0) {
-            adapter.setTotalAssets(vault, asset, totalAssets_);
-        }
-
+        // TODO: kMinter cannot have profits or we should send them to insurance
+        adapter.setTotalAssets(totalAssets_);
         // Mark batch as settled in the vault
-        IkStakingVault(vault).settleBatch(batchId);
+        ISettleBatch(vault).settleBatch(batchId);
 
         emit BatchSettled(vault, batchId, totalAssets_);
     }
@@ -553,7 +527,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     function _virtualBalance(address vault, address asset) private view returns (uint256 balance) {
         _isVault(vault);
         _isAsset(asset);
-        IAdapter adapter = IAdapter(_registry().getAdapter(vault, asset));
+        IVaultAdapter adapter = IVaultAdapter(_registry().getAdapter(vault, asset));
         balance += adapter.totalAssets();
     }
 

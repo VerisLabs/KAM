@@ -11,6 +11,55 @@ import { IRegistry } from "src/interfaces/IRegistry.sol";
 import { kRegistry } from "src/kRegistry/kRegistry.sol";
 
 contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
+    // Helper function to configure vault adapter permissions
+    function configureVaultAdapterPermissions(
+        IRegistry registry,
+        address adapter,
+        address vault,
+        address asset,
+        string memory adapterName
+    )
+        internal
+    {
+        bytes4 requestDepositSelector = IERC7540.requestDeposit.selector;
+        bytes4 depositSelector = bytes4(abi.encodeWithSignature("deposit(uint256,address)"));
+        bytes4 requestRedeemSelector = IERC7540.requestRedeem.selector;
+        bytes4 redeemSelector = IERC7540.redeem.selector;
+        bytes4 approveSelector = IERC7540.approve.selector;
+        bytes4 transferSelector = IERC7540.transfer.selector;
+
+        console.log(string.concat("Configuring ", adapterName, " permissions..."));
+
+        // Allow ERC7540 vault functions
+        registry.setAdapterAllowedSelector(adapter, vault, requestDepositSelector, true);
+        registry.setAdapterAllowedSelector(adapter, vault, depositSelector, true);
+        registry.setAdapterAllowedSelector(adapter, vault, requestRedeemSelector, true);
+        registry.setAdapterAllowedSelector(adapter, vault, redeemSelector, true);
+
+        // Allow transfer and approve for asset
+        registry.setAdapterAllowedSelector(adapter, asset, transferSelector, true);
+        registry.setAdapterAllowedSelector(adapter, asset, approveSelector, true);
+
+        console.log("   - Allowed ERC7540 functions on vault");
+        console.log("   - Allowed transfer and approve functions on asset");
+    }
+
+    // Helper function to configure parameter checkers
+    function configureParameterChecker(
+        IRegistry registry,
+        address adapter,
+        address asset,
+        address paramChecker
+    )
+        internal
+    {
+        bytes4 transferSelector = IERC7540.transfer.selector;
+        bytes4 approveSelector = IERC7540.approve.selector;
+
+        registry.setAdapterParametersChecker(adapter, asset, transferSelector, paramChecker);
+        registry.setAdapterParametersChecker(adapter, asset, approveSelector, paramChecker);
+    }
+
     function run() public {
         bool _isProduction = isProduction();
 
@@ -35,16 +84,6 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         // Write mock target addresses to deployment output
         writeContractAddress("erc20ParameterChecker", address(erc20ParameterChecker));
 
-        // Get function selectors for ERC7540
-        bytes4 requestDepositSelector = IERC7540.requestDeposit.selector;
-        bytes4 depositSelector = bytes4(abi.encodeWithSignature("deposit(uint256,address)"));
-        bytes4 requestRedeemSelector = IERC7540.requestRedeem.selector;
-        bytes4 redeemSelector = IERC7540.redeem.selector;
-        bytes4 approveSelector = IERC7540.approve.selector;
-
-        // Get function selector for wallet transfer
-        bytes4 transferSelector = IERC7540.transfer.selector;
-
         // Determine which contracts to use based on environment
         address usdcVault = existing.contracts.ERC7540USDC;
         address wbtcVault = existing.contracts.ERC7540WBTC;
@@ -52,73 +91,57 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         address usdc = config.assets.USDC;
         address wbtc = config.assets.WBTC;
 
-        console.log("1. Configuring DN Vault USDC Adapter permissions...");
-        // Allow ERC7540 USDC vault functions
-        registry.setAdapterAllowedSelector(
-            existing.contracts.dnVaultAdapterUSDC, usdcVault, requestDepositSelector, true
+        console.log("1. ");
+        configureVaultAdapterPermissions(
+            registry, existing.contracts.kMinterAdapterUSDC, usdcVault, usdc, "kMinter USDC Adapter"
         );
-        registry.setAdapterAllowedSelector(existing.contracts.dnVaultAdapterUSDC, usdcVault, depositSelector, true);
-        registry.setAdapterAllowedSelector(
-            existing.contracts.dnVaultAdapterUSDC, usdcVault, requestRedeemSelector, true
-        );
-        registry.setAdapterAllowedSelector(existing.contracts.dnVaultAdapterUSDC, usdcVault, redeemSelector, true);
-        // Allow wallet transfer for USDC
-        registry.setAdapterAllowedSelector(existing.contracts.dnVaultAdapterUSDC, usdc, transferSelector, true);
-        // Allow approve for USDC
-        registry.setAdapterAllowedSelector(existing.contracts.dnVaultAdapterUSDC, usdc, approveSelector, true);
-        console.log("   - Allowed ERC7540 functions on USDC vault");
-        console.log("   - Allowed transfer function on USDC wallet");
 
         console.log("");
-        console.log("2. Configuring DN Vault WBTC Adapter permissions...");
-        // Allow ERC7540 WBTC vault functions (no wallet for WBTC)
-        registry.setAdapterAllowedSelector(
-            existing.contracts.dnVaultAdapterWBTC, wbtcVault, requestDepositSelector, true
+        console.log("2. ");
+        configureVaultAdapterPermissions(
+            registry, existing.contracts.kMinterAdapterWBTC, wbtcVault, wbtc, "kMinter WBTC Adapter"
         );
-        registry.setAdapterAllowedSelector(existing.contracts.dnVaultAdapterWBTC, wbtcVault, depositSelector, true);
-        registry.setAdapterAllowedSelector(
-            existing.contracts.dnVaultAdapterWBTC, wbtcVault, requestRedeemSelector, true
-        );
-        registry.setAdapterAllowedSelector(existing.contracts.dnVaultAdapterWBTC, wbtcVault, redeemSelector, true);
-        // Allow wallet transfer for WBTC
-        registry.setAdapterAllowedSelector(existing.contracts.dnVaultAdapterWBTC, wbtc, transferSelector, true);
-        // Allow approve for WBTC
-        registry.setAdapterAllowedSelector(existing.contracts.dnVaultAdapterWBTC, wbtc, approveSelector, true);
-        console.log("   - Allowed ERC7540 functions on WBTC vault");
-        console.log("   - Allowed transfer function on WBTC wallet");
-        console.log("   - Allowed approve function on WBTC wallet");
 
         console.log("");
-        console.log("3. Configuring Alpha Vault Adapter permissions...");
+        console.log("3. ");
+        configureVaultAdapterPermissions(
+            registry, existing.contracts.dnVaultAdapterUSDC, usdcVault, usdc, "DN Vault USDC Adapter"
+        );
+
+        console.log("");
+        console.log("4. ");
+        configureVaultAdapterPermissions(
+            registry, existing.contracts.dnVaultAdapterWBTC, wbtcVault, wbtc, "DN Vault WBTC Adapter"
+        );
+
+        console.log("");
+        console.log("5. Configuring Alpha Vault Adapter permissions...");
         // Allow only wallet transfer for Alpha vault
+        bytes4 transferSelector = IERC7540.transfer.selector;
         registry.setAdapterAllowedSelector(existing.contracts.alphaVaultAdapter, usdc, transferSelector, true);
         console.log("   - Allowed transfer function on USDC wallet");
 
         console.log("");
-        console.log("4. Configuring Beta Vault Adapter permissions...");
+        console.log("6. Configuring Beta Vault Adapter permissions...");
         // Allow only wallet transfer for Beta vault
         registry.setAdapterAllowedSelector(existing.contracts.betaVaultAdapter, usdc, transferSelector, true);
         console.log("   - Allowed transfer function on USDC wallet");
 
-        // Activate param checker
-        registry.setAdapterParametersChecker(
-            existing.contracts.dnVaultAdapterUSDC, usdc, transferSelector, address(erc20ParameterChecker)
-        );
-        registry.setAdapterParametersChecker(
-            existing.contracts.dnVaultAdapterWBTC, wbtc, transferSelector, address(erc20ParameterChecker)
-        );
-        console.log("   - Set parameter checker for USDC and WBTC transfer");
+        console.log("");
+        console.log("7. Configuring parameter checkers...");
 
-        registry.setAdapterParametersChecker(
-            existing.contracts.dnVaultAdapterUSDC, usdc, approveSelector, address(erc20ParameterChecker)
-        );
-        registry.setAdapterParametersChecker(
-            existing.contracts.dnVaultAdapterWBTC, wbtc, approveSelector, address(erc20ParameterChecker)
-        );
-        console.log("   - Set parameter checker for USDC and WBTC approve");
+        // Activate param checker for kMinter adapters
+        configureParameterChecker(registry, existing.contracts.kMinterAdapterUSDC, usdc, address(erc20ParameterChecker));
+        configureParameterChecker(registry, existing.contracts.kMinterAdapterWBTC, wbtc, address(erc20ParameterChecker));
+        console.log("   - Set parameter checker for kMinter USDC and WBTC transfer/approve");
+
+        // Activate param checker for DN vault adapters
+        configureParameterChecker(registry, existing.contracts.dnVaultAdapterUSDC, usdc, address(erc20ParameterChecker));
+        configureParameterChecker(registry, existing.contracts.dnVaultAdapterWBTC, wbtc, address(erc20ParameterChecker));
+        console.log("   - Set parameter checker for DN Vault USDC and WBTC transfer/approve");
 
         console.log("");
-        console.log("5. Configuring parameter checker permissions...");
+        console.log("8. Configuring parameter checker permissions...");
 
         // Set token permissions in parameters checker
         erc20ParameterChecker.setAllowedReceiver(usdc, usdcWallet, true);
@@ -139,6 +162,8 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         console.log("Adapter permissions configuration complete!");
         console.log("");
         console.log("Summary:");
+        console.log("- kMinter USDC Adapter: Can interact with ERC7540 USDC vault, transfer and approve USDC");
+        console.log("- kMinter WBTC Adapter: Can interact with ERC7540 WBTC vault, transfer and approve WBTC");
         console.log("- DN Vault USDC Adapter: Can interact with ERC7540 USDC vault and USDC wallet");
         console.log("- DN Vault WBTC Adapter: Can interact with ERC7540 WBTC vault only");
         console.log("- Alpha Vault Adapter: Can interact with USDC wallet only");
