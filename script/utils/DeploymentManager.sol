@@ -211,10 +211,6 @@ abstract contract DeploymentManager is Script {
             output.contracts.vaultAdapterImpl = json.readAddress(".contracts.vaultAdapterImpl");
         }
 
-        if (json.keyExists(".contracts.vaultAdapter")) {
-            output.contracts.vaultAdapter = json.readAddress(".contracts.vaultAdapter");
-        }
-
         if (json.keyExists(".contracts.dnVaultAdapterUSDC")) {
             output.contracts.dnVaultAdapterUSDC = json.readAddress(".contracts.dnVaultAdapterUSDC");
         }
@@ -298,8 +294,6 @@ abstract contract DeploymentManager is Script {
             output.contracts.betaVault = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("vaultAdapterImpl"))) {
             output.contracts.vaultAdapterImpl = contractAddress;
-        } else if (keccak256(bytes(contractName)) == keccak256(bytes("vaultAdapter"))) {
-            output.contracts.vaultAdapter = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("dnVaultAdapterUSDC"))) {
             output.contracts.dnVaultAdapterUSDC = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("dnVaultAdapterWBTC"))) {
@@ -353,7 +347,6 @@ abstract contract DeploymentManager is Script {
         json = string.concat(json, '"alphaVault":"', vm.toString(output.contracts.alphaVault), '",');
         json = string.concat(json, '"betaVault":"', vm.toString(output.contracts.betaVault), '",');
         json = string.concat(json, '"vaultAdapterImpl":"', vm.toString(output.contracts.vaultAdapterImpl), '",');
-        json = string.concat(json, '"vaultAdapter":"', vm.toString(output.contracts.vaultAdapter), '",');
         json = string.concat(json, '"dnVaultAdapterUSDC":"', vm.toString(output.contracts.dnVaultAdapterUSDC), '",');
         json = string.concat(json, '"dnVaultAdapterWBTC":"', vm.toString(output.contracts.dnVaultAdapterWBTC), '",');
         json = string.concat(json, '"alphaVaultAdapter":"', vm.toString(output.contracts.alphaVaultAdapter), '",');
