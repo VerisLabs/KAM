@@ -16,6 +16,7 @@ import {
     KASSETROUTER_COOLDOOWN_IS_UP,
     KASSETROUTER_INSUFFICIENT_VIRTUAL_BALANCE,
     KASSETROUTER_INVALID_COOLDOWN,
+    KASSETROUTER_INVALID_TOLERANCE,
     KASSETROUTER_INVALID_VAULT,
     KASSETROUTER_IS_PAUSED,
     KASSETROUTER_NO_PROPOSAL,
@@ -25,6 +26,7 @@ import {
     KASSETROUTER_PROPOSAL_EXISTS,
     KASSETROUTER_PROPOSAL_NOT_FOUND,
     KASSETROUTER_WRONG_ROLE,
+    KASSETROUTER_YIELD_EXCEEDS_TOLERANCE,
     KASSETROUTER_ZERO_ADDRESS,
     KASSETROUTER_ZERO_AMOUNT,
     KBASE_NOT_INITIALIZED
@@ -74,6 +76,16 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// Prevents excessive delays that could harm user experience while maintaining security standards
     uint256 private constant MAX_VAULT_SETTLEMENT_COOLDOWN = 1 days;
 
+    /// @notice Default yield tolerance for settlement proposals (10%)
+    /// @dev Provides initial yield deviation threshold to prevent settlements with excessive yield changes
+    /// that could indicate errors in yield calculation or potential manipulation attempts
+    uint256 private constant DEFAULT_YIELD_TOLERANCE = 1000; // 10% in basis points
+
+    /// @notice Maximum allowed yield tolerance (50%)
+    /// @dev Caps the maximum yield tolerance to maintain protocol safety while allowing reasonable
+    /// yield fluctuations. Prevents setting tolerance so high that it becomes ineffective
+    uint256 private constant MAX_YIELD_TOLERANCE = 5000; // 50% in basis points
+
     /*//////////////////////////////////////////////////////////////
                             STORAGE LAYOUT
     //////////////////////////////////////////////////////////////*/
@@ -87,6 +99,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         uint256 proposalCounter;
         /// @dev Current cooldown period in seconds before settlement proposals can be executed
         uint256 vaultSettlementCooldown;
+        /// @dev Maximum allowed yield deviation in basis points before settlement proposal is rejected
+        uint256 yieldTolerance;
         /// @dev Set of proposal IDs that have been executed to prevent double-execution
         OptimizedBytes32EnumerableSetLib.Bytes32Set executedProposalIds;
         /// @dev Set of all batch IDs processed by the router for tracking and management
@@ -136,6 +150,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         $.vaultSettlementCooldown = DEFAULT_VAULT_SETTLEMENT_COOLDOWN;
+        $.yieldTolerance = DEFAULT_YIELD_TOLERANCE;
 
         emit ContractInitialized(registry_);
     }
@@ -309,6 +324,12 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             yield = lastTotalAssets - totalAssetsAdjusted;
         }
 
+        // Check if yield exceeds tolerance threshold to prevent excessive yield deviations
+        if (lastTotalAssets > 0) {
+            uint256 maxAllowedYield = lastTotalAssets.fullMulDiv($.yieldTolerance, 10_000);
+            require(yield <= maxAllowedYield, KASSETROUTER_YIELD_EXCEEDS_TOLERANCE);
+        }
+
         proposalId = OptimizedEfficientHashLib.hash(
             uint256(uint160(vault)), uint256(batchId), block.timestamp, $.proposalCounter
         );
@@ -473,6 +494,24 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         emit SettlementCooldownUpdated(oldCooldown, cooldown);
     }
 
+    /// @notice Updates the yield tolerance threshold for settlement proposals
+    /// @dev This function allows protocol governance to adjust the maximum acceptable yield deviation before
+    /// settlement proposals are rejected. The yield tolerance acts as a safety mechanism to prevent settlement
+    /// proposals with extremely high or low yield values that could indicate calculation errors, data corruption,
+    /// or potential manipulation attempts. Setting an appropriate tolerance balances protocol safety with
+    /// operational flexibility, allowing normal yield fluctuations while blocking suspicious proposals.
+    /// @param tolerance_ The new yield tolerance in basis points (e.g., 1000 = 10%)
+    function updateYieldTolerance(uint256 tolerance_) external {
+        _checkAdmin(msg.sender);
+        require(tolerance_ <= MAX_YIELD_TOLERANCE, KASSETROUTER_INVALID_TOLERANCE);
+
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        uint256 oldTolerance = $.yieldTolerance;
+        $.yieldTolerance = tolerance_;
+
+        emit YieldToleranceUpdated(oldTolerance, tolerance_);
+    }
+
     /*//////////////////////////////////////////////////////////////
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -513,6 +552,17 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     function getSettlementCooldown() external view returns (uint256) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         return $.vaultSettlementCooldown;
+    }
+
+    /// @notice Gets the current yield tolerance threshold for settlement proposals
+    /// @dev The yield tolerance determines the maximum acceptable yield deviation before settlement proposals
+    /// are automatically rejected. This acts as a safety mechanism to prevent processing of settlement proposals
+    /// with excessive yield values that could indicate calculation errors or potential manipulation. The tolerance
+    /// is expressed in basis points where 10000 equals 100%.
+    /// @return tolerance The current yield tolerance in basis points
+    function getYieldTolerance() external view returns (uint256) {
+        kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        return $.yieldTolerance;
     }
 
     function virtualBalance(address vault, address asset) external view returns (uint256) {
