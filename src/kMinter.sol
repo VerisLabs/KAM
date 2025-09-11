@@ -17,9 +17,10 @@ import { kBatchReceiver } from "src/kBatchReceiver.sol";
 
 import {
     KMINTER_BATCH_CLOSED,
+    KMINTER_BATCH_MINT_REACHED,
+    KMINTER_BATCH_MINT_REACHED,
     KMINTER_BATCH_NOT_CLOSED,
-    KMINTER_BATCH_MINT_REACHED,
-    KMINTER_BATCH_MINT_REACHED,
+    KMINTER_BATCH_NOT_SET,
     KMINTER_BATCH_REDEEM_REACHED,
     KMINTER_BATCH_SETTLED,
     KMINTER_INSUFFICIENT_BALANCE,
@@ -30,8 +31,7 @@ import {
     KMINTER_WRONG_ASSET,
     KMINTER_WRONG_ROLE,
     KMINTER_ZERO_ADDRESS,
-    KMINTER_ZERO_AMOUNT,
-    KMINTER_BATCH_NOT_SET
+    KMINTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
@@ -137,7 +137,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         address kToken = _getKTokenForAsset(asset_);
 
         bytes32 batchId = _currentBatchId(asset_);
-        if(batchId == bytes32(0)) {
+        if (batchId == bytes32(0)) {
             batchId = _createNewBatch(asset_);
         }
 
@@ -308,7 +308,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         _checkRelayer(msg.sender);
         kMinterStorage storage $ = _getkMinterStorage();
         require(!$.batches[_batchId].isClosed, KMINTER_BATCH_CLOSED);
-        
+
         address batchAsset = $.batches[_batchId].asset;
         $.batches[_batchId].isClosed = true;
 
@@ -316,7 +316,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         if (_create) {
             newBatchId = _createNewBatch(batchAsset); // Create new batch for same asset
         }
-        
+
         emit BatchClosed(newBatchId);
     }
 
@@ -361,37 +361,33 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     }
 
     /// @notice Internal function to create deterministic batch IDs with collision resistance per asset
-    /// @dev This function generates unique batch identifiers per asset using multiple entropy sources for security. 
-    /// The ID generation process: (1) Increments asset-specific batch counter to ensure uniqueness within the vault 
-    /// per asset, (2) Combines vault address, asset-specific batch number, chain ID, timestamp, and asset address 
-    /// for collision resistance, (3) Uses optimized hashing function for gas efficiency, (4) Initializes batch 
-    /// storage with default state for new requests. The deterministic approach enables consistent batch identification 
-    /// across different contexts while the multiple entropy sources prevent prediction or collision attacks. Each 
+    /// @dev This function generates unique batch identifiers per asset using multiple entropy sources for security.
+    /// The ID generation process: (1) Increments asset-specific batch counter to ensure uniqueness within the vault
+    /// per asset, (2) Combines vault address, asset-specific batch number, chain ID, timestamp, and asset address
+    /// for collision resistance, (3) Uses optimized hashing function for gas efficiency, (4) Initializes batch
+    /// storage with default state for new requests. The deterministic approach enables consistent batch identification
+    /// across different contexts while the multiple entropy sources prevent prediction or collision attacks. Each
     /// batch starts in open state ready to accept user requests until explicitly closed by relayers.
     /// @param asset_ The asset for which to create a new batch
     /// @return newBatchId Deterministic batch identifier for the newly created batch period for the specific asset
     function _createNewBatch(address asset_) private returns (bytes32) {
         kMinterStorage storage $ = _getkMinterStorage();
-        
+
         // Increment the asset-specific batch counter
         unchecked {
             $.assetBatchCounters[asset_]++;
         }
-        
+
         uint256 assetBatchNumber = $.assetBatchCounters[asset_];
-        
+
         // Generate deterministic batch ID using asset-specific counter
         bytes32 newBatchId = OptimizedEfficientHashLib.hash(
-            uint256(uint160(address(this))),  
-            assetBatchNumber,                 
-            block.chainid,                    
-            block.timestamp,                  
-            uint256(uint160(asset_))          
+            uint256(uint160(address(this))), assetBatchNumber, block.chainid, block.timestamp, uint256(uint160(asset_))
         );
 
         // Update current batch ID for this specific asset
         $.currentBatchIds[asset_] = newBatchId;
-        
+
         // Initialize new batch storage
         IkMinter.BatchInfo storage batch = $.batches[newBatchId];
         batch.batchId = newBatchId;
@@ -435,11 +431,11 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     function hasActiveBatch(address asset_) external view returns (bool) {
         kMinterStorage storage $ = _getkMinterStorage();
         bytes32 currentBatchId = $.currentBatchIds[asset_];
-        
+
         if (currentBatchId == bytes32(0)) {
             return false;
         }
-        
+
         IkMinter.BatchInfo storage batch = $.batches[currentBatchId];
         return !batch.isClosed;
     }

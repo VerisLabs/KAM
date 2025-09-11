@@ -53,13 +53,9 @@ contract ConfigureProtocolScript is Script, DeploymentManager {
         console.log("2. Registering adapters with vaults...");
 
         // Register adapters for kMinter
-        registry.registerAdapter(
-            existing.contracts.kMinter, config.assets.USDC, existing.contracts.kMinterAdapterUSDC
-        );
+        registry.registerAdapter(existing.contracts.kMinter, config.assets.USDC, existing.contracts.kMinterAdapterUSDC);
         console.log("   - Registered kMinter USDC Adapter for kMinter");
-        registry.registerAdapter(
-            existing.contracts.kMinter, config.assets.WBTC, existing.contracts.kMinterAdapterWBTC
-        );
+        registry.registerAdapter(existing.contracts.kMinter, config.assets.WBTC, existing.contracts.kMinterAdapterWBTC);
         console.log("   - Registered kMinter WBTC Adapter for kMinter");
 
         // Register adapters for DN vaults

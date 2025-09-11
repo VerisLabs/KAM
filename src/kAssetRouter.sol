@@ -33,10 +33,11 @@ import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32
 
 import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
 import { ISettleBatch, IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
+
+import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
-import { IkMinter } from "src/interfaces/IkMinter.sol";
 
 /// @title kAssetRouter
 /// @notice Central money flow coordinator for the KAM protocol, orchestrating all asset movements and yield
@@ -148,7 +149,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _checkAmountNotZero(amount);
         address kMinter = msg.sender;
         _checkKMinter(kMinter);
-        
+
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
         // Increase deposits in the batch for kMinter
@@ -421,13 +422,13 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             }
 
             // If netted assets are positive(it means more deposits than withdrawals)
-            if (netted > 0) {    
+            if (netted > 0) {
                 asset.safeTransfer(address(adapter), uint256(netted));
                 emit Deposited(vault, asset, uint256(netted));
             }
         } else {
             delete $.vaultRequestedShares[vault][batchId];
-            
+
             // kMinter yield is sent to insuranceFund, cannot be minted.
             if (yield > 0) {
                 if (profit) {
@@ -438,7 +439,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                     emit YieldDistributed(vault, yield, false);
                 }
             }
-  
+
             IVaultAdapter kMinterAdapter = IVaultAdapter(kMinter);
             _checkAddressNotZero(address(kMinterAdapter));
             int256 kMinterTotalAssets = int256(kMinterAdapter.totalAssets()) - netted;

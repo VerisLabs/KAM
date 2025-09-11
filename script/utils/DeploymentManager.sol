@@ -76,12 +76,6 @@ abstract contract DeploymentManager is Script {
         address WalletUSDC;
         address WalletWBTC;
         address erc20ParameterChecker;
-        address mockWalletWBTC;
-        address ERC7540USDC;
-        address ERC7540WBTC;
-        address WalletUSDC;
-        address WalletWBTC;
-        address erc20ParameterChecker;
     }
 
     /// @notice Gets the current network name from foundry context
@@ -95,11 +89,6 @@ abstract contract DeploymentManager is Script {
 
         // Fallback to localhost for unknown chains
         return "localhost";
-    }
-
-    function isProduction() internal view returns (bool) {
-        bool isProd = vm.envOr("PRODUCTION", false);
-        return isProd;
     }
 
     function isProduction() internal view returns (bool) {
@@ -254,16 +243,8 @@ abstract contract DeploymentManager is Script {
 
         if (json.keyExists(".contracts.ERC7540WBTC")) {
             output.contracts.ERC7540WBTC = json.readAddress(".contracts.ERC7540WBTC");
-        if (json.keyExists(".contracts.ERC7540WBTC")) {
-            output.contracts.ERC7540WBTC = json.readAddress(".contracts.ERC7540WBTC");
         }
 
-        if (json.keyExists(".contracts.WalletUSDC")) {
-            output.contracts.WalletUSDC = json.readAddress(".contracts.WalletUSDC");
-        }
-
-        if (json.keyExists(".contracts.erc20ParameterChecker")) {
-            output.contracts.erc20ParameterChecker = json.readAddress(".contracts.erc20ParameterChecker");
         if (json.keyExists(".contracts.WalletUSDC")) {
             output.contracts.WalletUSDC = json.readAddress(".contracts.WalletUSDC");
         }
@@ -389,7 +370,8 @@ abstract contract DeploymentManager is Script {
         json = string.concat(json, '"ERC7540USDC":"', vm.toString(output.contracts.ERC7540USDC), '",');
         json = string.concat(json, '"ERC7540WBTC":"', vm.toString(output.contracts.ERC7540WBTC), '",');
         json = string.concat(json, '"WalletUSDC":"', vm.toString(output.contracts.WalletUSDC), '",');
-        json = string.concat(json, '"erc20ParameterChecker":"', vm.toString(output.contracts.erc20ParameterChecker), '"');
+        json =
+            string.concat(json, '"erc20ParameterChecker":"', vm.toString(output.contracts.erc20ParameterChecker), '"');
         json = string.concat(json, "}}");
 
         return json;
@@ -417,9 +399,6 @@ abstract contract DeploymentManager is Script {
         require(existing.contracts.dnVaultAdapterWBTC != address(0), "dnVaultAdapterWBTC not deployed");
         require(existing.contracts.alphaVaultAdapter != address(0), "alphaVaultAdapter not deployed");
         require(existing.contracts.betaVaultAdapter != address(0), "betaVaultAdapter not deployed");
-        require(existing.contracts.ERC7540USDC != address(0), "ERC7540USDC not deployed");
-        require(existing.contracts.ERC7540WBTC != address(0), "ERC7540WBTC not deployed");
-        require(existing.contracts.WalletUSDC != address(0), "WalletUSDC not deployed");
         require(existing.contracts.ERC7540USDC != address(0), "ERC7540USDC not deployed");
         require(existing.contracts.ERC7540WBTC != address(0), "ERC7540WBTC not deployed");
         require(existing.contracts.WalletUSDC != address(0), "WalletUSDC not deployed");

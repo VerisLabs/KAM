@@ -98,7 +98,7 @@ interface IkMinter {
     /// @param asset The asset in which the batch will be created
     /// @param batchId The batch ID of the new batch
     /// @param batchNumber the batch number used
-     event BatchCreated(address indexed asset, bytes32 indexed batchId, uint256 batchNumber);
+    event BatchCreated(address indexed asset, bytes32 indexed batchId, uint256 batchNumber);
 
     /// @notice Emitted when a batch is settled
     /// @param batchId The batch ID of the settled batch
@@ -187,7 +187,7 @@ interface IkMinter {
     function hasActiveBatch(address asset_) external view returns (bool);
     function getBatchInfo(bytes32 batchId_) external view returns (IkMinter.BatchInfo memory);
     function getBatchReceiver(bytes32 batchId_) external view returns (address);
-    
+
     /// @notice Emergency admin function to recover stuck assets from a batch receiver contract
     /// @dev This function provides a recovery mechanism for assets that may become stuck in kBatchReceiver contracts
     /// due to failed redemptions or system errors. The process involves two steps: (1) calling rescueAssets on the

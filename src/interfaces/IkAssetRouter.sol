@@ -75,9 +75,7 @@ interface IkAssetRouter {
     /// @param vault The vault address from which assets are being requested
     /// @param asset The underlying asset address being requested for redemption
     /// @param amount The quantity of assets requested for redemption
-    event AssetsRequestPulled(
-        address indexed vault, address indexed asset, uint256 amount
-    );
+    event AssetsRequestPulled(address indexed vault, address indexed asset, uint256 amount);
 
     /// @notice Emitted when assets are transferred between kStakingVaults for optimal allocation
     /// @dev This is a virtual transfer for accounting purposes - actual assets may remain in the same
