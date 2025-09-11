@@ -209,6 +209,13 @@ interface IkAssetRouter is IVersioned {
     /// @param newCooldown The new cooldown period in seconds
     event SettlementCooldownUpdated(uint256 oldCooldown, uint256 newCooldown);
 
+    /// @notice Emitted when the yield tolerance threshold is updated by protocol governance
+    /// @dev Yield tolerance acts as a safety mechanism to prevent settlement proposals with excessive
+    /// yield deviations that could indicate calculation errors or potential manipulation attempts
+    /// @param oldTolerance The previous yield tolerance in basis points
+    /// @param newTolerance The new yield tolerance in basis points
+    event YieldToleranceUpdated(uint256 oldTolerance, uint256 newTolerance);
+
     /*//////////////////////////////////////////////////////////////
                             KMINTER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -342,6 +349,16 @@ interface IkAssetRouter is IVersioned {
     /// @param cooldown The new cooldown period in seconds before settlement proposals can be executed
     function setSettlementCooldown(uint256 cooldown) external;
 
+    /// @notice Updates the yield tolerance threshold for settlement proposals
+    /// @dev This function allows protocol governance to adjust the maximum acceptable yield deviation before
+    /// settlement proposals are rejected. The yield tolerance acts as a safety mechanism to prevent settlement
+    /// proposals with extremely high or low yield values that could indicate calculation errors, data corruption,
+    /// or potential manipulation attempts. Setting an appropriate tolerance balances protocol safety with
+    /// operational flexibility, allowing normal yield fluctuations while blocking suspicious proposals.
+    /// Only admin roles can modify this parameter as it affects protocol safety.
+    /// @param tolerance_ The new yield tolerance in basis points (e.g., 1000 = 10%)
+    function updateYieldTolerance(uint256 tolerance_) external;
+
     /*//////////////////////////////////////////////////////////////
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -423,6 +440,14 @@ interface IkAssetRouter is IVersioned {
     /// maintaining protocol integrity during yield distribution processes.
     /// @return cooldown The current cooldown period in seconds
     function getSettlementCooldown() external view returns (uint256 cooldown);
+
+    /// @notice Gets the current yield tolerance threshold for settlement proposals
+    /// @dev The yield tolerance determines the maximum acceptable yield deviation before settlement proposals
+    /// are automatically rejected. This acts as a safety mechanism to prevent processing of settlement proposals
+    /// with excessive yield values that could indicate calculation errors or potential manipulation. The tolerance
+    /// is expressed in basis points where 10000 equals 100%.
+    /// @return tolerance The current yield tolerance in basis points
+    function getYieldTolerance() external view returns (uint256 tolerance);
 
     /// @notice Retrieves the virtual balance of assets for a vault across all its adapters
     /// @dev This function aggregates asset balances across all adapters connected to a vault to determine
