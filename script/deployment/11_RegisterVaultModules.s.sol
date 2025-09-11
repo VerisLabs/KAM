@@ -26,27 +26,41 @@ contract RegisterModulesScript is DeploymentManager {
         console.log("Network:", config.network);
         console.log("");
 
-        console.log("Execute these admin calls:");
-        console.log("");
+        // Get the ReaderModule selectors using the selectors() function
+        ReaderModule readerModule = ReaderModule(existing.contracts.readerModule);
+        bytes4[] memory readerSelectors = readerModule.selectors();
 
-        console.log("1. Get module selectors:");
-        console.log("readerModule address:", existing.contracts.readerModule);
-        console.log("");
+        vm.startBroadcast();
 
-        console.log("2. Vault addresses:");
-        console.log("DN Vault USDC:", existing.contracts.dnVaultUSDC);
-        console.log("DN Vault WBTC:", existing.contracts.dnVaultWBTC);
-        console.log("Alpha Vault:", existing.contracts.alphaVault);
-        console.log("Beta Vault:", existing.contracts.betaVault);
-        console.log("");
+        // Register ReaderModule to DN Vault USDC
+        kStakingVault dnVaultUSDC = kStakingVault(payable(existing.contracts.dnVaultUSDC));
+        dnVaultUSDC.addFunctions(readerSelectors, existing.contracts.readerModule, true);
+        console.log("Registered ReaderModule to DN Vault USDC");
 
-        console.log("3. Registration pattern:");
-        console.log("For each vault, call:");
-        console.log("  vault.addFunctions(readerSelectors, readerModuleAddr, true)");
-        console.log("");
+        // Register ReaderModule to DN Vault WBTC
+        kStakingVault dnVaultWBTC = kStakingVault(payable(existing.contracts.dnVaultWBTC));
+        dnVaultWBTC.addFunctions(readerSelectors, existing.contracts.readerModule, true);
+        console.log("Registered ReaderModule to DN Vault WBTC");
 
-        console.log("Admin address:", config.roles.admin);
+        // Register ReaderModule to Alpha Vault
+        kStakingVault alphaVault = kStakingVault(payable(existing.contracts.alphaVault));
+        alphaVault.addFunctions(readerSelectors, existing.contracts.readerModule, true);
+        console.log("Registered ReaderModule to Alpha Vault");
+
+        // Register ReaderModule to Beta Vault
+        kStakingVault betaVault = kStakingVault(payable(existing.contracts.betaVault));
+        betaVault.addFunctions(readerSelectors, existing.contracts.readerModule, true);
+        console.log("Registered ReaderModule to Beta Vault");
+
+        vm.stopBroadcast();
+
+        console.log("");
         console.log("=======================================");
-        console.log("Note: Execute via admin account for security");
+        console.log("Module registration complete!");
+        console.log("ReaderModule registered to all vaults:");
+        console.log("  - DN Vault USDC:", existing.contracts.dnVaultUSDC);
+        console.log("  - DN Vault WBTC:", existing.contracts.dnVaultWBTC);
+        console.log("  - Alpha Vault:", existing.contracts.alphaVault);
+        console.log("  - Beta Vault:", existing.contracts.betaVault);
     }
 }
