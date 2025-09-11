@@ -440,9 +440,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             }
   
             IVaultAdapter kMinterAdapter = IVaultAdapter(kMinter);
-            _checkAddressNotZero(address(adapter));
+            _checkAddressNotZero(address(kMinterAdapter));
             int256 kMinterTotalAssets = int256(kMinterAdapter.totalAssets()) - netted;
-            require(kMinterTotalAssets > 0, KASSETROUTER_ZERO_AMOUNT);
+            require(kMinterTotalAssets >= 0, KASSETROUTER_ZERO_AMOUNT);
             kMinterAdapter.setTotalAssets(uint256(kMinterTotalAssets));
         }
 
