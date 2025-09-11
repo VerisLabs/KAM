@@ -3,7 +3,7 @@
 -include .env
 export
 
-.PHONY: help deploy-mainnet deploy-sepolia deploy-localhost deploy-all deploy-mock-assets verify clean clean-all configure-adapters register-modules
+.PHONY: help deploy-mainnet deploy-sepolia deploy-localhost deploy-all deploy-mock-assets verify clean clean-all configure-adapters register-modules format-output
 
 # Default target
 help:
@@ -45,8 +45,19 @@ deploy-localhost:
 	@$(MAKE) deploy-all FORGE_ARGS="--rpc-url http://localhost:8545 --broadcast --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 # Complete deployment sequence
-deploy-all: deploy-core setup-singletons deploy-tokens deploy-modules deploy-vaults deploy-adapters configure configure-adapters
+deploy-all: deploy-core setup-singletons deploy-tokens deploy-modules deploy-vaults deploy-adapters configure configure-adapters format-output
 	@echo "✅ Complete protocol deployment finished!"
+
+# Format JSON output files
+format-output:
+	@echo "📝 Formatting JSON output files..."
+	@for file in deployments/output/*/*.json; do \
+		if [ -f "$$file" ]; then \
+			echo "Formatting $$file"; \
+			jq . "$$file" > "$$file.tmp" && mv "$$file.tmp" "$$file"; \
+		fi; \
+	done
+	@echo "✅ JSON files formatted!"
 
 # Mock assets (00) - Only for testnets
 deploy-mock-assets:
