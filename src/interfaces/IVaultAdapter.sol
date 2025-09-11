@@ -102,5 +102,10 @@ interface IVaultAdapter {
     /// @param totalAssets_ The new total assets value to set.
     function setTotalAssets(uint256 totalAssets_) external;
 
+    /// @notice Retrieves the last recorded total assets for vault accounting and performance tracking
+    /// @dev This function returns the lastTotalAssets variable, which is used for various accounting
+    /// and performance metrics within the vault adapter. This provides a snapshot of the total assets
+    /// managed by the vault at the last recorded time.
+    /// @return The last recorded total assets value.
     function totalAssets() external view returns (uint256);
 }
