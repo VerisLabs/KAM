@@ -403,22 +403,31 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         uint256 yield = proposal.yield;
         bool profit = proposal.profit;
         uint256 requested = $.vaultBatchBalances[vault][batchId].requested;
-
+        address kMinter = _getKMinter();
         address kToken = _getKTokenForAsset(asset);
 
-        // Clear batch balances
-        delete $.vaultBatchBalances[vault][batchId];
-        delete $.vaultRequestedShares[vault][batchId];
+        IVaultAdapter adapter = IVaultAdapter(_registry().getAdapter(vault, asset));
+        _checkAddressNotZero(address(adapter));
 
         // kMinter settlement
-        if (vault == _getKMinter()) {
+        if (vault == kMinter) {
+            delete $.vaultBatchBalances[vault][batchId];
+
             if (requested > 0) {
                 // Transfer assets to batch receiver for redemptions
                 address receiver = IkMinter(vault).getBatchReceiver(batchId);
                 _checkAddressNotZero(receiver);
                 asset.safeTransfer(receiver, requested);
             }
+
+            // If netted assets are positive(it means more deposits than withdrawals)
+            if (netted > 0) {    
+                asset.safeTransfer(address(adapter), uint256(netted));
+                emit Deposited(vault, asset, uint256(netted));
+            }
         } else {
+            delete $.vaultRequestedShares[vault][batchId];
+            
             // kMinter yield is sent to insuranceFund, cannot be minted.
             if (yield > 0) {
                 if (profit) {
@@ -429,17 +438,15 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                     emit YieldDistributed(vault, yield, false);
                 }
             }
+  
+            IVaultAdapter kMinterAdapter = IVaultAdapter(kMinter);
+            _checkAddressNotZero(address(adapter));
+            int256 kMinterTotalAssets = int256(kMinterAdapter.totalAssets()) - netted;
+            require(kMinterTotalAssets > 0, KASSETROUTER_ZERO_AMOUNT);
+            kMinterAdapter.setTotalAssets(uint256(kMinterTotalAssets));
         }
 
-        IVaultAdapter adapter = IVaultAdapter(_registry().getAdapter(vault, asset));
-        _checkAddressNotZero(address(adapter));
-
-        // If netted assets are positive(it means more deposits than withdrawals)
-        if (netted > 0) {    
-            asset.safeTransfer(address(adapter), uint256(netted));
-            emit Deposited(vault, asset, uint256(netted));
-        }
-
+        // TODO: kMinter cannot have profits or we should send them to insurance
         adapter.setTotalAssets(totalAssets_);
         // Mark batch as settled in the vault
         ISettleBatch(vault).settleBatch(batchId);
