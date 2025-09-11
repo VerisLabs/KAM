@@ -61,9 +61,9 @@ contract DeployMockAssetsScript is Script, DeploymentManager {
         _updateNetworkConfig(config.network, address(mockUSDC), address(mockWBTC));
 
         // Write mock target addresses to deployment output
-        writeContractAddress("mockERC7540USDC", address(mockERC7540USDC));
-        writeContractAddress("mockERC7540WBTC", address(mockERC7540WBTC));
-        writeContractAddress("mockWalletUSDC", address(mockWalletUSDC));
+        writeContractAddress("ERC7540USDC", address(mockERC7540USDC));
+        writeContractAddress("ERC7540WBTC", address(mockERC7540WBTC));
+        writeContractAddress("WalletUSDC", address(mockWalletUSDC));
 
         // Mint tokens for testing
         _mintTokensForTesting(mockUSDC, mockWBTC, config);

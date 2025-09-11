@@ -191,10 +191,6 @@ abstract contract DeploymentManager is Script {
             output.contracts.kStakingVaultImpl = json.readAddress(".contracts.kStakingVaultImpl");
         }
 
-        if (json.keyExists(".contracts.dnVault")) {
-            output.contracts.dnVault = json.readAddress(".contracts.dnVault");
-        }
-
         if (json.keyExists(".contracts.dnVaultUSDC")) {
             output.contracts.dnVaultUSDC = json.readAddress(".contracts.dnVaultUSDC");
         }
@@ -235,30 +231,20 @@ abstract contract DeploymentManager is Script {
             output.contracts.betaVaultAdapter = json.readAddress(".contracts.betaVaultAdapter");
         }
 
-        if (isProduction()) {
-            if (json.keyExists(".contracts.ERC7540USDC")) {
-                output.contracts.ERC7540USDC = json.readAddress(".contracts.ERC7540USDC");
-            }
+        if (json.keyExists(".contracts.ERC7540USDC")) {
+            output.contracts.ERC7540USDC = json.readAddress(".contracts.ERC7540USDC");
+        }
 
-            if (json.keyExists(".contracts.ERC7540WBTC")) {
-                output.contracts.ERC7540WBTC = json.readAddress(".contracts.ERC7540WBTC");
-            }
+        if (json.keyExists(".contracts.ERC7540WBTC")) {
+            output.contracts.ERC7540WBTC = json.readAddress(".contracts.ERC7540WBTC");
+        }
 
-            if (json.keyExists(".contracts.WalletUSDC")) {
-                output.contracts.WalletUSDC = json.readAddress(".contracts.WalletUSDC");
-            }
-        } else {
-            if (json.keyExists(".contracts.mockERC7540USDC")) {
-                output.contracts.mockERC7540USDC = json.readAddress(".contracts.mockERC7540USDC");
-            }
+        if (json.keyExists(".contracts.WalletUSDC")) {
+            output.contracts.WalletUSDC = json.readAddress(".contracts.WalletUSDC");
+        }
 
-            if (json.keyExists(".contracts.mockERC7540WBTC")) {
-                output.contracts.mockERC7540WBTC = json.readAddress(".contracts.mockERC7540WBTC");
-            }
-
-            if (json.keyExists(".contracts.mockWalletUSDC")) {
-                output.contracts.mockWalletUSDC = json.readAddress(".contracts.mockWalletUSDC");
-            }
+        if (json.keyExists(".contracts.erc20ParameterChecker")) {
+            output.contracts.erc20ParameterChecker = json.readAddress(".contracts.erc20ParameterChecker");
         }
 
         return output;
@@ -302,8 +288,6 @@ abstract contract DeploymentManager is Script {
             output.contracts.adapterGuardianModule = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("kStakingVaultImpl"))) {
             output.contracts.kStakingVaultImpl = contractAddress;
-        } else if (keccak256(bytes(contractName)) == keccak256(bytes("dnVault"))) {
-            output.contracts.dnVault = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("dnVaultUSDC"))) {
             output.contracts.dnVaultUSDC = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("dnVaultWBTC"))) {
@@ -324,12 +308,12 @@ abstract contract DeploymentManager is Script {
             output.contracts.alphaVaultAdapter = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("betaVaultAdapter"))) {
             output.contracts.betaVaultAdapter = contractAddress;
-        } else if (keccak256(bytes(contractName)) == keccak256(bytes("mockERC7540USDC"))) {
-            output.contracts.mockERC7540USDC = contractAddress;
-        } else if (keccak256(bytes(contractName)) == keccak256(bytes("mockERC7540WBTC"))) {
-            output.contracts.mockERC7540WBTC = contractAddress;
-        } else if (keccak256(bytes(contractName)) == keccak256(bytes("mockWalletUSDC"))) {
-            output.contracts.mockWalletUSDC = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("ERC7540USDC"))) {
+            output.contracts.ERC7540USDC = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("ERC7540WBTC"))) {
+            output.contracts.ERC7540WBTC = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("WalletUSDC"))) {
+            output.contracts.WalletUSDC = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("erc20ParameterChecker"))) {
             output.contracts.erc20ParameterChecker = contractAddress;
         }
@@ -364,7 +348,6 @@ abstract contract DeploymentManager is Script {
         json = string.concat(json, '"readerModule":"', vm.toString(output.contracts.readerModule), '",');
         json =
             string.concat(json, '"adapterGuardianModule":"', vm.toString(output.contracts.adapterGuardianModule), '",');
-        json = string.concat(json, '"dnVault":"', vm.toString(output.contracts.dnVault), '",');
         json = string.concat(json, '"dnVaultUSDC":"', vm.toString(output.contracts.dnVaultUSDC), '",');
         json = string.concat(json, '"dnVaultWBTC":"', vm.toString(output.contracts.dnVaultWBTC), '",');
         json = string.concat(json, '"alphaVault":"', vm.toString(output.contracts.alphaVault), '",');
@@ -377,12 +360,8 @@ abstract contract DeploymentManager is Script {
         json = string.concat(json, '"betaVaultAdapter":"', vm.toString(output.contracts.betaVaultAdapter), '",');
         json = string.concat(json, '"ERC7540USDC":"', vm.toString(output.contracts.ERC7540USDC), '",');
         json = string.concat(json, '"ERC7540WBTC":"', vm.toString(output.contracts.ERC7540WBTC), '",');
-        json = string.concat(json, '"WalletUSDC":"', vm.toString(output.contracts.WalletUSDC), '"');
-        json = string.concat(json, '"ERC7540USDC":"', vm.toString(output.contracts.ERC7540USDC), '",');
-        json = string.concat(json, '"ERC7540WBTC":"', vm.toString(output.contracts.ERC7540WBTC), '",');
-        json = string.concat(json, '"WalletUSDC":"', vm.toString(output.contracts.WalletUSDC), '"');
-        json =
-            string.concat(json, '"erc20ParameterChecker":"', vm.toString(output.contracts.erc20ParameterChecker), '"');
+        json = string.concat(json, '"WalletUSDC":"', vm.toString(output.contracts.WalletUSDC), '",');
+        json = string.concat(json, '"erc20ParameterChecker":"', vm.toString(output.contracts.erc20ParameterChecker), '"');
         json = string.concat(json, "}}");
 
         return json;
@@ -404,21 +383,15 @@ abstract contract DeploymentManager is Script {
 
     /// @notice Validates that required deployment outputs are not zero for adapter configuration
     /// @param existing Deployment output to validate
-    function validateAdapterDeployments(DeploymentOutput memory existing) internal view {
+    function validateAdapterDeployments(DeploymentOutput memory existing) internal pure {
         require(existing.contracts.kRegistry != address(0), "kRegistry not deployed");
         require(existing.contracts.dnVaultAdapterUSDC != address(0), "dnVaultAdapterUSDC not deployed");
         require(existing.contracts.dnVaultAdapterWBTC != address(0), "dnVaultAdapterWBTC not deployed");
         require(existing.contracts.alphaVaultAdapter != address(0), "alphaVaultAdapter not deployed");
         require(existing.contracts.betaVaultAdapter != address(0), "betaVaultAdapter not deployed");
-        if (isProduction()) {
-            require(existing.contracts.ERC7540USDC != address(0), "ERC7540USDC not deployed");
-            require(existing.contracts.ERC7540WBTC != address(0), "ERC7540WBTC not deployed");
-            require(existing.contracts.WalletUSDC != address(0), "WalletUSDC not deployed");
-        } else {
-            require(existing.contracts.mockERC7540USDC != address(0), "mockERC7540USDC not deployed");
-            require(existing.contracts.mockERC7540WBTC != address(0), "mockERC7540WBTC not deployed");
-            require(existing.contracts.mockWalletUSDC != address(0), "mockWalletUSDC not deployed");
-        }
+        require(existing.contracts.ERC7540USDC != address(0), "ERC7540USDC not deployed");
+        require(existing.contracts.ERC7540WBTC != address(0), "ERC7540WBTC not deployed");
+        require(existing.contracts.WalletUSDC != address(0), "WalletUSDC not deployed");
     }
 
     /// @notice Validates that required deployment outputs are not zero for protocol configuration

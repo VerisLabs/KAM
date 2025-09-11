@@ -46,9 +46,9 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         bytes4 transferSelector = IERC7540.transfer.selector;
 
         // Determine which contracts to use based on environment
-        address usdcVault = _isProduction ? existing.contracts.ERC7540USDC : existing.contracts.mockERC7540USDC;
-        address wbtcVault = _isProduction ? existing.contracts.ERC7540WBTC : existing.contracts.mockERC7540WBTC;
-        address usdcWallet = _isProduction ? existing.contracts.WalletUSDC : existing.contracts.mockWalletUSDC;
+        address usdcVault = existing.contracts.ERC7540USDC;
+        address wbtcVault = existing.contracts.ERC7540WBTC;
+        address usdcWallet = existing.contracts.WalletUSDC;
         address usdc = config.assets.USDC;
         address wbtc = config.assets.WBTC;
 
