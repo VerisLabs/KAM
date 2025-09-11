@@ -41,6 +41,24 @@ interface IkMinter {
         address recipient;
     }
 
+    /// @notice Batch information structure
+    struct BatchInfo {
+        /// @notice asset address
+        address asset;
+        /// @notice Batch receiver address
+        address batchReceiver;
+        /// @notice Whether the batch is closed
+        bool isClosed;
+        /// @notice Whether the batch is settled
+        bool isSettled;
+        /// @notice Batch ID
+        bytes32 batchId;
+        /// @notice Share price of settlement
+        uint128 sharePrice;
+        /// @notice Net share price of settlement(share price - fees)
+        uint128 netSharePrice;
+    }
+
     /*//////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -78,6 +96,26 @@ interface IkMinter {
     /// @notice Emitted when a pending redemption request is cancelled before batch closure
     /// @param requestId The unique identifier of the cancelled redemption request
     event Cancelled(bytes32 indexed requestId);
+
+    // VaultBatches Events
+    /// @notice Emitted when a new batch is created
+    /// @param asset The asset in which the batch will be created
+    /// @param batchId The batch ID of the new batch
+    /// @param batchNumber the batch number used
+     event BatchCreated(address indexed asset, bytes32 indexed batchId, uint256 batchNumber);
+
+    /// @notice Emitted when a batch is settled
+    /// @param batchId The batch ID of the settled batch
+    event BatchSettled(bytes32 indexed batchId);
+
+    /// @notice Emitted when a batch is closed
+    /// @param batchId The batch ID of the closed batch
+    event BatchClosed(bytes32 indexed batchId);
+
+    /// @notice Emitted when a BatchReceiver is created
+    /// @param receiver The address of the created BatchReceiver
+    /// @param batchId The batch ID of the BatchReceiver
+    event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
 
     /*//////////////////////////////////////////////////////////////
                               FUNCTIONS
@@ -143,6 +181,11 @@ interface IkMinter {
     /// batch remains open, ensuring batch integrity and preventing manipulation of settled redemptions.
     /// @param requestId The unique identifier of the redemption request to cancel (obtained from requestRedeem)
     function cancelRequest(bytes32 requestId) external payable;
+
+    function createNewBatch(address asset_) external returns (bytes32);
+    function closeBatch(bytes32 _batchId, bool _create) external;
+    function settleBatch(bytes32 _batchId) external;
+    function createBatchReceiver(bytes32 _batchId) external returns (address);
 
     /// @notice Emergency admin function to recover stuck assets from a batch receiver contract
     /// @dev This function provides a recovery mechanism for assets that may become stuck in kBatchReceiver contracts

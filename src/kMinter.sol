@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import { OptimizedEfficientHashLib } from "src/libraries/OptimizedEfficientHashLib.sol";
 
 import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedLibClone } from "src/libraries/OptimizedLibClone.sol";
 import { OptimizedSafeCastLib } from "src/libraries/OptimizedSafeCastLib.sol";
 import { Initializable } from "src/vendor/Initializable.sol";
 import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
@@ -13,9 +14,11 @@ import { Extsload } from "src/abstracts/Extsload.sol";
 import { kBase } from "src/base/kBase.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkBatchReceiver } from "src/interfaces/IkBatchReceiver.sol";
+import { kBatchReceiver } from "src/kBatchReceiver.sol";
 
 import {
     KMINTER_BATCH_CLOSED,
+    KMINTER_BATCH_NOT_CLOSED,
     KMINTER_BATCH_MINT_REACHED,
     KMINTER_BATCH_MINT_REACHED,
     KMINTER_BATCH_REDEEM_REACHED,
@@ -62,6 +65,8 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     struct kMinterStorage {
         /// @dev Counter for generating unique request IDs
         uint64 requestCounter;
+        /// @dev receiverImplementation address
+        address receiverImplementation;
         /// @dev Tracks total minted and redeemed amounts per batch to enforce limits
         mapping(bytes32 => uint256) mintedInBatch;
         /// @dev Tracks total redeemed amounts per batch to enforce limits
@@ -72,6 +77,12 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         /// @dev Maps user addresses to their set of redemption request IDs for efficient lookup
         /// Enables quick retrieval of all requests associated with a specific user
         mapping(address => OptimizedBytes32EnumerableSetLib.Bytes32Set) userRequests;
+        /// @dev Per-asset batch counters
+        mapping(address => uint256) assetBatchCounters;
+        /// @dev Per-asset current batch ID tracking
+        mapping(address => bytes32) currentBatchIds;
+        /// @dev Global batch storage
+        mapping(bytes32 => IkMinter.BatchInfo) batches;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kMinter")) - 1)) & ~bytes32(uint256(0xff))
@@ -103,6 +114,9 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     function initialize(address registry_) external initializer {
         require(registry_ != address(0), KMINTER_ZERO_ADDRESS);
         __kBase_init(registry_);
+
+        kMinterStorage storage $ = _getkMinterStorage();
+        $.receiverImplementation = address(new kBatchReceiver(address(this)));
         emit ContractInitialized(registry_);
     }
 
@@ -275,6 +289,157 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     }
 
     /*//////////////////////////////////////////////////////////////
+                      BATCH FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IkMinter
+    function createNewBatch(address asset_) external returns (bytes32) {
+        _checkRelayer(msg.sender);
+        return _createNewBatch(asset_);
+    }
+
+    /// @inheritdoc IkMinter
+    function closeBatch(bytes32 _batchId, bool _create) external {
+        _checkRelayer(msg.sender);
+        kMinterStorage storage $ = _getkMinterStorage();
+        require(!$.batches[_batchId].isClosed, KMINTER_BATCH_CLOSED);
+        
+        address batchAsset = $.batches[_batchId].asset;
+        $.batches[_batchId].isClosed = true;
+
+        bytes32 newBatchId = _batchId;
+        if (_create) {
+            newBatchId = _createNewBatch(batchAsset); // Create new batch for same asset
+        }
+        
+        emit BatchClosed(newBatchId);
+    }
+
+    /// @inheritdoc IkMinter
+    /// @notice Settles a closed batch (unchanged functionality)
+    function settleBatch(bytes32 _batchId) external {
+        _checkRouter(msg.sender);
+        kMinterStorage storage $ = _getkMinterStorage();
+        require($.batches[_batchId].isClosed, KMINTER_BATCH_NOT_CLOSED);
+        require(!$.batches[_batchId].isSettled, KMINTER_BATCH_SETTLED);
+        $.batches[_batchId].isSettled = true;
+
+        // Snapshot the gross and net share price for this batch
+        // $.batches[_batchId].sharePrice = _sharePrice().toUint128();
+        // $.batches[_batchId].netSharePrice = _netSharePrice().toUint128();
+
+        emit BatchSettled(_batchId);
+    }
+
+    /// @inheritdoc IkMinter
+    /// @notice Creates a batch receiver for the specified batch (unchanged functionality)
+    function createBatchReceiver(bytes32 _batchId) external returns (address) {
+        _lockReentrant();
+        _checkRouter(msg.sender);
+
+        kMinterStorage storage $ = _getkMinterStorage();
+        address receiver = $.batches[_batchId].batchReceiver;
+        if (receiver != address(0)) return receiver;
+
+        receiver = OptimizedLibClone.clone($.receiverImplementation);
+
+        $.batches[_batchId].batchReceiver = receiver;
+
+        // Initialize the BatchReceiver - now with asset from batch
+        address batchAsset = $.batches[_batchId].asset;
+        kBatchReceiver(receiver).initialize(_batchId, batchAsset);
+
+        emit BatchReceiverCreated(receiver, _batchId);
+
+        _unlockReentrant();
+        return receiver;
+    }
+
+    /// @notice Internal function to create deterministic batch IDs with collision resistance per asset
+    /// @dev This function generates unique batch identifiers per asset using multiple entropy sources for security. 
+    /// The ID generation process: (1) Increments asset-specific batch counter to ensure uniqueness within the vault 
+    /// per asset, (2) Combines vault address, asset-specific batch number, chain ID, timestamp, and asset address 
+    /// for collision resistance, (3) Uses optimized hashing function for gas efficiency, (4) Initializes batch 
+    /// storage with default state for new requests. The deterministic approach enables consistent batch identification 
+    /// across different contexts while the multiple entropy sources prevent prediction or collision attacks. Each 
+    /// batch starts in open state ready to accept user requests until explicitly closed by relayers.
+    /// @param asset_ The asset for which to create a new batch
+    /// @return newBatchId Deterministic batch identifier for the newly created batch period for the specific asset
+    function _createNewBatch(address asset_) private returns (bytes32) {
+        kMinterStorage storage $ = _getkMinterStorage();
+        
+        // Increment the asset-specific batch counter
+        unchecked {
+            $.assetBatchCounters[asset_]++;
+        }
+        
+        uint256 assetBatchNumber = $.assetBatchCounters[asset_];
+        
+        // Generate deterministic batch ID using asset-specific counter
+        bytes32 newBatchId = OptimizedEfficientHashLib.hash(
+            uint256(uint160(address(this))),  
+            assetBatchNumber,                 
+            block.chainid,                    
+            block.timestamp,                  
+            uint256(uint160(asset_))          
+        );
+
+        // Update current batch ID for this specific asset
+        $.currentBatchIds[asset_] = newBatchId;
+        
+        // Initialize new batch storage
+        IkMinter.BatchInfo storage batch = $.batches[newBatchId];
+        batch.batchId = newBatchId;
+        batch.asset = asset_;
+        batch.batchReceiver = address(0);
+        batch.isClosed = false;
+        batch.isSettled = false;
+
+        emit BatchCreated(asset_, newBatchId, assetBatchNumber);
+
+        return newBatchId;
+    }
+
+    /// @notice Get the current active batch ID for a specific asset
+    /// @param asset_ The asset to query
+    /// @return The current batch ID for the asset, or bytes32(0) if no batch exists
+    function getCurrentBatchId(address asset_) public view returns (bytes32) {
+        kMinterStorage storage $ = _getkMinterStorage();
+        return $.currentBatchIds[asset_];
+    }
+
+    /// @notice Get the current batch number for a specific asset
+    /// @param asset_ The asset to query
+    /// @return The current batch number for the asset
+    function getCurrentBatchNumber(address asset_) public view returns (uint256) {
+        kMinterStorage storage $ = _getkMinterStorage();
+        return $.assetBatchCounters[asset_];
+    }
+
+    /// @notice Check if an asset has an active (open) batch
+    /// @param asset_ The asset to check
+    /// @return True if the asset has an open batch, false otherwise
+    function hasActiveBatch(address asset_) public view returns (bool) {
+        kMinterStorage storage $ = _getkMinterStorage();
+        bytes32 currentBatchId = $.currentBatchIds[asset_];
+        
+        if (currentBatchId == bytes32(0)) {
+            return false;
+        }
+        
+        IkMinter.BatchInfo storage batch = $.batches[currentBatchId];
+        return !batch.isClosed;
+    }
+
+    /// @notice Get batch info for a specific batch ID
+    /// @param batchId_ The batch ID to query
+    /// @return The batch information
+    function getBatchInfo(bytes32 batchId_) public view returns (IkMinter.BatchInfo memory) {
+        kMinterStorage storage $ = _getkMinterStorage();
+        return $.batches[batchId_];
+    }
+
+    /*//////////////////////////////////////////////////////////////
                       INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -293,6 +458,19 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @param user Address to check
     function _checkAdmin(address user) private view {
         require(_isAdmin(user), KMINTER_WRONG_ROLE);
+    }
+
+    /// @notice Check if caller is a relayer
+    /// @param user Address to check
+    function _checkRelayer(address user) private view {
+        require(_isRelayer(user), KMINTER_WRONG_ROLE);
+    }
+
+    /// @notice Check if caller is the AssetRouter
+    /// @param user Address to check
+    function _checkRouter(address user) private view {
+        address _kAssetRouter = _registry().getContractById(K_ASSET_ROUTER);
+        require(user == _kAssetRouter, KMINTER_WRONG_ROLE);
     }
 
     /// @notice Check if asset is valid/supported
