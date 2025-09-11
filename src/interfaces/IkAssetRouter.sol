@@ -429,8 +429,9 @@ interface IkAssetRouter {
     /// asset locations and protocol accounting. Used for settlement calculations and ensuring sufficient
     /// assets are available for redemptions and transfers within the money flow system.
     /// @param vault The vault address to calculate virtual balance for
+    /// @param asset The underlying asset of the vault
     /// @return balance The total virtual asset balance across all vault adapters
-    function virtualBalance(address vault) external view returns (uint256);
+    function virtualBalance(address vault, address asset) external view returns (uint256);
 
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO

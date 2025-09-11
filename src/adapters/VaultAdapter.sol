@@ -91,8 +91,8 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
 
     /// @inheritdoc IVaultAdapter
     function setPaused(bool paused_) external {
-        _checkEmergencyAdmin(msg.sender);
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
+        require($.registry.isEmergencyAdmin(msg.sender), VAULTADAPTER_WRONG_ROLE);
         $.paused = paused_;
         emit Paused(paused_);
     }
@@ -129,12 +129,11 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
         IRegistry registry = $.registry;
 
-        registry.isRelayer(msg.sender);
+        require(registry.isRelayer(msg.sender), VAULTADAPTER_WRONG_ROLE);
         _checkPaused();
 
         // Extract selector and validate vault-specific permission
         bytes4 functionSig = bytes4(params);
-        registry.isAdapterSelectorAllowed(address(this), target, functionSig);
         registry.authorizeAdapterCall(target, functionSig, params);
 
         result = target.callContract(value, params);
@@ -163,20 +162,6 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
     function _checkAdmin(address user) private view {
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
         require($.registry.isAdmin(user), VAULTADAPTER_WRONG_ROLE);
-    }
-
-    /// @notice Check if caller has emergency admin role
-    /// @param user Address to check
-    function _checkEmergencyAdmin(address user) private view {
-        VaultAdapterStorage storage $ = _getVaultAdapterStorage();
-        require($.registry.isEmergencyAdmin(user), VAULTADAPTER_WRONG_ROLE);
-    }
-
-    /// @notice Check if caller has relayer role
-    /// @param user Address to check
-    function _checkRelayer(address user) private view {
-        VaultAdapterStorage storage $ = _getVaultAdapterStorage();
-        require($.registry.isRelayer(user), VAULTADAPTER_WRONG_ROLE);
     }
 
     /// @notice Ensures the contract is not paused

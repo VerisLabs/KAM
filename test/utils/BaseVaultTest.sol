@@ -116,7 +116,7 @@ contract BaseVaultTest is DeploymentBaseTest {
             bytes32 batchId = dnVault.getBatchId();
             vm.prank(users.relayer);
             IkStakingVault(address(dnVault)).closeBatch(batchId, true);
-            uint256 lastTotalAssets = assetRouter.virtualBalance(address(minter));
+            uint256 lastTotalAssets = assetRouter.virtualBalance(address(minter), getUSDC());
             _executeBatchSettlement(address(minter), batchId, lastTotalAssets + amount, amount, 0, false);
         }
     }

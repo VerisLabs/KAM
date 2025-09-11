@@ -302,34 +302,34 @@ contract kRegistryTest is DeploymentBaseTest {
         // Test that only admin can register adapters
         vm.prank(users.alice);
         vm.expectRevert();
-        registry.registerAdapter(TEST_VAULT, TEST_ADAPTER);
+        registry.registerAdapter(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);
     }
 
     /// @dev Test adapter registration with zero address
     function test_RegisterAdapter_RevertZeroAddress() public {
         vm.prank(users.admin);
         vm.expectRevert(bytes(KREGISTRY_INVALID_ADAPTER));
-        registry.registerAdapter(TEST_VAULT, address(0));
+        registry.registerAdapter(TEST_VAULT, TEST_ASSET, address(0));
     }
 
     /// @dev Test removeAdapter access control
     function test_RemoveAdapter_OnlyAdmin() public {
         vm.prank(users.alice);
         vm.expectRevert();
-        registry.removeAdapter(TEST_VAULT, TEST_ADAPTER);
+        registry.removeAdapter(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);
     }
 
     /// @dev Test getAdapter returns zero for non-existent adapter
     function test_GetAdapter_RevertZeroAddress() public {
         vm.prank(users.admin);
         vm.expectRevert(bytes(KREGISTRY_ZERO_ADDRESS));
-        registry.getAdapter(TEST_VAULT);
+        registry.getAdapter(TEST_VAULT, TEST_ASSET);
     }
 
     /// @dev Test isAdapterRegistered returns false for non-existent adapter
     function test_IsAdapterRegistered_NonExistent() public view {
         assertFalse(
-            registry.isAdapterRegistered(TEST_VAULT, TEST_ADAPTER), "Should return false for non-existent adapter"
+            registry.isAdapterRegistered(TEST_VAULT, TEST_ASSET, TEST_ADAPTER), "Should return false for non-existent adapter"
         );
     }
 
@@ -513,7 +513,7 @@ contract kRegistryTest is DeploymentBaseTest {
         // Test that only admin can register adapters
         vm.prank(users.bob);
         vm.expectRevert();
-        registry.registerAdapter(TEST_VAULT, TEST_ADAPTER);
+        registry.registerAdapter(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);
 
         // Test that admin CAN perform these operations
         vm.startPrank(users.admin);
@@ -521,7 +521,7 @@ contract kRegistryTest is DeploymentBaseTest {
             TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max
         );
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
-        registry.registerAdapter(TEST_VAULT, TEST_ADAPTER);
+        registry.registerAdapter(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);
         vm.stopPrank();
 
         // Verify operations succeeded
@@ -760,17 +760,17 @@ contract kRegistryTest is DeploymentBaseTest {
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
 
         // Test adapter registration
-        vm.expectEmit(true, true, false, false);
-        emit IkRegistry.AdapterRegistered(TEST_VAULT, TEST_ADAPTER);
-        registry.registerAdapter(TEST_VAULT, TEST_ADAPTER);
+        vm.expectEmit(true, true, true, false);
+        emit IkRegistry.AdapterRegistered(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);
+        registry.registerAdapter(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);
 
         vm.stopPrank();
 
         // Verify adapter is registered
-        assertTrue(registry.isAdapterRegistered(TEST_VAULT, TEST_ADAPTER), "Adapter should be registered");
+        assertTrue(registry.isAdapterRegistered(TEST_VAULT, TEST_ASSET, TEST_ADAPTER), "Adapter should be registered");
 
-        // Verify getAdapters returns correct adapter
-        address adapter = registry.getAdapter(TEST_VAULT);
+        // Verify getAdapter returns correct adapter
+        address adapter = registry.getAdapter(TEST_VAULT, TEST_ASSET);
         assertEq(adapter, TEST_ADAPTER, "Adapter address incorrect");
     }
 
@@ -780,18 +780,18 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.startPrank(users.admin);
         registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
         registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
-        registry.registerAdapter(TEST_VAULT, TEST_ADAPTER);
+        registry.registerAdapter(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);
 
         // Verify adapter is registered
-        assertTrue(registry.isAdapterRegistered(TEST_VAULT, TEST_ADAPTER), "Adapter should be registered initially");
+        assertTrue(registry.isAdapterRegistered(TEST_VAULT, TEST_ASSET, TEST_ADAPTER), "Adapter should be registered initially");
 
         // Remove adapter
-        registry.removeAdapter(TEST_VAULT, TEST_ADAPTER);
+        registry.removeAdapter(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);
 
         vm.stopPrank();
 
         // Verify adapter is removed
-        assertFalse(registry.isAdapterRegistered(TEST_VAULT, TEST_ADAPTER), "Adapter should be removed");
+        assertFalse(registry.isAdapterRegistered(TEST_VAULT, TEST_ASSET, TEST_ADAPTER), "Adapter should be removed");
     }
 
     /*//////////////////////////////////////////////////////////////

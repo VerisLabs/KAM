@@ -322,10 +322,11 @@ contract DeploymentBaseTest is BaseTest {
 
         // Register adapters for vaults (if adapters were deployed)
         if (address(vaultAdapter) != address(0)) {
-            registry.registerAdapter(address(minter), address(vaultAdapter));
-            registry.registerAdapter(address(dnVault), address(vaultAdapter));
-            registry.registerAdapter(address(alphaVault), address(vaultAdapter));
-            registry.registerAdapter(address(betaVault), address(vaultAdapter));
+            registry.registerAdapter(address(minter), usdc, address(vaultAdapter));
+            registry.registerAdapter(address(minter), wbtc, address(vaultAdapter));
+            registry.registerAdapter(address(dnVault), usdc, address(vaultAdapter));
+            registry.registerAdapter(address(alphaVault), usdc, address(vaultAdapter));
+            registry.registerAdapter(address(betaVault), usdc, address(vaultAdapter));
         }
 
         vm.stopPrank();

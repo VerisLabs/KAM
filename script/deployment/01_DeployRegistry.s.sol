@@ -7,6 +7,7 @@ import { ERC1967Factory } from "src/vendor/ERC1967Factory.sol";
 
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
 import { kRegistry } from "src/kRegistry/kRegistry.sol";
+import { AdapterGuardianModule } from "src/kRegistry/modules/AdapterGuardianModule.sol";
 
 contract DeployRegistryScript is Script, DeploymentManager {
     function run() public {
@@ -36,12 +37,21 @@ contract DeployRegistryScript is Script, DeploymentManager {
 
         address registryProxy = factory.deployAndCall(address(registryImpl), msg.sender, initData);
 
+        // Deploy AdapterGuardianModule (facet implementation)
+        AdapterGuardianModule adapterGuardianModule = new AdapterGuardianModule();
+
+        // Add AdapterGuardianModule functions to kRegistry
+        kRegistry registry = kRegistry(payable(registryProxy));
+        bytes4[] memory selectors = adapterGuardianModule.selectors();
+        registry.addFunctions(selectors, address(adapterGuardianModule), false);
+
         vm.stopBroadcast();
 
         console.log("=== DEPLOYMENT COMPLETE ===");
         console.log("ERC1967Factory deployed at:", address(factory));
         console.log("kRegistry implementation deployed at:", address(registryImpl));
         console.log("kRegistry proxy deployed at:", registryProxy);
+        console.log("AdapterGuardianModule deployed at:", address(adapterGuardianModule));
         console.log("Network:", config.network);
         console.log("Chain ID:", config.chainId);
 
@@ -49,5 +59,6 @@ contract DeployRegistryScript is Script, DeploymentManager {
         writeContractAddress("ERC1967Factory", address(factory));
         writeContractAddress("kRegistryImpl", address(registryImpl));
         writeContractAddress("kRegistry", registryProxy);
+        writeContractAddress("AdapterGuardianModule", address(adapterGuardianModule));
     }
 }

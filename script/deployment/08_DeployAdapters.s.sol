@@ -28,27 +28,42 @@ contract DeployAdaptersScript is Script, DeploymentManager {
         // Get factory reference
         ERC1967Factory factory = ERC1967Factory(existing.contracts.ERC1967Factory);
 
-        // Deploy CustodialAdapter implementation
+        // Deploy VaultAdapter implementation (shared by all adapters)
         VaultAdapter vaultAdapterImpl = new VaultAdapter();
 
-        // Deploy CustodialAdapter proxy with initialization
+        // Deploy DN Vault USDC Adapter
         bytes memory adapterInitData =
             abi.encodeWithSelector(VaultAdapter.initialize.selector, existing.contracts.kRegistry);
-        address vaultAdapterProxy = factory.deployAndCall(address(vaultAdapterImpl), msg.sender, adapterInitData);
+        address dnVaultAdapterUSDC = factory.deployAndCall(address(vaultAdapterImpl), msg.sender, adapterInitData);
+
+        // Deploy DN Vault WBTC Adapter
+        address dnVaultAdapterWBTC = factory.deployAndCall(address(vaultAdapterImpl), msg.sender, adapterInitData);
+
+        // Deploy Alpha Vault Adapter
+        address alphaVaultAdapter = factory.deployAndCall(address(vaultAdapterImpl), msg.sender, adapterInitData);
+
+        // Deploy Beta Vault Adapter
+        address betaVaultAdapter = factory.deployAndCall(address(vaultAdapterImpl), msg.sender, adapterInitData);
 
         vm.stopBroadcast();
 
         console.log("=== DEPLOYMENT COMPLETE ===");
         console.log("VaultAdapter implementation deployed at:", address(vaultAdapterImpl));
-        console.log("VaultAdapter proxy deployed at:", vaultAdapterProxy);
+        console.log("DN Vault USDC Adapter deployed at:", dnVaultAdapterUSDC);
+        console.log("DN Vault WBTC Adapter deployed at:", dnVaultAdapterWBTC);
+        console.log("Alpha Vault Adapter deployed at:", alphaVaultAdapter);
+        console.log("Beta Vault Adapter deployed at:", betaVaultAdapter);
         console.log("Registry:", existing.contracts.kRegistry);
         console.log("Network:", config.network);
         console.log("");
-        console.log("Note: VaultAdapter inherits roles from registry");
-        console.log("      Configure vault destinations in next script");
+        console.log("Note: All adapters inherit roles from registry");
+        console.log("      Configure adapter permissions in next script");
 
         // Auto-write contract addresses to deployment JSON
         writeContractAddress("vaultAdapterImpl", address(vaultAdapterImpl));
-        writeContractAddress("vaultAdapter", vaultAdapterProxy);
+        writeContractAddress("dnVaultAdapterUSDC", dnVaultAdapterUSDC);
+        writeContractAddress("dnVaultAdapterWBTC", dnVaultAdapterWBTC);
+        writeContractAddress("alphaVaultAdapter", alphaVaultAdapter);
+        writeContractAddress("betaVaultAdapter", betaVaultAdapter);
     }
 }

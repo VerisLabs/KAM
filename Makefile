@@ -3,7 +3,7 @@
 -include .env
 export
 
-.PHONY: help deploy-mainnet deploy-sepolia deploy-localhost deploy-all deploy-mock-assets verify clean clean-all
+.PHONY: help deploy-mainnet deploy-sepolia deploy-localhost deploy-all deploy-mock-assets verify clean clean-all configure-adapters register-modules
 
 # Default target
 help:
@@ -26,6 +26,8 @@ help:
 	@echo "make deploy-vaults      - Deploy vaults (07)"
 	@echo "make deploy-adapters    - Deploy adapters (08)"
 	@echo "make configure          - Configure protocol (09)"
+	@echo "make configure-adapters - Configure adapter permissions (10)"
+	@echo "make register-modules   - Register vault modules (11) [OPTIONAL]"
 
 # Network-specific deployments
 deploy-mainnet:
@@ -43,7 +45,7 @@ deploy-localhost:
 	@$(MAKE) deploy-all FORGE_ARGS="--rpc-url http://localhost:8545 --broadcast --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 # Complete deployment sequence
-deploy-all: deploy-core setup-singletons deploy-tokens deploy-modules deploy-vaults deploy-adapters configure
+deploy-all: deploy-core setup-singletons deploy-tokens deploy-modules deploy-vaults deploy-adapters configure configure-adapters
 	@echo "✅ Complete protocol deployment finished!"
 
 # Mock assets (00) - Only for testnets
@@ -89,6 +91,17 @@ deploy-adapters:
 configure:
 	@echo "⚙️  Executing protocol configuration..."
 	forge script script/deployment/09_ConfigureProtocol.s.sol $(FORGE_ARGS)
+
+# Adapter permissions configuration (10)
+configure-adapters:
+	@echo "🔐 Configuring adapter permissions..."
+	forge script script/deployment/10_ConfigureAdapterPermissions.s.sol $(FORGE_ARGS)
+
+# Register vault modules (11) - Optional step for adding ReaderModule to vaults
+register-modules:
+	@echo "📦 Registering vault modules..."
+	forge script script/deployment/11_RegisterVaultModules.s.sol $(FORGE_ARGS)
+	@echo "⚠️  Execute the displayed admin calls via admin account"
 
 # Verification
 verify:

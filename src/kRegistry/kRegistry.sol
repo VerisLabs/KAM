@@ -103,7 +103,7 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
         mapping(address => address) assetToKToken;
         /// @dev Maps vaults to their registered external protocol adapters
         /// Enables yield strategies through DeFi protocol integrations
-        mapping(address => address) vaultAdapters;
+        mapping(address => mapping(address=> address)) vaultAdaptersByAsset;
         /// @dev Tracks whether an adapter address is registered in the protocol
         /// Used for validation and security checks on adapter operations
         mapping(address => bool) registeredAdapters;
@@ -200,6 +200,12 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
     function grantRelayerRole(address relayer_) external payable {
         _checkAdmin(msg.sender);
         _grantRoles(relayer_, RELAYER_ROLE);
+    }
+
+    /// @inheritdoc IkRegistry
+    function grantManagerRole(address manager_) external payable {
+        _checkAdmin(msg.sender);
+        _grantRoles(manager_, MANAGER_ROLE);
     }
 
     /// @inheritdoc IkRegistry
@@ -347,22 +353,28 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
     function registerVault(address vault, VaultType type_, address asset) external payable {
         _checkAdmin(msg.sender);
         _checkAddressNotZero(vault);
-        kRegistryStorage storage $ = _getkRegistryStorage();
-        require(!$.allVaults.contains(vault), KREGISTRY_ALREADY_REGISTERED);
-        _checkAssetRegistered(asset);
 
-        // Classify vault by type for routing logic
-        $.vaultType[vault] = uint8(type_);
+        kRegistryStorage storage $ = _getkRegistryStorage();
+        _checkAssetRegistered(asset);
+        
         // Associate vault with the asset it manages
         $.vaultAsset[vault].add(asset);
-        // Add to global vault registry
-        $.allVaults.add(vault);
+
         // Set as primary vault for this asset-type combination
         $.assetToVault[asset][uint8(type_)] = vault;
 
         // Enable reverse lookup: find all vaults for an asset
         $.vaultsByAsset[asset].add(vault);
 
+        address kMinter_ = $.singletonContracts[K_MINTER];
+        if(kMinter_ == vault && $.allVaults.contains(kMinter_)) return; 
+        
+        // Classify vault by type for routing logic
+        $.vaultType[vault] = uint8(type_);
+
+        _checkVaultRegistered(vault);
+        $.allVaults.add(vault);
+        
         emit VaultRegistered(vault, asset, type_);
     }
 
@@ -380,7 +392,7 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IkRegistry
-    function registerAdapter(address vault, address adapter) external payable {
+    function registerAdapter(address vault, address asset, address adapter) external payable {
         _checkAdmin(msg.sender);
         _checkAddressNotZero(vault);
         require(adapter != address(0), KREGISTRY_INVALID_ADAPTER);
@@ -388,25 +400,25 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
         kRegistryStorage storage $ = _getkRegistryStorage();
 
         // Ensure vault exists in protocol before adding adapter
-        _checkVaultRegistered(vault);
+        if($.singletonContracts[K_MINTER] != vault) _checkVaultRegistered(vault);
 
-        require($.vaultAdapters[vault] != address(0), KREGISTRY_ADAPTER_ALREADY_SET);
+        require($.vaultAdaptersByAsset[vault][asset] == address(0), KREGISTRY_ADAPTER_ALREADY_SET);
 
         // Register adapter for external protocol integration
-        $.vaultAdapters[vault] = adapter;
+        $.vaultAdaptersByAsset[vault][asset] = adapter;
 
-        emit AdapterRegistered(vault, adapter);
+        emit AdapterRegistered(vault, asset, adapter);
     }
 
     /// @inheritdoc IkRegistry
-    function removeAdapter(address vault, address adapter) external payable {
+    function removeAdapter(address vault, address asset, address adapter) external payable {
         _checkAdmin(msg.sender);
         kRegistryStorage storage $ = _getkRegistryStorage();
 
-        require($.vaultAdapters[vault] == adapter, KREGISTRY_INVALID_ADAPTER);
-        delete $.vaultAdapters[vault];
+        require($.vaultAdaptersByAsset[vault][asset] == adapter, KREGISTRY_INVALID_ADAPTER);
+        delete $.vaultAdaptersByAsset[vault][asset];
 
-        emit AdapterRemoved(vault, adapter);
+        emit AdapterRemoved(vault, asset, adapter);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -545,15 +557,15 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
     }
 
     /// @inheritdoc IkRegistry
-    function getAdapter(address vault) external view returns (address) {
+    function getAdapter(address vault, address asset) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        return $.vaultAdapters[vault];
+        return $.vaultAdaptersByAsset[vault][asset];
     }
 
     /// @inheritdoc IkRegistry
-    function isAdapterRegistered(address vault, address adapter) external view returns (bool) {
+    function isAdapterRegistered(address vault, address asset, address adapter) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        if ($.vaultAdapters[vault] != address(0)) return true;
+        return $.vaultAdaptersByAsset[vault][asset] == adapter;
     }
 
     /// @inheritdoc IkRegistry

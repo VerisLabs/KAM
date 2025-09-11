@@ -52,12 +52,22 @@ abstract contract DeploymentManager is Script {
         address kUSD;
         address kBTC;
         address readerModule;
+        address adapterGuardianModule;
         address kStakingVaultImpl;
         address dnVault;
+        address dnVaultUSDC;
+        address dnVaultWBTC;
         address alphaVault;
         address betaVault;
         address vaultAdapterImpl;
         address vaultAdapter;
+        address dnVaultAdapterUSDC;
+        address dnVaultAdapterWBTC;
+        address alphaVaultAdapter;
+        address betaVaultAdapter;
+        address mockERC7540USDC;
+        address mockERC7540WBTC;
+        address mockWalletUSDC;
     }
 
     /// @notice Gets the current network name from foundry context
@@ -162,12 +172,24 @@ abstract contract DeploymentManager is Script {
             output.contracts.readerModule = json.readAddress(".contracts.readerModule");
         }
 
+        if (json.keyExists(".contracts.adapterGuardianModule")) {
+            output.contracts.adapterGuardianModule = json.readAddress(".contracts.adapterGuardianModule");
+        }
+
         if (json.keyExists(".contracts.kStakingVaultImpl")) {
             output.contracts.kStakingVaultImpl = json.readAddress(".contracts.kStakingVaultImpl");
         }
 
         if (json.keyExists(".contracts.dnVault")) {
             output.contracts.dnVault = json.readAddress(".contracts.dnVault");
+        }
+
+        if (json.keyExists(".contracts.dnVaultUSDC")) {
+            output.contracts.dnVaultUSDC = json.readAddress(".contracts.dnVaultUSDC");
+        }
+
+        if (json.keyExists(".contracts.dnVaultWBTC")) {
+            output.contracts.dnVaultWBTC = json.readAddress(".contracts.dnVaultWBTC");
         }
 
         if (json.keyExists(".contracts.alphaVault")) {
@@ -184,6 +206,34 @@ abstract contract DeploymentManager is Script {
 
         if (json.keyExists(".contracts.vaultAdapter")) {
             output.contracts.vaultAdapter = json.readAddress(".contracts.vaultAdapter");
+        }
+
+        if (json.keyExists(".contracts.dnVaultAdapterUSDC")) {
+            output.contracts.dnVaultAdapterUSDC = json.readAddress(".contracts.dnVaultAdapterUSDC");
+        }
+
+        if (json.keyExists(".contracts.dnVaultAdapterWBTC")) {
+            output.contracts.dnVaultAdapterWBTC = json.readAddress(".contracts.dnVaultAdapterWBTC");
+        }
+
+        if (json.keyExists(".contracts.alphaVaultAdapter")) {
+            output.contracts.alphaVaultAdapter = json.readAddress(".contracts.alphaVaultAdapter");
+        }
+
+        if (json.keyExists(".contracts.betaVaultAdapter")) {
+            output.contracts.betaVaultAdapter = json.readAddress(".contracts.betaVaultAdapter");
+        }
+
+        if (json.keyExists(".contracts.mockERC7540USDC")) {
+            output.contracts.mockERC7540USDC = json.readAddress(".contracts.mockERC7540USDC");
+        }
+
+        if (json.keyExists(".contracts.mockERC7540WBTC")) {
+            output.contracts.mockERC7540WBTC = json.readAddress(".contracts.mockERC7540WBTC");
+        }
+
+        if (json.keyExists(".contracts.mockWalletUSDC")) {
+            output.contracts.mockWalletUSDC = json.readAddress(".contracts.mockWalletUSDC");
         }
 
         return output;
@@ -223,10 +273,16 @@ abstract contract DeploymentManager is Script {
             output.contracts.kBTC = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("readerModule"))) {
             output.contracts.readerModule = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("AdapterGuardianModule"))) {
+            output.contracts.adapterGuardianModule = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("kStakingVaultImpl"))) {
             output.contracts.kStakingVaultImpl = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("dnVault"))) {
             output.contracts.dnVault = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("dnVaultUSDC"))) {
+            output.contracts.dnVaultUSDC = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("dnVaultWBTC"))) {
+            output.contracts.dnVaultWBTC = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("alphaVault"))) {
             output.contracts.alphaVault = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("betaVault"))) {
@@ -235,6 +291,20 @@ abstract contract DeploymentManager is Script {
             output.contracts.vaultAdapterImpl = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("vaultAdapter"))) {
             output.contracts.vaultAdapter = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("dnVaultAdapterUSDC"))) {
+            output.contracts.dnVaultAdapterUSDC = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("dnVaultAdapterWBTC"))) {
+            output.contracts.dnVaultAdapterWBTC = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("alphaVaultAdapter"))) {
+            output.contracts.alphaVaultAdapter = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("betaVaultAdapter"))) {
+            output.contracts.betaVaultAdapter = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("mockERC7540USDC"))) {
+            output.contracts.mockERC7540USDC = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("mockERC7540WBTC"))) {
+            output.contracts.mockERC7540WBTC = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("mockWalletUSDC"))) {
+            output.contracts.mockWalletUSDC = contractAddress;
         }
 
         // Write to JSON file
@@ -265,11 +335,21 @@ abstract contract DeploymentManager is Script {
         json = string.concat(json, '"kBTC":"', vm.toString(output.contracts.kBTC), '",');
         json = string.concat(json, '"kStakingVaultImpl":"', vm.toString(output.contracts.kStakingVaultImpl), '",');
         json = string.concat(json, '"readerModule":"', vm.toString(output.contracts.readerModule), '",');
+        json = string.concat(json, '"adapterGuardianModule":"', vm.toString(output.contracts.adapterGuardianModule), '",');
         json = string.concat(json, '"dnVault":"', vm.toString(output.contracts.dnVault), '",');
+        json = string.concat(json, '"dnVaultUSDC":"', vm.toString(output.contracts.dnVaultUSDC), '",');
+        json = string.concat(json, '"dnVaultWBTC":"', vm.toString(output.contracts.dnVaultWBTC), '",');
         json = string.concat(json, '"alphaVault":"', vm.toString(output.contracts.alphaVault), '",');
         json = string.concat(json, '"betaVault":"', vm.toString(output.contracts.betaVault), '",');
         json = string.concat(json, '"vaultAdapterImpl":"', vm.toString(output.contracts.vaultAdapterImpl), '",');
-        json = string.concat(json, '"vaultAdapter":"', vm.toString(output.contracts.vaultAdapter), '"');
+        json = string.concat(json, '"vaultAdapter":"', vm.toString(output.contracts.vaultAdapter), '",');
+        json = string.concat(json, '"dnVaultAdapterUSDC":"', vm.toString(output.contracts.dnVaultAdapterUSDC), '",');
+        json = string.concat(json, '"dnVaultAdapterWBTC":"', vm.toString(output.contracts.dnVaultAdapterWBTC), '",');
+        json = string.concat(json, '"alphaVaultAdapter":"', vm.toString(output.contracts.alphaVaultAdapter), '",');
+        json = string.concat(json, '"betaVaultAdapter":"', vm.toString(output.contracts.betaVaultAdapter), '",');
+        json = string.concat(json, '"mockERC7540USDC":"', vm.toString(output.contracts.mockERC7540USDC), '",');
+        json = string.concat(json, '"mockERC7540WBTC":"', vm.toString(output.contracts.mockERC7540WBTC), '",');
+        json = string.concat(json, '"mockWalletUSDC":"', vm.toString(output.contracts.mockWalletUSDC), '"');
 
         json = string.concat(json, "}}");
 
@@ -284,8 +364,39 @@ abstract contract DeploymentManager is Script {
         require(config.roles.emergencyAdmin != address(0), "Missing emergencyAdmin address");
         require(config.roles.guardian != address(0), "Missing guardian address");
         require(config.roles.relayer != address(0), "Missing relayer address");
+        require(config.roles.institution != address(0), "Missing institution address");
+        require(config.roles.treasury != address(0), "Missing treasury address");
         require(config.assets.USDC != address(0), "Missing USDC address");
         require(config.assets.WBTC != address(0), "Missing WBTC address");
+    }
+
+    /// @notice Validates that required deployment outputs are not zero for adapter configuration
+    /// @param existing Deployment output to validate
+    function validateAdapterDeployments(DeploymentOutput memory existing) internal pure {
+        require(existing.contracts.kRegistry != address(0), "kRegistry not deployed");
+        require(existing.contracts.dnVaultAdapterUSDC != address(0), "dnVaultAdapterUSDC not deployed");
+        require(existing.contracts.dnVaultAdapterWBTC != address(0), "dnVaultAdapterWBTC not deployed");
+        require(existing.contracts.alphaVaultAdapter != address(0), "alphaVaultAdapter not deployed");
+        require(existing.contracts.betaVaultAdapter != address(0), "betaVaultAdapter not deployed");
+        require(existing.contracts.mockERC7540USDC != address(0), "mockERC7540USDC not deployed");
+        require(existing.contracts.mockERC7540WBTC != address(0), "mockERC7540WBTC not deployed");
+        require(existing.contracts.mockWalletUSDC != address(0), "mockWalletUSDC not deployed");
+    }
+
+    /// @notice Validates that required deployment outputs are not zero for protocol configuration
+    /// @param existing Deployment output to validate
+    function validateProtocolDeployments(DeploymentOutput memory existing) internal pure {
+        require(existing.contracts.kRegistry != address(0), "kRegistry not deployed");
+        require(existing.contracts.kMinter != address(0), "kMinter not deployed");
+        require(existing.contracts.kAssetRouter != address(0), "kAssetRouter not deployed");
+        require(existing.contracts.dnVaultUSDC != address(0), "dnVaultUSDC not deployed");
+        require(existing.contracts.dnVaultWBTC != address(0), "dnVaultWBTC not deployed");
+        require(existing.contracts.alphaVault != address(0), "alphaVault not deployed");
+        require(existing.contracts.betaVault != address(0), "betaVault not deployed");
+        require(existing.contracts.dnVaultAdapterUSDC != address(0), "dnVaultAdapterUSDC not deployed");
+        require(existing.contracts.dnVaultAdapterWBTC != address(0), "dnVaultAdapterWBTC not deployed");
+        require(existing.contracts.alphaVaultAdapter != address(0), "alphaVaultAdapter not deployed");
+        require(existing.contracts.betaVaultAdapter != address(0), "betaVaultAdapter not deployed");
     }
 
     /// @notice Logs deployment configuration for verification

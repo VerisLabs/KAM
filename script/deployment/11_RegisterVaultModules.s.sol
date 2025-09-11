@@ -14,7 +14,8 @@ contract RegisterModulesScript is DeploymentManager {
         DeploymentOutput memory existing = readDeploymentOutput();
 
         // Validate required contracts are deployed
-        require(existing.contracts.dnVault != address(0), "dnVault not deployed - run 07_DeployVaults first");
+        require(existing.contracts.dnVaultUSDC != address(0), "dnVaultUSDC not deployed - run 07_DeployVaults first");
+        require(existing.contracts.dnVaultWBTC != address(0), "dnVaultWBTC not deployed - run 07_DeployVaults first");
         require(existing.contracts.alphaVault != address(0), "alphaVault not deployed - run 07_DeployVaults first");
         require(existing.contracts.betaVault != address(0), "betaVault not deployed - run 07_DeployVaults first");
         require(
@@ -33,7 +34,8 @@ contract RegisterModulesScript is DeploymentManager {
         console.log("");
 
         console.log("2. Vault addresses:");
-        console.log("DN Vault:", existing.contracts.dnVault);
+        console.log("DN Vault USDC:", existing.contracts.dnVaultUSDC);
+        console.log("DN Vault WBTC:", existing.contracts.dnVaultWBTC);
         console.log("Alpha Vault:", existing.contracts.alphaVault);
         console.log("Beta Vault:", existing.contracts.betaVault);
         console.log("");
