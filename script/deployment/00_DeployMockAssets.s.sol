@@ -6,6 +6,8 @@ import { Script } from "forge-std/Script.sol";
 
 import { console } from "forge-std/console.sol";
 import { MockERC20 } from "test/mocks/MockERC20.sol";
+import { MockERC7540 } from "test/mocks/MockERC7540.sol";
+import { MockWallet } from "test/mocks/MockWallet.sol";
 
 contract DeployMockAssetsScript is Script, DeploymentManager {
     function run() public {
@@ -39,20 +41,41 @@ contract DeployMockAssetsScript is Script, DeploymentManager {
         MockERC20 mockUSDC = new MockERC20("Mock USDC", "USDC", 6);
         MockERC20 mockWBTC = new MockERC20("Mock WBTC", "WBTC", 8);
 
+        // Deploy mock ERC7540 vaults
+        MockERC7540 mockERC7540USDC = new MockERC7540(address(mockUSDC), "Mock ERC7540 USDC", "mERC7540USDC", 6);
+        MockERC7540 mockERC7540WBTC = new MockERC7540(address(mockWBTC), "Mock ERC7540 WBTC", "mERC7540WBTC", 8);
+
+        // Deploy mock wallet for USDC
+        MockWallet mockWalletUSDC = new MockWallet("Mock USDC Wallet");
+
         vm.stopBroadcast();
 
         console.log("Mock USDC deployed at:", address(mockUSDC));
         console.log("Mock WBTC deployed at:", address(mockWBTC));
+        console.log("Mock ERC7540 USDC deployed at:", address(mockERC7540USDC));
+        console.log("Mock ERC7540 WBTC deployed at:", address(mockERC7540WBTC));
+        console.log("Mock Wallet USDC deployed at:", address(mockWalletUSDC));
 
         // Update network config with deployed addresses
         _updateNetworkConfig(config.network, address(mockUSDC), address(mockWBTC));
 
+        // Write mock target addresses to deployment output
+        writeContractAddress("mockERC7540USDC", address(mockERC7540USDC));
+        writeContractAddress("mockERC7540WBTC", address(mockERC7540WBTC));
+        writeContractAddress("mockWalletUSDC", address(mockWalletUSDC));
+
         // Mint tokens for testing
         _mintTokensForTesting(mockUSDC, mockWBTC, config);
+
+        // Also mint tokens to mock targets for testing
+        _mintTokensToMockTargets(mockUSDC, mockWBTC, mockERC7540USDC, mockERC7540WBTC, mockWalletUSDC);
 
         console.log("=== MOCK ASSET DEPLOYMENT COMPLETE ===");
         console.log("Mock USDC:", address(mockUSDC));
         console.log("Mock WBTC:", address(mockWBTC));
+        console.log("Mock ERC7540 USDC:", address(mockERC7540USDC));
+        console.log("Mock ERC7540 WBTC:", address(mockERC7540WBTC));
+        console.log("Mock Wallet USDC:", address(mockWalletUSDC));
         console.log("Config updated at: deployments/config/", string.concat(config.network, ".json"));
     }
 
@@ -150,5 +173,33 @@ contract DeployMockAssetsScript is Script, DeploymentManager {
         ) {
             console.log("Minted 10M USDC and 1K WBTC to admin:", config.roles.admin);
         }
+    }
+
+    function _mintTokensToMockTargets(
+        MockERC20 mockUSDC,
+        MockERC20 mockWBTC,
+        MockERC7540 mockERC7540USDC,
+        MockERC7540 mockERC7540WBTC,
+        MockWallet mockWalletUSDC
+    )
+        internal
+    {
+        console.log("=== MINTING TOKENS TO MOCK TARGETS ===");
+
+        vm.startBroadcast();
+
+        // Mint tokens to mock ERC7540 vaults for liquidity
+        uint256 usdcAmount = 1_000_000 * 10 ** 6; // 1M USDC
+        uint256 wbtcAmount = 100 * 10 ** 8; // 100 WBTC
+
+        mockUSDC.mint(address(mockERC7540USDC), usdcAmount);
+        mockWBTC.mint(address(mockERC7540WBTC), wbtcAmount);
+        mockUSDC.mint(address(mockWalletUSDC), usdcAmount);
+
+        vm.stopBroadcast();
+
+        console.log("Minted 1M USDC to Mock ERC7540 USDC vault");
+        console.log("Minted 100 WBTC to Mock ERC7540 WBTC vault");
+        console.log("Minted 1M USDC to Mock Wallet");
     }
 }

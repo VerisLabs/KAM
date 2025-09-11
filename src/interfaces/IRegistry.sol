@@ -1,0 +1,7 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.30;
+
+import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { IAdapterGuardian } from "src/interfaces/modules/IAdapterGuardian.sol";
+
+interface IRegistry is IkRegistry, IAdapterGuardian { }

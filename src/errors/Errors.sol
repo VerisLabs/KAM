@@ -109,6 +109,23 @@ string constant KREGISTRY_WRONG_ROLE = "R7";
 string constant KREGISTRY_ZERO_ADDRESS = "R8";
 string constant KREGISTRY_ZERO_AMOUNT = "R9";
 string constant KREGISTRY_FEE_EXCEEDS_MAXIMUM = "R10";
+string constant KREGISTRY_SELECTOR_ALREADY_SET = "R11";
+string constant KREGISTRY_SELECTOR_NOT_FOUND = "R12";
+
+string constant GUARDIANMODULE_UNAUTHORIZED = "GM1";
+string constant GUARDIANMODULE_NOT_ALLOWED = "GM2";
+string constant GUARDIANMODULE_INVALID_ADAPTER = "GM3";
+string constant GUARDIANMODULE_SELECTOR_ALREADY_SET = "GM4";
+string constant GUARDIANMODULE_SELECTOR_NOT_FOUND = "GM5";
+string constant GUARDIANMODULE_ZERO_ADDRESS = "GM6";
+
+// kRegistryBase Errors
+string constant KROLESBASE_ALREADY_INITIALIZED = "KB1";
+string constant KROLESBASE_WRONG_ROLE = "KB2";
+string constant KROLESBASE_ZERO_ADDRESS = "KB3";
+string constant KROLESBASE_NOT_INITIALIZED = "KB4";
+string constant KROLESBASE_ZERO_AMOUNT = "KB5";
+string constant KROLESBASE_TRANSFER_FAILED = "KB6";
 
 // kStakingVault Errors
 string constant KSTAKINGVAULT_INSUFFICIENT_BALANCE = "SV1";
@@ -143,3 +160,22 @@ string constant VAULTCLAIMS_REQUEST_NOT_PENDING = "VC5";
 // VaultFees Errors
 string constant VAULTFEES_FEE_EXCEEDS_MAXIMUM = "VF1";
 string constant VAULTFEES_INVALID_TIMESTAMP = "VF2";
+
+// VaultAdapter Errors
+string constant VAULTADAPTER_EXPIRED_SIGNATURE = "VA1";
+string constant VAULTADAPTER_INVALID_SIGNATURE = "VA2";
+string constant VAULTADAPTER_ZERO_ADDRESS = "VA3";
+string constant VAULTADAPTER_WRONG_ROLE = "VA4";
+string constant VAULTADAPTER_IS_PAUSED = "VA5";
+string constant VAULTADAPTER_NOT_INITIALIZED = "VA6";
+string constant VAULTADAPTER_ZERO_AMOUNT = "VA7";
+string constant VAULTADAPTER_TRANSFER_FAILED = "VA8";
+string constant VAULTADAPTER_WRONG_ASSET = "VA9";
+string constant VAULTADAPTER_WRONG_SELECTOR = "VA10";
+string constant VAULTADAPTER_INVALID_NONCE = "VA11";
+string constant VAULTADAPTER_WRONG_TARGET = "VA12";
+string constant VAULTADAPTER_SELECTOR_NOT_ALLOWED = "VA13";
+
+// ParamsChecker Errors
+string constant PARAMETERCHECKER_NOT_ALLOWED = "PC1";
+string constant PARAMETERCHECKER_ZERO_ADDRESS = "PC2";

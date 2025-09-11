@@ -1,0 +1,132 @@
+🟢 Deploying to LOCALHOST...
+make[1]: Entering directory '/home/fv3n/Codebases/KAM'
+🪙 Deploying mock assets for testnet...
+forge script script/deployment/00_DeployMockAssets.s.sol --rpc-url http://localhost:8545 --broadcast --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+No files changed, compilation skipped
+Traces:
+  [7745073] → new DeployMockAssetsScript@0x5b73C5498c1E3b4dbA84de0F1833c4a029d90519
+    └─ ← [Return] 38564 bytes of code
+
+  [3936142] DeployMockAssetsScript::run()
+    ├─ [0] VM::exists("deployments/config/localhost.json") [staticcall]
+    │   └─ ← [Return] true
+    ├─ [0] VM::readFile("deployments/config/localhost.json") [staticcall]
+    │   └─ ← [Return] <file>
+    ├─ [0] VM::parseJsonString("<stringified JSON>", ".network") [staticcall]
+    │   └─ ← [Return] "localhost"
+    ├─ [0] VM::parseJsonUint("<stringified JSON>", ".chainId") [staticcall]
+    │   └─ ← [Return] 31337 [3.133e4]
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".roles.owner") [staticcall]
+    │   └─ ← [Return] 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".roles.admin") [staticcall]
+    │   └─ ← [Return] 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".roles.emergencyAdmin") [staticcall]
+    │   └─ ← [Return] 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".roles.guardian") [staticcall]
+    │   └─ ← [Return] 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".roles.relayer") [staticcall]
+    │   └─ ← [Return] 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".roles.institution") [staticcall]
+    │   └─ ← [Return] 0x90F79bf6EB2c4f870365E785982E1f101E93b906
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".roles.treasury") [staticcall]
+    │   └─ ← [Return] 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".assets.USDC") [staticcall]
+    │   └─ ← [Return] 0x5FbDB2315678afecb367f032d93F642f64180aa3
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".assets.WBTC") [staticcall]
+    │   └─ ← [Return] 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+    ├─ [0] console::log("=== DEPLOYING MOCK ASSETS ===") [staticcall]
+    │   └─ ← [Stop] 
+    ├─ [0] console::log("Network:", "localhost") [staticcall]
+    │   └─ ← [Stop] 
+    ├─ [0] console::log("Chain ID:", 31337 [3.133e4]) [staticcall]
+    │   └─ ← [Stop] 
+    ├─ [0] VM::startBroadcast()
+    │   └─ ← [Return] 
+    ├─ [634952] → new MockERC20@0x95401dc811bb5740090279Ba06cfA8fcF6113778
+    │   └─ ← [Return] 2832 bytes of code
+    ├─ [634952] → new MockERC20@0x998abeb3E57409262aE5b751f60747921B33613E
+    │   └─ ← [Return] 2832 bytes of code
+    ├─ [1116577] → new MockERC7540@0x70e0bA845a1A0F2DA3359C97E0285013525FFC49
+    │   └─ ← [Return] 5237 bytes of code
+    ├─ [1116577] → new MockERC7540@0x4826533B4897376654Bb4d4AD88B7faFD0C98528
+    │   └─ ← [Return] 5237 bytes of code
+    ├─ [220977] → new MockWallet@0x99bbA657f2BbC93c02D617f8bA121cB8Fc104Acf
+    │   └─ ← [Return] 989 bytes of code
+    ├─ [0] VM::stopBroadcast()
+    │   └─ ← [Return] 
+    ├─ [0] console::log("Mock USDC deployed at:", MockERC20: [0x95401dc811bb5740090279Ba06cfA8fcF6113778]) [staticcall]
+    │   └─ ← [Stop] 
+    ├─ [0] console::log("Mock WBTC deployed at:", MockERC20: [0x998abeb3E57409262aE5b751f60747921B33613E]) [staticcall]
+    │   └─ ← [Stop] 
+    ├─ [0] console::log("Mock ERC7540 USDC deployed at:", MockERC7540: [0x70e0bA845a1A0F2DA3359C97E0285013525FFC49]) [staticcall]
+    │   └─ ← [Stop] 
+    ├─ [0] console::log("Mock ERC7540 WBTC deployed at:", MockERC7540: [0x4826533B4897376654Bb4d4AD88B7faFD0C98528]) [staticcall]
+    │   └─ ← [Stop] 
+    ├─ [0] console::log("Mock Wallet USDC deployed at:", MockWallet: [0x99bbA657f2BbC93c02D617f8bA121cB8Fc104Acf]) [staticcall]
+    │   └─ ← [Stop] 
+    ├─ [0] VM::readFile("deployments/config/localhost.json") [staticcall]
+    │   └─ ← [Return] <file>
+    ├─ [0] VM::parseJsonUint("<stringified JSON>", ".chainId") [staticcall]
+    │   └─ ← [Return] 31337 [3.133e4]
+    ├─ [0] VM::toString(31337 [3.133e4]) [staticcall]
+    │   └─ ← [Return] "31337"
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".roles.owner") [staticcall]
+    │   └─ ← [Return] 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+    ├─ [0] VM::toString(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266) [staticcall]
+    │   └─ ← [Return] "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".roles.admin") [staticcall]
+    │   └─ ← [Return] 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+    ├─ [0] VM::toString(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266) [staticcall]
+    │   └─ ← [Return] "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".roles.emergencyAdmin") [staticcall]
+    │   └─ ← [Return] 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+    ├─ [0] VM::toString(0x70997970C51812dc3A010C7d01b50e0d17dc79C8) [staticcall]
+    │   └─ ← [Return] "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".roles.guardian") [staticcall]
+    │   └─ ← [Return] 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+    ├─ [0] VM::toString(0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC) [staticcall]
+    │   └─ ← [Return] "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".roles.relayer") [staticcall]
+    │   └─ ← [Return] 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+    ├─ [0] VM::toString(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266) [staticcall]
+    │   └─ ← [Return] "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".roles.institution") [staticcall]
+    │   └─ ← [Return] 0x90F79bf6EB2c4f870365E785982E1f101E93b906
+    ├─ [0] VM::toString(0x90F79bf6EB2c4f870365E785982E1f101E93b906) [staticcall]
+    │   └─ ← [Return] "0x90F79bf6EB2c4f870365E785982E1f101E93b906"
+    ├─ [0] VM::parseJsonAddress("<stringified JSON>", ".roles.treasury") [staticcall]
+    │   └─ ← [Return] 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+    ├─ [0] VM::toString(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266) [staticcall]
+    │   └─ ← [Return] "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+    ├─ [0] VM::toString(MockERC20: [0x95401dc811bb5740090279Ba06cfA8fcF6113778]) [staticcall]
+    │   └─ ← [Return] "0x95401dc811bb5740090279Ba06cfA8fcF6113778"
+    ├─ [0] VM::toString(MockERC20: [0x998abeb3E57409262aE5b751f60747921B33613E]) [staticcall]
+    │   └─ ← [Return] "0x998abeb3E57409262aE5b751f60747921B33613E"
+    ├─ [0] VM::writeFile("deployments/config/localhost.json", "{\"network\":\"localhost\",\"chainId\":31337,\"roles\":{\"owner\":\"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\",\"admin\":\"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\",\"emergencyAdmin\":\"0x70997970C51812dc3A010C7d01b50e0d17dc79C8\",\"guardian\":\"0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC\",\"relayer\":\"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\",\"institution\":\"0x90F79bf6EB2c4f870365E785982E1f101E93b906\",\"treasury\":\"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\"},\"assets\":{\"USDC\":\"0x95401dc811bb5740090279Ba06cfA8fcF6113778\",\"WBTC\":\"0x998abeb3E57409262aE5b751f60747921B33613E\"}}")
+    │   └─ ← [Return] 
+    ├─ [0] console::log("Updated config file with mock asset addresses") [staticcall]
+    │   └─ ← [Stop] 
+    ├─ [0] VM::exists("deployments/output/localhost/addresses.json") [staticcall]
+    │   └─ ← [Return] true
+    ├─ [0] VM::readFile("deployments/output/localhost/addresses.json") [staticcall]
+    │   └─ ← [Return] <file>
+    ├─ [0] VM::parseJsonUint("<stringified JSON>", ".chainId") [staticcall]
+    │   └─ ← [Revert] vm.parseJsonUint: path ".chainId" must return exactly one JSON value
+    └─ ← [Revert] vm.parseJsonUint: path ".chainId" must return exactly one JSON value
+
+
+
+== Logs ==
+  === DEPLOYING MOCK ASSETS ===
+  Network: localhost
+  Chain ID: 31337
+  Mock USDC deployed at: 0x95401dc811bb5740090279Ba06cfA8fcF6113778
+  Mock WBTC deployed at: 0x998abeb3E57409262aE5b751f60747921B33613E
+  Mock ERC7540 USDC deployed at: 0x70e0bA845a1A0F2DA3359C97E0285013525FFC49
+  Mock ERC7540 WBTC deployed at: 0x4826533B4897376654Bb4d4AD88B7faFD0C98528
+  Mock Wallet USDC deployed at: 0x99bbA657f2BbC93c02D617f8bA121cB8Fc104Acf
+  Updated config file with mock asset addresses
+Error: script failed: vm.parseJsonUint: path ".chainId" must return exactly one JSON value
+make[1]: *** [Makefile:54: deploy-mock-assets] Error 1
+make[1]: Leaving directory '/home/fv3n/Codebases/KAM'
+make: *** [Makefile:44: deploy-localhost] Error 2

@@ -142,7 +142,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @inheritdoc IkAssetRouter
     function kAssetPush(address _asset, uint256 amount, bytes32 batchId) external payable {
-        _unlockReentrant();
+        _lockReentrant();
         address kMinter = msg.sender;
         _checkKMinter(kMinter);
         _checkAmountNotZero(amount);
@@ -153,12 +153,13 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         // Increase deposits in the batch for kMinter
         $.vaultBatchBalances[kMinter][batchId].deposited += amount.toUint128();
         emit AssetsPushed(kMinter, amount);
-        _lockReentrant();
+
+        _unlockReentrant();
     }
 
     /// @inheritdoc IkAssetRouter
     function kAssetRequestPull(address _asset, address _vault, uint256 amount, bytes32 batchId) external payable {
-        _unlockReentrant();
+        _lockReentrant();
         _checkPaused();
         _checkAmountNotZero(amount);
         address kMinter = msg.sender;
@@ -177,7 +178,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _checkAddressNotZero(batchReceiver);
 
         emit AssetsRequestPulled(kMinter, _asset, batchReceiver, amount);
-        _lockReentrant();
+        _unlockReentrant();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -195,7 +196,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         external
         payable
     {
-        _unlockReentrant();
+        _lockReentrant();
         _checkPaused();
         _checkAmountNotZero(amount);
         _checkVault(msg.sender);
@@ -214,12 +215,12 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         $.vaultBatchBalances[targetVault][batchId].deposited += amount.toUint128();
 
         emit AssetsTransfered(sourceVault, targetVault, _asset, amount);
-        _lockReentrant();
+        _unlockReentrant();
     }
 
     /// @inheritdoc IkAssetRouter
     function kSharesRequestPush(address sourceVault, uint256 amount, bytes32 batchId) external payable {
-        _unlockReentrant();
+        _lockReentrant();
         _checkPaused();
         _checkAmountNotZero(amount);
         _checkVault(msg.sender);
@@ -230,12 +231,12 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         $.vaultRequestedShares[sourceVault][batchId] += amount;
 
         emit SharesRequestedPushed(sourceVault, batchId, amount);
-        _lockReentrant();
+        _unlockReentrant();
     }
 
     /// @inheritdoc IkAssetRouter
     function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable {
-        _unlockReentrant();
+        _lockReentrant();
         _checkPaused();
         _checkAmountNotZero(amount);
         _checkVault(msg.sender);
@@ -246,7 +247,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         $.vaultRequestedShares[sourceVault][batchId] -= amount;
 
         emit SharesRequestedPulled(sourceVault, batchId, amount);
-        _lockReentrant();
+        _unlockReentrant();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -258,16 +259,13 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         address asset,
         address vault,
         bytes32 batchId,
-        uint256 totalAssets_,
-        uint256 netted,
-        uint256 yield,
-        bool profit
+        uint256 totalAssets_
     )
         external
         payable
         returns (bytes32 proposalId)
     {
-        _unlockReentrant();
+        _lockReentrant();
         _checkPaused();
 
         require(_isRelayer(msg.sender), KASSETROUTER_WRONG_ROLE);
@@ -277,9 +275,45 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         require(!$.batchIds.contains(batchId), KASSETROUTER_BATCH_ID_PROPOSED);
         $.batchIds.add(batchId);
 
+        int256 netted;
+        uint256 yield;
+        uint256 lastTotalAssets = _virtualBalance(vault, asset);
+        bool profit;
+
         // Increase the counter to generate unique proposal id
         unchecked {
             $.proposalCounter++;
+        }
+
+        // To calculate the strategy yield we need to discount the deposits and requests
+        // First to match last total assets
+
+        // Example : total assets were 1000 before and there was 200 deposits and 100 withdrawal requests
+        // New total assets is 1200, but this new total assets include settled deposits and withdrawals
+        // So it will be 1000 + (200 - 100) +/- profit = 1100 +/- profit
+        // So first we need to adjust the substract the netted as follows:
+        // 1200 - (200 - 100) = 1100
+        // And now we can calculate the profit as 1100 - 1000 = 100
+
+        if (_isKMinter(vault)) {
+            netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited))
+                - int256(uint256($.vaultBatchBalances[vault][batchId].requested));
+        } else {
+            uint256 totalSupply = IkStakingVault(vault).totalSupply();
+            uint256 requestedAssets = totalSupply == 0
+                ? $.vaultRequestedShares[vault][batchId]
+                : $.vaultRequestedShares[vault][batchId].fullMulDiv(totalAssets_, totalSupply);
+            netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited)) - int256(uint256(requestedAssets));
+        }
+
+        uint256 totalAssetsAdjusted = uint256(int256(totalAssets_) - netted);
+
+        if (totalAssetsAdjusted > lastTotalAssets) {
+            profit = true;
+            yield = totalAssetsAdjusted - lastTotalAssets;
+        } else {
+            profit = false;
+            yield = lastTotalAssets - totalAssetsAdjusted;
         }
 
         proposalId = OptimizedEfficientHashLib.hash(
@@ -310,6 +344,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         });
 
         emit SettlementProposed(proposalId, vault, batchId, totalAssets_, netted, yield, profit, executeAfter);
+        _unlockReentrant();
     }
 
     /// @inheritdoc IkAssetRouter
@@ -374,7 +409,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         address vault = proposal.vault;
         bytes32 batchId = proposal.batchId;
         uint256 totalAssets_ = proposal.totalAssets;
-        uint256 netted = proposal.netted;
+        int256 netted = proposal.netted;
         uint256 yield = proposal.yield;
         bool profit = proposal.profit;
         uint256 requested = $.vaultBatchBalances[vault][batchId].requested;
@@ -416,10 +451,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             }
         }
 
-        // Fetch adapters of the vault(Initially one adapter per vault)
-        // That might change in future upgrades
-        address[] memory adapters = _registry().getAdapters(vault);
-        IAdapter adapter = IAdapter(adapters[0]);
+        IAdapter adapter = IAdapter(_registry().getAdapter(vault, asset));
 
         // If netted assets are positive(it means more deposits than withdrawals)
         if (netted > 0) {
@@ -430,12 +462,12 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             if (vault == dnVault && isKMinter) {
                 // at some point we will have multiple adapters for a vault
                 // for now we just use the first one
-                _checkAddressNotZero(adapters[0]);
-                asset.safeTransfer(address(adapter), netted);
-                adapter.deposit(asset, netted, vault);
+                _checkAddressNotZero(address(adapter));
+                asset.safeTransfer(address(adapter), uint256(netted));
+                adapter.deposit(asset, uint256(netted), vault);
             }
 
-            emit Deposited(vault, asset, netted, isKMinter);
+            emit Deposited(vault, asset, uint256(netted), isKMinter);
         }
 
         // Update vault's total assets
@@ -507,23 +539,22 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         return $.vaultSettlementCooldown;
     }
 
+    function virtualBalance(address vault, address asset) external view returns (uint256) {
+        return _virtualBalance(vault, asset);
+    }
+
     /// @notice Calculates the virtual balance of assets for a vault across all its adapters
     /// @dev This function aggregates asset balances across all adapters connected to a vault to determine
     /// the total virtual balance available for operations. Essential for coordination between physical
     /// asset locations and protocol accounting. Used for settlement calculations and ensuring sufficient
     /// assets are available for redemptions and transfers within the money flow system.
     /// @param vault The vault address to calculate virtual balance for
-    /// @param asset The asset address to query balance for
     /// @return balance The total virtual asset balance across all vault adapters
     function _virtualBalance(address vault, address asset) private view returns (uint256 balance) {
-        address[] memory assets = _getVaultAssets(vault);
-        address[] memory adapters = _registry().getAdapters(vault);
-        uint256 length = adapters.length;
-        for (uint256 i; i < length; ++i) {
-            IAdapter adapter = IAdapter(adapters[i]);
-            // For now, assume single asset per vault (use first asset)
-            balance += adapter.totalAssets(vault, assets[0]);
-        }
+        _isVault(vault);
+        _isAsset(asset);
+        IAdapter adapter = IAdapter(_registry().getAdapter(vault, asset));
+        balance += adapter.totalAssets();
     }
 
     /// @notice Validates that the caller is an authorized kMinter contract
@@ -558,7 +589,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @notice Check if virtual balance is sufficient
     /// @param vault Vault address
-    /// @param asset Asset address
     /// @param requiredAmount Required amount
     function _checkSufficientVirtualBalance(address vault, address asset, uint256 requiredAmount) private view {
         require(_virtualBalance(vault, asset) >= requiredAmount, KASSETROUTER_INSUFFICIENT_VIRTUAL_BALANCE);

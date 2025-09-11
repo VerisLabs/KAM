@@ -24,7 +24,7 @@ import { kAssetRouter } from "src/kAssetRouter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { kMinter } from "src/kMinter.sol";
-import { kRegistry } from "src/kRegistry.sol";
+import { kRegistry } from "src/kRegistry/kRegistry.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { kToken } from "src/kToken.sol";
 
@@ -33,8 +33,7 @@ import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { ReaderModule } from "src/kStakingVault/modules/ReaderModule.sol";
 
 // Adapters
-import { BaseAdapter } from "src/adapters/BaseAdapter.sol";
-import { CustodialAdapter } from "src/adapters/CustodialAdapter.sol";
+import { VaultAdapter } from "src/adapters/VaultAdapter.sol";
 
 // Interfaces
 
@@ -76,8 +75,8 @@ contract DeploymentBaseTest is BaseTest {
     ReaderModule public readerModule;
 
     // Adapters
-    CustodialAdapter public custodialAdapter;
-    CustodialAdapter public custodialAdapterImpl;
+    VaultAdapter public vaultAdapter;
+    VaultAdapter public vaultAdapterImpl;
 
     // Implementation contracts (for upgrades)
     kRegistry public registryImpl;
@@ -293,20 +292,19 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Deploy adapters for external strategy integrations
     function _deployAdapters() internal {
-        // Deploy CustodialAdapter implementation
-        custodialAdapterImpl = new CustodialAdapter();
+        // Deploy VaultAdapter implementation
+        vaultAdapterImpl = new VaultAdapter();
 
         // Deploy ERC1967 proxy with initialization (UUPSUpgradeable pattern)
-        bytes memory custodialInitData =
-            abi.encodeWithSelector(CustodialAdapter.initialize.selector, address(registry), users.owner, users.admin);
+        bytes memory adapterInitData = abi.encodeWithSelector(VaultAdapter.initialize.selector, address(registry));
 
         // Deploy proxy with initialization using ERC1967Factory
-        address custodialProxy = factory.deployAndCall(address(custodialAdapterImpl), users.admin, custodialInitData);
-        custodialAdapter = CustodialAdapter(custodialProxy);
+        address adapterProxy = factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData);
+        vaultAdapter = VaultAdapter(adapterProxy);
 
         // Label for debugging
-        vm.label(address(custodialAdapter), "CustodialAdapter");
-        vm.label(address(custodialAdapterImpl), "CustodialAdapterImpl");
+        vm.label(address(vaultAdapter), "VaultAdapter");
+        vm.label(address(vaultAdapterImpl), "VaultAdapterImpl");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -323,17 +321,12 @@ contract DeploymentBaseTest is BaseTest {
         registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, usdc);
 
         // Register adapters for vaults (if adapters were deployed)
-        if (address(custodialAdapter) != address(0)) {
-            registry.registerAdapter(address(minter), address(custodialAdapter));
-            registry.registerAdapter(address(dnVault), address(custodialAdapter));
-            registry.registerAdapter(address(alphaVault), address(custodialAdapter));
-            registry.registerAdapter(address(betaVault), address(custodialAdapter));
-
-            // Configure custodial adapter destinations for each vault
-            // For testing, use the treasury address as the custodial destination
-            custodialAdapter.setVaultDestination(address(dnVault), users.treasury);
-            custodialAdapter.setVaultDestination(address(alphaVault), users.treasury);
-            custodialAdapter.setVaultDestination(address(betaVault), users.treasury);
+        if (address(vaultAdapter) != address(0)) {
+            registry.registerAdapter(address(minter), usdc, address(vaultAdapter));
+            registry.registerAdapter(address(minter), wbtc, address(vaultAdapter));
+            registry.registerAdapter(address(dnVault), usdc, address(vaultAdapter));
+            registry.registerAdapter(address(alphaVault), usdc, address(vaultAdapter));
+            registry.registerAdapter(address(betaVault), usdc, address(vaultAdapter));
         }
 
         vm.stopPrank();
@@ -503,7 +496,7 @@ contract DeploymentBaseTest is BaseTest {
         assertTrue(registry.isVault(address(betaVault)));
 
         // Check adapters are deployed and initialized (disabled for debugging)
-        assertTrue(address(custodialAdapter) != address(0));
+        assertTrue(address(vaultAdapter) != address(0));
     }
 
     /// @dev Get current protocol state for debugging

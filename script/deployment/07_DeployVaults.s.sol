@@ -27,6 +27,8 @@ contract DeployVaultsScript is Script, DeploymentManager {
         require(
             existing.contracts.readerModule != address(0), "readerModule not deployed - run 06_DeployVaultModules first"
         );
+        require(existing.contracts.kUSD != address(0), "kUSD not deployed - run 05_DeployTokens first");
+        require(existing.contracts.kBTC != address(0), "kBTC not deployed - run 05_DeployTokens first");
 
         console.log("=== DEPLOYING VAULTS ===");
         console.log("Network:", config.network);
@@ -38,7 +40,8 @@ contract DeployVaultsScript is Script, DeploymentManager {
         stakingVaultImpl = address(new kStakingVault());
 
         // Deploy vaults
-        address dnVault = _deployDNVault();
+        address dnVaultUSDC = _deployDNVaultUSDC();
+        address dnVaultWBTC = _deployDNVaultWBTC();
         address alphaVault = _deployAlphaVault();
         address betaVault = _deployBetaVault();
 
@@ -46,19 +49,21 @@ contract DeployVaultsScript is Script, DeploymentManager {
 
         console.log("=== DEPLOYMENT COMPLETE ===");
         console.log("kStakingVault implementation deployed at:", stakingVaultImpl);
-        console.log("DN Vault proxy deployed at:", dnVault);
+        console.log("DN Vault USDC proxy deployed at:", dnVaultUSDC);
+        console.log("DN Vault WBTC proxy deployed at:", dnVaultWBTC);
         console.log("Alpha Vault proxy deployed at:", alphaVault);
         console.log("Beta Vault proxy deployed at:", betaVault);
         console.log("Network:", config.network);
 
         // Auto-write contract addresses to deployment JSON
         writeContractAddress("kStakingVaultImpl", stakingVaultImpl);
-        writeContractAddress("dnVault", dnVault);
+        writeContractAddress("dnVaultUSDC", dnVaultUSDC);
+        writeContractAddress("dnVaultWBTC", dnVaultWBTC);
         writeContractAddress("alphaVault", alphaVault);
         writeContractAddress("betaVault", betaVault);
     }
 
-    function _deployDNVault() internal returns (address) {
+    function _deployDNVaultUSDC() internal returns (address) {
         return factory.deployAndCall(
             stakingVaultImpl,
             msg.sender,
@@ -67,10 +72,27 @@ contract DeployVaultsScript is Script, DeploymentManager {
                 config.roles.owner,
                 existing.contracts.kRegistry,
                 false,
-                "DN KAM Vault",
+                "KAM DN Vault USD",
                 "dnkUSD",
                 6,
-                config.assets.USDC
+                config.assets.USDC // Uses USDC as underlying asset
+            )
+        );
+    }
+
+    function _deployDNVaultWBTC() internal returns (address) {
+        return factory.deployAndCall(
+            stakingVaultImpl,
+            msg.sender,
+            abi.encodeWithSelector(
+                kStakingVault.initialize.selector,
+                config.roles.owner,
+                existing.contracts.kRegistry,
+                false,
+                "KAM DN Vault BTC",
+                "dnkBTC",
+                8,
+                config.assets.WBTC // Uses WBTC as underlying asset
             )
         );
     }
@@ -84,10 +106,10 @@ contract DeployVaultsScript is Script, DeploymentManager {
                 config.roles.owner,
                 existing.contracts.kRegistry,
                 false,
-                "Alpha KAM Vault",
+                "KAM Alpha Vault USD",
                 "akUSD",
                 6,
-                config.assets.USDC
+                config.assets.USDC // Uses USDC as underlying asset
             )
         );
     }
@@ -101,10 +123,10 @@ contract DeployVaultsScript is Script, DeploymentManager {
                 config.roles.owner,
                 existing.contracts.kRegistry,
                 false,
-                "Beta KAM Vault",
+                "KAM Beta Vault USD",
                 "bkUSD",
                 6,
-                config.assets.USDC
+                config.assets.USDC // Uses USDC as underlying asset
             )
         );
     }

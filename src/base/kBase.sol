@@ -348,12 +348,12 @@ contract kBase is OptimizedReentrancyGuardTransient {
     /// @notice Checks if an address is the kMinter contract
     /// @dev Validates if the caller is the protocol's kMinter singleton for access control in vault operations.
     /// Used to ensure only kMinter can trigger institutional deposit and redemption flows.
-    /// @param user The address to check against kMinter
+    /// @param vault The address to check against kMinter
     /// @return Whether the address is the registered kMinter contract
-    function _isKMinter(address user) internal view returns (bool) {
+    function _isKMinter(address vault) internal view returns (bool) {
         bool isTrue;
         address _kminter = _registry().getContractById(K_MINTER);
-        if (_kminter == user) isTrue = true;
+        if (_kminter == vault) isTrue = true;
         return isTrue;
     }
 

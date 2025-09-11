@@ -41,7 +41,7 @@ interface IkAssetRouter {
         /// @dev Total asset value in the vault after yield generation
         uint256 totalAssets;
         /// @dev Net amount of new deposits/redemptions in this batch
-        uint256 netted;
+        int256 netted;
         /// @dev Absolute yield amount (positive or negative) generated in this batch
         uint256 yield;
         /// @dev True if yield is positive (profit), false if negative (loss)
@@ -167,7 +167,7 @@ interface IkAssetRouter {
         address indexed vault,
         bytes32 indexed batchId,
         uint256 totalAssets,
-        uint256 netted,
+        int256 netted,
         uint256 yield,
         bool profit,
         uint256 executeAfter
@@ -299,18 +299,11 @@ interface IkAssetRouter {
     /// @param vault The DN vault address where yield was generated
     /// @param batchId The batch identifier for this settlement period
     /// @param totalAssets Total asset value in the vault after yield generation/loss
-    /// @param netted Net amount of new deposits minus redemptions in this batch
-    /// @param yield Absolute amount of yield generated (positive) or lost (negative)
-    /// @param profit True if yield is positive (will mint kTokens), false if negative (will burn kTokens)
-    /// @return proposalId Unique identifier for this settlement proposal for tracking and execution
     function proposeSettleBatch(
         address asset,
         address vault,
         bytes32 batchId,
-        uint256 totalAssets,
-        uint256 netted,
-        uint256 yield,
-        bool profit
+        uint256 totalAssets
     )
         external
         payable
@@ -429,6 +422,16 @@ interface IkAssetRouter {
     /// maintaining protocol integrity during yield distribution processes.
     /// @return cooldown The current cooldown period in seconds
     function getSettlementCooldown() external view returns (uint256 cooldown);
+
+    /// @notice Retrieves the virtual balance of assets for a vault across all its adapters
+    /// @dev This function aggregates asset balances across all adapters connected to a vault to determine
+    /// the total virtual balance available for operations. Essential for coordination between physical
+    /// asset locations and protocol accounting. Used for settlement calculations and ensuring sufficient
+    /// assets are available for redemptions and transfers within the money flow system.
+    /// @param vault The vault address to calculate virtual balance for
+    /// @param asset The underlying asset of the vault
+    /// @return balance The total virtual asset balance across all vault adapters
+    function virtualBalance(address vault, address asset) external view returns (uint256);
 
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO

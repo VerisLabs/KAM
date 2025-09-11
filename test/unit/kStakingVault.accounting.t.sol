@@ -149,9 +149,8 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         vault.closeBatch(batchId, true);
 
         vm.prank(users.relayer);
-        bytes32 proposalId = assetRouter.proposeSettleBatch(
-            getUSDC(), address(vault), batchId, INITIAL_DEPOSIT + bobDeposit, bobDeposit, 0, false
-        );
+        bytes32 proposalId =
+            assetRouter.proposeSettleBatch(getUSDC(), address(vault), batchId, INITIAL_DEPOSIT + bobDeposit);
         vm.prank(users.relayer);
         assetRouter.executeSettleBatch(proposalId);
 

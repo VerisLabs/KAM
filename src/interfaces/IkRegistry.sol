@@ -294,13 +294,15 @@ interface IkRegistry {
 
     /// @notice Emitted when an adapter is registered for a vault
     /// @param vault The vault receiving the adapter
+    /// @param asset The asset of the vault
     /// @param adapter The adapter contract address
-    event AdapterRegistered(address indexed vault, address indexed adapter);
+    event AdapterRegistered(address indexed vault, address asset, address indexed adapter);
 
     /// @notice Emitted when an adapter is removed from a vault
     /// @param vault The vault losing the adapter
+    /// @param asset The asset of the vault
     /// @param adapter The adapter being removed
-    event AdapterRemoved(address indexed vault, address indexed adapter);
+    event AdapterRemoved(address indexed vault, address asset, address indexed adapter);
 
     /// @notice Emitted when a new kToken is deployed
     /// @param kTokenContract The deployed kToken address
@@ -333,9 +335,32 @@ interface IkRegistry {
     /// @param hurdleRate The hurdle rate in basis points
     event HurdleRateSet(address indexed asset, uint16 hurdleRate);
 
+    /// @notice Emitted when a vault-target-selector permission is registered
+    /// @param vault The vault receiving the permission
+    /// @param target The target contract address
+    /// @param selector The function selector being allowed
+    event VaultTargetSelectorRegistered(address indexed vault, address indexed target, bytes4 indexed selector);
+
+    /// @notice Emitted when a vault-target-selector permission is removed
+    /// @param vault The vault losing the permission
+    /// @param target The target contract address
+    /// @param selector The function selector being removed
+    event VaultTargetSelectorRemoved(address indexed vault, address indexed target, bytes4 indexed selector);
+
     /*//////////////////////////////////////////////////////////////
                               FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Emergency function to rescue accidentally sent assets (ETH or ERC20) from the contract
+    /// @dev This function provides a recovery mechanism for assets mistakenly sent to the registry. It includes
+    /// critical safety checks: (1) Only callable by ADMIN_ROLE to prevent unauthorized access, (2) Cannot rescue
+    /// registered protocol assets to prevent draining legitimate funds, (3) Validates amounts and balances.
+    /// For ETH rescue, use address(0) as the asset parameter. The function ensures protocol integrity by
+    /// preventing rescue of assets that are part of normal protocol operations.
+    /// @param asset_ The asset address to rescue (use address(0) for ETH)
+    /// @param to_ The destination address that will receive the rescued assets
+    /// @param amount_ The amount of assets to rescue (must not exceed contract balance)
+    function rescueAssets(address asset_, address to_, uint256 amount_) external payable;
 
     /// @notice Registers a core singleton contract in the protocol
     /// @dev Only callable by ADMIN_ROLE. Ensures single source of truth for protocol contracts.
@@ -381,15 +406,17 @@ interface IkRegistry {
     /// @notice Registers an external protocol adapter for a vault
     /// @dev Enables yield strategy integrations through external DeFi protocols. Only callable by ADMIN_ROLE.
     /// @param vault The vault address receiving the adapter
+    /// @param asset The vault underlying asset
     /// @param adapter The adapter contract address
-    function registerAdapter(address vault, address adapter) external payable;
+    function registerAdapter(address vault, address asset, address adapter) external payable;
 
     /// @notice Removes an adapter from a vault's registered adapter set
     /// @dev This disables a specific external protocol integration for the vault. Only callable by ADMIN_ROLE
     /// to ensure proper risk assessment before removing yield strategies.
     /// @param vault The vault address to remove the adapter from
+    /// @param asset The vault underlying asset
     /// @param adapter The adapter address to remove
-    function removeAdapter(address vault, address adapter) external payable;
+    function removeAdapter(address vault, address asset, address adapter) external payable;
 
     /// @notice Grants institution role to enable privileged protocol access
     /// @dev Only callable by VENDOR_ROLE. Institutions gain access to kMinter and other premium features.
@@ -406,17 +433,16 @@ interface IkRegistry {
     /// @param relayer_ The address to grant relayer privileges
     function grantRelayerRole(address relayer_) external payable;
 
+    /// @notice Grants manager role for vault adapter operations
+    /// @dev Only callable by ADMIN_ROLE. Relayers manage external vaults and set hurdle rates.
+    /// @param manager_ The address to grant manager privileges
+    function grantManagerRole(address manager_) external payable;
+
     /// @notice Retrieves a singleton contract address by identifier
     /// @dev Reverts if contract not registered. Used for protocol contract discovery.
     /// @param id Contract identifier (e.g., K_MINTER, K_ASSET_ROUTER)
     /// @return The contract address
     function getContractById(bytes32 id) external view returns (address);
-
-    /// @notice Retrieves a singleton asset address by identifier
-    /// @dev Reverts if asset not registered. Provides named access to common assets.
-    /// @param id Asset identifier (e.g., USDC, WBTC)
-    /// @return The asset address
-    function getAssetById(bytes32 id) external view returns (address);
 
     /// @notice Gets all protocol-supported asset addresses
     /// @dev Returns the complete whitelist of supported underlying assets.
@@ -499,15 +525,17 @@ interface IkRegistry {
     /// @notice Gets all adapters registered for a specific vault
     /// @dev Returns external protocol integrations enabling yield strategies.
     /// @param vault The vault address to query
+    /// @param asset The underlying asset of the vault
     /// @return Array of adapter addresses for the vault
-    function getAdapters(address vault) external view returns (address[] memory);
+    function getAdapter(address vault, address asset) external view returns (address);
 
     /// @notice Checks if a specific adapter is registered for a vault
     /// @dev Used to validate adapter-vault relationships before operations.
     /// @param vault The vault address to check
+    /// @param asset The underlying asset of the vault
     /// @param adapter The adapter address to verify
     /// @return True if adapter is registered for the vault
-    function isAdapterRegistered(address vault, address adapter) external view returns (bool);
+    function isAdapterRegistered(address vault, address asset, address adapter) external view returns (bool);
 
     /// @notice Gets all assets managed by a specific vault
     /// @dev Most vaults manage single asset, some (like kMinter) handle multiple.
