@@ -53,13 +53,19 @@ contract ConfigureProtocolScript is Script, DeploymentManager {
         console.log("2. Registering adapters with vaults...");
 
         // Register adapters for DN vaults
-        registry.registerAdapter(existing.contracts.dnVaultUSDC, config.assets.USDC, existing.contracts.dnVaultAdapterUSDC);
+        registry.registerAdapter(
+            existing.contracts.dnVaultUSDC, config.assets.USDC, existing.contracts.dnVaultAdapterUSDC
+        );
         console.log("   - Registered DN Vault USDC Adapter for DN Vault USDC");
-        registry.registerAdapter(existing.contracts.dnVaultWBTC, config.assets.WBTC, existing.contracts.dnVaultAdapterWBTC);
+        registry.registerAdapter(
+            existing.contracts.dnVaultWBTC, config.assets.WBTC, existing.contracts.dnVaultAdapterWBTC
+        );
         console.log("   - Registered DN Vault WBTC Adapter for DN Vault WBTC");
-        
+
         // Register adapters for Alpha and Beta vaults
-        registry.registerAdapter(existing.contracts.alphaVault, config.assets.USDC, existing.contracts.alphaVaultAdapter);
+        registry.registerAdapter(
+            existing.contracts.alphaVault, config.assets.USDC, existing.contracts.alphaVaultAdapter
+        );
         console.log("   - Registered Alpha Vault Adapter for Alpha Vault");
         registry.registerAdapter(existing.contracts.betaVault, config.assets.USDC, existing.contracts.betaVaultAdapter);
         console.log("   - Registered Beta Vault Adapter for Beta Vault");

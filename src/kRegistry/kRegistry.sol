@@ -103,7 +103,7 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
         mapping(address => address) assetToKToken;
         /// @dev Maps vaults to their registered external protocol adapters
         /// Enables yield strategies through DeFi protocol integrations
-        mapping(address => mapping(address=> address)) vaultAdaptersByAsset;
+        mapping(address => mapping(address => address)) vaultAdaptersByAsset;
         /// @dev Tracks whether an adapter address is registered in the protocol
         /// Used for validation and security checks on adapter operations
         mapping(address => bool) registeredAdapters;
@@ -356,7 +356,7 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
 
         kRegistryStorage storage $ = _getkRegistryStorage();
         _checkAssetRegistered(asset);
-        
+
         // Associate vault with the asset it manages
         $.vaultAsset[vault].add(asset);
 
@@ -367,14 +367,14 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
         $.vaultsByAsset[asset].add(vault);
 
         address kMinter_ = $.singletonContracts[K_MINTER];
-        if(kMinter_ == vault && $.allVaults.contains(kMinter_)) return; 
-        
+        if (kMinter_ == vault && $.allVaults.contains(kMinter_)) return;
+
         // Classify vault by type for routing logic
         $.vaultType[vault] = uint8(type_);
 
         require(!$.allVaults.contains(vault), KREGISTRY_ALREADY_REGISTERED);
         $.allVaults.add(vault);
-        
+
         emit VaultRegistered(vault, asset, type_);
     }
 
@@ -400,7 +400,7 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
         kRegistryStorage storage $ = _getkRegistryStorage();
 
         // Ensure vault exists in protocol before adding adapter
-        if($.singletonContracts[K_MINTER] != vault) _checkVaultRegistered(vault);
+        if ($.singletonContracts[K_MINTER] != vault) _checkVaultRegistered(vault);
 
         require($.vaultAdaptersByAsset[vault][asset] == address(0), KREGISTRY_ADAPTER_ALREADY_SET);
 

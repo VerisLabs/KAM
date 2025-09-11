@@ -335,7 +335,8 @@ abstract contract DeploymentManager is Script {
         json = string.concat(json, '"kBTC":"', vm.toString(output.contracts.kBTC), '",');
         json = string.concat(json, '"kStakingVaultImpl":"', vm.toString(output.contracts.kStakingVaultImpl), '",');
         json = string.concat(json, '"readerModule":"', vm.toString(output.contracts.readerModule), '",');
-        json = string.concat(json, '"adapterGuardianModule":"', vm.toString(output.contracts.adapterGuardianModule), '",');
+        json =
+            string.concat(json, '"adapterGuardianModule":"', vm.toString(output.contracts.adapterGuardianModule), '",');
         json = string.concat(json, '"dnVault":"', vm.toString(output.contracts.dnVault), '",');
         json = string.concat(json, '"dnVaultUSDC":"', vm.toString(output.contracts.dnVaultUSDC), '",');
         json = string.concat(json, '"dnVaultWBTC":"', vm.toString(output.contracts.dnVaultWBTC), '",');
