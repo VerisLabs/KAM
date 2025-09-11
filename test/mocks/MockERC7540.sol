@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { IERC7540 } from "src/interfaces/IERC7540.sol";
 import { ERC20 } from "src/vendor/ERC20.sol";
 import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
-import { IERC7540 } from "src/interfaces/IERC7540.sol";
 
 /// @title MockERC7540
 /// @notice Mock implementation of ERC7540 vault for testing
@@ -39,11 +39,11 @@ contract MockERC7540 is IERC7540, ERC20 {
     function decimals() public view override(ERC20, IERC7540) returns (uint8) {
         return _decimals;
     }
-    
+
     function balanceOf(address owner) public view override(ERC20, IERC7540) returns (uint256) {
         return super.balanceOf(owner);
     }
-    
+
     function totalSupply() public view override(ERC20, IERC7540) returns (uint256) {
         return super.totalSupply();
     }
@@ -76,15 +76,19 @@ contract MockERC7540 is IERC7540, ERC20 {
         uint256 assets,
         address controller,
         address owner
-    ) external override returns (uint256 requestId) {
+    )
+        external
+        override
+        returns (uint256 requestId)
+    {
         require(owner == msg.sender || _operators[owner][msg.sender], "Not authorized");
-        
+
         // Transfer assets from owner to vault
         _asset.safeTransferFrom(owner, address(this), assets);
-        
+
         _pendingDepositRequests[controller] += assets;
         _claimableDepositRequests[controller] += assets; // Auto-approve in mock
-        
+
         requestId = ++_requestCounter;
     }
 
@@ -92,24 +96,16 @@ contract MockERC7540 is IERC7540, ERC20 {
         return _deposit(assets, to, msg.sender);
     }
 
-    function deposit(
-        uint256 assets,
-        address to,
-        address controller
-    ) external override returns (uint256 shares) {
+    function deposit(uint256 assets, address to, address controller) external override returns (uint256 shares) {
         return _deposit(assets, to, controller);
     }
 
-    function _deposit(
-        uint256 assets,
-        address to,
-        address controller
-    ) internal returns (uint256 shares) {
+    function _deposit(uint256 assets, address to, address controller) internal returns (uint256 shares) {
         require(_claimableDepositRequests[controller] >= assets, "Insufficient claimable deposit");
-        
+
         _claimableDepositRequests[controller] -= assets;
         _pendingDepositRequests[controller] -= assets;
-        
+
         shares = assets; // 1:1 conversion
         _mint(to, shares);
     }
@@ -118,29 +114,29 @@ contract MockERC7540 is IERC7540, ERC20 {
         uint256 shares,
         address controller,
         address owner
-    ) external override returns (uint256 requestId) {
+    )
+        external
+        override
+        returns (uint256 requestId)
+    {
         require(owner == msg.sender || _operators[owner][msg.sender], "Not authorized");
         require(balanceOf(owner) >= shares, "Insufficient balance");
-        
+
         // Transfer shares from owner to vault (burn them)
         _burn(owner, shares);
-        
+
         _pendingRedeemRequests[controller] += shares;
         _claimableRedeemRequests[controller] += shares; // Auto-approve in mock
-        
+
         requestId = ++_requestCounter;
     }
 
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address controller
-    ) external override returns (uint256 assets) {
+    function redeem(uint256 shares, address receiver, address controller) external override returns (uint256 assets) {
         require(_claimableRedeemRequests[controller] >= shares, "Insufficient claimable redeem");
-        
+
         _claimableRedeemRequests[controller] -= shares;
         _pendingRedeemRequests[controller] -= shares;
-        
+
         assets = shares; // 1:1 conversion
         _asset.safeTransfer(receiver, assets);
     }
@@ -149,13 +145,17 @@ contract MockERC7540 is IERC7540, ERC20 {
         uint256 assets,
         address receiver,
         address controller
-    ) external override returns (uint256 shares) {
+    )
+        external
+        override
+        returns (uint256 shares)
+    {
         shares = assets; // 1:1 conversion
         require(_claimableRedeemRequests[controller] >= shares, "Insufficient claimable redeem");
-        
+
         _claimableRedeemRequests[controller] -= shares;
         _pendingRedeemRequests[controller] -= shares;
-        
+
         _asset.safeTransfer(receiver, assets);
     }
 

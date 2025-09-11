@@ -296,7 +296,7 @@ interface IkRegistry {
     /// @param vault The vault receiving the adapter
     /// @param asset The asset of the vault
     /// @param adapter The adapter contract address
-    event AdapterRegistered(address indexed vault, address asset,  address indexed adapter);
+    event AdapterRegistered(address indexed vault, address asset, address indexed adapter);
 
     /// @notice Emitted when an adapter is removed from a vault
     /// @param vault The vault losing the adapter
@@ -437,7 +437,7 @@ interface IkRegistry {
     /// @dev Only callable by ADMIN_ROLE. Relayers manage external vaults and set hurdle rates.
     /// @param manager_ The address to grant manager privileges
     function grantManagerRole(address manager_) external payable;
-    
+
     /// @notice Retrieves a singleton contract address by identifier
     /// @dev Reverts if contract not registered. Used for protocol contract discovery.
     /// @param id Contract identifier (e.g., K_MINTER, K_ASSET_ROUTER)

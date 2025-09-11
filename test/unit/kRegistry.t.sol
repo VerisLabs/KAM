@@ -329,7 +329,8 @@ contract kRegistryTest is DeploymentBaseTest {
     /// @dev Test isAdapterRegistered returns false for non-existent adapter
     function test_IsAdapterRegistered_NonExistent() public view {
         assertFalse(
-            registry.isAdapterRegistered(TEST_VAULT, TEST_ASSET, TEST_ADAPTER), "Should return false for non-existent adapter"
+            registry.isAdapterRegistered(TEST_VAULT, TEST_ASSET, TEST_ADAPTER),
+            "Should return false for non-existent adapter"
         );
     }
 
@@ -783,7 +784,9 @@ contract kRegistryTest is DeploymentBaseTest {
         registry.registerAdapter(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);
 
         // Verify adapter is registered
-        assertTrue(registry.isAdapterRegistered(TEST_VAULT, TEST_ASSET, TEST_ADAPTER), "Adapter should be registered initially");
+        assertTrue(
+            registry.isAdapterRegistered(TEST_VAULT, TEST_ASSET, TEST_ADAPTER), "Adapter should be registered initially"
+        );
 
         // Remove adapter
         registry.removeAdapter(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);

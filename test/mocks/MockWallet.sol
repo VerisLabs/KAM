@@ -23,7 +23,7 @@ contract MockWallet {
     }
 
     /// @notice Receive ETH
-    receive() external payable {}
+    receive() external payable { }
 
     /// @notice Get balance of a token in this wallet
     /// @param token The token address

@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 interface IERC7540 {
-
     function balanceOf(address) external view returns (uint256);
 
     function name() external view returns (string memory);

@@ -181,7 +181,9 @@ contract DeployMockAssetsScript is Script, DeploymentManager {
         MockERC7540 mockERC7540USDC,
         MockERC7540 mockERC7540WBTC,
         MockWallet mockWalletUSDC
-    ) internal {
+    )
+        internal
+    {
         console.log("=== MINTING TOKENS TO MOCK TARGETS ===");
 
         vm.startBroadcast();
