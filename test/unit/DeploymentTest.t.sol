@@ -6,7 +6,7 @@ import { ADMIN_ROLE, INSTITUTION_ROLE, MINTER_ROLE, _1_USDC, _1_WBTC } from "../
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { OptimizedOwnableRoles } from "src/vendor/solady/auth/OptimizedOwnableRoles.sol";
+import { OptimizedOwnableRoles } from "solady/auth/OptimizedOwnableRoles.sol";
 
 /// @title DeploymentTest
 /// @notice Test contract to verify protocol deployment works correctly

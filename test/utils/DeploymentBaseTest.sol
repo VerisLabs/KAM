@@ -15,8 +15,8 @@ import {
     _1_USDC,
     _1_WBTC
 } from "./Constants.sol";
-import { OptimizedOwnableRoles } from "src/vendor/solady/auth/OptimizedOwnableRoles.sol";
-import { ERC1967Factory } from "src/vendor/solady/utils/ERC1967Factory.sol";
+import { OptimizedOwnableRoles } from "solady/auth/OptimizedOwnableRoles.sol";
+import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 // Protocol contracts
 import { kAssetRouter } from "src/kAssetRouter.sol";

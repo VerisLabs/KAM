@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { OptimizedOwnableRoles } from "src/vendor/solady/auth/OptimizedOwnableRoles.sol";
+import { OptimizedOwnableRoles } from "solady/auth/OptimizedOwnableRoles.sol";
 
 import {
     KROLESBASE_ALREADY_INITIALIZED,

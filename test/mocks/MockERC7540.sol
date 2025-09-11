@@ -2,8 +2,8 @@
 pragma solidity 0.8.30;
 
 import { IERC7540 } from "src/interfaces/IERC7540.sol";
-import { ERC20 } from "src/vendor/solady/tokens/ERC20.sol";
-import { SafeTransferLib } from "src/vendor/solady/utils/SafeTransferLib.sol";
+import { ERC20 } from "solady/tokens/ERC20.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 /// @title MockERC7540
 /// @notice Mock implementation of ERC7540 vault for testing

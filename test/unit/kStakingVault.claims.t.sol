@@ -6,7 +6,7 @@ import { _1_USDC } from "../utils/Constants.sol";
 
 import { console2 } from "forge-std/console2.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { SafeTransferLib } from "src/vendor/solady/utils/SafeTransferLib.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";

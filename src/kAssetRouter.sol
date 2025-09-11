@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { OptimizedEfficientHashLib } from "src/vendor/solady/utils/OptimizedEfficientHashLib.sol";
-import { OptimizedFixedPointMathLib } from "src/vendor/solady/utils/OptimizedFixedPointMathLib.sol";
+import { OptimizedEfficientHashLib } from "solady/utils/OptimizedEfficientHashLib.sol";
+import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 
-import { Initializable } from "src/vendor/solady/utils/Initializable.sol";
-import { Multicallable } from "src/vendor/solady/utils/Multicallable.sol";
-import { OptimizedSafeCastLib } from "src/vendor/solady/utils/OptimizedSafeCastLib.sol";
-import { SafeTransferLib } from "src/vendor/solady/utils/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "src/vendor/solady/utils/UUPSUpgradeable.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
+import { Multicallable } from "solady/utils/Multicallable.sol";
+import { OptimizedSafeCastLib } from "solady/utils/OptimizedSafeCastLib.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { kBase } from "src/base/kBase.sol";
 import {

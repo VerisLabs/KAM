@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { Proxy } from "src/vendor/openzeppelin/Proxy.sol";
+import { Proxy } from "openzeppelin/Proxy.sol";
 
 /// @title MultiFacetProxy
 /// @notice A proxy contract that can route function calls to different implementation contracts

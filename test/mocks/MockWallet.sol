@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { SafeTransferLib } from "src/vendor/solady/utils/SafeTransferLib.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 /// @title MockWallet
 /// @notice Mock wallet contract for testing asset transfers

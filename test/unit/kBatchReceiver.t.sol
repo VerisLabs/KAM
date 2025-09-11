@@ -5,7 +5,7 @@ import { _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { OptimizedLibClone } from "src/vendor/solady/utils/OptimizedLibClone.sol";
+import { OptimizedLibClone } from "solady/utils/OptimizedLibClone.sol";
 
 import {
     KBATCHRECEIVER_ALREADY_INITIALIZED,
