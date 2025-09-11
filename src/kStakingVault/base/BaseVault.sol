@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ERC20 } from "src/vendor/ERC20.sol";
+import { ERC20 } from "src/vendor/solady/tokens/ERC20.sol";
 
-import { OptimizedBytes32EnumerableSetLib } from "src/libraries/OptimizedBytes32EnumerableSetLib.sol";
-import { OptimizedFixedPointMathLib } from "src/libraries/OptimizedFixedPointMathLib.sol";
-import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
+import { OptimizedBytes32EnumerableSetLib } from
+    "src/vendor/solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedFixedPointMathLib } from "src/vendor/solady/utils/OptimizedFixedPointMathLib.sol";
+import { SafeTransferLib } from "src/vendor/solady/utils/SafeTransferLib.sol";
 
-import { OptimizedReentrancyGuardTransient } from "src/abstracts/OptimizedReentrancyGuardTransient.sol";
+import { OptimizedReentrancyGuardTransient } from "src/vendor/solady/utils/OptimizedReentrancyGuardTransient.sol";
 
 import {
     BASEVAULT_ALREADY_INITIALIZED,

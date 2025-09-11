@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { Extsload } from "src/abstracts/Extsload.sol";
-import { OptimizedFixedPointMathLib } from "src/libraries/OptimizedFixedPointMathLib.sol";
+import { OptimizedFixedPointMathLib } from "src/vendor/solady/utils/OptimizedFixedPointMathLib.sol";
+import { Extsload } from "src/vendor/uniswap/Extsload.sol";
 
 import {
     KSTAKINGVAULT_NOT_INITIALIZED,

@@ -16,18 +16,16 @@ import {
     VAULTADAPTER_ZERO_ADDRESS,
     VAULTADAPTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
-import { Initializable } from "src/vendor/Initializable.sol";
-import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
+import { Initializable } from "src/vendor/solady/utils/Initializable.sol";
+import { SafeTransferLib } from "src/vendor/solady/utils/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "src/vendor/solady/utils/UUPSUpgradeable.sol";
 
 import { IRegistry } from "src/interfaces/IRegistry.sol";
 import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
 
-import { OptimizedAddressEnumerableSetLib } from "src/libraries/OptimizedAddressEnumerableSetLib.sol";
-import { OptimizedLibCall } from "src/libraries/OptimizedLibCall.sol";
-import { Initializable } from "src/vendor/Initializable.sol";
-import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
+import { OptimizedAddressEnumerableSetLib } from
+    "src/vendor/solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
+import { OptimizedLibCall } from "src/vendor/solady/utils/OptimizedLibCall.sol";
 
 /// @title VaultAdapter
 contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {

@@ -6,8 +6,8 @@ import { _1_USDC } from "../utils/Constants.sol";
 
 import { console } from "forge-std/console.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { OptimizedFixedPointMathLib } from "src/libraries/OptimizedFixedPointMathLib.sol";
-import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
+import { OptimizedFixedPointMathLib } from "src/vendor/solady/utils/OptimizedFixedPointMathLib.sol";
+import { SafeTransferLib } from "src/vendor/solady/utils/SafeTransferLib.sol";
 
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";

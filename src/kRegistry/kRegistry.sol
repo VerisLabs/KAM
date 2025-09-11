@@ -2,11 +2,12 @@
 pragma solidity 0.8.30;
 
 import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
-import { OptimizedAddressEnumerableSetLib } from "src/libraries/OptimizedAddressEnumerableSetLib.sol";
-import { Initializable } from "src/vendor/Initializable.sol";
+import { OptimizedAddressEnumerableSetLib } from
+    "src/vendor/solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
+import { Initializable } from "src/vendor/solady/utils/Initializable.sol";
 
-import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
+import { SafeTransferLib } from "src/vendor/solady/utils/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "src/vendor/solady/utils/UUPSUpgradeable.sol";
 
 import { kRolesBase } from "src/base/kRolesBase.sol";
 import {

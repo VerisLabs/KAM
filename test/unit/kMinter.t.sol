@@ -7,7 +7,7 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { kBase } from "src/base/kBase.sol";
-import { ERC1967Factory } from "src/vendor/ERC1967Factory.sol";
+import { ERC1967Factory } from "src/vendor/solady/utils/ERC1967Factory.sol";
 
 import {
     KBASE_WRONG_ROLE,

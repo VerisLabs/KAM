@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import { Script } from "forge-std/Script.sol";
 import { console } from "forge-std/console.sol";
-import { ERC1967Factory } from "src/vendor/ERC1967Factory.sol";
+import { ERC1967Factory } from "src/vendor/solady/utils/ERC1967Factory.sol";
 
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
 import { VaultAdapter } from "src/adapters/VaultAdapter.sol";

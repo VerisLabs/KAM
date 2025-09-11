@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { OptimizedReentrancyGuardTransient } from "src/abstracts/OptimizedReentrancyGuardTransient.sol";
-import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
+import { OptimizedReentrancyGuardTransient } from "src/vendor/solady/utils/OptimizedReentrancyGuardTransient.sol";
+import { SafeTransferLib } from "src/vendor/solady/utils/SafeTransferLib.sol";
 
 import {
     KBASE_ALREADY_INITIALIZED,

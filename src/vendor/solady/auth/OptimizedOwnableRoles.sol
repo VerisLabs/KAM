@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import { Ownable } from "../vendor/Ownable.sol";
+import { Ownable } from "./Ownable.sol";
 
 /// @notice Simple single owner and multiroles authorization mixin.
 /// @author Originally by Solady (https://github.com/vectorized/solady/blob/main/src/auth/OwnableRoles.sol)
