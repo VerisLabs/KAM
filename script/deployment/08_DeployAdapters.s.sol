@@ -45,6 +45,12 @@ contract DeployAdaptersScript is Script, DeploymentManager {
         // Deploy Beta Vault Adapter
         address betaVaultAdapter = factory.deployAndCall(address(vaultAdapterImpl), msg.sender, adapterInitData);
 
+        // Deploy kMinter USDC Adapter
+        address kMinterAdapterUSDC = factory.deployAndCall(address(vaultAdapterImpl), msg.sender, adapterInitData);
+
+        // Deploy kMinter WBTC Adapter
+        address kMinterAdapterWBTC = factory.deployAndCall(address(vaultAdapterImpl), msg.sender, adapterInitData);
+
         vm.stopBroadcast();
 
         console.log("=== DEPLOYMENT COMPLETE ===");
@@ -53,6 +59,8 @@ contract DeployAdaptersScript is Script, DeploymentManager {
         console.log("DN Vault WBTC Adapter deployed at:", dnVaultAdapterWBTC);
         console.log("Alpha Vault Adapter deployed at:", alphaVaultAdapter);
         console.log("Beta Vault Adapter deployed at:", betaVaultAdapter);
+        console.log("kMinter USDC Adapter deployed at:", kMinterAdapterUSDC);
+        console.log("kMinter WBTC Adapter deployed at:", kMinterAdapterWBTC);
         console.log("Registry:", existing.contracts.kRegistry);
         console.log("Network:", config.network);
         console.log("");
@@ -65,5 +73,7 @@ contract DeployAdaptersScript is Script, DeploymentManager {
         writeContractAddress("dnVaultAdapterWBTC", dnVaultAdapterWBTC);
         writeContractAddress("alphaVaultAdapter", alphaVaultAdapter);
         writeContractAddress("betaVaultAdapter", betaVaultAdapter);
+        writeContractAddress("kMinterAdapterUSDC", kMinterAdapterUSDC);
+        writeContractAddress("kMinterAdapterWBTC", kMinterAdapterWBTC);
     }
 }

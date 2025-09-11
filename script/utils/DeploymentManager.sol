@@ -65,6 +65,8 @@ abstract contract DeploymentManager is Script {
         address dnVaultAdapterWBTC;
         address alphaVaultAdapter;
         address betaVaultAdapter;
+        address kMinterAdapterUSDC;
+        address kMinterAdapterWBTC;
         address mockERC7540USDC;
         address mockERC7540WBTC;
         address mockWalletUSDC;
@@ -227,6 +229,14 @@ abstract contract DeploymentManager is Script {
             output.contracts.betaVaultAdapter = json.readAddress(".contracts.betaVaultAdapter");
         }
 
+        if (json.keyExists(".contracts.kMinterAdapterUSDC")) {
+            output.contracts.kMinterAdapterUSDC = json.readAddress(".contracts.kMinterAdapterUSDC");
+        }
+
+        if (json.keyExists(".contracts.kMinterAdapterWBTC")) {
+            output.contracts.kMinterAdapterWBTC = json.readAddress(".contracts.kMinterAdapterWBTC");
+        }
+
         if (json.keyExists(".contracts.ERC7540USDC")) {
             output.contracts.ERC7540USDC = json.readAddress(".contracts.ERC7540USDC");
         }
@@ -302,6 +312,10 @@ abstract contract DeploymentManager is Script {
             output.contracts.alphaVaultAdapter = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("betaVaultAdapter"))) {
             output.contracts.betaVaultAdapter = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("kMinterAdapterUSDC"))) {
+            output.contracts.kMinterAdapterUSDC = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("kMinterAdapterWBTC"))) {
+            output.contracts.kMinterAdapterWBTC = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("ERC7540USDC"))) {
             output.contracts.ERC7540USDC = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("ERC7540WBTC"))) {
@@ -351,6 +365,8 @@ abstract contract DeploymentManager is Script {
         json = string.concat(json, '"dnVaultAdapterWBTC":"', vm.toString(output.contracts.dnVaultAdapterWBTC), '",');
         json = string.concat(json, '"alphaVaultAdapter":"', vm.toString(output.contracts.alphaVaultAdapter), '",');
         json = string.concat(json, '"betaVaultAdapter":"', vm.toString(output.contracts.betaVaultAdapter), '",');
+        json = string.concat(json, '"kMinterAdapterUSDC":"', vm.toString(output.contracts.kMinterAdapterUSDC), '",');
+        json = string.concat(json, '"kMinterAdapterWBTC":"', vm.toString(output.contracts.kMinterAdapterWBTC), '",');
         json = string.concat(json, '"ERC7540USDC":"', vm.toString(output.contracts.ERC7540USDC), '",');
         json = string.concat(json, '"ERC7540WBTC":"', vm.toString(output.contracts.ERC7540WBTC), '",');
         json = string.concat(json, '"WalletUSDC":"', vm.toString(output.contracts.WalletUSDC), '",');

@@ -52,7 +52,43 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         address usdc = config.assets.USDC;
         address wbtc = config.assets.WBTC;
 
-        console.log("1. Configuring DN Vault USDC Adapter permissions...");
+        console.log("1. Configuring kMinter USDC Adapter permissions...");
+        // Allow ERC7540 USDC vault functions
+        registry.setAdapterAllowedSelector(
+            existing.contracts.kMinterAdapterUSDC, usdcVault, requestDepositSelector, true
+        );
+        registry.setAdapterAllowedSelector(existing.contracts.kMinterAdapterUSDC, usdcVault, depositSelector, true);
+        registry.setAdapterAllowedSelector(
+            existing.contracts.kMinterAdapterUSDC, usdcVault, requestRedeemSelector, true
+        );
+        registry.setAdapterAllowedSelector(existing.contracts.kMinterAdapterUSDC, usdcVault, redeemSelector, true);
+        // Allow transfer for USDC
+        registry.setAdapterAllowedSelector(existing.contracts.kMinterAdapterUSDC, usdc, transferSelector, true);
+        // Allow approve for USDC
+        registry.setAdapterAllowedSelector(existing.contracts.kMinterAdapterUSDC, usdc, approveSelector, true);
+        console.log("   - Allowed ERC7540 functions on USDC vault");
+        console.log("   - Allowed transfer and approve functions on USDC");
+
+        console.log("");
+        console.log("2. Configuring kMinter WBTC Adapter permissions...");
+        // Allow ERC7540 WBTC vault functions
+        registry.setAdapterAllowedSelector(
+            existing.contracts.kMinterAdapterWBTC, wbtcVault, requestDepositSelector, true
+        );
+        registry.setAdapterAllowedSelector(existing.contracts.kMinterAdapterWBTC, wbtcVault, depositSelector, true);
+        registry.setAdapterAllowedSelector(
+            existing.contracts.kMinterAdapterWBTC, wbtcVault, requestRedeemSelector, true
+        );
+        registry.setAdapterAllowedSelector(existing.contracts.kMinterAdapterWBTC, wbtcVault, redeemSelector, true);
+        // Allow transfer for WBTC
+        registry.setAdapterAllowedSelector(existing.contracts.kMinterAdapterWBTC, wbtc, transferSelector, true);
+        // Allow approve for WBTC  
+        registry.setAdapterAllowedSelector(existing.contracts.kMinterAdapterWBTC, wbtc, approveSelector, true);
+        console.log("   - Allowed ERC7540 functions on WBTC vault");
+        console.log("   - Allowed transfer and approve functions on WBTC");
+
+        console.log("");
+        console.log("3. Configuring DN Vault USDC Adapter permissions...");
         // Allow ERC7540 USDC vault functions
         registry.setAdapterAllowedSelector(
             existing.contracts.dnVaultAdapterUSDC, usdcVault, requestDepositSelector, true
@@ -70,7 +106,7 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         console.log("   - Allowed transfer function on USDC wallet");
 
         console.log("");
-        console.log("2. Configuring DN Vault WBTC Adapter permissions...");
+        console.log("4. Configuring DN Vault WBTC Adapter permissions...");
         // Allow ERC7540 WBTC vault functions (no wallet for WBTC)
         registry.setAdapterAllowedSelector(
             existing.contracts.dnVaultAdapterWBTC, wbtcVault, requestDepositSelector, true
@@ -89,18 +125,33 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         console.log("   - Allowed approve function on WBTC wallet");
 
         console.log("");
-        console.log("3. Configuring Alpha Vault Adapter permissions...");
+        console.log("5. Configuring Alpha Vault Adapter permissions...");
         // Allow only wallet transfer for Alpha vault
         registry.setAdapterAllowedSelector(existing.contracts.alphaVaultAdapter, usdc, transferSelector, true);
         console.log("   - Allowed transfer function on USDC wallet");
 
         console.log("");
-        console.log("4. Configuring Beta Vault Adapter permissions...");
+        console.log("6. Configuring Beta Vault Adapter permissions...");
         // Allow only wallet transfer for Beta vault
         registry.setAdapterAllowedSelector(existing.contracts.betaVaultAdapter, usdc, transferSelector, true);
         console.log("   - Allowed transfer function on USDC wallet");
 
-        // Activate param checker
+        // Activate param checker for kMinter adapters
+        registry.setAdapterParametersChecker(
+            existing.contracts.kMinterAdapterUSDC, usdc, transferSelector, address(erc20ParameterChecker)
+        );
+        registry.setAdapterParametersChecker(
+            existing.contracts.kMinterAdapterWBTC, wbtc, transferSelector, address(erc20ParameterChecker)
+        );
+        registry.setAdapterParametersChecker(
+            existing.contracts.kMinterAdapterUSDC, usdc, approveSelector, address(erc20ParameterChecker)
+        );
+        registry.setAdapterParametersChecker(
+            existing.contracts.kMinterAdapterWBTC, wbtc, approveSelector, address(erc20ParameterChecker)
+        );
+        console.log("   - Set parameter checker for kMinter USDC and WBTC transfer/approve");
+
+        // Activate param checker for DN vault adapters
         registry.setAdapterParametersChecker(
             existing.contracts.dnVaultAdapterUSDC, usdc, transferSelector, address(erc20ParameterChecker)
         );
@@ -118,7 +169,7 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         console.log("   - Set parameter checker for USDC and WBTC approve");
 
         console.log("");
-        console.log("5. Configuring parameter checker permissions...");
+        console.log("7. Configuring parameter checker permissions...");
 
         // Set token permissions in parameters checker
         erc20ParameterChecker.setAllowedReceiver(usdc, usdcWallet, true);
@@ -139,6 +190,8 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         console.log("Adapter permissions configuration complete!");
         console.log("");
         console.log("Summary:");
+        console.log("- kMinter USDC Adapter: Can interact with ERC7540 USDC vault, transfer and approve USDC");
+        console.log("- kMinter WBTC Adapter: Can interact with ERC7540 WBTC vault, transfer and approve WBTC");
         console.log("- DN Vault USDC Adapter: Can interact with ERC7540 USDC vault and USDC wallet");
         console.log("- DN Vault WBTC Adapter: Can interact with ERC7540 WBTC vault only");
         console.log("- Alpha Vault Adapter: Can interact with USDC wallet only");
