@@ -6,8 +6,8 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { console } from "forge-std/console.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { OptimizedFixedPointMathLib } from "src/libraries/OptimizedFixedPointMathLib.sol";
-import { SafeTransferLib } from "src/vendor/SafeTransferLib.sol";
+import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";

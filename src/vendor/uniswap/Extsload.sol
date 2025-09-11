@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import { IExtsload } from "../interfaces/IExtsload.sol";
+import { IExtsload } from "src/interfaces/IExtsload.sol";
 
 /// @title Extsload
+/// @author Uniswap
 /// @notice Enables public storage access for efficient state retrieval by external contracts
 /// @notice This was taken from https://github.com/Uniswap/v4-core/blob/main/src/Extsload.sol
 abstract contract Extsload is IExtsload {

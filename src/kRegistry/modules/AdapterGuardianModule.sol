@@ -13,7 +13,8 @@ import {
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 import { IAdapterGuardian, IParametersChecker } from "src/interfaces/modules/IAdapterGuardian.sol";
-import { OptimizedAddressEnumerableSetLib } from "src/libraries/OptimizedAddressEnumerableSetLib.sol";
+import { OptimizedAddressEnumerableSetLib } from
+    "src/vendor/solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
 
 /// @title AdapterGuardianModule
 /// @notice Module for managing adapter permissions and parameter checking in kRegistry
