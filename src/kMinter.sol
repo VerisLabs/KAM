@@ -324,10 +324,6 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         require(!$.batches[_batchId].isSettled, KMINTER_BATCH_SETTLED);
         $.batches[_batchId].isSettled = true;
 
-        // Snapshot the gross and net share price for this batch
-        // $.batches[_batchId].sharePrice = _sharePrice().toUint128();
-        // $.batches[_batchId].netSharePrice = _netSharePrice().toUint128();
-
         emit BatchSettled(_batchId);
     }
 

@@ -53,10 +53,6 @@ interface IkMinter {
         bool isSettled;
         /// @notice Batch ID
         bytes32 batchId;
-        /// @notice Share price of settlement
-        uint128 sharePrice;
-        /// @notice Net share price of settlement(share price - fees)
-        uint128 netSharePrice;
     }
 
     /*//////////////////////////////////////////////////////////////
