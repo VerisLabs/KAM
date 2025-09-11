@@ -13,7 +13,6 @@ import { UUPSUpgradeable } from "src/vendor/UUPSUpgradeable.sol";
 import { Extsload } from "src/abstracts/Extsload.sol";
 import { kBase } from "src/base/kBase.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
-import { IkBatchReceiver } from "src/interfaces/IkBatchReceiver.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 
 import {
@@ -35,7 +34,6 @@ import {
     KMINTER_BATCH_NOT_SET
 } from "src/errors/Errors.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
 
 /// @title kMinter
@@ -254,7 +252,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         IkToken(kToken).burn(address(this), redeemRequest.amount);
 
         // Pull assets from batch receiver - will revert if batch not settled
-        IkBatchReceiver(batchReceiver).pullAssets(redeemRequest.recipient, redeemRequest.amount, redeemRequest.batchId);
+        kBatchReceiver(batchReceiver).pullAssets(redeemRequest.recipient, redeemRequest.amount, redeemRequest.batchId);
 
         _unlockReentrant();
         emit Redeemed(requestId);
@@ -278,9 +276,9 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         $.userRequests[redeemRequest.user].remove(requestId);
 
         // Ensure batch is still open - cannot cancel after batch closure or settlement
-        address vault = _getDNVaultByAsset(redeemRequest.asset);
-        require(!IkStakingVault(vault).isBatchClosed(), KMINTER_BATCH_CLOSED);
-        require(!IkStakingVault(vault).isBatchSettled(), KMINTER_BATCH_SETTLED);
+        IkMinter.BatchInfo storage batch = $.batches[redeemRequest.batchId];
+        require(!batch.isClosed, KMINTER_BATCH_CLOSED);
+        require(!batch.isSettled, KMINTER_BATCH_SETTLED);
 
         address kToken = _getKTokenForAsset(redeemRequest.asset);
 
@@ -531,7 +529,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @inheritdoc IkMinter
     function rescueReceiverAssets(address batchReceiver, address asset_, address to_, uint256 amount_) external {
         require(batchReceiver != address(0) && asset_ != address(0) && to_ != address(0), KMINTER_ZERO_ADDRESS);
-        IkBatchReceiver(batchReceiver).rescueAssets(asset_);
+        kBatchReceiver(batchReceiver).rescueAssets(asset_);
         this.rescueAssets(asset_, to_, amount_);
     }
 
