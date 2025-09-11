@@ -44,6 +44,30 @@ contract MockERC7540 is IERC7540, ERC20 {
         return super.balanceOf(owner);
     }
 
+    function approve(address spender, uint256 amount) public override(ERC20, IERC7540) returns (bool) {
+        return super.approve(spender, amount);
+    }
+
+    function allowance(address owner, address spender) public view override(ERC20, IERC7540) returns (uint256) {
+        return super.allowance(owner, spender);
+    }
+
+    function transferFrom(
+        address owner,
+        address spender,
+        uint256 amount
+    )
+        public
+        override(ERC20, IERC7540)
+        returns (bool)
+    {
+        return super.transferFrom(owner, spender, amount);
+    }
+
+    function transfer(address to, uint256 amount) public override(ERC20, IERC7540) returns (bool) {
+        return super.transfer(to, amount);
+    }
+
     function totalSupply() public view override(ERC20, IERC7540) returns (uint256) {
         return super.totalSupply();
     }
