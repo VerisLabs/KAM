@@ -129,6 +129,8 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         // Allow only wallet transfer for Alpha vault
         registry.setAdapterAllowedSelector(existing.contracts.alphaVaultAdapter, usdc, transferSelector, true);
         console.log("   - Allowed transfer function on USDC wallet");
+        registry.setAdapterAllowedSelector(existing.contracts.alphaVaultAdapter, usdc, transferSelector, true);
+        console.log("   - Allowed transfer function on USDC wallet");
 
         console.log("");
         console.log("6. Configuring Beta Vault Adapter permissions...");
@@ -196,6 +198,13 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         console.log("- DN Vault WBTC Adapter: Can interact with ERC7540 WBTC vault only");
         console.log("- Alpha Vault Adapter: Can interact with USDC wallet only");
         console.log("- Beta Vault Adapter: Can interact with USDC wallet only");
+        console.log(" - USDC: can be only transfered to wallet");
+        console.log(" - USDC: can be approved to vault");
+        console.log(" - USDC: max transfer is 100,000 USDC");
+        console.log(" - WBTC: can be only transfered to wallet");
+        console.log(" - WBTC: can be approved to vault");
+        console.log(" - WBTC: max transfer is 3 WBTC");
+        console.log("");
         console.log(" - USDC: can be only transfered to wallet");
         console.log(" - USDC: can be approved to vault");
         console.log(" - USDC: max transfer is 100,000 USDC");
