@@ -73,6 +73,7 @@ abstract contract DeploymentManager is Script {
         address ERC7540WBTC;
         address WalletUSDC;
         address WalletWBTC;
+        address erc20ParameterChecker;
     }
 
     /// @notice Gets the current network name from foundry context
@@ -329,6 +330,8 @@ abstract contract DeploymentManager is Script {
             output.contracts.mockERC7540WBTC = contractAddress;
         } else if (keccak256(bytes(contractName)) == keccak256(bytes("mockWalletUSDC"))) {
             output.contracts.mockWalletUSDC = contractAddress;
+        } else if (keccak256(bytes(contractName)) == keccak256(bytes("erc20ParameterChecker"))) {
+            output.contracts.erc20ParameterChecker = contractAddress;
         }
 
         // Write to JSON file
@@ -378,6 +381,8 @@ abstract contract DeploymentManager is Script {
         json = string.concat(json, '"ERC7540USDC":"', vm.toString(output.contracts.ERC7540USDC), '",');
         json = string.concat(json, '"ERC7540WBTC":"', vm.toString(output.contracts.ERC7540WBTC), '",');
         json = string.concat(json, '"WalletUSDC":"', vm.toString(output.contracts.WalletUSDC), '"');
+        json =
+            string.concat(json, '"erc20ParameterChecker":"', vm.toString(output.contracts.erc20ParameterChecker), '"');
         json = string.concat(json, "}}");
 
         return json;
