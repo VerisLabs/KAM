@@ -39,7 +39,6 @@ import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
-import {console} from "forge-std/console.sol";
 
 /// @title kAssetRouter
 /// @notice Central money flow coordinator for the KAM protocol, orchestrating all asset movements and yield
@@ -293,16 +292,12 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited))
                 - int256(uint256($.vaultBatchBalances[vault][batchId].requested));
         } else {
-            console.log("NOT KMINTER");
             uint256 totalSupply = IkStakingVault(vault).totalSupply();
-            console.log("vault requested shares : ", $.vaultRequestedShares[vault][batchId]);
             uint256 requestedAssets = (totalSupply == 0 || totalAssets_ == 0)
                 ? $.vaultRequestedShares[vault][batchId]
                 : $.vaultRequestedShares[vault][batchId].fullMulDiv(totalAssets_, totalSupply);
-            console.log("requestedAssets : ", requestedAssets);
             netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited)) - int256(uint256(requestedAssets));
         }
-            console.log("netted : ", netted);
 
         uint256 totalAssetsAdjusted = uint256(int256(totalAssets_) - netted);
 
