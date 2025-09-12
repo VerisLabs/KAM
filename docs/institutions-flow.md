@@ -2,171 +2,375 @@
 
 ## Overview: Institution Journey
 
-```mermaid
-graph LR
-    I[Institution] --> M1[Step1: Mint kTokens]
-    M1 --> H[Hold kTokens]
-    H --> R1[Step2: Request Redemption]
-    R1 --> W[Wait for Settlement]
-    W --> E[Step3: Execute Redemption]
-    E --> A[Receive Assets + Yield]
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│Institution  │───▶│Step1: Mint  │───▶│Hold kTokens │───▶│Step2:Request│
+│has Assets   │    │kTokens 1:1  │    │& Earn Yield │    │Redemption   │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                                                                 │
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐            │
+│Receive      │◀───│Step3:Execute│◀───│Wait for     │◀───────────┘
+│Assets+Yield │    │Redemption   │    │Settlement   │
+└─────────────┘    └─────────────┘    └─────────────┘
 ```
 
 ## Detailed Flow: Minting kTokens
 
-```mermaid
-flowchart TD
-    Start([Institution has Assets]) --> Check{Has INSTITUTION_ROLE?}
-    Check -->|No| Deny[Transaction Reverts]
-    Check -->|Yes| Transfer[Transfer Assets to Router]
-    Transfer --> Mint[Mint kTokens 1:1]
-    Mint --> Track[Update Virtual Balances]
-    Track --> End([Institution has kTokens])
+```
+┌─────────────────┐
+│Institution has  │
+│Assets (USDC)    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐    ┌─────────────────┐
+│Has INSTITUTION_ │NO  │Transaction      │
+│ROLE?            ├───▶│Reverts          │
+└────────┬────────┘    └─────────────────┘
+         │YES
+         ▼
+┌─────────────────┐    ┌─────────────────┐
+│Active batch     │NO  │Create new batch │
+│exists for asset?├───▶│for asset        │
+└────────┬────────┘    └────────┬────────┘
+         │YES                   │
+         ▼                      ▼
+┌─────────────────┐    ┌─────────────────┐
+│safeTransferFrom │◀───┤Transfer to      │
+│to kAssetRouter  │    │kAssetRouter     │
+└────────┬────────┘    └─────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│kAssetRouter.    │
+│kAssetPush()     │ ── Track virtual balance
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Mint kTokens     │
+│1:1 immediately  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Institution has  │
+│kTokens          │
+└─────────────────┘
 ```
 
 ## Detailed Flow: Redemption Request
 
-```mermaid
-flowchart TD
-    Start([Institution has kTokens]) --> Request[Request Redemption]
-    Request --> Escrow[kTokens Held in Escrow]
-    Escrow --> GenID[Generate Request ID]
-    GenID --> Store[Store Request as PENDING]
-    Store --> Update[Update Virtual Balances]
-    Update --> End([Waiting for Batch Settlement])
+```
+┌─────────────────┐
+│Institution has  │
+│kTokens          │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐    ┌─────────────────┐
+│Sufficient       │NO  │Transaction      │
+│balance?         ├───▶│Reverts          │
+└────────┬────────┘    └─────────────────┘
+         │YES
+         ▼
+┌─────────────────┐
+│Generate unique  │
+│request ID       │ ── Uses hash(counter, user, asset, time)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Transfer kTokens │
+│to kMinter       │ ── Escrow (not burned yet)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Store as PENDING │
+│RedeemRequest    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│kAssetRouter.    │
+│kAssetRequestPull│ ── Track withdrawal request
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Create BatchRecv │
+│if needed        │ ── _createBatchReceiver()
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Waiting for      │
+│Batch Settlement │
+└─────────────────┘
 ```
 
 ## Batch Settlement Process
 
-```mermaid
-flowchart TD
-    Open[Batch Open] --> Close[Relayer Closes Batch]
-    Close --> Propose[Propose Settlement]
-    Propose --> Cool[Cooldown Period<br/>1-24 hours]
-    Cool --> Execute[Execute Settlement]
-    Execute --> Deploy[Deploy BatchReceiver]
-    Deploy --> Ready[Ready for Claims]
+```
+┌─────────────────┐
+│Batch Active     │
+│(Accepting mint/ │
+│redeem requests) │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Relayer Closes   │
+│Batch            │ ── closeBatch() - stops new requests
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────-┐
+│Relayer calls     │
+│proposeSettleBatch│ ── Only provides totalAssets parameter
+│with totalAssets  │
+└────────┬────────-┘
+         │
+         ▼
+┌─────────────────┐
+│kAssetRouter     │
+│calculates:      │ ── Contract automatically computes:
+│• netted amount  │    • netted = deposited - requested
+│• yield amount   │    • yield = totalAssets - netted - lastTotal
+│• profit/loss    │    • profit = yield > 0
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Cooldown Period  │
+│(Default 1 hour) │ ── Guards can cancel during cooldown
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────-┐
+│Anyone calls      │
+│executeSettleBatch│ ── After cooldown expires
+└────────┬────────-┘
+         │
+         ▼
+┌─────────────────┐
+│Transfer assets  │
+│to BatchReceiver │ ── For institutional redemptions
+│for redemptions  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Ready for Claims │
+└─────────────────┘
 ```
 
 ## Redemption Execution
 
-```mermaid
-flowchart TD
-    Start([Request Pending]) --> Check{Batch Settled?}
-    Check -->|No| Wait[Cannot Redeem Yet]
-    Check -->|Yes| Pull[Pull Assets from BatchReceiver]
-    Pull --> Burn[Burn Escrowed kTokens]
-    Burn --> Receive[Institution Receives Assets]
-    Receive --> End([Redemption Complete])
 ```
-
-## Contract Architecture
-
-```mermaid
-graph TD
-    subgraph User Layer
-        INST[Institution]
-    end
-    
-    subgraph Access Layer
-        KM[kMinter]
-    end
-    
-    subgraph Token Layer
-        KT[kToken]
-    end
-    
-    subgraph Routing Layer
-        KAR[kAssetRouter]
-    end
-    
-    subgraph Vault Layer
-        DNV[DN Vault]
-        BR[BatchReceiver]
-    end
-    
-    INST --> KM
-    KM --> KT
-    KM --> KAR
-    KAR --> DNV
-    DNV --> BR
-    BR --> INST
+┌─────────────────┐
+│Request Pending  │
+│(PENDING status) │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐    ┌─────────────────┐
+│Batch Settled?   │NO  │Cannot Redeem    │
+│                 ├───▶│Yet              │
+└────────┬────────┘    └─────────────────┘
+         │YES
+         ▼
+┌─────────────────┐
+│Validate request │
+│status           │ ── Check request exists and is PENDING
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Mark request as  │
+│REDEEMED         │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Burn escrowed    │
+│kTokens          │ ── IkToken(kToken).burn(address(this), amount)
+│permanently      │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│BatchReceiver.   │
+│pullAssets()     │ ── Transfer assets to recipient
+│to recipient     │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Institution      │
+│receives         │
+│underlying assets│
+└─────────────────┘
 ```
 
 ## State Machine: Request Lifecycle
 
-```mermaid
-flowchart LR
-    PENDING --> CANCELLED
-    PENDING --> SETTLED
-    SETTLED --> REDEEMED
+```
+Request Status Flow:
+
+┌─────────────┐
+│PENDING      │ ── Initial state when requestRedeem() is called
+└──────┬──────┘
+       │
+       ├─────────────┐
+       │             ▼
+       │    ┌─────────────┐
+       │    │CANCELLED    │ ── Via cancelRequest() before batch settlement
+       │    └─────────────┘
+       │
+       ▼
+┌─────────────┐
+│SETTLED      │ ── After batch settlement is executed
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│REDEEMED     │ ── After redeem() successfully pulls assets
+└─────────────┘
 ```
 
 ## Key Functions by Contract
 
-```mermaid
-graph TD
-    subgraph kMinter Functions
-        F1[mint - Create kTokens]
-        F2[requestRedeem - Start redemption]
-        F3[redeem - Execute redemption]
-        F4[cancelRequest - Cancel pending]
-    end
-    
-    subgraph kAssetRouter Functions
-        F5[kAssetPush - Track deposits]
-        F6[kAssetRequestPull - Track withdrawals]
-        F7[proposeSettleBatch - Start settlement]
-        F8[executeSettleBatch - Finalize settlement]
-    end
-    
-    subgraph DN Vault Functions
-        F9[closeBatch - Stop new requests]
-        F10[settleBatch - Lock in prices]
-        F11[createBatchReceiver - Deploy distributor]
-    end
+```
+┌─────────────────────────────────────────────────────────────────-┐
+│                    Contract Function Overview                    │
+├─────────────────────────────────────────────────────────────────-┤
+│                                                                  │
+│  kMinter Functions:              kAssetRouter Functions:         │
+│  ┌─────────────────────────┐      ┌─────────────────────────┐    │
+│  │• mint()                 │      │• kAssetPush()           │    │
+│  │  Create kTokens 1:1     │      │  Track deposits         │    │
+│  │                         │      │                         │    │
+│  │• requestRedeem()        │      │• kAssetRequestPull()    │    │
+│  │  Start redemption       │      │  Track withdrawals      │    │
+│  │                         │      │                         │    │
+│  │• redeem()               │      │• proposeSettleBatch()   │    │
+│  │  Execute redemption     │      │  Start settlement       │    │
+│  │                         │      │                         │    │
+│  │• cancelRequest()        │      │• executeSettleBatch()   │    │
+│  │  Cancel pending         │      │  Finalize settlement    │    │
+│  └─────────────────────────┘      └─────────────────────────┘    │
+│                                                                  │
+│  kMinter Batch Functions:                                        │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │• createNewBatch() - Create new batch for asset              │ │
+│  │• closeBatch() - Stop accepting new requests                 │ │
+│  │• settleBatch() - Mark batch as settled after processing     │ │
+│  │• createBatchReceiver() - Deploy distributor per batch       │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────────-─┘
 ```
 
 ## Timeline: Happy Path
 
-```mermaid
-graph LR
-    T0[Day_0: Mint kTokens] --> T1[Day_N: Request Redemption]
-    T1 --> T2[Day_N+1: Batch Closes]
-    T2 --> T3[Day_N+2: Settlement Proposed]
-    T3 --> T4[Day_N+3: Settlement Executed]
-    T4 --> T5[Day_N+3: Redeem Assets]
+```
+Institutional Redemption Timeline:
+
+Day 0:              Day N:              Day N+1:           Day N+2:
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│Mint kTokens │────▶│Request      │────▶│Batch Closes │────▶│Settlement   │
+│1:1 immediate│     │Redemption   │     │(relayer)    │     │Proposed     │
+│             │     │(any time)   │     │             │     │(relayer)    │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                                                                    │
+Day N+3:                                 Day N+3:                   │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐             │
+│Redeem Assets│◀────│Settlement   │◀────│Cooldown     │◀────────────┘
+│(institution)│     │Executed     │     │Period (1hr) │
+│             │     │(anyone)     │     │             │
+└─────────────┘     └─────────────┘     └─────────────┘
 ```
 
 ## Asset Flow
 
-```mermaid
-flowchart LR
-    subgraph Minting
-        A1[Institution Assets] -->|Transfer| A2[Router]
-        A2 -->|Virtual Balance| A3[DN Vault Batch]
-        A1 -->|Mint 1to1| A4[kTokens to Institution]
-    end
-    
-    subgraph Redeeming
-        B1[kTokens] -->|Escrow| B2[kMinter]
-        B3[BatchReceiver] -->|Transfer| B4[Assets to Institution]
-        B2 -->|Burn| B5[kTokens Destroyed]
-    end
+```
+┌───────────────────────────────────────────────────────────────----─┐
+│                        Asset Flow Diagram                          │
+├─────────────────────────────────────────────────────────────────---┤
+│                                                                    │
+│  MINTING FLOW:                                                     │
+│  ┌─────────────────┐    safeTransferFrom      ┌─────────────────┐  │
+│  │Institution      │─────────────────────────▶│kAssetRouter     │  │
+│  │Assets (USDC)    │                          │                 │  │
+│  └─────────────────┘                          └─────────┬───────┘  │
+│           │                                             │          │
+│           │ Mint 1:1 immediate                          │          │
+│           ▼                              kAssetPush()   │          │
+│  ┌─────────────────┐                     (tracking)     │          │
+│  │kTokens to       │                                    ▼          │
+│  │Institution      │                          ┌─────────────────┐  │
+│  └─────────────────┘                          │Virtual Balance  │  │
+│                                               │Update           │  │
+│                                               └─────────────────┘  │
+│                                                                    │
+│  REDEMPTION FLOW:                                                  │
+│  ┌─────────────────┐    Escrow                ┌─────────────────┐  │
+│  │kTokens          │────────────────────----─▶│Request Created  │  │
+│  │                 │   (not burned yet)       │in kMinter       │  │
+│  └─────────────────┘                          └─────────┬───────┘  │
+│                                                         │          │
+│                           Settlement                    ▼          │
+│                        ┌─────────────────┐    ┌─────────────────┐  │
+│                        │BatchReceiver    │◀───│Settlement       │  │
+│                        │gets assets      │    │Executed         │  │
+│                        └─────────┬───────┘    └─────────────────┘  │
+│                                  │                                 │
+│                    pullAssets()  ▼            Burn escrowed        │
+│  ┌─────────────────┐   ┌─────────────────┐       kTokens           │
+│  │Assets to        │◀──│Institution      │◀────────────-------     |
+│  │Institution      │   │calls redeem()   │                         │
+│  └─────────────────┘   └─────────────────┘                         │
+│                                                                    │
+└─────────────────────────────────────────────────────────────────---┘
 ```
 
 ## Virtual Balance Tracking
 
-```mermaid
-flowchart TD
-    subgraph Virtual Balances
-        D[Deposited]
-        R[Requested]
-        S[Settled]
-    end
-    
-    Mint -->|Increase| D
-    Request -->|Increase| R
-    Settlement -->|Move from D,R to| S
-    Claim -->|Decrease| S
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Virtual Balance State Machine                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Virtual Balances Tracked by kAssetRouter:                      │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐          │
+│  │Deposited    │    │Requested    │    │Settled      │          │
+│  │Balance      │    │Balance      │    │Balance      │          │
+│  └──────┬──────┘    └──────┬──────┘    └──────┬──────┘          │
+│         │                  │                  │                 │
+│         ▲                  ▲                  ▲                 │
+│         │                  │                  │                 │
+│  ┌──────┴──────┐    ┌──────┴──────┐    ┌──────┴──────┐          │
+│  │kAssetPush() │    │kAssetRequest│    │Settlement   │          │
+│  │             │    │Pull()       │    │Execution    │          │
+│  │Mint         │    │             │    │             │          │
+│  │Operations   │    │Redeem       │    │Batch        │          │
+│  └─────────────┘    │Requests     │    │Processing   │          │
+│                     └─────────────┘    └─────────────┘          │
+│                                               │                 │
+│                                               ▼                 │
+│                                        ┌─────────────┐          │
+│                                        │Claim        │          │
+│                                        │Operations   │          │
+│                                        │             │          │
+│                                        │Decrease     │          │
+│                                        │Settled      │          │
+│                                        └─────────────┘          │
+│                                                                 │
+│  Flow Summary:                                                  │
+│  Mint → Increase Deposited                                      │
+│  Request Redeem → Increase Requested                            │
+│  Settlement → Move D,R to Settled                               │
+│  Claim → Decrease Settled                                       │
+└─────────────────────────────────────────────────────────────────┘
 ```

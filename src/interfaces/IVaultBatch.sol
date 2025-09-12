@@ -47,17 +47,4 @@ interface IVaultBatch {
     /// finalization based on vault performance during the batch period.
     /// @param _batchId The batch identifier to mark as settled (must be closed, not previously settled)
     function settleBatch(bytes32 _batchId) external;
-
-    /// @notice Deploys a minimal proxy BatchReceiver for isolated asset distribution to unstaking users
-    /// @dev This function creates batch-specific receivers for secure unstaking asset distribution. Process:
-    /// (1) Checks if receiver already exists for batch to prevent duplicate deployments, (2) Clones minimal proxy
-    /// from receiver implementation to minimize gas costs while maintaining isolation, (3) Initializes receiver with
-    /// batch ID and asset type for proper operation, (4) Stores receiver address in batch info for claiming access.
-    /// The receiver pattern provides several benefits: asset isolation between batches preventing cross-contamination,
-    /// gas-efficient deployment through EIP-1167 minimal proxies, security through single-batch operation scope,
-    /// and simplified distribution logic for unstaking claims. Only kAssetRouter can create receivers as part of
-    /// settlement coordination.
-    /// @param _batchId The batch identifier requiring a receiver for asset distribution
-    /// @return The address of the deployed BatchReceiver contract for this specific batch
-    function createBatchReceiver(bytes32 _batchId) external returns (address);
 }

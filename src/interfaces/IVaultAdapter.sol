@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-interface IVaultAdapter {
+import { IVersioned } from "src/interfaces/IVersioned.sol";
+
+interface IVaultAdapter is IVersioned {
     /*//////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import { IVersioned } from "src/interfaces/IVersioned.sol";
+
 interface ISettleBatch {
     function settleBatch(bytes32 _batchId) external;
 }
@@ -15,7 +17,7 @@ interface ISettleBatch {
 /// cooldown periods for security, (6) Executing peg protection mechanisms during market stress. The router acts as
 /// the central hub that enables efficient capital allocation while maintaining the 1:1 backing guarantee of kTokens
 /// through precise yield distribution and loss management across the protocol's vault network.
-interface IkAssetRouter {
+interface IkAssetRouter is IVersioned {
     /*/////////////////////////////////////////////////////////////// 
                                 STRUCTS
     ///////////////////////////////////////////////////////////////*/
@@ -207,6 +209,13 @@ interface IkAssetRouter {
     /// @param newCooldown The new cooldown period in seconds
     event SettlementCooldownUpdated(uint256 oldCooldown, uint256 newCooldown);
 
+    /// @notice Emitted when the yield tolerance threshold is updated by protocol governance
+    /// @dev Yield tolerance acts as a safety mechanism to prevent settlement proposals with excessive
+    /// yield deviations that could indicate calculation errors or potential manipulation attempts
+    /// @param oldTolerance The previous yield tolerance in basis points
+    /// @param newTolerance The new yield tolerance in basis points
+    event YieldToleranceUpdated(uint256 oldTolerance, uint256 newTolerance);
+
     /*//////////////////////////////////////////////////////////////
                             KMINTER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -340,6 +349,16 @@ interface IkAssetRouter {
     /// @param cooldown The new cooldown period in seconds before settlement proposals can be executed
     function setSettlementCooldown(uint256 cooldown) external;
 
+    /// @notice Updates the yield tolerance threshold for settlement proposals
+    /// @dev This function allows protocol governance to adjust the maximum acceptable yield deviation before
+    /// settlement proposals are rejected. The yield tolerance acts as a safety mechanism to prevent settlement
+    /// proposals with extremely high or low yield values that could indicate calculation errors, data corruption,
+    /// or potential manipulation attempts. Setting an appropriate tolerance balances protocol safety with
+    /// operational flexibility, allowing normal yield fluctuations while blocking suspicious proposals.
+    /// Only admin roles can modify this parameter as it affects protocol safety.
+    /// @param tolerance_ The new yield tolerance in basis points (e.g., 1000 = 10%)
+    function updateYieldTolerance(uint256 tolerance_) external;
+
     /*//////////////////////////////////////////////////////////////
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -422,6 +441,14 @@ interface IkAssetRouter {
     /// @return cooldown The current cooldown period in seconds
     function getSettlementCooldown() external view returns (uint256 cooldown);
 
+    /// @notice Gets the current yield tolerance threshold for settlement proposals
+    /// @dev The yield tolerance determines the maximum acceptable yield deviation before settlement proposals
+    /// are automatically rejected. This acts as a safety mechanism to prevent processing of settlement proposals
+    /// with excessive yield values that could indicate calculation errors or potential manipulation. The tolerance
+    /// is expressed in basis points where 10000 equals 100%.
+    /// @return tolerance The current yield tolerance in basis points
+    function getYieldTolerance() external view returns (uint256 tolerance);
+
     /// @notice Retrieves the virtual balance of assets for a vault across all its adapters
     /// @dev This function aggregates asset balances across all adapters connected to a vault to determine
     /// the total virtual balance available for operations. Essential for coordination between physical
@@ -432,21 +459,5 @@ interface IkAssetRouter {
     /// @return balance The total virtual asset balance across all vault adapters
     function virtualBalance(address vault, address asset) external view returns (uint256);
 
-    /*//////////////////////////////////////////////////////////////
-                        CONTRACT INFO
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Returns the standard name identifier for this contract type within the KAM protocol
-    /// @dev Used for protocol identification and registry management. Provides a consistent way
-    /// to identify kAssetRouter contracts across the protocol ecosystem, enabling automated
-    /// contract discovery and validation by other protocol components.
-    /// @return The contract name as a string (typically "kAssetRouter")
-    function contractName() external pure returns (string memory);
-
-    /// @notice Returns the version identifier for this contract implementation
-    /// @dev Used for upgrade management and compatibility checking within the protocol. Enables
-    /// the system to verify contract versions during upgrades and ensure compatibility between
-    /// protocol components. Critical for protocol governance and maintenance procedures.
-    /// @return The contract version as a string (e.g., "1.0.0")
-    function contractVersion() external pure returns (string memory);
+    // contractName() and contractVersion() functions are inherited from IVersioned
 }

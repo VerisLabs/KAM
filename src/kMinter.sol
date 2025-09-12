@@ -37,6 +37,7 @@ import {
 } from "src/errors/Errors.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
+import { IVersioned } from "src/interfaces/IVersioned.sol";
 
 /// @title kMinter
 /// @notice Institutional gateway for kToken minting and redemption with batch settlement processing
@@ -580,14 +581,12 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the contract name
-    /// @return Contract name
+    /// @inheritdoc IVersioned
     function contractName() external pure returns (string memory) {
         return "kMinter";
     }
 
-    /// @notice Returns the contract version
-    /// @return Contract version
+    /// @inheritdoc IVersioned
     function contractVersion() external pure returns (string memory) {
         return "1.0.0";
     }

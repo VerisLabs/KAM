@@ -12,9 +12,9 @@ import {
     KROLESBASE_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
 
-/// @title kRolesBase
+/// @title kBaseRoles
 /// @notice Foundation contract providing essential shared functionality and registry integration for all KAM protocol
-contract kRolesBase is OptimizedOwnableRoles {
+contract kBaseRoles is OptimizedOwnableRoles {
     /*//////////////////////////////////////////////////////////////
                               ROLES
     //////////////////////////////////////////////////////////////*/
@@ -55,24 +55,24 @@ contract kRolesBase is OptimizedOwnableRoles {
                         STORAGE LAYOUT
     //////////////////////////////////////////////////////////////*/
 
-    /// @custom:storage-location erc7201:kam.storage.kRolesBase
+    /// @custom:storage-location erc7201:kam.storage.kBaseRoles
     /// @dev Storage struct following ERC-7201 namespaced storage pattern to prevent collisions during upgrades.
     /// This pattern ensures that storage layout remains consistent across proxy upgrades and prevents
     /// accidental overwriting when contracts inherit from multiple base contracts. The namespace
-    /// "kam.storage.kRolesBase" uniquely identifies this storage area within the contract's storage space.
-    struct kRolesBaseStorage {
+    /// "kam.storage.kBaseRoles" uniquely identifies this storage area within the contract's storage space.
+    struct kBaseRolesStorage {
         /// @dev Initialization flag preventing multiple initialization calls (reentrancy protection)
         bool initialized;
         /// @dev Emergency pause state affecting all protocol operations in inheriting contracts
         bool paused;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("kam.storage.kRolesBase")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("kam.storage.kBaseRoles")) - 1)) & ~bytes32(uint256(0xff))
     /// This specific slot is chosen to avoid any possible collision with standard storage layouts while maintaining
     /// deterministic addressing. The calculation ensures the storage location is unique to this namespace and won't
     /// conflict with other inherited contracts or future upgrades. The 0xff mask ensures proper alignment.
     bytes32 private constant KROLESBASE_STORAGE_LOCATION =
-        0x1e01aba436cb905d0325f2b72fb71cd138ddb103e078b2159b8c98194797bd00;
+        0x841668355433cc9fb8fc1984bd90b939822ef590acd27927baab4c6b4fb12900;
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE GETTER
@@ -83,7 +83,7 @@ contract kRolesBase is OptimizedOwnableRoles {
     /// This function uses inline assembly to directly set the storage pointer to our namespaced location,
     /// ensuring efficient access to storage variables while maintaining upgrade safety. The pure modifier
     /// is used because we're only returning a storage pointer, not reading storage values.
-    function _getkRolesBaseStorage() internal pure returns (kRolesBaseStorage storage $) {
+    function _getkBaseRolesStorage() internal pure returns (kBaseRolesStorage storage $) {
         assembly {
             $.slot := KROLESBASE_STORAGE_LOCATION
         }
@@ -93,17 +93,16 @@ contract kRolesBase is OptimizedOwnableRoles {
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    function __kRolesBase_init(
+    function __kBaseRoles_init(
         address owner_,
         address admin_,
         address emergencyAdmin_,
         address guardian_,
-        address relayer_,
-        address treasury_
+        address relayer_
     )
         internal
     {
-        kRolesBaseStorage storage $ = _getkRolesBaseStorage();
+        kBaseRolesStorage storage $ = _getkBaseRolesStorage();
 
         require(!$.initialized, KROLESBASE_ALREADY_INITIALIZED);
 
@@ -134,7 +133,7 @@ contract kRolesBase is OptimizedOwnableRoles {
     /// @param paused_ The desired pause state (true = halt operations, false = resume normal operation)
     function setPaused(bool paused_) external {
         _checkEmergencyAdmin(msg.sender);
-        kRolesBaseStorage storage $ = _getkRolesBaseStorage();
+        kBaseRolesStorage storage $ = _getkBaseRolesStorage();
         require($.initialized, KROLESBASE_NOT_INITIALIZED);
         $.paused = paused_;
         emit Paused(paused_);
