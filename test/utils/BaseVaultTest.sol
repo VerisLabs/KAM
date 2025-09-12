@@ -96,13 +96,13 @@ contract BaseVaultTest is DeploymentBaseTest {
         _mintKTokenToUser(users.charlie, INITIAL_DEPOSIT, false);
         vm.stopPrank();
 
-        bytes32 batchId = dnVault.getBatchId();
+        bytes32 batchId = minter.getBatchId(getUSDC());
         vm.prank(users.relayer);
-        IkStakingVault(address(dnVault)).closeBatch(batchId, true);
+        IkStakingVault(address(minter)).closeBatch(batchId, true);
 
         // Settle batch
         uint256 totalAssets = INITIAL_DEPOSIT * 3 + LARGE_DEPOSIT + INITIAL_DEPOSIT;
-        _executeBatchSettlement(address(minter), batchId, totalAssets, totalAssets, 0, false);
+        _executeBatchSettlement(address(minter), batchId, totalAssets);
     }
 
     function _mintKTokenToUser(address user, uint256 amount, bool settle) internal {
@@ -113,21 +113,18 @@ contract BaseVaultTest is DeploymentBaseTest {
         vm.stopPrank();
 
         if (settle) {
-            bytes32 batchId = dnVault.getBatchId();
+            bytes32 batchId = minter.getBatchId(getUSDC());
             vm.prank(users.relayer);
-            IkStakingVault(address(dnVault)).closeBatch(batchId, true);
+            IkStakingVault(address(minter)).closeBatch(batchId, true);
             uint256 lastTotalAssets = assetRouter.virtualBalance(address(minter), getUSDC());
-            _executeBatchSettlement(address(minter), batchId, lastTotalAssets + amount, amount, 0, false);
+            _executeBatchSettlement(address(minter), batchId, lastTotalAssets + amount);
         }
     }
 
     function _executeBatchSettlement(
         address vault,
         bytes32 batchId,
-        uint256 totalAssets,
-        uint256 netted,
-        uint256 yield,
-        bool profit
+        uint256 totalAssets
     )
         internal
     {

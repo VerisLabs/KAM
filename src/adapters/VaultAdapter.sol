@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { Initializable } from "solady/utils/Initializable.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 import {
     VAULTADAPTER_EXPIRED_SIGNATURE,
     VAULTADAPTER_INVALID_NONCE,
@@ -16,15 +19,11 @@ import {
     VAULTADAPTER_ZERO_ADDRESS,
     VAULTADAPTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
-import { Initializable } from "solady/utils/Initializable.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { IRegistry } from "src/interfaces/IRegistry.sol";
 import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
 
-import { OptimizedAddressEnumerableSetLib } from
-    "solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
+import { OptimizedAddressEnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
 import { OptimizedLibCall } from "solady/utils/OptimizedLibCall.sol";
 
 /// @title VaultAdapter

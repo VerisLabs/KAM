@@ -182,7 +182,7 @@ interface IkMinter {
     function closeBatch(bytes32 _batchId, bool _create) external;
     function settleBatch(bytes32 _batchId) external;
     function createBatchReceiver(bytes32 _batchId) external returns (address);
-    function getCurrentBatchId(address asset_) external view returns (bytes32);
+    function getBatchId(address asset_) external view returns (bytes32);
     function getCurrentBatchNumber(address asset_) external view returns (uint256);
     function hasActiveBatch(address asset_) external view returns (bool);
     function getBatchInfo(bytes32 batchId_) external view returns (IkMinter.BatchInfo memory);

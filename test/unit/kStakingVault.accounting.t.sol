@@ -90,7 +90,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         vm.prank(users.relayer);
         vault.closeBatch(batchId, true);
 
-        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + yield, 0, yield, true);
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + yield);
 
         // Total assets should now be 1.1M USDC
         assertEq(vault.totalAssets(), INITIAL_DEPOSIT + yield);
@@ -115,7 +115,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         vm.prank(users.relayer);
         vault.closeBatch(batchId, true);
 
-        _executeBatchSettlement(address(vault), batchId, lastTotalAssets - lossAmount, 0, lossAmount, false);
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets - lossAmount);
 
         // Total assets should now be 950K USDC
         assertEq(vault.totalAssets(), INITIAL_DEPOSIT - lossAmount);
@@ -183,7 +183,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         vm.prank(users.relayer);
         vault.closeBatch(batchId, true);
 
-        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + yield, 0, yield, true);
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + yield);
 
         // Share price is now 1.2 USDC per stkToken
         assertEq(vault.sharePrice(), 1.2e6);

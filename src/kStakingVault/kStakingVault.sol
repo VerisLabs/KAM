@@ -3,8 +3,7 @@ pragma solidity 0.8.30;
 
 import { Ownable } from "solady/auth/Ownable.sol";
 
-import { OptimizedBytes32EnumerableSetLib } from
-    "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 

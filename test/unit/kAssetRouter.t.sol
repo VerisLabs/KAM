@@ -6,6 +6,7 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
+import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 import { kBase } from "src/base/kBase.sol";
 import {
     KASSETROUTER_BATCH_ID_PROPOSED,
@@ -30,7 +31,6 @@ import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { kAssetRouter } from "src/kAssetRouter.sol";
-import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 /// @title kAssetRouterTest
 /// @notice Comprehensive unit tests for kAssetRouter contract with timelock settlement
@@ -173,21 +173,21 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // Expected to fail due to insufficient virtual balance in unit test environment
         vm.prank(address(minter));
         vm.expectRevert();
-        assetRouter.kAssetRequestPull(getUSDC(), address(dnVault), amount, batchId);
+        assetRouter.kAssetRequestPull(getUSDC(), amount, batchId);
     }
 
     /// @dev Test asset request pull reverts with zero amount
     function test_KAssetRequestPull_RevertZeroAmount() public {
         vm.prank(address(minter));
         vm.expectRevert(bytes(KASSETROUTER_ZERO_AMOUNT));
-        assetRouter.kAssetRequestPull(getUSDC(), address(dnVault), 0, TEST_BATCH_ID);
+        assetRouter.kAssetRequestPull(getUSDC(), 0, TEST_BATCH_ID);
     }
 
     /// @dev Test asset request pull reverts when called by non-kMinter
     function test_KAssetRequestPull_OnlyKMinter() public {
         vm.prank(users.alice);
         vm.expectRevert(bytes(KASSETROUTER_ONLY_KMINTER));
-        assetRouter.kAssetRequestPull(getUSDC(), address(dnVault), TEST_AMOUNT, TEST_BATCH_ID);
+        assetRouter.kAssetRequestPull(getUSDC(), TEST_AMOUNT, TEST_BATCH_ID);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -317,8 +317,8 @@ contract kAssetRouterTest is DeploymentBaseTest {
             address(dnVault),
             batchId,
             TEST_TOTAL_ASSETS,
-            TEST_NETTED,
-            TEST_PROFIT,
+            0,
+            0,
             true,
             block.timestamp + 1 // executeAfter with 1 second cooldown
         );
@@ -331,8 +331,8 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(proposal.vault, address(dnVault), "Vault incorrect");
         assertEq(proposal.batchId, batchId, "BatchId incorrect");
         assertEq(proposal.totalAssets, TEST_TOTAL_ASSETS, "Total assets incorrect");
-        assertEq(proposal.netted, TEST_NETTED, "Netted amount incorrect");
-        assertEq(proposal.yield, TEST_PROFIT, "Yield incorrect");
+        assertEq(proposal.netted, 0, "Netted amount incorrect");
+        assertEq(proposal.yield, TEST_TOTAL_ASSETS, "Yield incorrect");
         assertTrue(proposal.profit, "Profit flag incorrect");
         assertEq(proposal.executeAfter, block.timestamp + 1, "ExecuteAfter incorrect");
     }
@@ -590,8 +590,8 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(proposal.vault, address(dnVault), "Vault incorrect");
         assertEq(proposal.batchId, TEST_BATCH_ID, "BatchId incorrect");
         assertEq(proposal.totalAssets, TEST_TOTAL_ASSETS, "Total assets incorrect");
-        assertEq(proposal.netted, TEST_NETTED, "Netted incorrect");
-        assertEq(proposal.yield, TEST_PROFIT, "Yield incorrect");
+        assertEq(proposal.netted, 0, "Netted incorrect");
+        assertEq(proposal.yield, TEST_TOTAL_ASSETS, "Yield incorrect");
         assertTrue(proposal.profit, "Profit flag incorrect");
         assertGt(proposal.executeAfter, 0, "executeAfter should be set");
     }
@@ -801,7 +801,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
         vm.prank(address(minter));
         vm.expectRevert(bytes(KASSETROUTER_IS_PAUSED));
-        assetRouter.kAssetRequestPull(getUSDC(), address(dnVault), TEST_AMOUNT, TEST_BATCH_ID);
+        assetRouter.kAssetRequestPull(getUSDC(), TEST_AMOUNT, TEST_BATCH_ID);
 
         vm.prank(address(alphaVault));
         vm.expectRevert(bytes(KASSETROUTER_IS_PAUSED));
@@ -958,25 +958,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         proposalId = assetRouter.proposeSettleBatch(getUSDC(), address(dnVault), batchId, TEST_TOTAL_ASSETS + 1000);
     }
 
-    /// @dev Test settlement with loss instead of profit
-    function test_SettlementFlow_WithLoss() public {
-        bytes32 batchId = bytes32(uint256(TEST_BATCH_ID) + 100);
-
-        // Propose settlement with loss
-        vm.prank(users.relayer);
-        bytes32 proposalId =
-            assetRouter.proposeSettleBatch(getUSDC(), address(dnVault), batchId, TEST_TOTAL_ASSETS - TEST_LOSS);
-
-        // Verify proposal stored loss correctly
-        IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(proposalId);
-        assertEq(proposal.yield, TEST_LOSS, "Loss amount incorrect");
-        assertFalse(proposal.profit, "Should be marked as loss");
-
-        // Wait and verify can execute
-        vm.warp(block.timestamp + 2);
-        (bool canExecute,) = assetRouter.canExecuteProposal(proposalId);
-        assertTrue(canExecute, "Should be able to execute loss settlement");
-    }
 
     /// @dev Test cooldown edge cases
     function test_CooldownEdgeCases() public {

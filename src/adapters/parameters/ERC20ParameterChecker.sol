@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { ERC20 } from "solady/tokens/ERC20.sol";
 import { PARAMETERCHECKER_NOT_ALLOWED, PARAMETERCHECKER_ZERO_ADDRESS } from "src/errors/Errors.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
 import { IAdapterGuardian, IParametersChecker } from "src/interfaces/modules/IAdapterGuardian.sol";
-import { ERC20 } from "solady/tokens/ERC20.sol";
 
 /// @title ERC20ParameterChecker
 /// @notice A contract that checks parameters for ERC20 token operations

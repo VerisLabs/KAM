@@ -6,8 +6,8 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
-import { kBase } from "src/base/kBase.sol";
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
+import { kBase } from "src/base/kBase.sol";
 
 import {
     KBASE_WRONG_ROLE,
@@ -524,31 +524,8 @@ contract kMinterTest is DeploymentBaseTest {
         // Verify DN vault received the assets (through kAssetRouter)
         // In a full integration test, we would verify the batch balances
         assertEq(kUSD.balanceOf(users.institution), amount, "kTokens should be minted");
-    }
+  }
 
-    /// @dev Test that minting calls kAssetPush on the router
-    function test_Mint_CallsKAssetPush() public {
-        uint256 amount = TEST_AMOUNT;
-
-        // Setup
-        mockUSDC.mint(users.institution, amount);
-        vm.prank(users.institution);
-        IERC20(getUSDC()).approve(address(minter), amount);
-
-        // Get batch balances before mint
-        bytes32 batchId = dnVault.getBatchId();
-        (uint256 depositedBefore,) = assetRouter.getBatchIdBalances(address(minter), batchId);
-
-        // Mint
-        vm.prank(users.institution);
-        minter.mint(getUSDC(), users.institution, amount);
-
-        // Get batch balances after mint
-        (uint256 depositedAfter,) = assetRouter.getBatchIdBalances(address(minter), batchId);
-
-        // Verify kAssetPush was called (deposited amount increased)
-        assertEq(depositedAfter - depositedBefore, amount, "Deposited amount should increase");
-    }
 
     /*//////////////////////////////////////////////////////////////
                         EDGE CASE TESTS

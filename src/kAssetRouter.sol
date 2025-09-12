@@ -39,6 +39,7 @@ import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
+import {console} from "forge-std/console.sol";
 
 /// @title kAssetRouter
 /// @notice Central money flow coordinator for the KAM protocol, orchestrating all asset movements and yield
@@ -270,6 +271,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         int256 netted;
         uint256 yield;
         uint256 lastTotalAssets = _virtualBalance(vault, asset);
+        console.log("last total assets : ", lastTotalAssets);
         bool profit;
 
         // Increase the counter to generate unique proposal id
@@ -291,12 +293,16 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited))
                 - int256(uint256($.vaultBatchBalances[vault][batchId].requested));
         } else {
+            console.log("NOT KMINTER");
             uint256 totalSupply = IkStakingVault(vault).totalSupply();
-            uint256 requestedAssets = totalSupply == 0
+            console.log("vault requested shares : ", $.vaultRequestedShares[vault][batchId]);
+            uint256 requestedAssets = (totalSupply == 0 || totalAssets_ == 0)
                 ? $.vaultRequestedShares[vault][batchId]
                 : $.vaultRequestedShares[vault][batchId].fullMulDiv(totalAssets_, totalSupply);
+            console.log("requestedAssets : ", requestedAssets);
             netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited)) - int256(uint256(requestedAssets));
         }
+            console.log("netted : ", netted);
 
         uint256 totalAssetsAdjusted = uint256(int256(totalAssets_) - netted);
 
@@ -309,7 +315,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         }
 
         proposalId = OptimizedEfficientHashLib.hash(
-            uint256(uint160(vault)), uint256(batchId), block.timestamp, $.proposalCounter
+            uint256(uint160(vault)), uint256(uint160(asset)), uint256(batchId), block.timestamp, $.proposalCounter
         );
 
         // Check if proposal already exists
@@ -441,17 +447,16 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                 }
             }
 
-            IVaultAdapter kMinterAdapter = IVaultAdapter(kMinter);
+            IVaultAdapter kMinterAdapter = IVaultAdapter(_registry().getAdapter(_getKMinter(), asset));
             _checkAddressNotZero(address(kMinterAdapter));
             int256 kMinterTotalAssets = int256(kMinterAdapter.totalAssets()) - netted;
             require(kMinterTotalAssets >= 0, KASSETROUTER_ZERO_AMOUNT);
             kMinterAdapter.setTotalAssets(uint256(kMinterTotalAssets));
         }
 
-        // TODO: kMinter cannot have profits or we should send them to insurance
-        adapter.setTotalAssets(totalAssets_);
         // Mark batch as settled in the vault
         ISettleBatch(vault).settleBatch(batchId);
+        adapter.setTotalAssets(totalAssets_);
 
         emit BatchSettled(vault, batchId, totalAssets_);
     }

@@ -3,8 +3,7 @@ pragma solidity 0.8.30;
 
 import { OptimizedEfficientHashLib } from "solady/utils/OptimizedEfficientHashLib.sol";
 
-import { OptimizedBytes32EnumerableSetLib } from
-    "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 
 import { Initializable } from "solady/utils/Initializable.sol";
 import { OptimizedLibClone } from "solady/utils/OptimizedLibClone.sol";
@@ -406,7 +405,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @notice Get the current active batch ID for a specific asset
     /// @param asset_ The asset to query
     /// @return The current batch ID for the asset, or bytes32(0) if no batch exists
-    function getCurrentBatchId(address asset_) external view returns (bytes32) {
+    function getBatchId(address asset_) external view returns (bytes32) {
         return _currentBatchId(asset_);
     }
 
