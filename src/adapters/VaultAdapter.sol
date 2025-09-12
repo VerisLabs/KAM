@@ -128,7 +128,7 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
         IRegistry registry = $.registry;
 
-        require(registry.isRelayer(msg.sender), VAULTADAPTER_WRONG_ROLE);
+        require(registry.isManager(msg.sender), VAULTADAPTER_WRONG_ROLE);
         _checkPaused();
 
         // Extract selector and validate vault-specific permission

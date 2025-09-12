@@ -512,6 +512,12 @@ interface IkRegistry is IVersioned {
     /// @return True if address has VENDOR_ROLE
     function isVendor(address user) external view returns (bool);
 
+    /// @notice Checks if an address has manager privileges
+    /// @dev Managers can Execute calls in the vault adapter
+    /// @param user The address to check
+    /// @return True if address has VENDOR_ROLE
+    function isManager(address user) external view returns (bool);
+
     /// @notice Checks if an asset is supported by the protocol
     /// @dev Used for validation before operations. Checks supportedAssets set membership.
     /// @param asset The asset address to verify

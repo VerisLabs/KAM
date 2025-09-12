@@ -547,6 +547,11 @@ contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mu
     }
 
     /// @inheritdoc IkRegistry
+    function isManager(address user) external view returns (bool) {
+        return _hasRole(user, MANAGER_ROLE);
+    }
+
+    /// @inheritdoc IkRegistry
     function isAsset(address asset) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.supportedAssets.contains(asset);

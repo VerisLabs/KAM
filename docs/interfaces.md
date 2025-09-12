@@ -11,39 +11,71 @@ The institutional gateway for minting and redeeming kTokens. Implements a push-p
 **Core Operations**
 
 - `mint(address asset, address to, uint256 amount)` - Creates new kTokens by accepting underlying asset deposits in a 1:1 ratio
-- `requestRedeem(address kToken, address to, uint256 amount)` - Initiates redemption process by escrowing kTokens and creating batch redemption request
+- `requestRedeem(address asset, address to, uint256 amount)` - Initiates redemption process by escrowing kTokens and creating batch redemption request
 - `redeem(bytes32 requestId)` - Executes redemption for a request in a settled batch, burning kTokens and transferring assets
 - `cancelRequest(bytes32 requestId)` - Cancels a redemption request before batch settlement
 
 **Request Management**
 
-- Generates unique request IDs for tracking redemptions
-- Maintains user request mappings for efficient lookups
+- Generates unique request IDs using hash function with multiple entropy sources
+- Maintains per-asset batch tracking with `currentBatchIds[asset]` and `assetBatchCounters[asset]`
 - Supports request status tracking (PENDING, REDEEMED, CANCELLED)
-- Integrates with batch settlement system for asset distribution
+- Integrates with batch settlement system for asset distribution via BatchReceiver contracts
+- Manages batch lifecycle: create, close, settle, and BatchReceiver deployment
+
+**Additional Functions**
+
+- `createNewBatch(address asset_)` - Creates new batch for asset and returns batch ID
+- `closeBatch(bytes32 _batchId, bool _create)` - Closes batch to prevent new requests, optionally creates new batch
+- `settleBatch(bytes32 _batchId)` - Marks batch as settled after processing
+- `createBatchReceiver(bytes32 _batchId)` - Deploys BatchReceiver contract for asset distribution
+- `getCurrentBatchId(address asset_)` - Returns current active batch ID for an asset
+- `getCurrentBatchNumber(address asset_)` - Returns current batch number counter for an asset
+- `hasActiveBatch(address asset_)` - Checks if asset has an active batch
+- `getBatchInfo(bytes32 batchId_)` - Returns complete BatchInfo struct with asset, receiver, and status
+- `getBatchReceiver(bytes32 batchId_)` - Returns BatchReceiver address for a batch
+- `isPaused()` - Checks if contract is currently paused
+- `getRedeemRequest(bytes32 requestId)` - Returns complete RedeemRequest struct with status and details
+- `getUserRequests(address user)` - Returns array of request IDs belonging to a user
+- `getRequestCounter()` - Returns current counter used for generating unique request IDs
+- `getTotalLockedAssets(address asset)` - Returns total amount of assets locked through mint operations
+- `rescueReceiverAssets(address batchReceiver, address asset, address to, uint256 amount)` - Recovers stuck assets from BatchReceiver contracts
 
 ### IkAssetRouter
 
-Central hub for asset flow coordination between vaults and external strategies. Manages virtual balance accounting, settlement proposals with timelock, and adapter integrations.
+Central coordinator for all asset movements and settlements in the KAM protocol. Manages virtual balance accounting, settlement proposals with cooldown periods, and coordinates asset flows between institutional (kMinter) and retail (kStakingVault) operations. Automatically calculates yield distribution parameters when relayers provide only totalAssets values.
 
 **Virtual Balance System**
 
-- `kAssetPush(address from, address vault, address asset, uint256 amount, bytes32 batchId)` - Records incoming asset flows to vault's virtual balance
-- `kAssetRequestPull(address from, address vault, address asset, uint256 amount, bytes32 batchId)` - Stages outgoing asset requests from vault's virtual balance
+- `kAssetPush(address asset, uint256 amount, bytes32 batchId)` - Records incoming asset flows from caller to virtual balance
+- `kAssetRequestPull(address asset, uint256 amount, bytes32 batchId)` - Stages outgoing asset requests from caller's virtual balance
 - `kSharesRequestPush(address vault, uint256 amount, bytes32 batchId)` - Records incoming share flows for unstaking
 - `kSharesRequestPull(address vault, uint256 amount, bytes32 batchId)` - Records outgoing share flows for staking
 
 **Settlement Operations**
 
-- `proposeSettleBatch(address vault, address asset, bytes32 batchId, uint256 totalAssets, uint256 netted, uint256 yield, bool profit)` - Creates timelock settlement proposal
-- `executeSettleBatch(address vault, bytes32 batchId)` - Executes approved settlement after cooldown
-- `cancelProposal(address vault, bytes32 batchId)` - Cancels settlement proposals during cooldown period
+- `proposeSettleBatch(address asset, address vault, bytes32 batchId, uint256 totalAssets)` - Creates timelock settlement proposal with automatic yield calculations
+- `executeSettleBatch(bytes32 proposalId)` - Executes approved settlement after cooldown using proposal ID
+- `cancelProposal(bytes32 proposalId)` - Cancels settlement proposals during cooldown period
 
 **Asset Transfer**
 
 - `kAssetTransfer(address sourceVault, address targetVault, address asset, uint256 amount, bytes32 batchId)` - Direct asset transfers between entities with virtual balance updates
 - Implements explicit approval pattern for secure adapter interactions
 - Coordinates with batch receivers for redemption distribution
+
+**View Functions**
+
+- `getPendingProposals(address vault_)` - Returns array of pending settlement proposal IDs for a vault
+- `getDNVaultByAsset(address asset)` - Gets the DN vault address responsible for yield generation for a specific asset
+- `getBatchIdBalances(address vault, bytes32 batchId)` - Returns deposited and requested amounts for batch coordination
+- `getRequestedShares(address vault, bytes32 batchId)` - Returns total shares requested for redemption in kStakingVault batch
+- `isPaused()` - Checks if kAssetRouter contract is currently paused
+- `getSettlementProposal(bytes32 proposalId)` - Retrieves complete VaultSettlementProposal struct with all details
+- `canExecuteProposal(bytes32 proposalId)` - Checks execution readiness and returns boolean result with descriptive reason
+- `getSettlementCooldown()` - Gets current cooldown period in seconds before proposals can be executed
+- `getYieldTolerance()` - Gets current yield tolerance threshold in basis points for proposal validation
+- `virtualBalance(address vault, address asset)` - Aggregates virtual asset balance across all vault adapters
 
 ### IkRegistry
 
@@ -57,14 +89,17 @@ Central registry managing protocol contracts, supported assets, vault registrati
 
 **Asset Management**
 
-- `registerAsset(address asset, address kToken)` - Establishes support for new assets and their corresponding kTokens
+- `registerAsset(string name, string symbol, address asset, bytes32 id, uint256 maxMintPerBatch, uint256 maxRedeemPerBatch)` - Deploys new kToken and establishes asset support with batch limits
 - `assetToKToken(address asset)` - Maps underlying assets to their kToken representations
-- `kTokenToAsset(address kToken)` - Reverse mapping from kToken to underlying asset
-- `getAssets()` - Returns all protocol-supported assets
+- `getAllAssets()` - Returns all protocol-supported assets
+- `isAsset(address asset)` - Checks if asset is supported by the protocol
+- `setAssetBatchLimits(address asset, uint256 maxMintPerBatch_, uint256 maxRedeemPerBatch_)` - Sets maximum amounts per batch
+- `getMaxMintPerBatch(address asset)` - Returns maximum mint amount per batch for an asset
+- `getMaxRedeemPerBatch(address asset)` - Returns maximum redeem amount per batch for an asset
 
 **Vault Registry**
 
-- `registerVault(address vault, VaultType vaultType, address[] memory assets)` - Registers new vaults with type classification
+- `registerVault(address vault, VaultType type_, address asset)` - Registers new vault with type classification for single asset
 - `getVaultsByAsset(address asset)` - Returns all vaults managing a specific asset
 - `getVaultByAssetAndType(address asset, VaultType vaultType)` - Retrieves vault by asset and type combination
 - `getVaultAssets(address vault)` - Returns assets managed by a vault
@@ -126,7 +161,6 @@ Interface for batch lifecycle management enabling gas-efficient settlement of mu
 - `createNewBatch()` - Creates new batch for processing requests
 - `closeBatch(bytes32 batchId, bool create)` - Closes batch to prevent new requests
 - `settleBatch(bytes32 batchId)` - Marks batch as settled after yield distribution
-- `createBatchReceiver(bytes32 batchId)` - Deploys minimal proxy for asset distribution
 
 ### IVaultClaim
 
@@ -209,13 +243,13 @@ Minimal proxy contract that holds and distributes settled assets for batch redem
 
 ### IkToken
 
-ERC20 token representing wrapped underlying assets in the KAM protocol. Implements role-restricted minting with standard transfer capabilities.
+ERC20 token representing wrapped underlying assets in the KAM protocol. Implements role-restricted minting and burning with emergency pause capabilities and comprehensive role management.
 
 **Token Operations**
 
 - `mint(address to, uint256 amount)` - Creates new tokens (restricted to MINTER_ROLE)
-- `burn(uint256 amount)` - Destroys tokens from caller
-- `burnFrom(address from, uint256 amount)` - Burns tokens from another address with allowance
+- `burn(address from, uint256 amount)` - Destroys tokens from specified address (restricted to MINTER_ROLE)
+- `burnFrom(address from, uint256 amount)` - Burns tokens from another address using allowance mechanism
 
 **Standard ERC20**
 
@@ -223,40 +257,41 @@ ERC20 token representing wrapped underlying assets in the KAM protocol. Implemen
 - Standard allowance mechanism for third-party integrations
 - Event emission for all token operations
 
+**Admin Functions**
+
+- `setPaused(bool _isPaused)` - Emergency pause mechanism (EMERGENCY_ADMIN_ROLE only)
+- `isPaused()` - Returns current pause state
+
+**Role Management**
+
+- `grantAdminRole(address admin)` - Grants administrative privileges (owner only)
+- `revokeAdminRole(address admin)` - Revokes administrative privileges (owner only)
+- `grantEmergencyRole(address emergency)` - Grants emergency admin role (ADMIN_ROLE only)
+- `revokeEmergencyRole(address emergency)` - Revokes emergency admin role (ADMIN_ROLE only)
+- `grantMinterRole(address minter)` - Grants minting privileges (ADMIN_ROLE only)
+- `revokeMinterRole(address minter)` - Revokes minting privileges (ADMIN_ROLE only)
+
 **Metadata**
 
-- `name()`, `symbol()`, `decimals()` - Standard ERC20 metadata
-- Supports ERC-2612 permit functionality for gasless approvals
+- `name()`, `symbol()`, `decimals()` - Standard ERC20 metadata with underlying asset parity
+- Extends IVersioned for contract version tracking
 
 ## External Integration Interfaces
 
-### IAdapter
+### IVaultAdapter
 
-Interface for protocol adapters that manage external strategy integrations. All adapters must implement this interface for kAssetRouter integration.
+Interface for vault adapter contracts that manage external strategy integrations with permission-based execution. Used by DN vaults to interact with external DeFi protocols while maintaining strict access control.
 
 **Core Operations**
 
-- `deposit(address asset, uint256 amount, address onBehalfOf)` - Deposits assets to external strategy
-- `redeem(address asset, uint256 amount, address onBehalfOf)` - Redeems assets from external strategy
-- `processRedemption(uint256 requestId)` - Processes pending redemptions
-- `setTotalAssets(address vault, address asset, uint256 totalAssets)` - Updates total assets tracking
+- `execute(address target, bytes calldata data, uint256 value)` - Executes arbitrary calls to external contracts with relayer authorization
+- `setTotalAssets(uint256 totalAssets_)` - Updates the last recorded total assets for accounting
+- `totalAssets()` - Returns current total assets under management in external strategies
 
-**Asset Tracking**
+**Emergency Functions**
 
-- `totalAssets(address vault, address asset)` - Returns current total assets in strategy
-- `getLastTotalAssets(address vault, address asset)` - Returns last recorded total assets
-- `convertToAssets(address vault, uint256 shares)` - Converts strategy shares to underlying
-
-**Redemption Management**
-
-- `getPendingRedemption(uint256 requestId)` - Returns redemption request details
-- `getPendingRedemptions(address vault)` - Returns all pending redemptions for vault
-
-**Metadata**
-
-- `registered()` - Returns adapter registration status
-- `name()` - Human readable adapter identification
-- `version()` - Adapter version for compatibility tracking
+- `setPaused(bool paused_)` - Emergency pause mechanism for risk management
+- `rescueAssets(address asset_, address to_, uint256 amount_)` - Recovers accidentally sent tokens (non-protocol assets only)
 
 ## Utility Interfaces
 
