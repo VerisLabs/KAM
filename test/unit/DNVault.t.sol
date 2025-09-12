@@ -274,32 +274,13 @@ contract DNVaultTest is BaseVaultTest {
 
     /// @dev Test successful claim of unstaked assets
     function test_ClaimUnstakedAssets_Success() public {
-        // Setup: First stake to get stkTokens
-        _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
-
-        vm.prank(users.alice);
-        kUSD.approve(address(vault), 1000 * _1_USDC);
-
-        bytes32 stakeBatchId = vault.getBatchId();
-
-        vm.prank(users.alice);
-        bytes32 stakeRequestId = vault.requestStake(users.alice, 1000 * _1_USDC);
-
-        // Close and settle staking batch
-        vm.prank(users.relayer);
-        vault.closeBatch(stakeBatchId, true);
-
-        uint256 lastTotalAssets = assetRouter.virtualBalance(address(vault), getUSDC());
-        _executeBatchSettlement(address(vault), stakeBatchId, lastTotalAssets + 1000 * _1_USDC);
-
-        // Claim staked shares to get stkTokens
-        vm.prank(users.alice);
-        vault.claimStakedShares(stakeBatchId, stakeRequestId);
+              // First complete a staking cycle to get stkTokens
+        _setupUserWithStkTokens(users.alice, 1000 * _1_USDC);
 
         uint256 stkBalance = vault.balanceOf(users.alice);
         assertEq(stkBalance, 1000 * _1_USDC);
 
-        // Now request unstaking
+        // 1. Request unstaking
         bytes32 unstakeBatchId = vault.getBatchId();
 
         vm.prank(users.alice);
@@ -309,7 +290,7 @@ contract DNVaultTest is BaseVaultTest {
         vm.prank(users.relayer);
         vault.closeBatch(unstakeBatchId, true);
 
-        lastTotalAssets = assetRouter.virtualBalance(address(vault), getUSDC());
+        uint256 lastTotalAssets = assetRouter.virtualBalance(address(vault), getUSDC());
         _executeBatchSettlement(address(vault), unstakeBatchId, lastTotalAssets - stkBalance);
 
         // Get kToken balance before claim
@@ -318,7 +299,7 @@ contract DNVaultTest is BaseVaultTest {
         // Claim unstaked assets
         vm.prank(users.alice);
         vm.expectEmit(true, false, true, true);
-        emit UnstakingAssetsClaimed(unstakeBatchId, unstakeRequestId, users.alice, 1000 * _1_USDC);
+        emit KTokenUnstaked(users.alice,stkBalance, stkBalance);
         vault.claimUnstakedAssets(unstakeBatchId, unstakeRequestId);
 
         // Verify user received kTokens back
