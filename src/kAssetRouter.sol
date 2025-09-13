@@ -26,7 +26,6 @@ import {
     KASSETROUTER_PROPOSAL_EXISTS,
     KASSETROUTER_PROPOSAL_NOT_FOUND,
     KASSETROUTER_WRONG_ROLE,
-    KASSETROUTER_YIELD_EXCEEDS_TOLERANCE,
     KASSETROUTER_ZERO_ADDRESS,
     KASSETROUTER_ZERO_AMOUNT,
     KBASE_NOT_INITIALIZED
@@ -327,7 +326,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         // Check if yield exceeds tolerance threshold to prevent excessive yield deviations
         if (lastTotalAssets > 0) {
             uint256 maxAllowedYield = lastTotalAssets.fullMulDiv($.yieldTolerance, 10_000);
-            require(yield <= maxAllowedYield, KASSETROUTER_YIELD_EXCEEDS_TOLERANCE);
+            if (yield > maxAllowedYield) {
+                emit YieldExceedsToleranceWarning(vault, asset, batchId, yield, maxAllowedYield);
+            }
         }
 
         proposalId = OptimizedEfficientHashLib.hash(

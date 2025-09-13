@@ -21,7 +21,6 @@ import {
     KMINTER_BATCH_MINT_REACHED,
     KMINTER_BATCH_MINT_REACHED,
     KMINTER_BATCH_NOT_CLOSED,
-    KMINTER_BATCH_NOT_SET,
     KMINTER_BATCH_REDEEM_REACHED,
     KMINTER_BATCH_SETTLED,
     KMINTER_INSUFFICIENT_BALANCE,
@@ -32,7 +31,8 @@ import {
     KMINTER_WRONG_ASSET,
     KMINTER_WRONG_ROLE,
     KMINTER_ZERO_ADDRESS,
-    KMINTER_ZERO_AMOUNT
+    KMINTER_ZERO_AMOUNT,
+    KMINTER_BATCH_NOT_SET
 } from "src/errors/Errors.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
@@ -410,13 +410,18 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         return _currentBatchId(asset_);
     }
 
+    /// @notice Get the current active batch ID for a specific asset
+    /// @param asset_ The asset to query
+    /// @return The current batch ID for the asset, or bytes32(0) if no batch exists
     function _currentBatchId(address asset_) internal view returns (bytes32) {
         kMinterStorage storage $ = _getkMinterStorage();
         return $.currentBatchIds[asset_];
     }
 
+    /// @notice Checks if a batch exists for a specific asset
+    /// @param asset_ The asset to check
     function _checkBatchId(address asset_) internal view {
-        require(_currentBatchId(asset_) == bytes32(0), KMINTER_BATCH_NOT_SET);
+        require(_currentBatchId(asset_) != bytes32(0), KMINTER_BATCH_NOT_SET);
     }
 
     /// @notice Get the current batch number for a specific asset
@@ -429,7 +434,6 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
     /// @notice Check if an asset has an active (open) batch
     /// @param asset_ The asset to check
-    /// @return True if the asset has an open batch, false otherwise
     function hasActiveBatch(address asset_) external view returns (bool) {
         kMinterStorage storage $ = _getkMinterStorage();
         bytes32 currentBatchId = $.currentBatchIds[asset_];
@@ -450,9 +454,11 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         return $.batches[batchId_];
     }
 
+    /// @inheritdoc IkMinter
     function getBatchReceiver(bytes32 batchId_) external view returns (address) {
         kMinterStorage storage $ = _getkMinterStorage();
         address receiver = $.batches[batchId_].batchReceiver;
+        return receiver;
     }
 
     /*//////////////////////////////////////////////////////////////

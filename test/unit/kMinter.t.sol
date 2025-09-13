@@ -20,7 +20,8 @@ import {
     KMINTER_WRONG_ASSET,
     KMINTER_WRONG_ROLE,
     KMINTER_ZERO_ADDRESS,
-    KMINTER_ZERO_AMOUNT
+    KMINTER_ZERO_AMOUNT,
+    KMINTER_BATCH_NOT_SET
 } from "src/errors/Errors.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { kMinter } from "src/kMinter.sol";
@@ -267,11 +268,11 @@ contract kMinterTest is DeploymentBaseTest {
         minter.requestRedeem(invalidAsset, users.institution, TEST_AMOUNT);
     }
 
-    /// @dev Test redemption request reverts with insufficient balance
-    function test_RequestRedeem_RevertInsufficientBalance() public {
+    /// @dev Test redemption request reverts with batch not set
+    function test_RequestRedeem_RevertBatchNotSet() public {
         // Institution has no kTokens
         vm.prank(users.institution);
-        vm.expectRevert(bytes(KMINTER_INSUFFICIENT_BALANCE));
+        vm.expectRevert(bytes(KMINTER_BATCH_NOT_SET));
         minter.requestRedeem(getUSDC(), users.institution, TEST_AMOUNT);
     }
 
