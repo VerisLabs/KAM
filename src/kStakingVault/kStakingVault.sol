@@ -384,28 +384,6 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit BatchSettled(_batchId);
     }
 
-    /// @inheritdoc IVaultBatch
-    function createBatchReceiver(bytes32 _batchId) external returns (address) {
-        _lockReentrant();
-        _checkRouter(msg.sender);
-
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        address receiver = $.batches[_batchId].batchReceiver;
-        if (receiver != address(0)) return receiver;
-
-        receiver = OptimizedLibClone.clone($.receiverImplementation);
-
-        $.batches[_batchId].batchReceiver = receiver;
-
-        // Initialize the BatchReceiver
-        kBatchReceiver(receiver).initialize(_batchId, $.underlyingAsset);
-
-        emit BatchReceiverCreated(receiver, _batchId);
-
-        _unlockReentrant();
-        return receiver;
-    }
-
     /// @notice Internal function to create deterministic batch IDs with collision resistance
     /// @dev This function generates unique batch identifiers using multiple entropy sources for security. The ID
     /// generation process: (1) Increments internal batch counter to ensure uniqueness within the vault, (2) Combines

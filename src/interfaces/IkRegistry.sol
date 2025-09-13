@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-interface IkRegistry {
+import { IVersioned } from "src/interfaces/IVersioned.sol";
+
+interface IkRegistry is IVersioned {
     /*//////////////////////////////////////////////////////////////
                                 ENUMS
     //////////////////////////////////////////////////////////////*/
@@ -509,6 +511,12 @@ interface IkRegistry {
     /// @param user The address to check
     /// @return True if address has VENDOR_ROLE
     function isVendor(address user) external view returns (bool);
+
+    /// @notice Checks if an address has manager privileges
+    /// @dev Managers can Execute calls in the vault adapter
+    /// @param user The address to check
+    /// @return True if address has VENDOR_ROLE
+    function isManager(address user) external view returns (bool);
 
     /// @notice Checks if an asset is supported by the protocol
     /// @dev Used for validation before operations. Checks supportedAssets set membership.

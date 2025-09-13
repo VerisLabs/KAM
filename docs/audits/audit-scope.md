@@ -1,128 +1,314 @@
 # KAM Protocol Audit
 
-The KAM protocol is an institutional asset management system that implements a dual-track architecture for both institutional and retail access. The protocol features batch processing with virtual balance accounting, a two-phase settlement with timelock proposals, and a modular vault architecture implemented through a diamond pattern.
+The KAM protocol is an institutional-grade tokenization system that bridges traditional finance and DeFi through a sophisticated dual-track architecture. The protocol enables institutions to mint asset-backed kTokens with guaranteed 1:1 backing while allowing retail users to earn yield through staking mechanisms.
 
-The core system enables institutions to mint kTokens 1:1 with underlying assets, stake them in yield-generating vaults, and redeem through batch settlement mechanisms. The protocol implements explicit security patterns, including role-based access control, CREATE2 deterministic deployment, and comprehensive validation layers.
+## Protocol Architecture Overview
+
+KAM implements a **hub-and-spoke model** where kAssetRouter serves as the central coordinator managing asset flows between institutional operations (kMinter) and retail yield generation (kStakingVault). The system uses **virtual balance accounting** to enable capital efficiency—assets remain productively deployed in yield strategies while maintaining instant liquidity for institutional operations.
+
+The protocol's **two-phase settlement system** with mandatory cooldown periods provides security through guardian oversight while maintaining operational efficiency through batch processing. This enables the protocol to maintain 1:1 backing guarantees while supporting complex multi-vault yield distribution.
+
+**Security-First Design**: Every component implements defense-in-depth principles with role-based access control, transient reentrancy protection, ERC-7201 upgrade-safe storage, and explicit approval patterns for external integrations.
+
+## Quick Reference
+
+| Component | Purpose | Upgradeable | Key Security Feature |
+|-----------|---------|-------------|---------------------|
+| **kMinter** | Institutional gateway for minting/redeeming | ✅ UUPS | Role-based access + Batch limits |
+| **kAssetRouter** | Virtual balance coordinator | ✅ UUPS | Guardian oversight + Yield tolerance |
+| **kRegistry** | Protocol configuration hub | ✅ UUPS | Single source of truth |
+| **kStakingVault** | Retail yield generation | ✅ UUPS | Share price appreciation |
+| **kBatchReceiver** | Settlement distribution | ❌ Minimal Proxy | Batch isolation + Immutable auth |
+| **kToken** | Asset-backed ERC20 | ❌ Immutable | 1:1 backing guarantee |
 
 ## Audit Scope
 
-The scope of audit involves the complete KAM protocol implementation in `src/`:
+The scope of audit involves the complete KAM protocol implementation in `src/`, excluding interfaces, vendor dependencies, and utility libraries:
+
+### In Scope - Core Protocol Implementation
 
 ```
 ├── src
-│   ├── abstracts/
-│   │   ├── Extsload.sol              [NOT IN SCOPE - Storage optimization]
-│   │   └── Proxy.sol                 [NOT IN SCOPE - Proxy implementation]
 │   ├── adapters/
-│   │   ├── BaseAdapter.sol
-│   │   └── CustodialAdapter.sol
+│   │   ├── parameters/
+│   │   │   └── ERC20ParameterChecker.sol  ✅ Parameter validation utilities
+│   │   └── VaultAdapter.sol               ✅ External protocol adapter
 │   ├── base/
-│   │   ├── MultiFacetProxy.sol       [NOT IN SCOPE - Proxy base]
-│   │   └── kBase.sol
-│   ├── interfaces/
-│   │   ├── IAdapter.sol
-│   │   ├── IExtsload.sol
-│   │   ├── IkAssetRouter.sol
-│   │   ├── IkBatchReceiver.sol
-│   │   ├── IkMinter.sol
-│   │   ├── IkRegistry.sol
-│   │   ├── IkStakingVault.sol
-│   │   ├── IkToken.sol
-│   │   ├── IVault.sol
+│   │   ├── kBase.sol                      ✅ Protocol foundation contract
+│   │   ├── kBaseRoles.sol                 ✅ Role-based access control
+│   │   └── MultiFacetProxy.sol            ✅ Modular vault architecture
+│   ├── kRegistry/
+│   │   ├── kRegistry.sol                  ✅ Protocol configuration registry
 │   │   └── modules/
-│   │       ├── IVaultBatch.sol
-│   │       ├── IVaultClaim.sol
-│   │       ├── IVaultFees.sol
-│   │       └── IVaultReader.sol
-│   ├── kAssetRouter.sol
-│   ├── kBatchReceiver.sol
-│   ├── kMinter.sol
-│   ├── kRegistry.sol
+│   │       └── AdapterGuardianModule.sol  ✅ Adapter security module
 │   ├── kStakingVault/
 │   │   ├── base/
-│   │   │   └── BaseVault.sol
-│   │   ├── kStakingVault.sol
+│   │   │   └── BaseVault.sol              ✅ Vault foundation logic
 │   │   ├── modules/
-│   │   │   └── ReaderModule.sol
-│   │   └── types/
-│   │       └── BaseVaultTypes.sol
-│   ├── libraries/                    [NOT IN SCOPE - Optimized libraries]
-│   ├── vendor/                       [NOT IN SCOPE - External dependencies]
-│   └── kToken.sol
+│   │   │   └── ReaderModule.sol           ✅ State query module
+│   │   ├── types/
+│   │   │   └── BaseVaultTypes.sol         ✅ Vault data structures
+│   │   └── kStakingVault.sol              ✅ Main retail staking contract
+│   ├── kAssetRouter.sol                   ✅ Virtual balance coordinator
+│   ├── kBatchReceiver.sol                 ✅ Batch settlement distribution
+│   ├── kMinter.sol                        ✅ Institutional gateway
+│   └── kToken.sol                         ✅ Asset-backed ERC20 token
 ```
 
-**Out of scope**: Libraries (`libraries/`), vendor dependencies (`vendor/`), external dependencies (Solady, OpenZeppelin), test contracts, and deployment scripts.
+### Out of Scope - Supporting Components
+
+```
+├── src
+│   ├── errors/                       ❌ Error definitions only
+│   ├── interfaces/                   ❌ Interface definitions (as requested)
+│   └── vendor/                       ❌ External dependencies (as requested)
+│       ├── openzeppelin/             ❌ OpenZeppelin library implementations
+│       ├── solady/                   ❌ Solady optimized library implementations
+│       └── uniswap/                  ❌ Uniswap protocol integrations
+```
+
+**Excluded Categories:**
+
+- **Interfaces** (`src/interfaces/`): Interface definitions without implementation logic
+- **Vendor Dependencies** (`src/vendor/`): External library implementations (OpenZeppelin, Solady, Uniswap)
+- **Error Definitions** (`src/errors/`): Pure error constant definitions only
+- **Test Contracts**: All test, mock, and script files
+- **External Dependencies**: Imported libraries and protocol integrations
+
+**Rationale for Exclusions:**
+
+- Interfaces contain no executable logic and serve as API definitions
+- Vendor code represents well-tested implementations audited separately by their respective teams
+- Error definitions are purely declarative constants with no logic
+- Focus remains on custom KAM protocol implementation logic
 
 ## Core Protocol Components
 
-**kMinter** - Institutional gateway implementing push-pull minting model. Accepts underlying asset deposits to mint kTokens 1:1, manages redemption requests through batch settlement, and coordinates with kAssetRouter for asset flow.
+### kMinter - Institutional Gateway
 
-**kAssetRouter** - Central coordination hub managing virtual balance accounting between vaults and external strategies. Implements two-phase settlement with timelock proposals, handles adapter integrations with explicit approval patterns, and coordinates batch processing flows.
+**Primary Function**: Enables qualified institutions to mint and redeem kTokens through a sophisticated batch-based system with immediate minting and deferred redemption settlement.
 
-**kRegistry** - Protocol registry managing singleton contracts, asset support, vault registration, and adapter coordination. Maintains bidirectional asset-kToken mappings and enforces protocol-wide access control.
+**Minting Workflow**:
 
-**kStakingVault** - ERC20 vault with dual accounting implementing automatic yield distribution. Features modular architecture through MultiFacetProxy pattern with ReaderModule, batch request processing, and CREATE2 deterministic deployment of batch receivers.
+1. Institution calls `mint(asset, to, amount)` with underlying assets (USDC, WBTC, etc.)
+2. Assets transferred from institution to kMinter contract
+3. kTokens minted immediately 1:1 to specified recipient address
+4. Assets pushed to kAssetRouter for deployment in yield strategies via `kAssetPush()`
+5. Virtual balance accounting updated across protocol components
 
-**kBatchReceiver** - Minimal proxy contracts deployed per batch for isolated asset distribution. Implements one-time initialization and secure asset distribution with batch ID validation.
+**Redemption Workflow**:
 
-**kToken** - ERC20 token representing wrapped underlying assets with institutional-only minting restrictions.
+1. **Request Phase**: Institution calls `requestRedeem(asset, to, amount)` 
+   - kTokens escrowed in kMinter contract
+   - Unique request ID generated using multiple entropy sources
+   - Request added to current active batch for the asset
+2. **Batch Settlement**: When batch closes and settles:
+   - kBatchReceiver minimal proxy deployed for isolated asset distribution
+   - Assets transferred from kAssetRouter to BatchReceiver
+   - Batch marked as settled, enabling claims
+3. **Claim Phase**: Institution calls `redeem(requestId)`
+   - Validates request exists and batch is settled
+   - Burns escrowed kTokens
+   - Pulls underlying assets from BatchReceiver to recipient
 
-## Notable Protocol Features
+**Critical Security Features**: INSTITUTION_ROLE enforcement, batch amount limits, immutable BatchReceiver deployment, and tamper-proof request ID generation.
 
-**Virtual Balance Accounting** - Assets are tracked through virtual balances rather than direct token holdings, enabling efficient batch processing and settlement coordination without constant token transfers.
+### kAssetRouter - Virtual Balance Coordinator
 
-**Two-Phase Settlement** - Settlement proposals implement timelock mechanisms allowing for correction of incorrect parameters through cancellation before execution. Proposals include cooldown periods (1 hour to 1 day) before execution is permitted.
+**Primary Function**: Serves as the central hub coordinating all asset movements, virtual balance tracking, and settlement orchestration across institutional and retail operations.
 
-**Batch Processing Architecture** - Requests are grouped into batches for gas-efficient settlement, with deterministic batch receiver deployment and isolated asset distribution.
+**Virtual Balance System**:
 
-**Explicit Approval Pattern** - Adapters receive temporary approvals only during settlement execution, immediately revoked afterward for security.
+- Tracks asset positions across all vaults without requiring immediate physical transfers
+- Enables capital efficiency by keeping assets deployed in yield strategies while maintaining liquidity
+- Records incoming/outgoing flows via `kAssetPush()`, `kAssetRequestPull()`, `kSharesRequestPush()`, `kSharesRequestPull()`
+- Aggregates balances across multiple adapters per vault for unified accounting
 
-**Role-Based Access Control** - Comprehensive role system implemented through Solady's OptimizedOwnableRoles including:
-- Owner: Protocol ownership and ultimate control
-- Admin: Administrative functions and upgrades  
-- Emergency Admin: Pause functionality and emergency operations
-- Institution: Minting and redemption permissions
-- Vendor: Asset management and adapter permissions
-- Relayer: Settlement proposal creation
-- Guardian: Settlement proposal cancellation
+**Settlement Workflow**:
 
-**Modular Vault System** - Vaults implement MultiFacetProxy pattern with ReaderModule for state queries, while core functionality remains in the main contract.
+1. **Proposal Phase**: Relayers call `proposeSettleBatch(asset, vault, batchId, totalAssets)`
+   - Contract automatically calculates yield: `yieldGenerated = totalAssets - lastTotalAssets`
+   - Validates yield against tolerance limits (default 10%, max 50%)
+   - Creates proposal with mandatory cooldown period (default 1 hour)
+2. **Cooldown Phase**: Guardian oversight period
+   - GUARDIAN_ROLE can call `cancelProposal()` if irregularities detected
+   - Proposal remains pending until cooldown expires
+   - Multiple proposals can be pending simultaneously
+3. **Execution Phase**: Anyone calls `executeSettleBatch(proposalId)` after cooldown
+   - Distributes calculated yield through kToken minting/burning
+   - Updates virtual balances across all participating vaults
+   - Triggers explicit approval pattern for secure adapter interactions
+   - Coordinates with BatchReceivers for institutional redemption distribution
 
-## Technical Architecture
+**Security Features**: Yield tolerance validation, guardian cancellation rights, explicit approval patterns, and atomic settlement operations.
 
-**ERC-7201 Storage Patterns** - All contracts implement namespaced storage using ERC-7201 to prevent storage collisions during upgrades. Each contract defines unique storage locations with keccak256-derived slots.
+### kRegistry - Protocol Configuration Hub
 
-**UUPS Upgradeability** - Core contracts (`kMinter`, `kAssetRouter`, `kRegistry`, `kStakingVault`) implement UUPS (Universal Upgradeable Proxy Standard) through Solady's UUPSUpgradeable, enabling controlled protocol upgrades with admin authorization.
+**Primary Function**: Serves as the authoritative registry and configuration center for all protocol components, asset relationships, and access control management.
 
-**Solady Dependencies** - Protocol extensively uses Solady library for gas optimization and security:
-- `SafeTransferLib` for secure token transfers
-- `ReentrancyGuardTransient` for gas-efficient reentrancy protection  
-- `OptimizedFixedPointMathLib` for precision arithmetic
-- `OptimizedBytes32EnumerableSetLib` for efficient set operations
-- `OptimizedOwnableRoles` for role-based access control
+**Asset Management Workflow**:
 
-**Extsload Pattern** - `kMinter` implements Extsload for storage reading optimization, allowing efficient cross-contract storage access without additional SLOAD operations.
+1. **Asset Registration**: Admin calls `registerAsset(name, symbol, asset, id, maxMintPerBatch, maxRedeemPerBatch)`
+   - Deploys new kToken contract with specified metadata
+   - Creates bidirectional asset↔kToken mapping for protocol operations
+   - Sets initial batch limits for institutional operations
+   - Emits events for off-chain indexing and monitoring
 
-**Transient Reentrancy Protection** - All state-changing functions use transient reentrancy guards that leverage Solidity 0.8.30's transient storage (TSTORE/TLOAD) for gas-efficient protection.
+**Vault Coordination System**:
 
-## Known Caveats
+- **Type-Based Organization**: Registers vaults by classification (DN for yield generation, ALPHA/BETA for different risk profiles)
+- **Asset Allocation Tracking**: Maps which vaults can manage which assets via `getVaultsByAsset()`
+- **Single Source of Truth**: All protocol components query Registry for vault relationships
 
-**Settlement Proposal Timelock** - Proposals require timelock delays before execution, potentially causing delays in asset settlement if parameters need correction. The protocol addresses this through proposal cancellation mechanisms.
+**Adapter Integration Process**:
 
-**Virtual Balance Synchronization** - Virtual balances must remain synchronized with actual adapter holdings. Discrepancies could arise from direct adapter interactions or external protocol changes affecting adapter behavior.
+1. Admin calls `registerAdapter(vault, adapter)` to associate external strategy adapters
+2. Registry validates vault exists and adapter address is valid
+3. Creates vault→adapter mapping for settlement and execution operations
+4. Enables controlled access to external DeFi protocols with proper authorization
 
-**Batch Settlement Dependencies** - Redemption completion depends on successful batch settlement and adapter cooperation. Failed adapter operations could block entire batch processing.
+**Role Management System**:
 
-**CREATE2 Salt Mining** - Batch receiver deployment relies on CREATE2 with specific salt requirements. Registry parameter changes between salt discovery and deployment could invalidate prepared salts.
+- **Protocol-Wide Enforcement**: All contracts check Registry for role validation
+- **Hierarchical Permissions**: Owner → Admin → Emergency Admin → Specialized Roles
+- **Cross-Contract Coordination**: Ensures consistent access control across all protocol components
 
-**ERC-7201 Storage Collision Risks** - While ERC-7201 prevents most storage collisions, incorrect namespace calculations or implementation errors could lead to storage overwrites during upgrades.
+**Security Architecture**: Single point of trust for protocol relationships, preventing unauthorized integrations and maintaining operational integrity.
 
-**MultiFacetProxy Security** - The modular vault architecture using MultiFacetProxy requires careful validation of function selector conflicts and delegation call security. The ReaderModule integration must maintain proper access controls and state consistency.
+### kStakingVault - Retail Yield Generation
 
-**Transient Storage Dependencies** - The protocol's reliance on Solidity 0.8.30's transient storage for reentrancy protection creates a hard dependency on specific compiler behavior and EVM implementations that support TSTORE/TLOAD.
+**Primary Function**: Enables retail users to stake kTokens for yield-bearing stkTokens with automatic compounding and batch-efficient settlement processing.
 
-**UUPS Upgrade Authorization** - Upgrade mechanisms depend on proper access control validation. Compromise of admin keys or authorization bypass could allow malicious upgrades across multiple protocol contracts.
+**Staking Workflow**:
 
-**Adapter Integration Complexity** - Each adapter integration requires careful validation of redemption patterns, asset tracking accuracy, and emergency handling procedures. Different DeFi protocols may have varying settlement timeframes and failure modes.
+1. **Request Phase**: User calls `requestStake(to, kTokensAmount)`
+   - kTokens transferred from user to vault contract
+   - Unique request ID generated and added to current batch
+   - Request tracked in vault's internal batch system (no separate BatchReceiver)
+2. **Batch Settlement**: When batch closes and settles via kAssetRouter:
+   - Yield distributed automatically through share price appreciation
+   - Virtual balances updated to reflect new asset positions
+   - Share price recalculated based on new total assets
+3. **Claim Phase**: User calls `claimStakedShares(batchId, requestId)`
+   - Calculates stkTokens owed: `stkTokens = kTokensStaked / sharePrice`
+   - Mints stkTokens directly to recipient address
+   - Updates vault accounting and user balances
 
-**Virtual Balance Attack Vectors** - Virtual balance accounting creates potential attack vectors where discrepancies between recorded and actual balances could be exploited to drain funds or prevent legitimate withdrawals.
+**Unstaking Workflow**:
+
+1. **Request Phase**: User calls `requestUnstake(to, stkTokenAmount)`
+   - stkTokens transferred from user to vault contract
+   - Request added to current unstaking batch
+2. **Settlement & Claim**: After batch processing:
+   - User calls `claimUnstakedAssets(batchId, requestId)`
+   - Calculates payout: `kTokens = stkTokensUnstaked * sharePrice`
+   - Burns stkTokens and transfers kTokens to recipient
+
+**Architecture Features**:
+
+- **MultiFacetProxy Pattern**: Core staking logic in main contract, state queries routed to ReaderModule
+- **Internal Batch System**: No separate BatchReceiver contracts needed, simplified claim process
+- **Share Price Appreciation**: Yield distributed through increasing token value rather than token quantity
+- **Fee Structure**: Management fees (time-based) and performance fees (yield-based) with high-watermark protection
+
+**Yield Distribution**: Automatic compounding through share price increases, proportional yield distribution to all stkToken holders.
+
+### kBatchReceiver - Settlement Distribution
+
+**Primary Function**: Minimal proxy contract instances providing isolated asset holding and distribution for institutional redemption batches.
+
+**Deployment & Initialization Workflow**:
+
+1. **Creation**: kMinter calls `createBatchReceiver(batchId)` when batch ready for settlement
+   - Uses OptimizedLibClone.clone() for gas-efficient EIP-1167 minimal proxy deployment
+   - Each receiver is a separate contract instance with unique address
+2. **Initialization**: Newly deployed receiver calls `initialize(batchId, asset)`
+   - Links receiver to specific batch ID and asset type
+   - Sets immutable kMinter authorization reference
+   - Prevents reuse or reconfiguration after setup
+
+**Asset Distribution Process**:
+
+1. **Asset Reception**: During settlement, kAssetRouter transfers underlying assets to receiver
+2. **Individual Claims**: For each redemption in the batch:
+   - kMinter calls `pullAssets(receiver, amount, batchId)` with specific user address
+   - Receiver validates batch ID matches and caller is authorized kMinter
+   - Assets transferred directly to individual redemption claimant
+3. **Batch Completion**: Receiver remains available for any delayed claims
+
+**Security Architecture**:
+
+- **Batch Isolation**: Each receiver handles exactly one batch, preventing cross-contamination
+- **Immutable Authorization**: kMinter address set at construction, cannot be changed
+- **Batch ID Validation**: All operations require correct batch ID to prevent operational errors
+- **Emergency Recovery**: `rescueAssets()` for accidentally sent tokens (excluding protocol assets)
+
+**Gas Efficiency**: Minimal proxy pattern reduces deployment costs by ~90% compared to full contract deployment per batch.
+
+### kToken - Asset-Backed Token
+
+**Primary Function**: Immutable ERC20 token representing real-world assets with guaranteed 1:1 backing and institutional-grade security controls.
+
+**Token Lifecycle Management**:
+
+1. **Deployment**: Registry deploys new kToken via `registerAsset()` with specific name, symbol, and underlying asset
+2. **Minting Operations**: Only MINTER_ROLE holders (kMinter, kStakingVault) can call `mint(to, amount)`
+   - Validates recipient address and amount parameters
+   - Creates new tokens backed by underlying assets in protocol vaults
+   - Maintains 1:1 backing ratio through coordinated asset management
+3. **Burning Operations**: MINTER_ROLE calls `burn(from, amount)` or users call `burnFrom(from, amount)`
+   - Destroys tokens when underlying assets are redeemed
+   - Validates sufficient balance and allowances
+   - Maintains backing guarantee through asset release coordination
+
+**Security Architecture**:
+
+- **Immutable Implementation**: No proxy pattern ensures token contract cannot be upgraded or modified
+- **Role-Based Access Control**: Uses OptimizedOwnableRoles for efficient permission management
+- **Emergency Controls**: EMERGENCY_ADMIN_ROLE can pause all transfers during crisis situations
+- **Supply Validation**: Total supply always equals underlying assets held across protocol vaults
+
+**Trust Model**:
+
+- **Transparency**: Immutable code provides verifiable token behavior for institutional adoption
+- **Backing Guarantee**: Every kToken backed by exactly one unit of underlying asset (USDC, WBTC, etc.)
+- **Institutional Grade**: Role separation ensures operational security and regulatory compliance
+
+**Integration Points**: Seamless ERC20 compatibility with existing DeFi infrastructure while maintaining protocol-specific minting restrictions.
+
+## Audit Summary
+
+### Key Focus Areas for Auditors
+
+1. **Virtual Balance Accounting System** (`kAssetRouter.sol`)
+   - Consistency between virtual and actual balances across all adapters
+   - Settlement proposal validation and yield calculation accuracy
+   - Guardian oversight mechanisms and cooldown period effectiveness
+
+2. **Batch Processing Architecture** (`kMinter.sol`, `kStakingVault.sol`)
+   - Request lifecycle management from creation to settlement
+   - BatchReceiver deployment and asset distribution security
+   - Cross-batch isolation and accounting accuracy
+
+3. **Upgrade Safety** (All UUPS contracts)
+   - ERC-7201 storage namespace calculations and collision prevention
+   - Authorization mechanisms and admin key security
+   - State preservation across upgrades
+
+4. **Gas Optimization Implementations**
+   - Transient storage reentrancy protection correctness
+   - Batch processing efficiency vs security trade-offs
+   - Extsload implementation security and access controls
+
+5. **Role-Based Access Control** (`kBaseRoles.sol`)
+   - Role hierarchy and permission enforcement across all contracts
+   - Emergency pause mechanisms and recovery procedures
+   - Multi-signature requirements and timelock implementations
+
+### Critical Security Properties to Validate
+
+- **1:1 Backing Guarantee**: Every kToken must be backed by exactly one unit of underlying asset
+- **Settlement Atomicity**: All multi-contract operations must be atomic and fail-safe
+- **Access Control Consistency**: Role-based permissions must be enforced uniformly across the protocol
+- **Upgrade Safety**: Contract upgrades must preserve state integrity and security properties
+- **Economic Security**: Attack costs must exceed potential profits under all market conditions

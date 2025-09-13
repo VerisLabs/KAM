@@ -226,69 +226,6 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
     }
 
     /*//////////////////////////////////////////////////////////////
-                    CREATE BATCH RECEIVER TESTS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @dev Test createBatchReceiver deployment
-    function test_CreateBatchReceiver_Success() public {
-        // Create a batch
-        vm.prank(users.relayer);
-        vault.createNewBatch();
-        bytes32 batchId = vault.getBatchId();
-
-        // Deploy batch receiver as kAssetRouter
-        vm.prank(address(assetRouter));
-        vm.expectEmit(false, true, false, true);
-        emit BatchReceiverCreated(address(0), batchId); // Don't know exact address
-        address receiver = vault.createBatchReceiver(batchId);
-
-        // Verify receiver was deployed
-        assertTrue(receiver != address(0));
-        assertTrue(receiver.code.length > 0);
-
-        // Verify receiver is initialized correctly
-        kBatchReceiver batchReceiver = kBatchReceiver(receiver);
-        assertEq(batchReceiver.batchId(), batchId);
-        assertEq(batchReceiver.asset(), getUSDC());
-    }
-
-    /// @dev Test createBatchReceiver returns existing if already deployed
-    function test_CreateBatchReceiver_ReturnsExisting() public {
-        // Create a batch
-        vm.prank(users.relayer);
-        vault.createNewBatch();
-        bytes32 batchId = vault.getBatchId();
-
-        // Deploy batch receiver first time
-        vm.prank(address(assetRouter));
-        address receiver1 = vault.createBatchReceiver(batchId);
-
-        // Deploy again should return same address
-        vm.prank(address(assetRouter));
-        address receiver2 = vault.createBatchReceiver(batchId);
-
-        assertEq(receiver1, receiver2);
-    }
-
-    /// @dev Test createBatchReceiver requires kAssetRouter role
-    function test_CreateBatchReceiver_RequiresKAssetRouter() public {
-        bytes32 batchId = vault.getBatchId();
-
-        // Non-kAssetRouter should fail
-        vm.prank(users.alice);
-        vm.expectRevert(bytes(KSTAKINGVAULT_WRONG_ROLE));
-        vault.createBatchReceiver(batchId);
-
-        vm.prank(users.relayer);
-        vm.expectRevert(bytes(KSTAKINGVAULT_WRONG_ROLE));
-        vault.createBatchReceiver(batchId);
-
-        vm.prank(users.admin);
-        vm.expectRevert(bytes(KSTAKINGVAULT_WRONG_ROLE));
-        vault.createBatchReceiver(batchId);
-    }
-
-    /*//////////////////////////////////////////////////////////////
                         INTEGRATION TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -350,11 +287,6 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vm.prank(users.relayer);
         vault.createNewBatch();
         bytes32 anotherBatch = vault.getBatchId();
-
-        // Create batch receiver should work
-        vm.prank(address(assetRouter));
-        address receiver = vault.createBatchReceiver(anotherBatch);
-        assertTrue(receiver != address(0));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -372,11 +304,6 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vm.prank(users.alice);
         vm.expectRevert(bytes(KSTAKINGVAULT_WRONG_ROLE));
         vault.settleBatch(bytes32(0));
-
-        // Create receiver for zero ID
-        vm.prank(users.alice);
-        vm.expectRevert(bytes(KSTAKINGVAULT_WRONG_ROLE));
-        vault.createBatchReceiver(bytes32(0));
     }
 
     /// @dev Test batch operations with max batch ID
@@ -391,9 +318,5 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vm.prank(users.alice);
         vm.expectRevert(bytes(KSTAKINGVAULT_WRONG_ROLE));
         vault.settleBatch(maxBatchId);
-
-        vm.prank(users.alice);
-        vm.expectRevert(bytes(KSTAKINGVAULT_WRONG_ROLE));
-        vault.createBatchReceiver(maxBatchId);
     }
 }

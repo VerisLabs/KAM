@@ -2,225 +2,608 @@
 
 ## Overview: User Journey
 
-```mermaid
-graph LR
-    U[User] --> S1[Step1: Stake kTokens]
-    S1 --> W1[Wait for Settlement]
-    W1 --> C1[Step2: Claim stkTokens]
-    C1 --> H[Hold stkTokens and Earn Yield]
-    H --> U1[Step3: Request Unstake]
-    U1 --> W2[Wait for Settlement]
-    W2 --> C2[Step4: Claim kTokens plus Yield]
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│User has     │───▶│Step1: Stake │───▶│Wait for     │───▶│Step2: Claim │
+│kTokens      │    │kTokens      │    │Settlement   │    │stkTokens    │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                                                                  │
+┌─────────────┐    ┌─────────────┐    ┌───────────-──┐            │
+│Step4: Claim │◀───│Wait for     │◀───│Step3: Request│◀───────────┘
+│kTokens +    │    │Settlement   │    │Unstake       │
+│Yield        │    └─────────────┘    └────────────-─┘
+└─────────────┘                   
 ```
 
 ## Detailed Flow: Staking kTokens
 
-```mermaid
-flowchart TD
-    Start([User has kTokens]) --> Request[Request Stake]
-    Request --> Check{Batch Open?}
-    Check -->|No| Reject[Cannot Stake]
-    Check -->|Yes| Transfer[Transfer kTokens to Vault]
-    Transfer --> Store[Create Stake Request]
-    Store --> Track[Update Pending Stakes]
-    Track --> End([Waiting for Batch Settlement])
+```
+┌─────────────────┐
+│User has kTokens │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Request Stake    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐    ┌─────────────────┐
+│Check Balance    │NO  │Insufficient     │
+│kToken >= amount ├───▶│Balance Error    │
+└────────┬────────┘    └─────────────────┘
+         │YES
+         ▼
+┌─────────────────┐
+│Generate Request │
+│ID (hash-based)  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│safeTransferFrom │
+│kTokens to Vault │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Create Stake     │
+│Request Struct   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Track User       │
+│Request & Update │
+│Pending Stakes   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Notify Router    │
+│kAssetTransfer() │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Waiting for      │
+│Batch Settlement │
+└─────────────────┘
 ```
 
 ## Detailed Flow: Unstaking Process
 
-```mermaid
-flowchart TD
-    Start([User has stkTokens]) --> Request[Request Unstake]
-    Request --> Check{Has Balance?}
-    Check -->|No| Reject[Insufficient Balance]
-    Check -->|Yes| Hold[stkTokens Held by Vault]
-    Hold --> Store[Create Unstake Request]
-    Store --> Track[Update Virtual Balances]
-    Track --> End([Waiting for Batch Settlement])
+```
+┌─────────────────┐
+│User has         │
+│stkTokens        │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Request Unstake  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐    ┌─────────────────┐
+│Has Balance?     │NO  │Insufficient     │
+│                 ├───▶│Balance          │
+└────────┬────────┘    └─────────────────┘
+         │YES
+         ▼
+┌─────────────────┐
+│stkTokens Held   │
+│by Vault         │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Create Unstake   │
+│Request          │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Update Virtual   │
+│Balances         │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Waiting for      │
+│Batch Settlement │
+└─────────────────┘
 ```
 
 ## Batch Processing
 
-```mermaid
-flowchart TD
-    Active[Active Batch] --> Close[Relayer Closes Batch]
-    Close --> Settle[Settlement Executed]
-    Settle --> Capture[Capture Share Prices]
-    Capture --> Create[Create BatchReceiver]
-    Create --> Ready[Ready for Claims]
+```
+┌─────────────────┐
+│Active Batch     │
+│(Accepting       │
+│stake/unstake    │
+│requests)        │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Relayer Closes   │
+│Batch            │ ── closeBatch() - stops new requests
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Relayer Proposes │
+│Settlement       │ ── proposeSettleBatch() with yield calculation
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Cooldown Period  │
+│(1 hour default) │ ── Guardian review period
+└────────┬────────┘
+         │
+         ├──────────────────────────┐
+         ▼                          ▼
+┌────────────────---─┐     ┌─────────────────┐     
+│After Cooldown      │     │Guardian Can     │     
+│Execute Settlement  │     │Cancel Proposal  │     
+│executeSettleBatch()│     │cancelProposal() │     
+└-───────┬──-──────--┘     └─────────────────┘     
+         │
+         ▼
+┌─────────────────┐
+│Settlement       │
+│Executed         │ ── Mint/burn kTokens for yield
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Vault settleBatch│
+│Called           │ ── Captures share prices
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Share Prices     │
+│Locked           │ ── sharePrice and netSharePrice set
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Ready for Claims │
+└─────────────────┘
 ```
 
 ## Claiming Staked Shares
 
-```mermaid
-flowchart TD
-    Start([Stake Request Pending]) --> Check{Batch Settled?}
-    Check -->|No| Wait[Cannot Claim Yet]
-    Check -->|Yes| Calculate[Calculate stkTokens Based on Net Share Price]
-    Calculate --> Mint[Mint stkTokens to User]
-    Mint --> Update[Update Pending Stakes]
-    Update --> End([User Receives stkTokens])
+```
+┌─────────────────┐
+│Stake Request    │
+│Pending          │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐    ┌─────────────────┐
+│Batch Settled?   │NO  │Cannot Claim Yet │
+│                 ├───▶│                 │
+└────────┬────────┘    └─────────────────┘
+         │YES
+         ▼
+┌─────────────────┐
+│Calculate        │
+│stkTokens Based  │ ── stkTokens = kTokens * (10^decimals) / netSharePrice
+│on Net Share     │ 
+│Price            │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Mint stkTokens   │
+│to User          │ ── ERC20 mint operation
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Update State     │
+│- Mark CLAIMED   │ ── Status = RequestStatus.CLAIMED
+│- Remove from    │ ── $.userRequests[user].remove(requestId)
+│  user requests  │ ── $.totalPendingStake -= kTokenAmount
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│User Receives    │
+│stkTokens        │
+└─────────────────┘
 ```
 
 ## Claiming Unstaked Assets
 
-```mermaid
-flowchart TD
-    Start([Unstake Request Pending]) --> Check{Batch Settled?}
-    Check -->|No| Wait[Cannot Claim Yet]
-    Check -->|Yes| Calculate[Calculate kTokens Gross and Net Amounts]
-    Calculate --> Fees[Deduct Fees to Treasury]
-    Fees --> Burn[Burn stkTokens]
-    Burn --> Transfer[Transfer Net kTokens]
-    Transfer --> End([User Receives kTokens plus Yield])
+```
+┌─────────────────┐
+│Unstake Request  │
+│Pending          │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐    ┌─────────────────┐
+│Batch Settled?   │NO  │Cannot Claim Yet │
+│                 ├───▶│                 │
+└────────┬────────┘    └─────────────────┘
+         │YES
+         ▼
+┌─────────────────┐
+│Calculate kTokens│
+│Net Amount       │ ── netKTokens = stkTokens * netSharePrice / (10^decimals)
+│                 │ 
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Calculate Fees   │
+│                 │ ── grossKTokens = stkTokens * sharePrice / (10^decimals)
+│                 │ ── fees = grossKTokens - netKTokens
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Burn stkTokens   │
+│from Vault       │ ── Burns from address(this) - already transferred
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Transfer Fees to │
+│Treasury         │ ── $.kToken.safeTransfer(getTreasury(), fees)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│Transfer Net     │
+│kTokens to User  │ ── $.kToken.safeTransfer(user, netKTokens)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│User Receives    │
+│kTokens + Yield  │
+└─────────────────┘
 ```
 
 ## Contract Architecture
 
-```mermaid
-graph TD
-    subgraph User Layer
-        USER[Retail User]
-    end
-    
-    subgraph Vault Layer
-        KSV[kStakingVault]
-        STK[stkTokens]
-    end
-    
-    subgraph Infrastructure
-        KT[kToken]
-        KAR[kAssetRouter]
-        BR[BatchReceiver]
-    end
-    
-    subgraph Fee Layer
-        TREAS[Treasury]
-    end
-    
-    USER --> KSV
-    KSV --> STK
-    KSV --> KT
-    KSV --> KAR
-    KSV --> BR
-    KSV --> TREAS
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                       Retail Staking Architecture                  │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  User Layer:                                                       │
+│  ┌─────────────┐                                                   │
+│  │Retail User  │                                                   │
+│  └──────┬──────┘                                                   │
+│         │                                                          │
+│         ▼                                                          │
+│  Vault Layer:                                                      │
+│  ┌─────────────┐      ┌──────────────┐                             │
+│  │kStakingVault│─────▶│stkTokens     │                             │
+│  │             │      │(ERC20 shares)│                             │
+│  └──────┬──────┘      └──────────────┘                             │
+│         │                                                          │
+│  Core Infrastructure:                                              │
+│         ├─────────▶ ┌─────────────┐                                │
+│         │           │kToken       │ ── Underlying asset            │
+│         │           └─────────────┘                                │
+│         │                                                          │
+│         ├─────────▶ ┌─────────────┐                                │
+│         │           │kAssetRouter │ ── Central coordinator         │
+│         │           └──────┬──────┘    & Virtual balances          │
+│         │                  │                                       │
+│         │                  ▼                                       │
+│         ├─────────▶ ┌─────────────┐                                │
+│         │           │kMinter      │ ── Institutional flows         │
+│         │           └─────────────┘                                │
+│         │                                                          │
+│         ├─────────▶ ┌─────────────┐                                │
+│         │           │kRegistry    │ ── Access control & config     │
+│         │           └─────────────┘                                │
+│         │                                                          │
+│  Fee & Settlement:                                                 │
+│         ├─────────▶ ┌─────────────┐                                │
+│         │           │Treasury     │ ── Fee collection              │
+│         │           └─────────────┘                                │
+│         │                                                          │
+│         └─────────▶ ┌─────────────┐                                │
+│                     │BatchReceiver│ ── Settlement distribution     │
+│                     └─────────────┘                                │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Share Price Calculation
 
-```mermaid
-flowchart TD
-    TA[Total Assets] --> SP{Calculate Share Price}
-    TS[Total Supply] --> SP
-    SP --> Formula[sharePrice equals totalAssets times 1e18 divided by totalSupply]
-    
-    subgraph Components
-        VB[Virtual Balance]
-        AA[Adapter Assets]
-        MF[Management Fees]
-        PF[Performance Fees]
-    end
-    
-    VB --> TA
-    AA --> TA
-    MF -->|Reduces| TA
-    PF -->|Reduces| TA
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Share Price Calculation                      │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  Components that build Total Assets:                                │
+│  ┌─────────────────┐                                                │
+│  │kToken Balance   │                                                │
+│  │vault.kToken.    │                                                │
+│  │balanceOf(this)  │                                                │
+│  └────────┬────────┘                                                │
+│           │                                                         │
+│           │ Subtract pending stakes                                 │
+│           ▼                                                         │
+│  ┌─────────────────┐                                                │
+│  │Total Assets =   │                                                │
+│  │Balance -        │                                                │
+│  │PendingStakes    │                                                │
+│  └────────┬────────┘                                                │
+│           │                                                         │
+│  Components that reduce to Net Assets:                              │
+│  ┌─────────────────┐         ┌─────────────────┐                    │
+│  │Management Fees  │         │Performance Fees │                    │
+│  │(configurable)   │         │(configurable)   │                    │
+│  │Time-based       │         │Above watermark  │                    │
+│  └────────┬────────┘         └────────┬────────┘                    │
+│           │                           │                             │
+│           └───────────┬───────────────┘                             │
+│                       ▼                                             │
+│              ┌─────────────────┐                                    │
+│              │Total Net Assets │                                    │
+│              │= totalAssets -  │                                    │
+│              │accumulatedFees  │                                    │
+│              └────────┬────────┘                                    │
+│                       │                                             │
+│  ┌─────────────────┐  │                                             │
+│  │Total Supply     │  │                                             │
+│  │(stkTokens)      │  │                                             │
+│  └────────┬────────┘  │                                             │
+│           │           │                                             │
+│           └─────┬─────┘                                             │
+│                 ▼                                                   │
+│        ┌─────────────────────────────────┐                          │
+│        │Formulas:                        │                          │
+│        │                                 │                          │
+│        │grossSharePrice =                │                          │
+│        │  totalAssets * (10^decimals)    │                          │
+│        │  / totalSupply                  │                          │
+│        │                                 │                          │
+│        │netSharePrice =                  │                          │
+│        │  totalNetAssets * (10^decimals) │                          │
+│        │  / totalSupply                  │                          │
+│        └─────────────────────────────────┘                          │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Fee Distribution
 
-```mermaid
-flowchart LR
-    GY[Gross Yield] --> MF[Management Fee 2pct]
-    GY --> PF[Performance Fee 10pct]
-    MF --> T[Treasury]
-    PF --> T
-    GY --> NY[Net Yield]
-    NY --> U[Users]
+```
+┌────────────────────────────────────────────────────────────────┐
+│                        Fee Distribution Flow                   │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│                         ┌─────────────┐                        │
+│                         │Gross Yield  │                        │
+│                         └──────┬──────┘                        │
+│                                │                               │
+│               ┌────────────────────────────────┐               │
+│               │                                │               │
+│               ▼                                ▼               │
+│      ┌────────────────┐               ┌────────────────┐       │
+│      │Management Fee  │               │Performance Fee │       │
+│      │(configurable)  │               │(configurable)  │       │
+│      └────────┬───────┘               └────────┬───────┘       │
+│               │                                │               │
+│               │                                ▼               │
+│               │                         ┌─────────────┐        │
+│               └────────────────────────▶│Treasury     │        │
+│                                         └─────────────┘        │
+│                                                │               |
+│                                                ▼               |     
+│                                         ┌─────────────┐        |
+│                                         │Net Yield    │        |
+│                                         └──────┬──────┘        |
+│                                                │               |
+│                                                ▼               |
+│                                         ┌─────────────┐        |
+│                                         │Users        │        |
+│                                         │(Stakers)    │        |
+│                                         └─────────────┘        |
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ## Request States
 
-```mermaid
-flowchart LR
-    PENDING --> CLAIMED
-    PENDING --> CANCELLED
+```
+Request Status Flow:
+
+┌─────────────┐
+│PENDING      │ ── Initial state when requestStake() or requestUnstake() is called
+└──────┬──────┘
+       │
+       ├────────────────────────────────────┐
+       │                                    ▼
+       │                            ┌─────────────┐
+       │                            │CANCELLED    │ ── Via user cancellation
+       │                            └─────────────┘
+       │
+       ▼
+┌─────────────┐
+│CLAIMED      │ ── After successful claim operation
+└─────────────┘
 ```
 
 ## Key Functions by Contract
 
-```mermaid
-graph TD
-    subgraph kStakingVault Functions
-        F1[requestStake - Start staking]
-        F2[requestUnstake - Start unstaking]
-        F3[claimStakedShares - Get stkTokens]
-        F4[claimUnstakedAssets - Get kTokens]
-    end
-    
-    subgraph Batch Functions
-        F5[closeBatch - Stop new requests]
-        F6[settleBatch - Lock share prices]
-        F7[createBatchReceiver - Deploy distributor]
-    end
-    
-    subgraph Price Functions
-        F8[sharePrice - Current price]
-        F9[netSharePrice - Price after fees]
-        F10[totalAssets - AUM calculation]
-    end
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Contract Function Overview                       │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  kStakingVault Functions:             Batch Functions:              │
+│  ┌───────────────────────────┐      ┌───────────────────────────┐   │
+│  │• requestStake()           │      │• createNewBatch()         │   │
+│  │  Start staking process    │      │  Create new batch ID      │   │
+│  │                           │      │                           │   │
+│  │• requestUnstake()         │      │• closeBatch()             │   │
+│  │  Start unstaking process  │      │  Stop new requests        │   │
+│  │                           │      │                           │   │
+│  │• claimStakedShares()      │      │• settleBatch()            │   │
+│  │  Get stkTokens            │      │  Lock share prices        │   │
+│  │                           │      │  (Called by kAssetRouter) │   │
+│  │• claimUnstakedAssets()    │      └───────────────────────────┘   │
+│  │  Get kTokens + yield      │                                      │
+│  │                           │                                      │
+│  │• cancelStakeRequest()     │      kAssetRouter Functions:         │
+│  │  Cancel pending stake     │      ┌───────────────────────────┐   │
+│  │                           │      │• proposeSettleBatch()     │   │
+│  │• cancelUnstakeRequest()   │      │  Start settlement process │   │
+│  │  Cancel pending unstake   │      │                           │   │
+│  └───────────────────────────┘      │• executeSettleBatch()     │   │
+│                                     │  Execute after cooldown   │   │
+│  Price Functions:                   │                           │   │
+│  ┌───────────────────────────┐      │• cancelProposal()         │   │
+│  │• _sharePrice()            │      │  Guardian cancellation    │   │
+│  │  Gross price calculation  │      │                           │   │
+│  │                           │      │• kAssetTransfer()         │   │
+│  │• _netSharePrice()         │      │  Virtual balance updates  │   │
+│  │  Net after fees           │      └───────────────────────────┘   │
+│  │                           │                                      │
+│  │• _totalAssets()           │      Fee Functions:                  │
+│  │  Balance - pending stakes │      ┌───────────────────────────┐   │
+│  │                           │      │• setManagementFee()       │   │
+│  │• _totalNetAssets()        │      │• setPerformanceFee()      │   │
+│  │  Assets - fees            │      │• setHardHurdleRate()      │   │
+│  └───────────────────────────┘      └───────────────────────────┘   │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Timeline: Happy Path Staking
 
-```mermaid
-graph LR
-    T0[Day_0: Stake kTokens] --> T1[Day_1: Batch Closes]
-    T1 --> T2[Day_2: Settlement]
-    T2 --> T3[Day_2: Claim stkTokens]
-    T3 --> T4[Day_N: Earn Yield]
+```
+Staking Timeline:
+
+Day 0:              Day 1:              Day 2:              Day 2:              Day N:
+┌───────────-──┐     ┌─────────────-┐    ┌-─────────────┐    ┌-─────────────┐    ┌-─────────────┐
+│Stake kTokens │───-▶│Batch Closes  │───▶│Settlement    │───▶│Claim         │───▶│Earn Yield    │
+│via           │     │(relayer)     │    │Executed      │    │stkTokens     │    │(ongoing)     │
+│requestStake()│     │              │    │              │    │              │    │              │
+└────────────-─┘     └─────────────-┘    └─────────────-┘    └─────────────-┘    └─────────────-┘
 ```
 
 ## Timeline: Happy Path Unstaking
 
-```mermaid
-graph LR
-    T0[Day_0: Request Unstake] --> T1[Day_1: Batch Closes]
-    T1 --> T2[Day_2: Settlement]
-    T2 --> T3[Day_2: Claim kTokens]
+```
+Unstaking Timeline:
+
+Day 0:              Day 1:              Day 2:              Day 2:
+┌───────────-──┐    ┌───-──────────┐    ┌─-────────────┐    ┌──-───────────┐
+│Request       │───▶│Batch Closes  │───▶│Settlement    │───▶│Claim kTokens │
+│Unstake via   │    │(relayer)     │    │Executed      │    │+ Yield       │
+│requestUnstake│    │              │    │              │    │              │
+└───────────-──┘    └───────-──────┘    └─────────────-┘    └──────-───────┘
 ```
 
 ## Token Flow
 
-```mermaid
-flowchart LR
-    subgraph Staking
-        K1[User kTokens] -->|Transfer| K2[Vault]
-        K2 -->|After Settlement| K3[stkTokens to User]
-    end
-    
-    subgraph Unstaking
-        S1[User stkTokens] -->|Hold| S2[Vault]
-        S2 -->|Burn| S3[Destroyed]
-        S4[Vault kTokens] -->|Transfer| S5[User kTokens plus Yield]
-        S4 -->|Fees| S6[Treasury]
-    end
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    Token Flow Diagram                                           │
+├─────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                 │
+│  STAKING FLOW:                                                                                  │
+│  ┌─────────────────┐    safeTransferFrom      ┌─────────────────┐                               │
+│  │User kTokens     │─────────────────────────▶│kStakingVault    │                               │
+│  │                 │                          │                 │                               │
+│  └─────────────────┘                          └─────────┬───────┘                               │
+│                                                         │                                       │
+│                    Virtual transfer via kAssetRouter    │                                       │
+│                                                         ▼                                       │
+│                                               ┌─────────────────┐                               │
+│                                               │From kMinter     │                               │
+│                                               │to Vault         │                               │
+│                                               └─────────┬───────┘                               │
+│                                                         │                                       │
+│                      After Settlement                   ▼                                       │
+│                                               ┌─────────────────┐                               │
+│                                               │Mint stkTokens   │                               │
+│                                               │based on share   │                               │
+│                                               │price to User    │                               │
+│                                               └─────────────────┘                               │
+│                                                                                                 │
+│  UNSTAKING FLOW:                                                                                │
+│  ┌─────────────────┐    Track shares          ┌─────────────────┐                               │
+│  │User requests    │─────────────────--───--─▶│   kAssetRouter  │                               │
+│  │unstaking        │                          │                 │                               │
+│  └─────────────────┘                          └─────────────────┘                               │
+│                                                         │                                       │
+│                        Settlement yield                 ▼                                       │
+│                        ┌─────────────────┐    ┌─────────────────┐                               │
+│                        │Mint/burn kTokens│───▶│Vault balance    │                               │
+│                        │to vault         │    │updated          │                               │
+│                        └─────────────────┘    └─────────-───────┘                               │
+│                                                                                                 |
+|                                                                                                 │
+│  ┌─────────────────┐     Burn stkTokens       ┌─────────────────┐                               │
+│  │User claims      │───────────────────----──▶│stkTokens        │                               │
+│  │                 │                          │Destroyed        │                               │
+│  └─────────────────┘                          └─────────────────┘                               │
+│           │                                                                                     │
+│           │                Transfer net amount                                                  │
+│           ▼                                                                                     │
+│  ┌─────────────────┐    ┌─────────────────────────────────┐    ┌─────────────────┐              │
+│  │User receives    │◀───│                                 │───▶│Treasury         │              │
+│  │kTokens + yield  │    │         Fees deducted           │    │(Fees)           │              │
+│  └─────────────────┘    └─────────────────────────────────┘    └─────────────────┘              │
+│                                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Yield Accumulation
 
-```mermaid
-flowchart TD
-    subgraph Yield Sources
-        Y1[Lending Protocols]
-        Y2[Liquidity Pools]
-        Y3[Staking Rewards]
-    end
-    
-    Y1 --> YP[Yield Pool]
-    Y2 --> YP
-    Y3 --> YP
-    
-    YP --> SP[Increases Share Price]
-    SP --> BH[Benefits All Holders]
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                Yield Accumulation Flow                                          │
+├─────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                 │
+│  Yield Sources:                                                                                 │
+│  ┌─────────────────┐                                                                            │
+│  │Adapters         │                                                                            │
+│  │                 │                                                                            │
+│  │• MetaVault      │                                                                            │
+│  │• CEFFU          │                                                                            │
+│  │                 │                                                                            │
+│  └─────────┬───────┘                                                                            │
+│            │                                                                                    │
+│            │                                                                                    │
+│            |                                                                                    │
+│            │                                                                                    │
+│            ▼                                                                                    │
+│  ┌─────────────────┐                                                                            │
+│  │Yield Pool       │                                                                            │
+│  │(Aggregated      │                                                                            │
+│  │Returns)         │                                                                            │
+│  └─────────┬───────┘                                                                            │
+│            │                                                                                    │
+│            ▼                                                                                    │
+│  ┌─────────────────┐                                                                            │
+│  │Increases Share  │                                                                            │
+│  │Price            │                                                                            │
+│  │                 │ ── sharePrice = totalAssets * 1e18 / totalSupply                           │
+│  └─────────┬───────┘                                                                            │
+│            │                                                                                    │
+│            ▼                                                                                    │
+│  ┌─────────────────┐                                                                            │
+│  │Benefits All     │                                                                            │
+│  │stkToken Holders │                                                                            │
+│  │                 │ ── All stakers earn proportional yield                                     │
+│  └─────────────────┘                                                                            │
+│                                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```

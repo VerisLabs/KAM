@@ -19,6 +19,10 @@ import {
     VAULTADAPTER_ZERO_ADDRESS,
     VAULTADAPTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { IVersioned } from "src/interfaces/IVersioned.sol";
+import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { IRegistry } from "src/interfaces/IRegistry.sol";
 import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
@@ -126,7 +130,7 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
         IRegistry registry = $.registry;
 
-        require(registry.isRelayer(msg.sender), VAULTADAPTER_WRONG_ROLE);
+        require(registry.isManager(msg.sender), VAULTADAPTER_WRONG_ROLE);
         _checkPaused();
 
         // Extract selector and validate vault-specific permission
@@ -208,14 +212,12 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the contract name
-    /// @return Contract name
+    /// @inheritdoc IVersioned
     function contractName() external pure returns (string memory) {
         return "VaultAdapter";
     }
 
-    /// @notice Returns the contract version
-    /// @return Contract version
+    /// @inheritdoc IVersioned
     function contractVersion() external pure returns (string memory) {
         return "1.0.0";
     }

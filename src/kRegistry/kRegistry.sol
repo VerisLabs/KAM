@@ -8,7 +8,7 @@ import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import { kRolesBase } from "src/base/kRolesBase.sol";
+import { kBaseRoles } from "src/base/kBaseRoles.sol";
 import {
     KREGISTRY_ADAPTER_ALREADY_SET,
     KREGISTRY_ALREADY_REGISTERED,
@@ -24,6 +24,7 @@ import {
     KREGISTRY_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { IVersioned } from "src/interfaces/IVersioned.sol";
 import { kToken } from "src/kToken.sol";
 
 /// @title kRegistry
@@ -38,7 +39,7 @@ import { kToken } from "src/kToken.sol";
 /// and VENDOR roles to enforce protocol security, (5) Adapter management - registers and tracks external protocol
 /// adapters per vault enabling yield strategy integrations. The registry uses upgradeable architecture with UUPS
 /// pattern and ERC-7201 namespaced storage to ensure future extensibility while maintaining state consistency.
-contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, MultiFacetProxy {
+contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, MultiFacetProxy {
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
     using SafeTransferLib for address;
 
@@ -161,7 +162,7 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
         _checkAddressNotZero(relayer_);
         _checkAddressNotZero(treasury_);
 
-        __kRolesBase_init(owner_, admin_, emergencyAdmin_, guardian_, relayer_, treasury_);
+        __kBaseRoles_init(owner_, admin_, emergencyAdmin_, guardian_, relayer_);
 
         _getkRegistryStorage().treasury = treasury_;
     }
@@ -545,6 +546,11 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
     }
 
     /// @inheritdoc IkRegistry
+    function isManager(address user) external view returns (bool) {
+        return _hasRole(user, MANAGER_ROLE);
+    }
+
+    /// @inheritdoc IkRegistry
     function isAsset(address asset) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.supportedAssets.contains(asset);
@@ -672,14 +678,12 @@ contract kRegistry is IkRegistry, kRolesBase, Initializable, UUPSUpgradeable, Mu
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the contract name
-    /// @return Contract name
+    /// @inheritdoc IVersioned
     function contractName() external pure returns (string memory) {
         return "kRegistry";
     }
 
-    /// @notice Returns the contract version
-    /// @return Contract version
+    /// @inheritdoc IVersioned
     function contractVersion() external pure returns (string memory) {
         return "1.0.0";
     }

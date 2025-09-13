@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { kRolesBase } from "src/base/kRolesBase.sol";
+import { kBaseRoles } from "src/base/kBaseRoles.sol";
 import {
     GUARDIANMODULE_INVALID_ADAPTER,
     GUARDIANMODULE_NOT_ALLOWED,
@@ -18,8 +18,8 @@ import { OptimizedAddressEnumerableSetLib } from
 
 /// @title AdapterGuardianModule
 /// @notice Module for managing adapter permissions and parameter checking in kRegistry
-/// @dev Inherits from kRolesBase for role-based access control
-contract AdapterGuardianModule is IAdapterGuardian, kRolesBase {
+/// @dev Inherits from kBaseRoles for role-based access control
+contract AdapterGuardianModule is IAdapterGuardian, kBaseRoles {
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
 
     /*//////////////////////////////////////////////////////////////
