@@ -46,10 +46,4 @@ abstract contract OptimizedReentrancyGuardTransient {
             tstore(s, 0)
         }
     }
-
-    /// @dev For widespread compatibility with L2s.
-    /// Only Ethereum mainnet is expensive anyways.
-    function _useTransientReentrancyGuardOnlyOnMainnet() internal view virtual returns (bool) {
-        return true;
-    }
 }
