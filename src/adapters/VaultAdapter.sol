@@ -2,7 +2,12 @@
 pragma solidity 0.8.30;
 
 import { Initializable } from "solady/utils/Initializable.sol";
+
+import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
+
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 import {
     VAULTADAPTER_EXPIRED_SIGNATURE,
@@ -19,10 +24,7 @@ import {
     VAULTADAPTER_ZERO_ADDRESS,
     VAULTADAPTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
-import { Initializable } from "solady/utils/Initializable.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IVersioned } from "src/interfaces/IVersioned.sol";
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
 import { IRegistry } from "src/interfaces/IRegistry.sol";
 import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";

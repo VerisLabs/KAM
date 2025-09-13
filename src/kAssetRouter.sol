@@ -36,11 +36,11 @@ import { OptimizedBytes32EnumerableSetLib } from
 import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
 import { ISettleBatch, IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 
+import { IVersioned } from "src/interfaces/IVersioned.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
-import { IVersioned } from "src/interfaces/IVersioned.sol";
 
 /// @title kAssetRouter
 /// @notice Central money flow coordinator for the KAM protocol, orchestrating all asset movements and yield

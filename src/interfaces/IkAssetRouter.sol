@@ -222,7 +222,9 @@ interface IkAssetRouter is IVersioned {
     /// @param batchId The batch identifier
     /// @param yield The yield amount
     /// @param maxAllowedYield The maximum allowed yield
-    event YieldExceedsToleranceWarning(address vault, address asset, bytes32 batchId, uint256 yield, uint256 maxAllowedYield);
+    event YieldExceedsToleranceWarning(
+        address vault, address asset, bytes32 batchId, uint256 yield, uint256 maxAllowedYield
+    );
 
     /*//////////////////////////////////////////////////////////////
                             KMINTER FUNCTIONS

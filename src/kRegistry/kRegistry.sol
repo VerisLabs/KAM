@@ -23,8 +23,9 @@ import {
     KREGISTRY_ZERO_ADDRESS,
     KREGISTRY_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+
 import { IVersioned } from "src/interfaces/IVersioned.sol";
+import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { kToken } from "src/kToken.sol";
 
 /// @title kRegistry

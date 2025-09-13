@@ -63,7 +63,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
     function test_FirstDeposit_SharePriceRemains1to1() public {
         // Alice deposits 1M USDC
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Total assets should equal deposit
         assertEq(vault.totalAssets(), INITIAL_DEPOSIT);
@@ -80,7 +80,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
     function test_SharePriceCalculation_AfterYield() public {
         // Alice deposits 1M USDC
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Simulate 10% yield by adding 100K USDC to vault
         bytes32 batchId = vault.getBatchId();
@@ -105,7 +105,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
     function test_SharePriceCalculation_AfterLoss() public {
         // Alice deposits 1M USDC
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Simulate 5% loss by burning 50K USDC from vault
         bytes32 batchId = vault.getBatchId();
@@ -131,7 +131,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
     function test_SecondDeposit_SameSharePrice() public {
         // Alice deposits 1M USDC
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Bob deposits 500K USDC at same share price
         uint256 bobDeposit = 500_000 * _1_USDC;
@@ -173,7 +173,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
     function test_SecondDeposit_AfterYield() public {
         // Alice deposits 1M USDC
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Add 20% yield (200K USDC)
         bytes32 batchId = vault.getBatchId();
@@ -190,7 +190,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
         // Bob deposits 600K USDC (should get 500K stkTokens)
         uint256 bobDeposit = 600_000 * _1_USDC;
-        _performStakeAndSettle(users.bob, bobDeposit);
+        _performStakeAndSettle(users.bob, bobDeposit, 0);
 
         // Calculate expected stkTokens for Bob
         uint256 expectedBobShares = bobDeposit * 1e6 / 1.2e6; // 500K stkTokens
@@ -219,25 +219,25 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         uint256[] memory expectedShares = new uint256[](3);
 
         for (uint256 i = 0; i < 3; i++) {
+            uint256 currentAssets;
+            uint256 yieldAmount;
+
             // Record share price before deposit
             uint256 sharePrice = vault.sharePrice();
-
-            // Perform deposit
-            _performStakeAndSettle(_users[i], deposits[i]);
 
             // Calculate expected shares
             expectedShares[i] = deposits[i] * 1e6 / sharePrice;
 
-            // Verify user's share balance
-            assertApproxEqAbs(vault.balanceOf(_users[i]), expectedShares[i], 10); // 10 wei tolerance
-
-            // Add some yield before next deposit (10% each time)
             if (i < 2) {
                 uint256 currentAssets = vault.totalAssets();
                 uint256 yieldAmount = currentAssets / 10; // 10% yield
-                vm.prank(address(minter));
-                kUSD.mint(address(vault), yieldAmount);
             }
+
+            // Perform deposit
+            _performStakeAndSettle(_users[i], deposits[i], int256(yieldAmount));
+
+            // Verify user's share balance
+            assertApproxEqAbs(vault.balanceOf(_users[i]), expectedShares[i], 10); // 10 wei tolerance
         }
 
         // Verify total supply equals sum of individual shares
@@ -255,7 +255,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
         // Use internal function via low-level call (testing internal logic)
         // In practice, this is tested through deposit functionality
-        _performStakeAndSettle(users.alice, assets);
+        _performStakeAndSettle(users.alice, assets, 0);
 
         // First deposit should always be 1:1
         assertEq(vault.balanceOf(users.alice), assets);
@@ -268,20 +268,18 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
     }
 
     function test_ConvertToShares_WithExistingSupply() public {
-        // Setup: Alice deposits 1M USDC
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
-
         // Add yield to change share price
         uint256 yieldAmount = 500_000 * _1_USDC; // 50% yield
-        vm.prank(address(minter));
-        kUSD.mint(address(vault), yieldAmount);
+        uint256 aliceDeposit = INITIAL_DEPOSIT;
 
-        // Share price should now be 1.5 USDC per stkToken
+        _performStakeAndSettle(users.alice, aliceDeposit, int256(yieldAmount));
+
         assertEq(vault.sharePrice(), 1.5e6);
 
         // Bob deposits 750K USDC (should get 500K stkTokens)
         uint256 bobDeposit = 750_000 * _1_USDC;
-        _performStakeAndSettle(users.bob, bobDeposit);
+
+        _performStakeAndSettle(users.bob, bobDeposit, 0);
 
         uint256 expectedBobShares = bobDeposit * 1e6 / 1.5e6; // 500K stkTokens
         assertApproxEqAbs(vault.balanceOf(users.bob), expectedBobShares, 1);
@@ -289,7 +287,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
     function test_ConvertToAssets_WithExistingSupply() public {
         // Setup: Alice deposits 1M USDC, gets 1M stkTokens
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Add yield
         uint256 yieldAmount = 200_000 * _1_USDC; // 20% yield
@@ -311,7 +309,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         // Test very small deposits to check precision handling
         uint256 smallAmount = 1 * _1_USDC; // 1 USDC
 
-        _performStakeAndSettle(users.alice, smallAmount);
+        _performStakeAndSettle(users.alice, smallAmount, 0);
 
         // Should receive exactly 1 stkToken (1e6 wei)
         assertEq(vault.balanceOf(users.alice), smallAmount);
@@ -326,7 +324,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         // Mint large amount to Alice
         _mintKTokenToUser(users.alice, largeAmount, true);
 
-        _performStakeAndSettle(users.alice, largeAmount);
+        _performStakeAndSettle(users.alice, largeAmount, 0);
 
         // Verify no precision loss
         assertEq(vault.balanceOf(users.alice), largeAmount);
@@ -340,7 +338,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
     function test_TotalNetAssets_WithoutFees() public {
         // Setup: Alice deposits 1M USDC
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Without any time passing, net assets should equal total assets
         assertEq(vault.totalNetAssets(), vault.totalAssets());
@@ -351,7 +349,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         _setupTestFees();
 
         // Alice deposits 1M USDC
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Fast forward time to accrue management fees
         vm.warp(block.timestamp + 365 days);

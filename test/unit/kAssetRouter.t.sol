@@ -958,7 +958,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         proposalId = assetRouter.proposeSettleBatch(getUSDC(), address(dnVault), batchId, TEST_TOTAL_ASSETS + 1000);
     }
 
-
     /// @dev Test cooldown edge cases
     function test_CooldownEdgeCases() public {
         vm.prank(users.admin);

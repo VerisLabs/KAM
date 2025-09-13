@@ -51,7 +51,7 @@ contract BaseVaultTest is DeploymentBaseTest {
                           HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _performStakeAndSettle(address user, uint256 amount) internal returns (bytes32 requestId) {
+    function _performStakeAndSettle(address user, uint256 amount, int256 profit) internal returns (bytes32 requestId) {
         // Approve kUSD for staking
         vm.prank(user);
         kUSD.approve(address(vault), amount);
@@ -66,8 +66,12 @@ contract BaseVaultTest is DeploymentBaseTest {
         vault.closeBatch(batchId, true);
 
         vm.prank(users.relayer);
-        bytes32 proposalId =
-            assetRouter.proposeSettleBatch(getUSDC(), address(vault), batchId, lastTotalAssets + amount);
+        bytes32 proposalId = assetRouter.proposeSettleBatch(
+            getUSDC(),
+            address(vault),
+            batchId,
+            profit > 0 ? lastTotalAssets + amount + uint256(profit) : lastTotalAssets + amount - uint256(profit)
+        );
 
         vm.prank(users.relayer);
         assetRouter.executeSettleBatch(proposalId);
@@ -121,13 +125,7 @@ contract BaseVaultTest is DeploymentBaseTest {
         }
     }
 
-    function _executeBatchSettlement(
-        address vault,
-        bytes32 batchId,
-        uint256 totalAssets
-    )
-        internal
-    {
+    function _executeBatchSettlement(address vault, bytes32 batchId, uint256 totalAssets) internal {
         vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(getUSDC(), address(vault), batchId, totalAssets);
 
