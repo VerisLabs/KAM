@@ -10,8 +10,8 @@ import {
     KSTAKINGVAULT_VAULT_SETTLED
 } from "src/errors/Errors.sol";
 
-import { IVaultReader } from "src/interfaces/modules/IVaultReader.sol";
 import { IVersioned } from "src/interfaces/IVersioned.sol";
+import { IVaultReader } from "src/interfaces/modules/IVaultReader.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 

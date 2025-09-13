@@ -214,7 +214,7 @@ interface IkAssetRouter is IVersioned {
     /// yield deviations that could indicate calculation errors or potential manipulation attempts
     /// @param oldTolerance The previous yield tolerance in basis points
     /// @param newTolerance The new yield tolerance in basis points
-    event YieldToleranceUpdated(uint256 oldTolerance, uint256 newTolerance);
+    event MaxAllowedDeltaUpdated(uint256 oldTolerance, uint256 newTolerance);
 
     /// @notice Emitted when yield exceeds the tolerance threshold
     /// @param vault The DN vault address
@@ -222,7 +222,9 @@ interface IkAssetRouter is IVersioned {
     /// @param batchId The batch identifier
     /// @param yield The yield amount
     /// @param maxAllowedYield The maximum allowed yield
-    event YieldExceedsToleranceWarning(address vault, address asset, bytes32 batchId, uint256 yield, uint256 maxAllowedYield);
+    event YieldExceedsMaxDeltaWarning(
+        address vault, address asset, bytes32 batchId, uint256 yield, uint256 maxAllowedYield
+    );
 
     /*//////////////////////////////////////////////////////////////
                             KMINTER FUNCTIONS
@@ -365,7 +367,7 @@ interface IkAssetRouter is IVersioned {
     /// operational flexibility, allowing normal yield fluctuations while blocking suspicious proposals.
     /// Only admin roles can modify this parameter as it affects protocol safety.
     /// @param tolerance_ The new yield tolerance in basis points (e.g., 1000 = 10%)
-    function updateYieldTolerance(uint256 tolerance_) external;
+    function setMaxAllowedDelta(uint256 tolerance_) external;
 
     /*//////////////////////////////////////////////////////////////
                             VIEW FUNCTIONS

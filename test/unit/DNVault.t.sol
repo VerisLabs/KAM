@@ -274,7 +274,7 @@ contract DNVaultTest is BaseVaultTest {
 
     /// @dev Test successful claim of unstaked assets
     function test_ClaimUnstakedAssets_Success() public {
-              // First complete a staking cycle to get stkTokens
+        // First complete a staking cycle to get stkTokens
         _setupUserWithStkTokens(users.alice, 1000 * _1_USDC);
 
         uint256 stkBalance = vault.balanceOf(users.alice);
@@ -299,7 +299,7 @@ contract DNVaultTest is BaseVaultTest {
         // Claim unstaked assets
         vm.prank(users.alice);
         vm.expectEmit(true, false, true, true);
-        emit KTokenUnstaked(users.alice,stkBalance, stkBalance);
+        emit KTokenUnstaked(users.alice, stkBalance, stkBalance);
         vault.claimUnstakedAssets(unstakeBatchId, unstakeRequestId);
 
         // Verify user received kTokens back
@@ -505,7 +505,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Verify stkTokens were burned
         assertEq(vault.balanceOf(address(vault)), 0);
-        assertEq(vault.sharePrice() , 1e6);
+        assertEq(vault.sharePrice(), 1e6);
         assertEq(vault.totalAssets(), 0);
         assertEq(vault.totalSupply(), 0);
     }

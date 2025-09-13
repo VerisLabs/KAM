@@ -346,7 +346,6 @@ contract DeploymentBaseTest is BaseTest {
         // Give admin permissions to router
         vm.prank(users.owner);
         registry.grantRoles(address(assetRouter), ADMIN_ROLE);
-
     }
 
     /// @dev Initialize initial batches for all vaults

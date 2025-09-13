@@ -12,6 +12,8 @@ import { kBase } from "src/base/kBase.sol";
 import {
     KBASE_WRONG_ROLE,
     KMINTER_BATCH_MINT_REACHED,
+    KMINTER_BATCH_NOT_SET,
+    KMINTER_BATCH_NOT_SET,
     KMINTER_BATCH_REDEEM_REACHED,
     KMINTER_INSUFFICIENT_BALANCE,
     KMINTER_IS_PAUSED,
@@ -20,8 +22,7 @@ import {
     KMINTER_WRONG_ASSET,
     KMINTER_WRONG_ROLE,
     KMINTER_ZERO_ADDRESS,
-    KMINTER_ZERO_AMOUNT,
-    KMINTER_BATCH_NOT_SET
+    KMINTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { kMinter } from "src/kMinter.sol";
@@ -36,7 +37,7 @@ contract kMinterTest is DeploymentBaseTest {
     // Events to test
     event Initialized(address indexed registry, address indexed owner, address admin, address emergencyAdmin);
     event Minted(address indexed to, uint256 amount, bytes32 batchId);
-    event RedeemRequestCreated(
+    event BurnRequestCreated(
         bytes32 indexed requestId,
         address indexed user,
         address indexed kToken,
@@ -44,7 +45,7 @@ contract kMinterTest is DeploymentBaseTest {
         address recipient,
         uint24 batchId
     );
-    event Redeemed(bytes32 indexed requestId);
+    event Burned(bytes32 indexed requestId);
     event Cancelled(bytes32 indexed requestId);
 
     /*//////////////////////////////////////////////////////////////
@@ -189,8 +190,8 @@ contract kMinterTest is DeploymentBaseTest {
                     REDEMPTION REQUEST TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test successful redemption request (partial validation)
-    function test_RequestRedeem_Success() public {
+    /// @dev Test successful burn request (partial validation)
+    function test_RequestBurn_Success() public {
         uint256 amount = TEST_AMOUNT;
         address recipient = users.institution;
 
@@ -209,35 +210,35 @@ contract kMinterTest is DeploymentBaseTest {
         vm.prank(users.institution);
         kUSD.approve(address(minter), amount);
 
-        // Request redemption - will fail due to insufficient virtual balance in vault
+        // Request burn - will fail due to insufficient virtual balance in vault
         vm.prank(users.institution);
         vm.expectRevert();
-        minter.requestRedeem(getUSDC(), recipient, amount);
+        minter.requestBurn(getUSDC(), recipient, amount);
     }
 
-    /// @dev Test redemption request requires institution role
-    function test_RequestRedeem_WrongRole() public {
+    /// @dev Test burn request requires institution role
+    function test_RequestBurn_WrongRole() public {
         vm.prank(users.alice);
         vm.expectRevert(bytes(KMINTER_WRONG_ROLE));
-        minter.requestRedeem(getUSDC(), users.alice, TEST_AMOUNT);
+        minter.requestBurn(getUSDC(), users.alice, TEST_AMOUNT);
     }
 
-    /// @dev Test redemption request reverts with zero amount
-    function test_RequestRedeem_RevertZeroAmount() public {
+    /// @dev Test burn request reverts with zero amount
+    function test_RequestBurn_RevertZeroAmount() public {
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_ZERO_AMOUNT));
-        minter.requestRedeem(getUSDC(), users.institution, 0);
+        minter.requestBurn(getUSDC(), users.institution, 0);
     }
 
-    /// @dev Test redemption request reverts with zero recipient
-    function test_RequestRedeem_RevertZeroRecipient() public {
+    /// @dev Test burn request reverts with zero recipient
+    function test_RequestBurn_RevertZeroRecipient() public {
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_ZERO_ADDRESS));
-        minter.requestRedeem(getUSDC(), ZERO_ADDRESS, TEST_AMOUNT);
+        minter.requestBurn(getUSDC(), ZERO_ADDRESS, TEST_AMOUNT);
     }
 
-    /// @dev Test redemption request reverts with batch limit reached
-    function test_RequestRedeem_RevertBatchLimitReached() public {
+    /// @dev Test burn request reverts with batch limit reached
+    function test_RequestBurn_RevertBatchLimitReached() public {
         uint256 amount = TEST_AMOUNT;
         address recipient = users.institution;
 
@@ -256,61 +257,61 @@ contract kMinterTest is DeploymentBaseTest {
 
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_BATCH_REDEEM_REACHED));
-        minter.requestRedeem(getUSDC(), recipient, amount);
+        minter.requestBurn(getUSDC(), recipient, amount);
     }
 
-    /// @dev Test redemption request reverts with invalid asset
-    function test_RequestRedeem_RevertInvalidAsset() public {
+    /// @dev Test burn request reverts with invalid asset
+    function test_RequestBurn_RevertInvalidAsset() public {
         address invalidAsset = address(0x1234567890123456789012345678901234567890);
 
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_WRONG_ASSET));
-        minter.requestRedeem(invalidAsset, users.institution, TEST_AMOUNT);
+        minter.requestBurn(invalidAsset, users.institution, TEST_AMOUNT);
     }
 
-    /// @dev Test redemption request reverts with batch not set
-    function test_RequestRedeem_RevertBatchNotSet() public {
+    /// @dev Test burn request reverts with batch not set
+    function test_RequestBurn_RevertBatchNotSet() public {
         // Institution has no kTokens
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_BATCH_NOT_SET));
-        minter.requestRedeem(getUSDC(), users.institution, TEST_AMOUNT);
+        minter.requestBurn(getUSDC(), users.institution, TEST_AMOUNT);
     }
 
-    /// @dev Test redemption request reverts when paused
-    function test_RequestRedeem_RevertWhenPaused() public {
+    /// @dev Test burn request reverts when paused
+    function test_RequestBurn_RevertWhenPaused() public {
         // Pause minter
         vm.prank(users.emergencyAdmin);
         minter.setPaused(true);
 
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_IS_PAUSED));
-        minter.requestRedeem(getUSDC(), users.institution, TEST_AMOUNT);
+        minter.requestBurn(getUSDC(), users.institution, TEST_AMOUNT);
     }
 
     /*//////////////////////////////////////////////////////////////
                         REDEMPTION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test redemption requires valid request
-    function test_Redeem_RevertRequestNotFound() public {
+    /// @dev Test burn requires valid request
+    function test_Burn_RevertRequestNotFound() public {
         bytes32 invalidRequestId = keccak256("invalid");
 
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_REQUEST_NOT_FOUND));
-        minter.redeem(invalidRequestId);
+        minter.burn(invalidRequestId);
     }
 
-    /// @dev Test redemption requires institution role
-    function test_Redeem_WrongRole() public {
+    /// @dev Test burn requires institution role
+    function test_Burn_WrongRole() public {
         bytes32 requestId = keccak256("test");
 
         vm.prank(users.alice);
         vm.expectRevert(bytes(KMINTER_WRONG_ROLE));
-        minter.redeem(requestId);
+        minter.burn(requestId);
     }
 
-    /// @dev Test redemption reverts when paused
-    function test_Redeem_RevertWhenPaused() public {
+    /// @dev Test burn reverts when paused
+    function test_Burn_RevertWhenPaused() public {
         // Pause minter
         vm.prank(users.emergencyAdmin);
         minter.setPaused(true);
@@ -319,7 +320,7 @@ contract kMinterTest is DeploymentBaseTest {
 
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_IS_PAUSED));
-        minter.redeem(requestId);
+        minter.burn(requestId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -409,11 +410,11 @@ contract kMinterTest is DeploymentBaseTest {
         assertEq(minter.contractVersion(), "1.0.0", "Contract version incorrect");
     }
 
-    /// @dev Test getRedeemRequest returns empty for non-existent request
-    function test_GetRedeemRequest_NonExistent() public {
+    /// @dev Test getBurnRequest returns empty for non-existent request
+    function test_GetBurnRequest_NonExistent() public {
         bytes32 invalidRequestId = keccak256("invalid");
 
-        IkMinter.RedeemRequest memory request = minter.getRedeemRequest(invalidRequestId);
+        IkMinter.BurnRequest memory request = minter.getBurnRequest(invalidRequestId);
         assertEq(request.user, address(0), "User should be zero");
         assertEq(request.amount, 0, "Amount should be zero");
     }
@@ -525,8 +526,7 @@ contract kMinterTest is DeploymentBaseTest {
         // Verify DN vault received the assets (through kAssetRouter)
         // In a full integration test, we would verify the batch balances
         assertEq(kUSD.balanceOf(users.institution), amount, "kTokens should be minted");
-  }
-
+    }
 
     /*//////////////////////////////////////////////////////////////
                         EDGE CASE TESTS
@@ -550,7 +550,7 @@ contract kMinterTest is DeploymentBaseTest {
     }
 
     /// @dev Test concurrent requests from same user
-    function test_RequestRedeem_Concurrent() public {
+    function test_RequestBurn_Concurrent() public {
         // Setup: Mint tokens first
         uint256 totalAmount = 3000 * _1_USDC;
         mockUSDC.mint(users.institution, totalAmount);
@@ -559,17 +559,17 @@ contract kMinterTest is DeploymentBaseTest {
         vm.prank(users.institution);
         minter.mint(getUSDC(), users.institution, totalAmount);
 
-        // Approve all tokens for redemption
+        // Approve all tokens for burn
         vm.prank(users.institution);
         kUSD.approve(address(minter), totalAmount);
 
-        // Create multiple concurrent redemption requests
+        // Create multiple concurrent burn requests
         uint256 requestAmount = 1000 * _1_USDC;
 
         for (uint256 i = 0; i < 3; i++) {
             vm.prank(users.institution);
             vm.expectRevert();
-            minter.requestRedeem(getUSDC(), users.institution, requestAmount);
+            minter.requestBurn(getUSDC(), users.institution, requestAmount);
         }
     }
 

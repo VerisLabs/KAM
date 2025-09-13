@@ -116,7 +116,7 @@
 ┌─────────────────┐
 │Batch Active     │
 │(Accepting mint/ │
-│redeem requests) │
+│burn requests) │
 └────────┬────────┘
          │
          ▼
@@ -236,7 +236,7 @@ Request Status Flow:
        │
        ▼
 ┌─────────────┐
-│REDEEMED     │ ── After redeem() successfully pulls assets
+│REDEEMED     │ ── After burn() successfully pulls assets
 └─────────────┘
 ```
 
@@ -255,7 +255,7 @@ Request Status Flow:
 │  │• requestRedeem()        │      │• kAssetRequestPull()    │    │
 │  │  Start redemption       │      │  Track withdrawals      │    │
 │  │                         │      │                         │    │
-│  │• redeem()               │      │• proposeSettleBatch()   │    │
+│  │• burn()                 │      │• proposeSettleBatch()   │    │
 │  │  Execute redemption     │      │  Start settlement       │    │
 │  │                         │      │                         │    │
 │  │• cancelRequest()        │      │• executeSettleBatch()   │    │
@@ -329,7 +329,7 @@ Day N+3:                                 Day N+3:                   │
 │                    pullAssets()  ▼            Burn escrowed        │
 │  ┌─────────────────┐   ┌─────────────────┐       kTokens           │
 │  │Assets to        │◀──│Institution      │◀────────────-------     |
-│  │Institution      │   │calls redeem()   │                         │
+│  │Institution      │   │calls burn()   │                         │
 │  └─────────────────┘   └─────────────────┘                         │
 │                                                                    │
 └─────────────────────────────────────────────────────────────────---┘

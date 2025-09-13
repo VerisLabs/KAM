@@ -21,6 +21,7 @@ import {
     KMINTER_BATCH_MINT_REACHED,
     KMINTER_BATCH_MINT_REACHED,
     KMINTER_BATCH_NOT_CLOSED,
+    KMINTER_BATCH_NOT_SET,
     KMINTER_BATCH_REDEEM_REACHED,
     KMINTER_BATCH_SETTLED,
     KMINTER_INSUFFICIENT_BALANCE,
@@ -31,17 +32,17 @@ import {
     KMINTER_WRONG_ASSET,
     KMINTER_WRONG_ROLE,
     KMINTER_ZERO_ADDRESS,
-    KMINTER_ZERO_AMOUNT,
-    KMINTER_BATCH_NOT_SET
+    KMINTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
+
+import { IVersioned } from "src/interfaces/IVersioned.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
-import { IVersioned } from "src/interfaces/IVersioned.sol";
 
 /// @title kMinter
 /// @notice Institutional gateway for kToken minting and redemption with batch settlement processing
 /// @dev This contract serves as the primary interface for qualified institutions to interact with the KAM protocol,
-/// enabling them to mint kTokens by depositing underlying assets and redeem them through a sophisticated batch
+/// enabling them to mint kTokens by depositing underlying assets and burn them through a sophisticated batch
 /// settlement system. Key features include: (1) Immediate 1:1 kToken minting upon asset deposit, bypassing the
 /// share-based accounting used for retail users, (2) Two-phase redemption process that handles requests through
 /// batch settlements to optimize gas costs and maintain protocol efficiency, (3) Integration with kStakingVault
@@ -68,13 +69,13 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         uint64 requestCounter;
         /// @dev receiverImplementation address
         address receiverImplementation;
-        /// @dev Tracks total minted and redeemed amounts per batch to enforce limits
+        /// @dev Tracks total minted and burned amounts per batch to enforce limits
         mapping(bytes32 => uint256) mintedInBatch;
-        /// @dev Tracks total redeemed amounts per batch to enforce limits
-        mapping(bytes32 => uint256) redeemedInBatch;
+        /// @dev Tracks total burned amounts per batch to enforce limits
+        mapping(bytes32 => uint256) burnedInBatch;
         /// @dev Tracks total assets locked in pending redemption requests per asset
         mapping(address => uint256) totalLockedAssets;
-        mapping(bytes32 => RedeemRequest) redeemRequests;
+        mapping(bytes32 => BurnRequest) burnRequests;
         /// @dev Maps user addresses to their set of redemption request IDs for efficient lookup
         /// Enables quick retrieval of all requests associated with a specific user
         mapping(address => OptimizedBytes32EnumerableSetLib.Bytes32Set) userRequests;
@@ -167,7 +168,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     }
 
     /// @inheritdoc IkMinter
-    function requestRedeem(address asset_, address to_, uint256 amount_) external payable returns (bytes32 requestId) {
+    function requestBurn(address asset_, address to_, uint256 amount_) external payable returns (bytes32 requestId) {
         _lockReentrant();
         _checkNotPaused();
         _checkInstitution(msg.sender);
@@ -180,20 +181,20 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         require(kToken.balanceOf(msg.sender) >= amount_, KMINTER_INSUFFICIENT_BALANCE);
 
         // Generate unique request ID using recipient, amount, timestamp and counter for uniqueness
-        requestId = _createRedeemRequestId(to_, amount_, block.timestamp);
+        requestId = _createBurnRequestId(to_, amount_, block.timestamp);
 
         bytes32 batchId = _currentBatchId(asset_);
 
         kMinterStorage storage $ = _getkMinterStorage();
 
-        // Make sure we dont exceed the max redeem per batch
+        // Make sure we dont exceed the max burn per batch
         require(
-            ($.redeemedInBatch[batchId] += amount_) <= _registry().getMaxRedeemPerBatch(asset_),
+            ($.burnedInBatch[batchId] += amount_) <= _registry().getMaxRedeemPerBatch(asset_),
             KMINTER_BATCH_REDEEM_REACHED
         );
 
         // Create redemption request
-        $.redeemRequests[requestId] = RedeemRequest({
+        $.burnRequests[requestId] = BurnRequest({
             user: msg.sender,
             amount: amount_,
             asset: asset_,
@@ -215,49 +216,49 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         // Register redemption request with router for batch processing and settlement
         IkAssetRouter(_getKAssetRouter()).kAssetRequestPull(asset_, amount_, batchId);
 
-        emit RedeemRequestCreated(requestId, to_, kToken, amount_, to_, batchId);
+        emit BurnRequestCreated(requestId, to_, kToken, amount_, to_, batchId);
 
         _unlockReentrant();
         return requestId;
     }
 
     /// @inheritdoc IkMinter
-    function redeem(bytes32 requestId) external payable {
+    function burn(bytes32 requestId) external payable {
         _lockReentrant();
         _checkNotPaused();
         _checkInstitution(msg.sender);
 
         kMinterStorage storage $ = _getkMinterStorage();
-        RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
+        BurnRequest storage burnRequest = $.burnRequests[requestId];
 
         // Validate request exists and belongs to the user
-        require($.userRequests[redeemRequest.user].contains(requestId), KMINTER_REQUEST_NOT_FOUND);
+        require($.userRequests[burnRequest.user].contains(requestId), KMINTER_REQUEST_NOT_FOUND);
         // Ensure request is still pending (not already processed)
-        require(redeemRequest.status == RequestStatus.PENDING, KMINTER_REQUEST_NOT_ELIGIBLE);
-        // Double-check request hasn't been redeemed (redundant but safe)
-        require(redeemRequest.status != RequestStatus.REDEEMED, KMINTER_REQUEST_PROCESSED);
+        require(burnRequest.status == RequestStatus.PENDING, KMINTER_REQUEST_NOT_ELIGIBLE);
+        // Double-check request hasn't been burned (redundant but safe)
+        require(burnRequest.status != RequestStatus.REDEEMED, KMINTER_REQUEST_PROCESSED);
         // Ensure request wasn't cancelled
-        require(redeemRequest.status != RequestStatus.CANCELLED, KMINTER_REQUEST_NOT_ELIGIBLE);
+        require(burnRequest.status != RequestStatus.CANCELLED, KMINTER_REQUEST_NOT_ELIGIBLE);
 
-        // Mark request as redeemed to prevent double-spending
-        redeemRequest.status = RequestStatus.REDEEMED;
+        // Mark request as burned to prevent double-spending
+        burnRequest.status = RequestStatus.REDEEMED;
 
         // Clean up request tracking and update accounting
-        $.userRequests[redeemRequest.user].remove(requestId);
-        $.totalLockedAssets[redeemRequest.asset] -= redeemRequest.amount;
+        $.userRequests[burnRequest.user].remove(requestId);
+        $.totalLockedAssets[burnRequest.asset] -= burnRequest.amount;
 
-        address batchReceiver = $.batches[redeemRequest.batchId].batchReceiver;
+        address batchReceiver = $.batches[burnRequest.batchId].batchReceiver;
         require(batchReceiver != address(0), KMINTER_ZERO_ADDRESS);
 
         // Permanently burn the escrowed kTokens to reduce total supply
-        address kToken = _getKTokenForAsset(redeemRequest.asset);
-        IkToken(kToken).burn(address(this), redeemRequest.amount);
+        address kToken = _getKTokenForAsset(burnRequest.asset);
+        IkToken(kToken).burn(address(this), burnRequest.amount);
 
         // Pull assets from batch receiver - will revert if batch not settled
-        kBatchReceiver(batchReceiver).pullAssets(redeemRequest.recipient, redeemRequest.amount, redeemRequest.batchId);
+        kBatchReceiver(batchReceiver).pullAssets(burnRequest.recipient, burnRequest.amount, burnRequest.batchId);
 
         _unlockReentrant();
-        emit Redeemed(requestId);
+        emit Burned(requestId);
     }
 
     /// @inheritdoc IkMinter
@@ -267,28 +268,28 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         _checkInstitution(msg.sender);
 
         kMinterStorage storage $ = _getkMinterStorage();
-        RedeemRequest storage redeemRequest = $.redeemRequests[requestId];
+        BurnRequest storage burnRequest = $.burnRequests[requestId];
 
         // Validate request exists and is eligible for cancellation
-        require($.userRequests[redeemRequest.user].contains(requestId), KMINTER_REQUEST_NOT_FOUND);
-        require(redeemRequest.status == RequestStatus.PENDING, KMINTER_REQUEST_NOT_ELIGIBLE);
+        require($.userRequests[burnRequest.user].contains(requestId), KMINTER_REQUEST_NOT_FOUND);
+        require(burnRequest.status == RequestStatus.PENDING, KMINTER_REQUEST_NOT_ELIGIBLE);
 
         // Update status and remove from tracking
-        redeemRequest.status = RequestStatus.CANCELLED;
-        $.userRequests[redeemRequest.user].remove(requestId);
+        burnRequest.status = RequestStatus.CANCELLED;
+        $.userRequests[burnRequest.user].remove(requestId);
 
         // Ensure batch is still open - cannot cancel after batch closure or settlement
-        IkMinter.BatchInfo storage batch = $.batches[redeemRequest.batchId];
+        IkMinter.BatchInfo storage batch = $.batches[burnRequest.batchId];
         require(!batch.isClosed, KMINTER_BATCH_CLOSED);
         require(!batch.isSettled, KMINTER_BATCH_SETTLED);
 
-        address kToken = _getKTokenForAsset(redeemRequest.asset);
+        address kToken = _getKTokenForAsset(burnRequest.asset);
 
         // Return escrowed kTokens to the original requester
-        kToken.safeTransfer(redeemRequest.user, redeemRequest.amount);
+        kToken.safeTransfer(burnRequest.user, burnRequest.amount);
 
         // Remove request from batch
-        $.redeemedInBatch[redeemRequest.batchId] -= redeemRequest.amount;
+        $.burnedInBatch[burnRequest.batchId] -= burnRequest.amount;
 
         emit Cancelled(requestId);
 
@@ -518,7 +519,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     /// @param amount Amount
     /// @param timestamp Timestamp
     /// @return Request ID
-    function _createRedeemRequestId(address user, uint256 amount, uint256 timestamp) private returns (bytes32) {
+    function _createBurnRequestId(address user, uint256 amount, uint256 timestamp) private returns (bytes32) {
         kMinterStorage storage $ = _getkMinterStorage();
         $.requestCounter = (uint256($.requestCounter) + 1).toUint64();
         return OptimizedEfficientHashLib.hash(
@@ -547,9 +548,9 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     }
 
     /// @inheritdoc IkMinter
-    function getRedeemRequest(bytes32 requestId) external view returns (RedeemRequest memory) {
+    function getBurnRequest(bytes32 requestId) external view returns (BurnRequest memory) {
         kMinterStorage storage $ = _getkMinterStorage();
-        return $.redeemRequests[requestId];
+        return $.burnRequests[requestId];
     }
 
     /// @inheritdoc IkMinter
