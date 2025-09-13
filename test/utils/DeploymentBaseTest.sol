@@ -373,6 +373,10 @@ contract DeploymentBaseTest is BaseTest {
         (bool success3,) = address(betaVault).call(abi.encodeWithSelector(createBatchSelector));
         require(success3, "Beta vault batch creation failed");
 
+        // // Create initial batch for Minter vault
+        // (bool success4,) = address(minter).call(abi.encodeWithSelector(createBatchSelector));
+        // require(success4, "Minter vault batch creation failed");
+
         vm.stopPrank();
     }
 

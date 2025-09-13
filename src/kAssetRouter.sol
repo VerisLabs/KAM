@@ -270,7 +270,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         int256 netted;
         uint256 yield;
         uint256 lastTotalAssets = _virtualBalance(vault, asset);
-        console.log("last total assets : ", lastTotalAssets);
         bool profit;
 
         // Increase the counter to generate unique proposal id
