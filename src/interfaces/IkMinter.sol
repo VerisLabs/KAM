@@ -184,41 +184,33 @@ interface IkMinter is IVersioned {
     /// @param asset_ The asset for which to create a new batch
     /// @return The batch ID of the newly created batch
     function createNewBatch(address asset_) external returns (bytes32);
-    
+
     /// @notice Closes a specific batch and optionally creates a new one
     /// @param _batchId The batch ID to close
     /// @param _create Whether to create a new batch for the same asset
     function closeBatch(bytes32 _batchId, bool _create) external;
-    
+
     /// @notice Marks a batch as settled after processing
     /// @param _batchId The batch ID to settle
     function settleBatch(bytes32 _batchId) external;
-    
+
     /// @notice Creates a batch receiver contract for a specific batch
     /// @param _batchId The batch ID to create a receiver for
     /// @return The address of the created batch receiver
     function createBatchReceiver(bytes32 _batchId) external returns (address);
-    
-    /// @notice Gets the current active batch ID for a specific asset
-    /// @param asset_ The asset to query
-    /// @return The current batch ID for the asset
     function getBatchId(address asset_) external view returns (bytes32);
-    
-    /// @notice Gets the current batch number for a specific asset
-    /// @param asset_ The asset to query
-    /// @return The current batch number for the asset
     function getCurrentBatchNumber(address asset_) external view returns (uint256);
-    
+
     /// @notice Checks if an asset has an active (open) batch
     /// @param asset_ The asset to check
     /// @return True if the asset has an active batch, false otherwise
     function hasActiveBatch(address asset_) external view returns (bool);
-    
+
     /// @notice Gets batch information for a specific batch ID
     /// @param batchId_ The batch ID to query
     /// @return The batch information
     function getBatchInfo(bytes32 batchId_) external view returns (IkMinter.BatchInfo memory);
-    
+
     /// @notice Gets the batch receiver address for a specific batch
     /// @param batchId_ The batch ID to query
     /// @return The address of the batch receiver

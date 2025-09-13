@@ -109,7 +109,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
     function test_ManagementFee_NoTimeElapsed() public {
         _setupTestFees();
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         (uint256 managementFees,,) = vault.computeLastBatchFees();
 
@@ -119,7 +119,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
     function test_ManagementFee_OneYear() public {
         _setupTestFees();
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Fast forward one year
         vm.warp(block.timestamp + 365 days);
@@ -133,7 +133,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
     function test_ManagementFee_PartialYear() public {
         _setupTestFees();
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Fast forward 6 months
         uint256 sixMonths = 180 days;
@@ -148,7 +148,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
     function test_ManagementFee_IncreasedAssets() public {
         _setupTestFees();
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Add yield to increase total assets
         uint256 yieldAmount = 200_000 * _1_USDC; // 20% yield
@@ -171,7 +171,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
     function test_PerformanceFee_NoProfit() public {
         _setupTestFees();
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Fast forward time but no profit
         vm.warp(block.timestamp + 365 days);
@@ -184,7 +184,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
     function test_PerformanceFee_WithProfit_SoftHurdle() public {
         _setupTestFees();
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Set soft hurdle (default)
         vm.prank(users.admin);
@@ -210,7 +210,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
     function test_PerformanceFee_WithProfit_HardHurdle() public {
         _setupTestFees();
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Set hard hurdle
         vm.prank(users.admin);
@@ -240,7 +240,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
     function test_PerformanceFee_BelowHurdle() public {
         _setupTestFees();
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Add small yield (2% - below 5% hurdle)
         uint256 smallYield = 20_000 * _1_USDC;
@@ -258,7 +258,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
     function test_PerformanceFee_Loss() public {
         _setupTestFees();
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Simulate loss by reducing vault's kToken balance
         uint256 lossAmount = 100_000 * _1_USDC;
@@ -284,7 +284,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
     }
 
     function test_SharePriceWatermark_UpdateAfterProfit() public {
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         uint256 initialWatermark = vault.sharePriceWatermark();
 
@@ -305,7 +305,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
     }
 
     function test_SharePriceWatermark_NoUpdateAfterLoss() public {
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Add yield first to increase watermark
         uint256 yieldAmount = 200_000 * _1_USDC;
@@ -395,7 +395,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
     function test_ComputeLastBatchFees_BothFees() public {
         _setupTestFees();
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Add yield
         uint256 yieldAmount = 300_000 * _1_USDC; // 30% yield
@@ -444,7 +444,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
     function test_TotalNetAssets_WithAccruedFees() public {
         _setupTestFees();
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Add yield
         uint256 yieldAmount = 200_000 * _1_USDC;
@@ -466,7 +466,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
     function test_SharePrice_vs_NetSharePrice() public {
         _setupTestFees();
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Add yield
         uint256 yieldAmount = 200_000 * _1_USDC;
@@ -503,7 +503,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vm.prank(users.relayer);
         registry.setHurdleRate(getUSDC(), 0); // No hurdle
 
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Add small yield
         uint256 smallYield = 10_000 * _1_USDC; // 1%
@@ -528,7 +528,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vm.prank(users.relayer);
         registry.setHurdleRate(getUSDC(), TEST_HURDLE_RATE);
 
-        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT);
+        _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Add significant yield
         uint256 yieldAmount = 500_000 * _1_USDC;

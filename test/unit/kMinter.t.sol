@@ -12,6 +12,8 @@ import { kBase } from "src/base/kBase.sol";
 import {
     KBASE_WRONG_ROLE,
     KMINTER_BATCH_MINT_REACHED,
+    KMINTER_BATCH_NOT_SET,
+    KMINTER_BATCH_NOT_SET,
     KMINTER_BATCH_REDEEM_REACHED,
     KMINTER_INSUFFICIENT_BALANCE,
     KMINTER_IS_PAUSED,
@@ -20,8 +22,7 @@ import {
     KMINTER_WRONG_ASSET,
     KMINTER_WRONG_ROLE,
     KMINTER_ZERO_ADDRESS,
-    KMINTER_ZERO_AMOUNT,
-    KMINTER_BATCH_NOT_SET
+    KMINTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { kMinter } from "src/kMinter.sol";
@@ -525,8 +526,7 @@ contract kMinterTest is DeploymentBaseTest {
         // Verify DN vault received the assets (through kAssetRouter)
         // In a full integration test, we would verify the batch balances
         assertEq(kUSD.balanceOf(users.institution), amount, "kTokens should be minted");
-  }
-
+    }
 
     /*//////////////////////////////////////////////////////////////
                         EDGE CASE TESTS

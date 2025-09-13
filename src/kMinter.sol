@@ -21,6 +21,7 @@ import {
     KMINTER_BATCH_MINT_REACHED,
     KMINTER_BATCH_MINT_REACHED,
     KMINTER_BATCH_NOT_CLOSED,
+    KMINTER_BATCH_NOT_SET,
     KMINTER_BATCH_REDEEM_REACHED,
     KMINTER_BATCH_SETTLED,
     KMINTER_INSUFFICIENT_BALANCE,
@@ -31,12 +32,12 @@ import {
     KMINTER_WRONG_ASSET,
     KMINTER_WRONG_ROLE,
     KMINTER_ZERO_ADDRESS,
-    KMINTER_ZERO_AMOUNT,
-    KMINTER_BATCH_NOT_SET
+    KMINTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
+
+import { IVersioned } from "src/interfaces/IVersioned.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkToken } from "src/interfaces/IkToken.sol";
-import { IVersioned } from "src/interfaces/IVersioned.sol";
 
 /// @title kMinter
 /// @notice Institutional gateway for kToken minting and redemption with batch settlement processing
