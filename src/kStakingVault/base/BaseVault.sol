@@ -3,8 +3,7 @@ pragma solidity 0.8.30;
 
 import { ERC20 } from "solady/tokens/ERC20.sol";
 
-import { OptimizedBytes32EnumerableSetLib } from
-    "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 

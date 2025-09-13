@@ -26,7 +26,6 @@ import {
     KASSETROUTER_PROPOSAL_EXISTS,
     KASSETROUTER_PROPOSAL_NOT_FOUND,
     KASSETROUTER_WRONG_ROLE,
-    KASSETROUTER_YIELD_EXCEEDS_TOLERANCE,
     KASSETROUTER_ZERO_ADDRESS,
     KASSETROUTER_ZERO_AMOUNT,
     KBASE_NOT_INITIALIZED
@@ -308,7 +307,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                 - int256(uint256($.vaultBatchBalances[vault][batchId].requested));
         } else {
             uint256 totalSupply = IkStakingVault(vault).totalSupply();
-            uint256 requestedAssets = totalSupply == 0
+            uint256 requestedAssets = (totalSupply == 0 || totalAssets_ == 0)
                 ? $.vaultRequestedShares[vault][batchId]
                 : $.vaultRequestedShares[vault][batchId].fullMulDiv(totalAssets_, totalSupply);
             netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited)) - int256(uint256(requestedAssets));
@@ -327,11 +326,13 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         // Check if yield exceeds tolerance threshold to prevent excessive yield deviations
         if (lastTotalAssets > 0) {
             uint256 maxAllowedYield = lastTotalAssets.fullMulDiv($.yieldTolerance, 10_000);
-            require(yield <= maxAllowedYield, KASSETROUTER_YIELD_EXCEEDS_TOLERANCE);
+            if (yield > maxAllowedYield) {
+                emit YieldExceedsToleranceWarning(vault, asset, batchId, yield, maxAllowedYield);
+            }
         }
 
         proposalId = OptimizedEfficientHashLib.hash(
-            uint256(uint160(vault)), uint256(batchId), block.timestamp, $.proposalCounter
+            uint256(uint160(vault)), uint256(uint160(asset)), uint256(batchId), block.timestamp, $.proposalCounter
         );
 
         // Check if proposal already exists
@@ -463,17 +464,16 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                 }
             }
 
-            IVaultAdapter kMinterAdapter = IVaultAdapter(kMinter);
+            IVaultAdapter kMinterAdapter = IVaultAdapter(_registry().getAdapter(_getKMinter(), asset));
             _checkAddressNotZero(address(kMinterAdapter));
             int256 kMinterTotalAssets = int256(kMinterAdapter.totalAssets()) - netted;
             require(kMinterTotalAssets >= 0, KASSETROUTER_ZERO_AMOUNT);
             kMinterAdapter.setTotalAssets(uint256(kMinterTotalAssets));
         }
 
-        // TODO: kMinter cannot have profits or we should send them to insurance
-        adapter.setTotalAssets(totalAssets_);
         // Mark batch as settled in the vault
         ISettleBatch(vault).settleBatch(batchId);
+        adapter.setTotalAssets(totalAssets_);
 
         emit BatchSettled(vault, batchId, totalAssets_);
     }

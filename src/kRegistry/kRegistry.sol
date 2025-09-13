@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
-import { OptimizedAddressEnumerableSetLib } from
-    "solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
+import { OptimizedAddressEnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
+import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
@@ -566,7 +565,9 @@ contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mu
     /// @inheritdoc IkRegistry
     function getAdapter(address vault, address asset) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        return $.vaultAdaptersByAsset[vault][asset];
+        address adapter = $.vaultAdaptersByAsset[vault][asset];
+        _checkAddressNotZero(adapter);
+        return adapter;
     }
 
     /// @inheritdoc IkRegistry

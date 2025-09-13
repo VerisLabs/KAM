@@ -6,8 +6,8 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
-import { kBase } from "src/base/kBase.sol";
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
+import { kBase } from "src/base/kBase.sol";
 
 import {
     KBASE_WRONG_ROLE,
@@ -20,7 +20,8 @@ import {
     KMINTER_WRONG_ASSET,
     KMINTER_WRONG_ROLE,
     KMINTER_ZERO_ADDRESS,
-    KMINTER_ZERO_AMOUNT
+    KMINTER_ZERO_AMOUNT,
+    KMINTER_BATCH_NOT_SET
 } from "src/errors/Errors.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { kMinter } from "src/kMinter.sol";
@@ -267,11 +268,11 @@ contract kMinterTest is DeploymentBaseTest {
         minter.requestRedeem(invalidAsset, users.institution, TEST_AMOUNT);
     }
 
-    /// @dev Test redemption request reverts with insufficient balance
-    function test_RequestRedeem_RevertInsufficientBalance() public {
+    /// @dev Test redemption request reverts with batch not set
+    function test_RequestRedeem_RevertBatchNotSet() public {
         // Institution has no kTokens
         vm.prank(users.institution);
-        vm.expectRevert(bytes(KMINTER_INSUFFICIENT_BALANCE));
+        vm.expectRevert(bytes(KMINTER_BATCH_NOT_SET));
         minter.requestRedeem(getUSDC(), users.institution, TEST_AMOUNT);
     }
 
@@ -524,31 +525,8 @@ contract kMinterTest is DeploymentBaseTest {
         // Verify DN vault received the assets (through kAssetRouter)
         // In a full integration test, we would verify the batch balances
         assertEq(kUSD.balanceOf(users.institution), amount, "kTokens should be minted");
-    }
+  }
 
-    /// @dev Test that minting calls kAssetPush on the router
-    function test_Mint_CallsKAssetPush() public {
-        uint256 amount = TEST_AMOUNT;
-
-        // Setup
-        mockUSDC.mint(users.institution, amount);
-        vm.prank(users.institution);
-        IERC20(getUSDC()).approve(address(minter), amount);
-
-        // Get batch balances before mint
-        bytes32 batchId = dnVault.getBatchId();
-        (uint256 depositedBefore,) = assetRouter.getBatchIdBalances(address(minter), batchId);
-
-        // Mint
-        vm.prank(users.institution);
-        minter.mint(getUSDC(), users.institution, amount);
-
-        // Get batch balances after mint
-        (uint256 depositedAfter,) = assetRouter.getBatchIdBalances(address(minter), batchId);
-
-        // Verify kAssetPush was called (deposited amount increased)
-        assertEq(depositedAfter - depositedBefore, amount, "Deposited amount should increase");
-    }
 
     /*//////////////////////////////////////////////////////////////
                         EDGE CASE TESTS

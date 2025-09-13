@@ -216,6 +216,14 @@ interface IkAssetRouter is IVersioned {
     /// @param newTolerance The new yield tolerance in basis points
     event YieldToleranceUpdated(uint256 oldTolerance, uint256 newTolerance);
 
+    /// @notice Emitted when yield exceeds the tolerance threshold
+    /// @param vault The DN vault address
+    /// @param asset The underlying asset address
+    /// @param batchId The batch identifier
+    /// @param yield The yield amount
+    /// @param maxAllowedYield The maximum allowed yield
+    event YieldExceedsToleranceWarning(address vault, address asset, bytes32 batchId, uint256 yield, uint256 maxAllowedYield);
+
     /*//////////////////////////////////////////////////////////////
                             KMINTER FUNCTIONS
     //////////////////////////////////////////////////////////////*/

@@ -75,7 +75,12 @@ contract DeploymentBaseTest is BaseTest {
     ReaderModule public readerModule;
 
     // Adapters
-    VaultAdapter public vaultAdapter;
+    VaultAdapter public vaultAdapter1;
+    VaultAdapter public vaultAdapter2;
+    VaultAdapter public vaultAdapter3;
+    VaultAdapter public vaultAdapter4;
+    VaultAdapter public vaultAdapter5;
+    VaultAdapter public vaultAdapter6;
     VaultAdapter public vaultAdapterImpl;
 
     // Implementation contracts (for upgrades)
@@ -299,11 +304,20 @@ contract DeploymentBaseTest is BaseTest {
         bytes memory adapterInitData = abi.encodeWithSelector(VaultAdapter.initialize.selector, address(registry));
 
         // Deploy proxy with initialization using ERC1967Factory
-        address adapterProxy = factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData);
-        vaultAdapter = VaultAdapter(adapterProxy);
+        vaultAdapter1 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        vaultAdapter2 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        vaultAdapter3 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        vaultAdapter4 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        vaultAdapter5 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        vaultAdapter6 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
 
         // Label for debugging
-        vm.label(address(vaultAdapter), "VaultAdapter");
+        vm.label(address(vaultAdapter1), "VaultAdapter1");
+        vm.label(address(vaultAdapter2), "VaultAdapter2");
+        vm.label(address(vaultAdapter3), "VaultAdapter3");
+        vm.label(address(vaultAdapter4), "VaultAdapter4");
+        vm.label(address(vaultAdapter5), "VaultAdapter5");
+        vm.label(address(vaultAdapter6), "VaultAdapter6");
         vm.label(address(vaultAdapterImpl), "VaultAdapterImpl");
     }
 
@@ -321,15 +335,18 @@ contract DeploymentBaseTest is BaseTest {
         registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, usdc);
 
         // Register adapters for vaults (if adapters were deployed)
-        if (address(vaultAdapter) != address(0)) {
-            registry.registerAdapter(address(minter), usdc, address(vaultAdapter));
-            registry.registerAdapter(address(minter), wbtc, address(vaultAdapter));
-            registry.registerAdapter(address(dnVault), usdc, address(vaultAdapter));
-            registry.registerAdapter(address(alphaVault), usdc, address(vaultAdapter));
-            registry.registerAdapter(address(betaVault), usdc, address(vaultAdapter));
-        }
+        registry.registerAdapter(address(minter), usdc, address(vaultAdapter1));
+        registry.registerAdapter(address(minter), wbtc, address(vaultAdapter2));
+        registry.registerAdapter(address(dnVault), usdc, address(vaultAdapter3));
+        registry.registerAdapter(address(alphaVault), usdc, address(vaultAdapter4));
+        registry.registerAdapter(address(betaVault), usdc, address(vaultAdapter5));
 
         vm.stopPrank();
+
+        // Give admin permissions to router
+        vm.prank(users.owner);
+        registry.grantRoles(address(assetRouter), ADMIN_ROLE);
+
     }
 
     /// @dev Initialize initial batches for all vaults
@@ -355,6 +372,10 @@ contract DeploymentBaseTest is BaseTest {
         // Create initial batch for Beta vault
         (bool success3,) = address(betaVault).call(abi.encodeWithSelector(createBatchSelector));
         require(success3, "Beta vault batch creation failed");
+
+        // // Create initial batch for Minter vault
+        // (bool success4,) = address(minter).call(abi.encodeWithSelector(createBatchSelector));
+        // require(success4, "Minter vault batch creation failed");
 
         vm.stopPrank();
     }
@@ -496,7 +517,11 @@ contract DeploymentBaseTest is BaseTest {
         assertTrue(registry.isVault(address(betaVault)));
 
         // Check adapters are deployed and initialized (disabled for debugging)
-        assertTrue(address(vaultAdapter) != address(0));
+        assertTrue(address(vaultAdapter1) != address(0));
+        assertTrue(address(vaultAdapter2) != address(0));
+        assertTrue(address(vaultAdapter3) != address(0));
+        assertTrue(address(vaultAdapter4) != address(0));
+        assertTrue(address(vaultAdapter5) != address(0));
     }
 
     /// @dev Get current protocol state for debugging

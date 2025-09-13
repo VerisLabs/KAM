@@ -11,7 +11,8 @@ import {
     KREGISTRY_ASSET_NOT_SUPPORTED,
     KREGISTRY_FEE_EXCEEDS_MAXIMUM,
     KREGISTRY_INVALID_ADAPTER,
-    KREGISTRY_ZERO_ADDRESS
+    KREGISTRY_ZERO_ADDRESS,
+    KROLESBASE_ZERO_ADDRESS
 } from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { kRegistry } from "src/kRegistry/kRegistry.sol";
@@ -74,7 +75,7 @@ contract kRegistryTest is DeploymentBaseTest {
     /// @dev Test singleton contract registration reverts with zero address
     function test_SetSingletonContract_RevertZeroAddress() public {
         vm.prank(users.admin);
-        vm.expectRevert(bytes(KREGISTRY_ZERO_ADDRESS));
+        vm.expectRevert(bytes(KROLESBASE_ZERO_ADDRESS));
         registry.setSingletonContract(TEST_CONTRACT_ID, address(0));
     }
 
@@ -92,7 +93,7 @@ contract kRegistryTest is DeploymentBaseTest {
 
     /// @dev Test getContractById reverts when contract not set
     function test_GetContractById_RevertZeroAddress() public {
-        vm.expectRevert(bytes(KREGISTRY_ZERO_ADDRESS));
+        vm.expectRevert(bytes(KROLESBASE_ZERO_ADDRESS));
         registry.getContractById(keccak256("NONEXISTENT"));
     }
 
@@ -157,7 +158,7 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.startPrank(users.admin);
 
         // Zero asset address
-        vm.expectRevert(bytes(KREGISTRY_ZERO_ADDRESS));
+        vm.expectRevert(bytes(KROLESBASE_ZERO_ADDRESS));
         registry.registerAsset(TEST_NAME, TEST_SYMBOL, address(0), TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         // Zero ID
@@ -225,7 +226,7 @@ contract kRegistryTest is DeploymentBaseTest {
         registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         vm.prank(users.admin);
-        vm.expectRevert(bytes(KREGISTRY_ZERO_ADDRESS));
+        vm.expectRevert(bytes(KROLESBASE_ZERO_ADDRESS));
         registry.registerVault(address(0), IkRegistry.VaultType.ALPHA, TEST_ASSET);
     }
 
@@ -322,7 +323,7 @@ contract kRegistryTest is DeploymentBaseTest {
     /// @dev Test getAdapter returns zero for non-existent adapter
     function test_GetAdapter_RevertZeroAddress() public {
         vm.prank(users.admin);
-        vm.expectRevert(bytes(KREGISTRY_ZERO_ADDRESS));
+        vm.expectRevert(bytes(KROLESBASE_ZERO_ADDRESS));
         registry.getAdapter(TEST_VAULT, TEST_ASSET);
     }
 

@@ -1,6 +1,6 @@
 forge-std/=dependencies/forge-std-1.9.7/src/
+openzeppelin/=src/vendor/openzeppelin/
+solady/=src/vendor/solady/
 src/=src/
 test/=test/
-solady/=src/vendor/solady/
 uniswap/=src/vendor/uniswap/
-openzeppelin/=src/vendor/openzeppelin/
