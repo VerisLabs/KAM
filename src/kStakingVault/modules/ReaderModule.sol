@@ -195,6 +195,11 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader {
 
     /// @inheritdoc IVaultReader
     function sharePrice() external view returns (uint256) {
+        return _sharePrice();
+    }
+
+    /// @inheritdoc IVaultReader
+    function netSharePrice() external view returns (uint256) {
         return _netSharePrice();
     }
 
@@ -248,7 +253,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader {
     /// @notice Returns the selectors for functions in this module
     /// @return selectors Array of function selectors
     function selectors() public pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](26);
+        bytes4[] memory moduleSelectors = new bytes4[](27);
         moduleSelectors[0] = this.registry.selector;
         moduleSelectors[1] = this.asset.selector;
         moduleSelectors[2] = this.underlyingAsset.selector;
@@ -267,14 +272,15 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader {
         moduleSelectors[15] = this.getBatchReceiver.selector;
         moduleSelectors[16] = this.getSafeBatchReceiver.selector;
         moduleSelectors[17] = this.sharePrice.selector;
-        moduleSelectors[18] = this.totalAssets.selector;
-        moduleSelectors[19] = this.totalNetAssets.selector;
-        moduleSelectors[20] = this.getBatchId.selector;
-        moduleSelectors[21] = this.getSafeBatchId.selector;
-        moduleSelectors[22] = this.convertToShares.selector;
-        moduleSelectors[23] = this.convertToAssets.selector;
-        moduleSelectors[24] = this.contractName.selector;
-        moduleSelectors[25] = this.contractVersion.selector;
+        moduleSelectors[18] = this.netSharePrice.selector;
+        moduleSelectors[19] = this.totalAssets.selector;
+        moduleSelectors[20] = this.totalNetAssets.selector;
+        moduleSelectors[21] = this.getBatchId.selector;
+        moduleSelectors[22] = this.getSafeBatchId.selector;
+        moduleSelectors[23] = this.convertToShares.selector;
+        moduleSelectors[24] = this.convertToAssets.selector;
+        moduleSelectors[25] = this.contractName.selector;
+        moduleSelectors[26] = this.contractVersion.selector;
         return moduleSelectors;
     }
 }

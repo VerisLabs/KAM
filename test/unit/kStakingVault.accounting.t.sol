@@ -46,7 +46,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assertEq(vault.totalNetAssets(), 0);
 
         // Share price should be 1:1 initially (1e6 for 6 decimals)
-        assertEq(vault.sharePrice(), 1e6);
+        assertEq(vault.netSharePrice(), 1e6);
     }
 
     function test_InitialSharePriceWith6Decimals() public view {
@@ -54,7 +54,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assertEq(vault.decimals(), 6);
 
         // Initial share price should be 1 USDC (1e6)
-        assertEq(vault.sharePrice(), 1e6);
+        assertEq(vault.netSharePrice(), 1e6);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -75,7 +75,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assertEq(vault.totalSupply(), INITIAL_DEPOSIT);
 
         // // Share price should remain 1:1
-        assertEq(vault.sharePrice(), 1e6);
+        assertEq(vault.netSharePrice(), 1e6);
     }
 
     function test_SharePriceCalculation_AfterYield() public {
@@ -100,7 +100,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
         // Share price should be 1.1 USDC per stkToken
         uint256 expectedSharePrice = 1.1e6; // 1.1 USDC
-        assertEq(vault.sharePrice(), expectedSharePrice);
+        assertEq(vault.netSharePrice(), expectedSharePrice);
     }
 
     function test_SharePriceCalculation_AfterLoss() public {
@@ -122,7 +122,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
         // Share price should be 0.95 USDC per stkToken
         uint256 expectedSharePrice = 0.95e6; // 0.95 USDC
-        assertEq(vault.sharePrice(), expectedSharePrice);
+        assertEq(vault.netSharePrice(), expectedSharePrice);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -150,7 +150,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
         vm.prank(users.relayer);
         bytes32 proposalId =
-            assetRouter.proposeSettleBatch(getUSDC(), address(vault), batchId, INITIAL_DEPOSIT + bobDeposit);
+            assetRouter.proposeSettleBatch(getUSDC(), address(vault), batchId, INITIAL_DEPOSIT + bobDeposit, 0, 0);
         vm.prank(users.relayer);
         assetRouter.executeSettleBatch(proposalId);
 
@@ -168,7 +168,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assertEq(vault.totalSupply(), INITIAL_DEPOSIT + bobDeposit);
 
         // Share price should remain 1:1
-        assertEq(vault.sharePrice(), 1e6);
+        assertEq(vault.netSharePrice(), 1e6);
     }
 
     function test_SecondDeposit_AfterYield() public {
@@ -186,7 +186,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         _executeBatchSettlement(address(vault), batchId, lastTotalAssets + yield);
 
         // Share price is now 1.2 USDC per stkToken
-        assertEq(vault.sharePrice(), 1.2e6);
+        assertEq(vault.netSharePrice(), 1.2e6);
 
         // Bob deposits 600K USDC (should get 500K stkTokens)
         uint256 bobDeposit = 600_000 * _1_USDC;
@@ -202,7 +202,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assertEq(vault.totalAssets(), 1.8e6 * _1_USDC);
 
         // Share price should remain approximately 1.2 USDC
-        assertApproxEqRel(vault.sharePrice(), 1.2e6, 0.001e18); // 0.1% tolerance
+        assertApproxEqRel(vault.netSharePrice(), 1.2e6, 0.001e18); // 0.1% tolerance
     }
 
     function test_MultipleDeposits_DifferentSharePrices() public {
@@ -223,7 +223,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
             uint256 yieldAmount;
 
             // Record share price before deposit
-            uint256 sharePrice = vault.sharePrice();
+            uint256 sharePrice = vault.netSharePrice();
 
             // Calculate expected shares
             expectedShares[i] = deposits[i] * 1e6 / sharePrice;
@@ -264,7 +264,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
     function test_ConvertToAssets_ZeroTotalSupply() public {
         // With zero total supply, assets per share should be 1:1
         // This is implicitly tested in initial share price
-        assertEq(vault.sharePrice(), 1e6);
+        assertEq(vault.netSharePrice(), 1e6);
     }
 
     function test_ConvertToShares_WithExistingSupply() public {
@@ -274,7 +274,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
         _performStakeAndSettle(users.alice, aliceDeposit, int256(yieldAmount));
 
-        assertEq(vault.sharePrice(), 1.5e6);
+        assertEq(vault.netSharePrice(), 1.5e6);
 
         // Bob deposits 750K USDC (should get 500K stkTokens)
         uint256 bobDeposit = 750_000 * _1_USDC;
@@ -296,7 +296,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
         // Alice's 1M stkTokens should now be worth 1.2M USDC
         uint256 aliceShares = vault.balanceOf(users.alice);
-        uint256 expectedAssetValue = aliceShares * vault.sharePrice() / 1e6;
+        uint256 expectedAssetValue = aliceShares * vault.netSharePrice() / 1e6;
 
         assertEq(expectedAssetValue, 1.2e6 * _1_USDC);
     }
@@ -314,7 +314,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         // Should receive exactly 1 stkToken (1e6 wei)
         assertEq(vault.balanceOf(users.alice), smallAmount);
         assertEq(vault.totalAssets(), smallAmount);
-        assertEq(vault.sharePrice(), 1e6);
+        assertEq(vault.netSharePrice(), 1e6);
     }
 
     function test_LargeNumbers_Precision() public {
@@ -329,7 +329,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         // Verify no precision loss
         assertEq(vault.balanceOf(users.alice), largeAmount);
         assertEq(vault.totalAssets(), largeAmount);
-        assertEq(vault.sharePrice(), 1e6);
+        assertEq(vault.netSharePrice(), 1e6);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -393,6 +393,6 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
     function test_SharePrice_WithZeroTotalSupply() public view {
         // Edge case: what happens with zero total supply
         // Should maintain 1:1 ratio (1e6 for 6 decimals)
-        assertEq(vault.sharePrice(), 1e6);
+        assertEq(vault.netSharePrice(), 1e6);
     }
 }

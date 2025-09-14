@@ -288,47 +288,60 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
         uint256 initialWatermark = vault.sharePriceWatermark();
 
+        vm.warp(block.timestamp + 2);
+
         // Add yield to increase share price
         uint256 yieldAmount = 200_000 * _1_USDC;
-        vm.prank(address(minter));
-        kUSD.mint(address(vault), yieldAmount);
 
         // Trigger watermark update by notifying fee charge
-        vm.prank(users.admin);
-        vault.notifyPerformanceFeesCharged(uint64(block.timestamp));
+        vm.startPrank(users.relayer);
+        bytes32 batchId = vault.getBatchId();
+        vault.closeBatch(batchId, true);
+
+        bytes32 proposalId = assetRouter.proposeSettleBatch(
+            getUSDC(),
+            address(vault),
+            batchId,
+            vault.totalAssets() + yieldAmount,
+            uint64(block.timestamp - 1),
+            uint64(block.timestamp - 1)
+        );
+
+        assetRouter.executeSettleBatch(proposalId);
 
         uint256 newWatermark = vault.sharePriceWatermark();
 
         // Watermark should have increased
         assertGt(newWatermark, initialWatermark);
-        assertEq(newWatermark, vault.sharePrice());
+        assertEq(newWatermark, vault.netSharePrice());
     }
 
     function test_SharePriceWatermark_NoUpdateAfterLoss() public {
         _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
-        // Add yield first to increase watermark
-        uint256 yieldAmount = 200_000 * _1_USDC;
-        vm.prank(address(minter));
-        kUSD.mint(address(vault), yieldAmount);
+        // Now simulate loss
+        uint256 lossAmount = 300_000 * _1_USDC; // Bigger than yield
+        bytes32 batchId = vault.getBatchId();
 
-        vm.prank(users.admin);
-        vault.notifyPerformanceFeesCharged(uint64(block.timestamp));
+        // Trigger watermark update by notifying fee charge
+        vm.startPrank(users.relayer);
+        vault.closeBatch(batchId, true);
+        bytes32 proposalId = assetRouter.proposeSettleBatch(
+            getUSDC(),
+            address(vault),
+            batchId,
+            vault.totalAssets() - lossAmount,
+            uint64(block.timestamp - 1),
+            uint64(block.timestamp - 1)
+        );
+
+        assetRouter.executeSettleBatch(proposalId);
 
         uint256 highWatermark = vault.sharePriceWatermark();
 
-        // Now simulate loss
-        uint256 lossAmount = 300_000 * _1_USDC; // Bigger than yield
-        vm.prank(address(vault));
-        kUSD.transfer(users.treasury, lossAmount);
-
-        // Try to update watermark
-        vm.prank(users.admin);
-        vault.notifyManagementFeesCharged(uint64(block.timestamp));
-
         // Watermark should not decrease
         assertEq(vault.sharePriceWatermark(), highWatermark);
-        assertGt(vault.sharePriceWatermark(), vault.sharePrice());
+        assertGt(vault.sharePriceWatermark(), vault.netSharePrice());
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -480,7 +493,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         uint256 totalAssets = vault.totalAssets();
         uint256 netAssets = vault.totalNetAssets();
 
-        uint256 netSharePrice = vault.sharePrice();
+        uint256 netSharePrice = vault.netSharePrice();
         uint256 sharePrice = (totalAssets * 1e6) / totalSupply;
 
         // Net share price should be lower than gross share price

@@ -384,6 +384,11 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit BatchSettled(_batchId);
     }
 
+    function burnFees(uint256 shares) external {
+        _checkAdmin(msg.sender);
+        _burn(address(this), shares);
+    }
+
     /// @notice Internal function to create deterministic batch IDs with collision resistance
     /// @dev This function generates unique batch identifiers using multiple entropy sources for security. The ID
     /// generation process: (1) Increments internal batch counter to ensure uniqueness within the vault, (2) Combines
@@ -550,16 +555,11 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         // Multply redeemed shares for net and gross share price to obtain gross and net amount of assets
         uint8 decimals = _getDecimals($);
         uint256 totalKTokensNet = (uint256(request.stkTokenAmount)).fullMulDiv(netSharePrice, 10 ** decimals);
-
-        // Calculate fees as the deifference between gross and net amount
-        uint256 fees = (uint256(request.stkTokenAmount)).fullMulDiv(sharePrice, 10 ** decimals) - totalKTokensNet;
+        uint256 netSharesToBurn = (uint256(request.stkTokenAmount)).fullMulDiv(netSharePrice, sharePrice);
 
         // Burn stkTokens from vault (already transferred to vault during request)
-        _burn(address(this), request.stkTokenAmount);
+        _burn(address(this), netSharesToBurn);
         emit UnstakingAssetsClaimed(batchId, requestId, request.user, totalKTokensNet);
-
-        // Transfer fees to treasury
-        $.kToken.safeTransfer(_registry().getTreasury(), fees);
 
         // Transfer kTokens to user
         $.kToken.safeTransfer(request.user, totalKTokensNet);
