@@ -81,4 +81,11 @@ library OptimizedFixedPointMathLib {
             }
         }
     }
+
+    /// @dev Returns the absolute value of `x`.
+    function abs(int256 x) internal pure returns (uint256 z) {
+        unchecked {
+            z = (uint256(x) + uint256(x >> 255)) ^ uint256(x >> 255);
+        }
+    }
 }

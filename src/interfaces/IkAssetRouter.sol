@@ -49,11 +49,13 @@ interface IkAssetRouter is IVersioned {
         /// @dev Net amount of new deposits/redemptions in this batch
         int256 netted;
         /// @dev Absolute yield amount (positive or negative) generated in this batch
-        uint256 yield;
-        /// @dev True if yield is positive (profit), false if negative (loss)
-        bool profit;
+        int256 yield;
         /// @dev Timestamp after which this proposal can be executed (cooldown protection)
-        uint256 executeAfter;
+        uint64 executeAfter;
+        /// @dev Timestamp of last management fee charged
+        uint64 lastFeesChargedManagement;
+        /// @dev Timestamp of last performance fee charged
+        uint64 lastFeesChargedPerformance;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -143,9 +145,8 @@ interface IkAssetRouter is IVersioned {
     /// @dev This is the core mechanism for maintaining 1:1 backing while distributing yield.
     /// Positive yield increases kToken supply, negative yield (losses) decreases supply.
     /// @param vault The vault that generated the yield being distributed
-    /// @param yield The absolute amount of yield (positive or negative) being distributed
-    /// @param isProfit True if yield is positive (minting kTokens), false if negative (burning kTokens)
-    event YieldDistributed(address indexed vault, uint256 yield, bool isProfit);
+    /// @param yield The amount of yield (positive or negative) being distributed
+    event YieldDistributed(address indexed vault, int256 yield);
 
     /// @notice Emitted when assets are deposited into a vault through various protocol mechanisms
     /// @dev Tracks all asset deposits whether from kMinter institutional flows or other sources
@@ -162,17 +163,19 @@ interface IkAssetRouter is IVersioned {
     /// @param totalAssets Total asset value in the vault after yield generation
     /// @param netted Net amount of new deposits/redemptions in this batch
     /// @param yield Absolute yield amount generated in this batch
-    /// @param profit True if yield is positive, false if negative
     /// @param executeAfter Timestamp after which the proposal can be executed
+    /// @param lastFeesChargedManagement Last management fees charged
+    /// @param lastFeesChargedPerformance Last performance fees charged
     event SettlementProposed(
         bytes32 indexed proposalId,
         address indexed vault,
         bytes32 indexed batchId,
         uint256 totalAssets,
         int256 netted,
-        uint256 yield,
-        bool profit,
-        uint256 executeAfter
+        int256 yield,
+        uint256 executeAfter,
+        uint256 lastFeesChargedManagement,
+        uint256 lastFeesChargedPerformance
     );
 
     /// @notice Emitted when a settlement proposal is successfully executed
@@ -223,7 +226,7 @@ interface IkAssetRouter is IVersioned {
     /// @param yield The yield amount
     /// @param maxAllowedYield The maximum allowed yield
     event YieldExceedsMaxDeltaWarning(
-        address vault, address asset, bytes32 batchId, uint256 yield, uint256 maxAllowedYield
+        address vault, address asset, bytes32 batchId, int256 yield, uint256 maxAllowedYield
     );
 
     /*//////////////////////////////////////////////////////////////
@@ -317,11 +320,15 @@ interface IkAssetRouter is IVersioned {
     /// @param vault The DN vault address where yield was generated
     /// @param batchId The batch identifier for this settlement period
     /// @param totalAssets Total asset value in the vault after yield generation/loss
+    /// @param lastFeesChargedManagement Last management fees charged
+    /// @param lastFeesChargedPerformance Last performance fees charged
     function proposeSettleBatch(
         address asset,
         address vault,
         bytes32 batchId,
-        uint256 totalAssets
+        uint256 totalAssets,
+        uint64 lastFeesChargedManagement,
+        uint64 lastFeesChargedPerformance
     )
         external
         payable

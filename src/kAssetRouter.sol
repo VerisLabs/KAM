@@ -36,6 +36,7 @@ import { OptimizedBytes32EnumerableSetLib } from
 import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
 import { ISettleBatch, IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 
+import { console } from "forge-std/console.sol";
 import { IVersioned } from "src/interfaces/IVersioned.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
@@ -56,6 +57,7 @@ import { IkToken } from "src/interfaces/IkToken.sol";
 /// money flows while enabling efficient capital utilization across the entire vault network.
 contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, Multicallable {
     using OptimizedFixedPointMathLib for uint256;
+    using OptimizedFixedPointMathLib for int256;
     using SafeTransferLib for address;
     using OptimizedSafeCastLib for uint256;
     using OptimizedSafeCastLib for uint128;
@@ -261,7 +263,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         address asset,
         address vault,
         bytes32 batchId,
-        uint256 totalAssets_
+        uint256 totalAssets_,
+        uint64 lastFeesChargedManagement,
+        uint64 lastFeesChargedPerformance
     )
         external
         payable
@@ -278,9 +282,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         $.batchIds.add(batchId);
 
         int256 netted;
-        uint256 yield;
+        int256 yield;
         uint256 lastTotalAssets = _virtualBalance(vault, asset);
-        bool profit;
 
         // Increase the counter to generate unique proposal id
         unchecked {
@@ -310,18 +313,12 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         uint256 totalAssetsAdjusted = uint256(int256(totalAssets_) - netted);
 
-        if (totalAssetsAdjusted > lastTotalAssets) {
-            profit = true;
-            yield = totalAssetsAdjusted - lastTotalAssets;
-        } else {
-            profit = false;
-            yield = lastTotalAssets - totalAssetsAdjusted;
-        }
+        yield = int256(totalAssetsAdjusted) - int256(lastTotalAssets);
 
         // Check if yield exceeds tolerance threshold to prevent excessive yield deviations
         if (lastTotalAssets > 0) {
-            uint256 maxAllowedYield = lastTotalAssets.fullMulDiv($.maxAllowedDelta, 10_000);
-            if (yield > maxAllowedYield) {
+            uint256 maxAllowedYield = lastTotalAssets * $.maxAllowedDelta / 10_000;
+            if (yield.abs() > maxAllowedYield) {
                 emit YieldExceedsMaxDeltaWarning(vault, asset, batchId, yield, maxAllowedYield);
             }
         }
@@ -349,11 +346,22 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             totalAssets: totalAssets_,
             netted: netted,
             yield: yield,
-            profit: profit,
-            executeAfter: executeAfter
+            executeAfter: executeAfter.toUint64(),
+            lastFeesChargedManagement: lastFeesChargedManagement,
+            lastFeesChargedPerformance: lastFeesChargedPerformance
         });
 
-        emit SettlementProposed(proposalId, vault, batchId, totalAssets_, netted, yield, profit, executeAfter);
+        emit SettlementProposed(
+            proposalId,
+            vault,
+            batchId,
+            totalAssets_,
+            netted,
+            yield,
+            executeAfter,
+            lastFeesChargedManagement,
+            lastFeesChargedPerformance
+        );
         _unlockReentrant();
     }
 
@@ -420,8 +428,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         bytes32 batchId = proposal.batchId;
         uint256 totalAssets_ = proposal.totalAssets;
         int256 netted = proposal.netted;
-        uint256 yield = proposal.yield;
-        bool profit = proposal.profit;
+        int256 yield = proposal.yield;
+        bool profit = yield > 0;
         uint256 requested = $.vaultBatchBalances[vault][batchId].requested;
         address kMinter = _getKMinter();
         address kToken = _getKTokenForAsset(asset);
@@ -445,18 +453,25 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                 asset.safeTransfer(address(adapter), uint256(netted));
                 emit Deposited(vault, asset, uint256(netted));
             }
+
+            // Mark batch as settled in the vault
+            ISettleBatch(vault).settleBatch(batchId);
+            adapter.setTotalAssets(totalAssets_);
         } else {
+            console.log("is not kminter");
+            uint256 totalRequestedShares = $.vaultRequestedShares[vault][batchId];
             delete $.vaultRequestedShares[vault][batchId];
 
             // kMinter yield is sent to insuranceFund, cannot be minted.
-            if (yield > 0) {
+            if (yield != 0) {
                 if (profit) {
-                    IkToken(kToken).mint(vault, yield);
-                    emit YieldDistributed(vault, yield, true);
+                    IkToken(kToken).mint(vault, uint256(yield));
+                    console.log("minting profit");
                 } else {
-                    IkToken(kToken).burn(vault, yield);
-                    emit YieldDistributed(vault, yield, false);
+                    IkToken(kToken).burn(vault, yield.abs());
+                    console.log("burning loss");
                 }
+                emit YieldDistributed(vault, yield);
             }
 
             IVaultAdapter kMinterAdapter = IVaultAdapter(_registry().getAdapter(_getKMinter(), asset));
@@ -464,11 +479,37 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             int256 kMinterTotalAssets = int256(kMinterAdapter.totalAssets()) - netted;
             require(kMinterTotalAssets >= 0, KASSETROUTER_ZERO_AMOUNT);
             kMinterAdapter.setTotalAssets(uint256(kMinterTotalAssets));
-        }
 
-        // Mark batch as settled in the vault
-        ISettleBatch(vault).settleBatch(batchId);
-        adapter.setTotalAssets(totalAssets_);
+            // Mark batch as settled in the vault
+            ISettleBatch(vault).settleBatch(batchId);
+            adapter.setTotalAssets(totalAssets_);
+
+            // If there were withdrawals we take fees on them
+            if (totalRequestedShares != 0) {
+                // Discount protocol fees
+                uint256 netRequestedShares = totalRequestedShares.fullMulDiv(
+                    IkStakingVault(vault).totalNetAssets(), IkStakingVault(vault).totalAssets()
+                );
+                uint256 feeShares = totalRequestedShares - netRequestedShares;
+                uint256 feeAssets = IkStakingVault(vault).convertToAssets(feeShares);
+
+                // Burn redemption shares of staking vault corresponding to protocol fees
+                if (feeShares != 0) IkStakingVault(vault).burnFees(feeShares);
+
+                // Move fees as ktokens to treasury
+                if (feeAssets != 0) {
+                    IkToken(kToken).burn(vault, feeAssets);
+                    IkToken(kToken).mint(_registry().getTreasury(), feeAssets);
+                }
+            }
+            if (proposal.lastFeesChargedManagement != 0) {
+                IkStakingVault(vault).notifyManagementFeesCharged(proposal.lastFeesChargedManagement);
+            }
+
+            if (proposal.lastFeesChargedPerformance != 0) {
+                IkStakingVault(vault).notifyPerformanceFeesCharged(proposal.lastFeesChargedPerformance);
+            }
+        }
 
         emit BatchSettled(vault, batchId, totalAssets_);
     }
