@@ -104,6 +104,12 @@ interface IVaultReader is IVersioned {
     function getSafeBatchReceiver(bytes32 batchId) external view returns (address);
 
     /// @notice Calculates current share price including all accrued yields
+    /// @dev Returns net share price after fee deductions, reflecting total vault performance.
+    /// Used for settlement calculations and performance tracking.
+    /// @return Share price per stkToken in underlying asset terms (scaled to token decimals)
+    function netSharePrice() external view returns (uint256);
+
+    /// @notice Calculates current share price including all accrued yields
     /// @dev Returns gross share price before fee deductions, reflecting total vault performance.
     /// Used for settlement calculations and performance tracking.
     /// @return Share price per stkToken in underlying asset terms (scaled to token decimals)

@@ -505,7 +505,7 @@ contract DNVaultTest is BaseVaultTest {
 
         // Verify stkTokens were burned
         assertEq(vault.balanceOf(address(vault)), 0);
-        assertEq(vault.sharePrice(), 1e6);
+        assertEq(vault.netSharePrice(), 1e6);
         assertEq(vault.totalAssets(), 0);
         assertEq(vault.totalSupply(), 0);
     }

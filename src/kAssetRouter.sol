@@ -36,7 +36,6 @@ import { OptimizedBytes32EnumerableSetLib } from
 import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
 import { ISettleBatch, IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 
-import { console } from "forge-std/console.sol";
 import { IVersioned } from "src/interfaces/IVersioned.sol";
 import { IkMinter } from "src/interfaces/IkMinter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
@@ -458,7 +457,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             ISettleBatch(vault).settleBatch(batchId);
             adapter.setTotalAssets(totalAssets_);
         } else {
-            console.log("is not kminter");
             uint256 totalRequestedShares = $.vaultRequestedShares[vault][batchId];
             delete $.vaultRequestedShares[vault][batchId];
 
@@ -466,10 +464,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             if (yield != 0) {
                 if (profit) {
                     IkToken(kToken).mint(vault, uint256(yield));
-                    console.log("minting profit");
                 } else {
                     IkToken(kToken).burn(vault, yield.abs());
-                    console.log("burning loss");
                 }
                 emit YieldDistributed(vault, yield);
             }
@@ -488,7 +484,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             if (totalRequestedShares != 0) {
                 // Discount protocol fees
                 uint256 netRequestedShares = totalRequestedShares.fullMulDiv(
-                    IkStakingVault(vault).totalNetAssets(), IkStakingVault(vault).totalAssets()
+                    IkStakingVault(vault).netSharePrice(), IkStakingVault(vault).sharePrice()
                 );
                 uint256 feeShares = totalRequestedShares - netRequestedShares;
                 uint256 feeAssets = IkStakingVault(vault).convertToAssets(feeShares);

@@ -313,7 +313,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
         // Watermark should have increased
         assertGt(newWatermark, initialWatermark);
-        assertEq(newWatermark, vault.sharePrice());
+        assertEq(newWatermark, vault.netSharePrice());
     }
 
     function test_SharePriceWatermark_NoUpdateAfterLoss() public {
@@ -341,7 +341,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
         // Watermark should not decrease
         assertEq(vault.sharePriceWatermark(), highWatermark);
-        assertGt(vault.sharePriceWatermark(), vault.sharePrice());
+        assertGt(vault.sharePriceWatermark(), vault.netSharePrice());
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -493,7 +493,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         uint256 totalAssets = vault.totalAssets();
         uint256 netAssets = vault.totalNetAssets();
 
-        uint256 netSharePrice = vault.sharePrice();
+        uint256 netSharePrice = vault.netSharePrice();
         uint256 sharePrice = (totalAssets * 1e6) / totalSupply;
 
         // Net share price should be lower than gross share price

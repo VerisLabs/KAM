@@ -46,7 +46,6 @@ import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { kBatchReceiver } from "src/kBatchReceiver.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
-import {console} from "forge-std/console.sol";
 
 /// @title kStakingVault
 /// @notice Retail staking vault enabling kToken holders to earn yield through batch-processed share tokens
@@ -558,16 +557,10 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         uint256 totalKTokensNet = (uint256(request.stkTokenAmount)).fullMulDiv(netSharePrice, 10 ** decimals);
         uint256 netSharesToBurn = (uint256(request.stkTokenAmount)).fullMulDiv(netSharePrice, sharePrice);
 
-        console.log("1");
-
-        console.log("want to burn: ", netSharesToBurn);
-        console.log("actual balance : ", balanceOf(address(this)));
-
         // Burn stkTokens from vault (already transferred to vault during request)
-        _burn(address(this),netSharesToBurn);
+        _burn(address(this), netSharesToBurn);
         emit UnstakingAssetsClaimed(batchId, requestId, request.user, totalKTokensNet);
 
-        console.log("2");
         // Transfer kTokens to user
         $.kToken.safeTransfer(request.user, totalKTokensNet);
         emit KTokenUnstaked(request.user, request.stkTokenAmount, totalKTokensNet);
