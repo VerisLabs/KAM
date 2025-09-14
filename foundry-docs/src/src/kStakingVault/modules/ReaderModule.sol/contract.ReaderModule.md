@@ -1,8 +1,8 @@
 # ReaderModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/kStakingVault/modules/ReaderModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/kStakingVault/modules/ReaderModule.sol)
 
 **Inherits:**
-[BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md), [Extsload](/src/abstracts/Extsload.sol/abstract.Extsload.md), [IVaultReader](/src/interfaces/modules/IVaultReader.sol/interface.IVaultReader.md)
+[BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md), [Extsload](/src/vendor/uniswap/Extsload.sol/abstract.Extsload.md), [IVaultReader](/src/interfaces/modules/IVaultReader.sol/interface.IVaultReader.md)
 
 Contains all the public getters for the Staking Vault
 
@@ -350,6 +350,24 @@ function sharePrice() external view returns (uint256);
 |`<none>`|`uint256`|Share price per stkToken in underlying asset terms (scaled to token decimals)|
 
 
+### netSharePrice
+
+Calculates current share price including all accrued yields
+
+*Returns net share price after fee deductions, reflecting total vault performance.
+Used for settlement calculations and performance tracking.*
+
+
+```solidity
+function netSharePrice() external view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Share price per stkToken in underlying asset terms (scaled to token decimals)|
+
+
 ### totalAssets
 
 Returns total assets under management including pending fees
@@ -457,7 +475,11 @@ function convertToAssets(uint256 assets) external view returns (uint256);
 
 ### contractName
 
-Returns the human-readable contract name for identification
+Returns the human-readable name identifier for this contract type
+
+*Used for contract identification and logging purposes. The name should be consistent
+across all versions of the same contract type. This enables external systems and other
+contracts to identify the contract's purpose and role within the protocol ecosystem.*
 
 
 ```solidity
@@ -467,12 +489,17 @@ function contractName() external pure returns (string memory);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`string`|Contract name string for display and logging purposes|
+|`<none>`|`string`|The contract name as a string (e.g., "kMinter", "kAssetRouter", "kRegistry")|
 
 
 ### contractVersion
 
-Returns the contract version for upgrade tracking and compatibility
+Returns the version identifier for this contract implementation
+
+*Used for upgrade management and compatibility checking within the protocol. The version
+string should follow semantic versioning (e.g., "1.0.0") to clearly indicate major, minor,
+and patch updates. This enables the protocol governance and monitoring systems to track
+deployed versions and ensure compatibility between interacting components.*
 
 
 ```solidity
@@ -482,7 +509,7 @@ function contractVersion() external pure returns (string memory);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`string`|Version string indicating current implementation version|
+|`<none>`|`string`|The contract version as a string following semantic versioning (e.g., "1.0.0")|
 
 
 ### selectors

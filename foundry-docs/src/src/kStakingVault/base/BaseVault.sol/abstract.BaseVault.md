@@ -1,8 +1,8 @@
 # BaseVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/kStakingVault/base/BaseVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/kStakingVault/base/BaseVault.sol)
 
 **Inherits:**
-[ERC20](/src/vendor/ERC20.sol/abstract.ERC20.md), [OptimizedReentrancyGuardTransient](/src/abstracts/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)
+[ERC20](/src/vendor/solady/tokens/ERC20.sol/abstract.ERC20.md), [OptimizedReentrancyGuardTransient](/src/vendor/solady/utils/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)
 
 Foundation contract providing essential shared functionality for all kStakingVault implementations
 

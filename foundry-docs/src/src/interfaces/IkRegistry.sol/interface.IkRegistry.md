@@ -1,8 +1,34 @@
 # IkRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/interfaces/IkRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/interfaces/IkRegistry.sol)
+
+**Inherits:**
+[IVersioned](/src/interfaces/IVersioned.sol/interface.IVersioned.md)
 
 
 ## Functions
+### rescueAssets
+
+Emergency function to rescue accidentally sent assets (ETH or ERC20) from the contract
+
+*This function provides a recovery mechanism for assets mistakenly sent to the registry. It includes
+critical safety checks: (1) Only callable by ADMIN_ROLE to prevent unauthorized access, (2) Cannot rescue
+registered protocol assets to prevent draining legitimate funds, (3) Validates amounts and balances.
+For ETH rescue, use address(0) as the asset parameter. The function ensures protocol integrity by
+preventing rescue of assets that are part of normal protocol operations.*
+
+
+```solidity
+function rescueAssets(address asset_, address to_, uint256 amount_) external payable;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset_`|`address`|The asset address to rescue (use address(0) for ETH)|
+|`to_`|`address`|The destination address that will receive the rescued assets|
+|`amount_`|`uint256`|The amount of assets to rescue (must not exceed contract balance)|
+
+
 ### setSingletonContract
 
 Registers a core singleton contract in the protocol
@@ -95,13 +121,14 @@ Registers an external protocol adapter for a vault
 
 
 ```solidity
-function registerAdapter(address vault, address adapter) external payable;
+function registerAdapter(address vault, address asset, address adapter) external payable;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`vault`|`address`|The vault address receiving the adapter|
+|`asset`|`address`|The vault underlying asset|
 |`adapter`|`address`|The adapter contract address|
 
 
@@ -114,13 +141,14 @@ to ensure proper risk assessment before removing yield strategies.*
 
 
 ```solidity
-function removeAdapter(address vault, address adapter) external payable;
+function removeAdapter(address vault, address asset, address adapter) external payable;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`vault`|`address`|The vault address to remove the adapter from|
+|`asset`|`address`|The vault underlying asset|
 |`adapter`|`address`|The adapter address to remove|
 
 
@@ -175,6 +203,23 @@ function grantRelayerRole(address relayer_) external payable;
 |`relayer_`|`address`|The address to grant relayer privileges|
 
 
+### grantManagerRole
+
+Grants manager role for vault adapter operations
+
+*Only callable by ADMIN_ROLE. Relayers manage external vaults and set hurdle rates.*
+
+
+```solidity
+function grantManagerRole(address manager_) external payable;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`manager_`|`address`|The address to grant manager privileges|
+
+
 ### getContractById
 
 Retrieves a singleton contract address by identifier
@@ -196,29 +241,6 @@ function getContractById(bytes32 id) external view returns (address);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`address`|The contract address|
-
-
-### getAssetById
-
-Retrieves a singleton asset address by identifier
-
-*Reverts if asset not registered. Provides named access to common assets.*
-
-
-```solidity
-function getAssetById(bytes32 id) external view returns (address);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`id`|`bytes32`|Asset identifier (e.g., USDC, WBTC)|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|The asset address|
 
 
 ### getAllAssets
@@ -464,6 +486,29 @@ function isVendor(address user) external view returns (bool);
 |`<none>`|`bool`|True if address has VENDOR_ROLE|
 
 
+### isManager
+
+Checks if an address has manager privileges
+
+*Managers can Execute calls in the vault adapter*
+
+
+```solidity
+function isManager(address user) external view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`user`|`address`|The address to check|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|True if address has VENDOR_ROLE|
+
+
 ### isAsset
 
 Checks if an asset is supported by the protocol
@@ -510,7 +555,7 @@ function isVault(address vault) external view returns (bool);
 |`<none>`|`bool`|True if vault is registered|
 
 
-### getAdapters
+### getAdapter
 
 Gets all adapters registered for a specific vault
 
@@ -518,19 +563,20 @@ Gets all adapters registered for a specific vault
 
 
 ```solidity
-function getAdapters(address vault) external view returns (address[] memory);
+function getAdapter(address vault, address asset) external view returns (address);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`vault`|`address`|The vault address to query|
+|`asset`|`address`|The underlying asset of the vault|
 
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`address[]`|Array of adapter addresses for the vault|
+|`<none>`|`address`|Array of adapter addresses for the vault|
 
 
 ### isAdapterRegistered
@@ -541,13 +587,14 @@ Checks if a specific adapter is registered for a vault
 
 
 ```solidity
-function isAdapterRegistered(address vault, address adapter) external view returns (bool);
+function isAdapterRegistered(address vault, address asset, address adapter) external view returns (bool);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`vault`|`address`|The vault address to check|
+|`asset`|`address`|The underlying asset of the vault|
 |`adapter`|`address`|The adapter address to verify|
 
 **Returns**
@@ -862,7 +909,7 @@ Emitted when an adapter is registered for a vault
 
 
 ```solidity
-event AdapterRegistered(address indexed vault, address indexed adapter);
+event AdapterRegistered(address indexed vault, address asset, address indexed adapter);
 ```
 
 **Parameters**
@@ -870,6 +917,7 @@ event AdapterRegistered(address indexed vault, address indexed adapter);
 |Name|Type|Description|
 |----|----|-----------|
 |`vault`|`address`|The vault receiving the adapter|
+|`asset`|`address`|The asset of the vault|
 |`adapter`|`address`|The adapter contract address|
 
 ### AdapterRemoved
@@ -877,7 +925,7 @@ Emitted when an adapter is removed from a vault
 
 
 ```solidity
-event AdapterRemoved(address indexed vault, address indexed adapter);
+event AdapterRemoved(address indexed vault, address asset, address indexed adapter);
 ```
 
 **Parameters**
@@ -885,6 +933,7 @@ event AdapterRemoved(address indexed vault, address indexed adapter);
 |Name|Type|Description|
 |----|----|-----------|
 |`vault`|`address`|The vault losing the adapter|
+|`asset`|`address`|The asset of the vault|
 |`adapter`|`address`|The adapter being removed|
 
 ### KTokenDeployed
@@ -977,6 +1026,38 @@ event HurdleRateSet(address indexed asset, uint16 hurdleRate);
 |----|----|-----------|
 |`asset`|`address`|The asset receiving the hurdle rate|
 |`hurdleRate`|`uint16`|The hurdle rate in basis points|
+
+### VaultTargetSelectorRegistered
+Emitted when a vault-target-selector permission is registered
+
+
+```solidity
+event VaultTargetSelectorRegistered(address indexed vault, address indexed target, bytes4 indexed selector);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault`|`address`|The vault receiving the permission|
+|`target`|`address`|The target contract address|
+|`selector`|`bytes4`|The function selector being allowed|
+
+### VaultTargetSelectorRemoved
+Emitted when a vault-target-selector permission is removed
+
+
+```solidity
+event VaultTargetSelectorRemoved(address indexed vault, address indexed target, bytes4 indexed selector);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault`|`address`|The vault losing the permission|
+|`target`|`address`|The target contract address|
+|`selector`|`bytes4`|The function selector being removed|
 
 ## Enums
 ### VaultType

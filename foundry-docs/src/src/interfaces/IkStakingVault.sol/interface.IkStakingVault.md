@@ -1,5 +1,5 @@
 # IkStakingVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/interfaces/IkStakingVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/interfaces/IkStakingVault.sol)
 
 **Inherits:**
 [IVault](/src/interfaces/IVault.sol/interface.IVault.md), [IVaultReader](/src/interfaces/modules/IVaultReader.sol/interface.IVaultReader.md)

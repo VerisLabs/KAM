@@ -1,8 +1,8 @@
 # kAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/kAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/kAssetRouter.sol)
 
 **Inherits:**
-[IkAssetRouter](/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.md), [Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [kBase](/src/base/kBase.sol/contract.kBase.md), [Multicallable](/src/vendor/Multicallable.sol/abstract.Multicallable.md)
+[IkAssetRouter](/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.md), [Initializable](/src/vendor/solady/utils/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/solady/utils/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [kBase](/src/base/kBase.sol/contract.kBase.md), [Multicallable](/src/vendor/solady/utils/Multicallable.sol/abstract.Multicallable.md)
 
 Central money flow coordinator for the KAM protocol, orchestrating all asset movements and yield
 distribution
@@ -40,6 +40,18 @@ Prevents excessive delays that could harm user experience while maintaining secu
 
 ```solidity
 uint256 private constant MAX_VAULT_SETTLEMENT_COOLDOWN = 1 days;
+```
+
+
+### DEFAULT_MAX_DELTA
+Default yield tolerance for settlement proposals (10%)
+
+*Provides initial yield deviation threshold to prevent settlements with excessive yield changes
+that could indicate errors in yield calculation or potential manipulation attempts*
+
+
+```solidity
+uint256 private constant DEFAULT_MAX_DELTA = 1000;
 ```
 
 
@@ -137,14 +149,13 @@ fair settlement across all institutional redemption requests in the batch.*
 
 
 ```solidity
-function kAssetRequestPull(address _asset, address _vault, uint256 amount, bytes32 batchId) external payable;
+function kAssetRequestPull(address _asset, uint256 amount, bytes32 batchId) external payable;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`_asset`|`address`|The underlying asset address being redeemed|
-|`_vault`|`address`|The DN vault address from which assets will be withdrawn|
 |`amount`|`uint256`|The quantity of assets requested for redemption|
 |`batchId`|`bytes32`|The batch identifier for coordinating this redemption with other requests|
 
@@ -248,9 +259,8 @@ function proposeSettleBatch(
     address vault,
     bytes32 batchId,
     uint256 totalAssets_,
-    uint256 netted,
-    uint256 yield,
-    bool profit
+    uint64 lastFeesChargedManagement,
+    uint64 lastFeesChargedPerformance
 )
     external
     payable
@@ -264,15 +274,8 @@ function proposeSettleBatch(
 |`vault`|`address`|The DN vault address where yield was generated|
 |`batchId`|`bytes32`|The batch identifier for this settlement period|
 |`totalAssets_`|`uint256`||
-|`netted`|`uint256`|Net amount of new deposits minus redemptions in this batch|
-|`yield`|`uint256`|Absolute amount of yield generated (positive) or lost (negative)|
-|`profit`|`bool`|True if yield is positive (will mint kTokens), false if negative (will burn kTokens)|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`proposalId`|`bytes32`|Unique identifier for this settlement proposal for tracking and execution|
+|`lastFeesChargedManagement`|`uint64`|Last management fees charged|
+|`lastFeesChargedPerformance`|`uint64`|Last performance fees charged|
 
 
 ### executeSettleBatch
@@ -357,6 +360,27 @@ function setSettlementCooldown(uint256 cooldown) external;
 |Name|Type|Description|
 |----|----|-----------|
 |`cooldown`|`uint256`|The new cooldown period in seconds before settlement proposals can be executed|
+
+
+### setMaxAllowedDelta
+
+Updates the yield tolerance threshold for settlement proposals
+
+*This function allows protocol governance to adjust the maximum acceptable yield deviation before
+settlement proposals are rejected. The yield tolerance acts as a safety mechanism to prevent settlement
+proposals with extremely high or low yield values that could indicate calculation errors, data corruption,
+or potential manipulation attempts. Setting an appropriate tolerance balances protocol safety with
+operational flexibility, allowing normal yield fluctuations while blocking suspicious proposals.*
+
+
+```solidity
+function setMaxAllowedDelta(uint256 maxDelta_) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`maxDelta_`|`uint256`|The new yield tolerance in basis points (e.g., 1000 = 10%)|
 
 
 ### getPendingProposals
@@ -456,6 +480,33 @@ function getSettlementCooldown() external view returns (uint256);
 |`<none>`|`uint256`|cooldown The current cooldown period in seconds|
 
 
+### getYieldTolerance
+
+Gets the current yield tolerance threshold for settlement proposals
+
+*The yield tolerance determines the maximum acceptable yield deviation before settlement proposals
+are automatically rejected. This acts as a safety mechanism to prevent processing of settlement proposals
+with excessive yield values that could indicate calculation errors or potential manipulation. The tolerance
+is expressed in basis points where 10000 equals 100%.*
+
+
+```solidity
+function getYieldTolerance() external view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|tolerance The current yield tolerance in basis points|
+
+
+### virtualBalance
+
+
+```solidity
+function virtualBalance(address vault, address asset) external view returns (uint256);
+```
+
 ### _virtualBalance
 
 Calculates the virtual balance of assets for a vault across all its adapters
@@ -474,7 +525,7 @@ function _virtualBalance(address vault, address asset) private view returns (uin
 |Name|Type|Description|
 |----|----|-----------|
 |`vault`|`address`|The vault address to calculate virtual balance for|
-|`asset`|`address`|The asset address to query balance for|
+|`asset`|`address`||
 
 **Returns**
 
@@ -566,7 +617,7 @@ function _checkSufficientVirtualBalance(address vault, address asset, uint256 re
 |Name|Type|Description|
 |----|----|-----------|
 |`vault`|`address`|Vault address|
-|`asset`|`address`|Asset address|
+|`asset`|`address`||
 |`requiredAmount`|`uint256`|Required amount|
 
 
@@ -745,11 +796,11 @@ receive() external payable;
 
 ### contractName
 
-Returns the standard name identifier for this contract type within the KAM protocol
+Returns the human-readable name identifier for this contract type
 
-*Used for protocol identification and registry management. Provides a consistent way
-to identify kAssetRouter contracts across the protocol ecosystem, enabling automated
-contract discovery and validation by other protocol components.*
+*Used for contract identification and logging purposes. The name should be consistent
+across all versions of the same contract type. This enables external systems and other
+contracts to identify the contract's purpose and role within the protocol ecosystem.*
 
 
 ```solidity
@@ -759,16 +810,17 @@ function contractName() external pure returns (string memory);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`string`|The contract name as a string (typically "kAssetRouter")|
+|`<none>`|`string`|The contract name as a string (e.g., "kMinter", "kAssetRouter", "kRegistry")|
 
 
 ### contractVersion
 
 Returns the version identifier for this contract implementation
 
-*Used for upgrade management and compatibility checking within the protocol. Enables
-the system to verify contract versions during upgrades and ensure compatibility between
-protocol components. Critical for protocol governance and maintenance procedures.*
+*Used for upgrade management and compatibility checking within the protocol. The version
+string should follow semantic versioning (e.g., "1.0.0") to clearly indicate major, minor,
+and patch updates. This enables the protocol governance and monitoring systems to track
+deployed versions and ensure compatibility between interacting components.*
 
 
 ```solidity
@@ -778,7 +830,7 @@ function contractVersion() external pure returns (string memory);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`string`|The contract version as a string (e.g., "1.0.0")|
+|`<none>`|`string`|The contract version as a string following semantic versioning (e.g., "1.0.0")|
 
 
 ## Structs
@@ -796,6 +848,7 @@ storage-location: erc7201:kam.storage.kAssetRouter
 struct kAssetRouterStorage {
     uint256 proposalCounter;
     uint256 vaultSettlementCooldown;
+    uint256 maxAllowedDelta;
     OptimizedBytes32EnumerableSetLib.Bytes32Set executedProposalIds;
     OptimizedBytes32EnumerableSetLib.Bytes32Set batchIds;
     mapping(address vault => OptimizedBytes32EnumerableSetLib.Bytes32Set) vaultPendingProposalIds;

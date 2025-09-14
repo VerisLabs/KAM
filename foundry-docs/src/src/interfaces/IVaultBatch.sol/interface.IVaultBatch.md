@@ -1,5 +1,5 @@
 # IVaultBatch
-[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/interfaces/IVaultBatch.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/interfaces/IVaultBatch.sol)
 
 Interface for batch lifecycle management enabling gas-efficient settlement of multiple user operations
 
@@ -86,33 +86,20 @@ function settleBatch(bytes32 _batchId) external;
 |`_batchId`|`bytes32`|The batch identifier to mark as settled (must be closed, not previously settled)|
 
 
-### createBatchReceiver
+### burnFees
 
-Deploys a minimal proxy BatchReceiver for isolated asset distribution to unstaking users
+Burns fees shares from the vault
 
-*This function creates batch-specific receivers for secure unstaking asset distribution. Process:
-(1) Checks if receiver already exists for batch to prevent duplicate deployments, (2) Clones minimal proxy
-from receiver implementation to minimize gas costs while maintaining isolation, (3) Initializes receiver with
-batch ID and asset type for proper operation, (4) Stores receiver address in batch info for claiming access.
-The receiver pattern provides several benefits: asset isolation between batches preventing cross-contamination,
-gas-efficient deployment through EIP-1167 minimal proxies, security through single-batch operation scope,
-and simplified distribution logic for unstaking claims. Only kAssetRouter can create receivers as part of
-settlement coordination.*
+*This function burns fees from the vault*
 
 
 ```solidity
-function createBatchReceiver(bytes32 _batchId) external returns (address);
+function burnFees(uint256 shares) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_batchId`|`bytes32`|The batch identifier requiring a receiver for asset distribution|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|The address of the deployed BatchReceiver contract for this specific batch|
+|`shares`|`uint256`|The quantity of shares to burn|
 
 

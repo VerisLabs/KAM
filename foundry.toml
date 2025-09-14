@@ -58,6 +58,10 @@ mainnet = { key = "${ETHERSCAN_MAINNET_KEY}" }
 [doc]
 out = "foundry-docs/"
 title = "KAM Contracts Documentation"
+ignore = [
+    "src/vendor/**",
+]
+
 
 [dependencies]
 forge-std = "1.9.7"

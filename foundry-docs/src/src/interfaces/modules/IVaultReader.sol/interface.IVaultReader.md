@@ -1,5 +1,8 @@
 # IVaultReader
-[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/interfaces/modules/IVaultReader.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/interfaces/modules/IVaultReader.sol)
+
+**Inherits:**
+[IVersioned](/src/interfaces/IVersioned.sol/interface.IVersioned.md)
 
 Read-only interface for querying vault state, calculations, and metrics without modifying contract state
 
@@ -302,6 +305,24 @@ function getSafeBatchReceiver(bytes32 batchId) external view returns (address);
 |`<none>`|`address`|Address of the batch receiver (guaranteed non-zero)|
 
 
+### netSharePrice
+
+Calculates current share price including all accrued yields
+
+*Returns net share price after fee deductions, reflecting total vault performance.
+Used for settlement calculations and performance tracking.*
+
+
+```solidity
+function netSharePrice() external view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Share price per stkToken in underlying asset terms (scaled to token decimals)|
+
+
 ### sharePrice
 
 Calculates current share price including all accrued yields
@@ -423,35 +444,5 @@ function convertToAssets(uint256 assets) external view returns (uint256);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`uint256`|The equivalent amount of shares|
-
-
-### contractName
-
-Returns the human-readable contract name for identification
-
-
-```solidity
-function contractName() external pure returns (string memory);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`string`|Contract name string for display and logging purposes|
-
-
-### contractVersion
-
-Returns the contract version for upgrade tracking and compatibility
-
-
-```solidity
-function contractVersion() external pure returns (string memory);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`string`|Version string indicating current implementation version|
 
 

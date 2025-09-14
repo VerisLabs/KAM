@@ -2,12 +2,16 @@
 
 # Contents
 - [modules](/src/interfaces/modules)
-- [IAdapter](IAdapter.sol/interface.IAdapter.md)
+- [IERC7540](IERC7540.sol/interface.IERC7540.md)
 - [IExtsload](IExtsload.sol/interface.IExtsload.md)
+- [IRegistry](IRegistry.sol/interface.IRegistry.md)
 - [IVault](IVault.sol/interface.IVault.md)
+- [IVaultAdapter](IVaultAdapter.sol/interface.IVaultAdapter.md)
 - [IVaultBatch](IVaultBatch.sol/interface.IVaultBatch.md)
 - [IVaultClaim](IVaultClaim.sol/interface.IVaultClaim.md)
 - [IVaultFees](IVaultFees.sol/interface.IVaultFees.md)
+- [IVersioned](IVersioned.sol/interface.IVersioned.md)
+- [ISettleBatch](IkAssetRouter.sol/interface.ISettleBatch.md)
 - [IkAssetRouter](IkAssetRouter.sol/interface.IkAssetRouter.md)
 - [IkBatchReceiver](IkBatchReceiver.sol/interface.IkBatchReceiver.md)
 - [IkMinter](IkMinter.sol/interface.IkMinter.md)

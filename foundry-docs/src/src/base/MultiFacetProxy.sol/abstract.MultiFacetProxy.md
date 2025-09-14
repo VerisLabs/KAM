@@ -1,8 +1,8 @@
 # MultiFacetProxy
-[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/base/MultiFacetProxy.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/base/MultiFacetProxy.sol)
 
 **Inherits:**
-[Proxy](/src/abstracts/Proxy.sol/abstract.Proxy.md)
+[Proxy](/src/vendor/openzeppelin/Proxy.sol/abstract.Proxy.md)
 
 A proxy contract that can route function calls to different implementation contracts
 

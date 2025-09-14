@@ -1,10 +1,13 @@
 # IkMinter
-[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/interfaces/IkMinter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/interfaces/IkMinter.sol)
+
+**Inherits:**
+[IVersioned](/src/interfaces/IVersioned.sol/interface.IVersioned.md)
 
 Interface for institutional minting and redemption operations in the KAM protocol
 
 *This interface defines the core functionality for qualified institutions to mint kTokens
-by depositing underlying assets and redeem them through a batch settlement system. The interface
+by depositing underlying assets and burn them through a batch settlement system. The interface
 supports a two-phase redemption process to accommodate batch processing and yield distribution.*
 
 
@@ -33,7 +36,7 @@ function mint(address asset, address to, uint256 amount) external payable;
 |`amount`|`uint256`|The amount of underlying asset to deposit and kTokens to mint (1:1 ratio)|
 
 
-### requestRedeem
+### requestBurn
 
 Initiates a two-phase institutional redemption by creating a batch request for underlying asset
 withdrawal
@@ -41,24 +44,24 @@ withdrawal
 *This function implements the first phase of the redemption process for qualified institutions. The workflow
 consists of: (1) transferring kTokens from the caller to this contract for escrow (not burned yet), (2)
 generating
-a unique request ID for tracking, (3) creating a RedeemRequest struct with PENDING status, (4) registering the
+a unique request ID for tracking, (3) creating a BurnRequest struct with PENDING status, (4) registering the
 request with kAssetRouter for batch processing. The kTokens remain in escrow until the batch is settled and the
-user calls redeem() to complete the process. This two-phase approach is necessary because redemptions are
+user calls burn() to complete the process. This two-phase approach is necessary because redemptions are
 processed
 in batches through the DN vault system, which requires waiting for batch settlement to ensure proper asset
 availability and yield distribution. The request can be cancelled before batch closure/settlement.*
 
 
 ```solidity
-function requestRedeem(address asset, address to, uint256 amount) external payable returns (bytes32 requestId);
+function requestBurn(address asset, address to, uint256 amount) external payable returns (bytes32 requestId);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`asset`|`address`|The underlying asset address to redeem (must match the kToken's underlying asset)|
+|`asset`|`address`|The underlying asset address to burn (must match the kToken's underlying asset)|
 |`to`|`address`|The recipient address that will receive the underlying assets after batch settlement|
-|`amount`|`uint256`|The amount of kTokens to redeem (will receive equivalent underlying assets)|
+|`amount`|`uint256`|The amount of kTokens to burn (will receive equivalent underlying assets)|
 
 **Returns**
 
@@ -67,11 +70,11 @@ function requestRedeem(address asset, address to, uint256 amount) external payab
 |`requestId`|`bytes32`|A unique bytes32 identifier for tracking and executing this redemption request|
 
 
-### redeem
+### burn
 
 Completes the second phase of institutional redemption by executing a settled batch request
 
-*This function finalizes the redemption process initiated by requestRedeem(). It can only be called after
+*This function finalizes the redemption process initiated by requestBurn(). It can only be called after
 the batch containing this request has been settled through the kAssetRouter settlement process. The execution
 involves: (1) validating the request exists and is in PENDING status, (2) updating the request status to
 REDEEMED,
@@ -86,13 +89,13 @@ safety.*
 
 
 ```solidity
-function redeem(bytes32 requestId) external payable;
+function burn(bytes32 requestId) external payable;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`requestId`|`bytes32`|The unique identifier of the redemption request to execute (obtained from requestRedeem)|
+|`requestId`|`bytes32`|The unique identifier of the redemption request to execute (obtained from requestBurn)|
 
 
 ### cancelRequest
@@ -120,7 +123,157 @@ function cancelRequest(bytes32 requestId) external payable;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`requestId`|`bytes32`|The unique identifier of the redemption request to cancel (obtained from requestRedeem)|
+|`requestId`|`bytes32`|The unique identifier of the redemption request to cancel (obtained from requestBurn)|
+
+
+### createNewBatch
+
+Creates a new batch for a specific asset
+
+
+```solidity
+function createNewBatch(address asset_) external returns (bytes32);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset_`|`address`|The asset for which to create a new batch|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bytes32`|The batch ID of the newly created batch|
+
+
+### closeBatch
+
+Closes a specific batch and optionally creates a new one
+
+
+```solidity
+function closeBatch(bytes32 _batchId, bool _create) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`_batchId`|`bytes32`|The batch ID to close|
+|`_create`|`bool`|Whether to create a new batch for the same asset|
+
+
+### settleBatch
+
+Marks a batch as settled after processing
+
+
+```solidity
+function settleBatch(bytes32 _batchId) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`_batchId`|`bytes32`|The batch ID to settle|
+
+
+### createBatchReceiver
+
+Creates a batch receiver contract for a specific batch
+
+
+```solidity
+function createBatchReceiver(bytes32 _batchId) external returns (address);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`_batchId`|`bytes32`|The batch ID to create a receiver for|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`address`|The address of the created batch receiver|
+
+
+### getBatchId
+
+
+```solidity
+function getBatchId(address asset_) external view returns (bytes32);
+```
+
+### getCurrentBatchNumber
+
+
+```solidity
+function getCurrentBatchNumber(address asset_) external view returns (uint256);
+```
+
+### hasActiveBatch
+
+Checks if an asset has an active (open) batch
+
+
+```solidity
+function hasActiveBatch(address asset_) external view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset_`|`address`|The asset to check|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|True if the asset has an active batch, false otherwise|
+
+
+### getBatchInfo
+
+Gets batch information for a specific batch ID
+
+
+```solidity
+function getBatchInfo(bytes32 batchId_) external view returns (IkMinter.BatchInfo memory);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`batchId_`|`bytes32`|The batch ID to query|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`IkMinter.BatchInfo`|The batch information|
+
+
+### getBatchReceiver
+
+Gets the batch receiver address for a specific batch
+
+
+```solidity
+function getBatchReceiver(bytes32 batchId_) external view returns (address);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`batchId_`|`bytes32`|The batch ID to query|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`address`|The address of the batch receiver|
 
 
 ### rescueReceiverAssets
@@ -165,15 +318,15 @@ function isPaused() external view returns (bool);
 |`<none>`|`bool`|True if paused, false otherwise|
 
 
-### getRedeemRequest
+### getBurnRequest
 
 Retrieves details of a specific redemption request
 
-*Returns the complete RedeemRequest struct containing all request information*
+*Returns the complete BurnRequest struct containing all request information*
 
 
 ```solidity
-function getRedeemRequest(bytes32 requestId) external view returns (RedeemRequest memory);
+function getBurnRequest(bytes32 requestId) external view returns (BurnRequest memory);
 ```
 **Parameters**
 
@@ -185,7 +338,7 @@ function getRedeemRequest(bytes32 requestId) external view returns (RedeemReques
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`RedeemRequest`|The complete RedeemRequest struct with status, amounts, and batch information|
+|`<none>`|`BurnRequest`|The complete BurnRequest struct with status, amounts, and batch information|
 
 
 ### getUserRequests
@@ -282,12 +435,12 @@ event Minted(address indexed to, uint256 amount, bytes32 batchId);
 |`amount`|`uint256`|The amount of kTokens minted (matches deposited asset amount)|
 |`batchId`|`bytes32`|The batch identifier where the deposited assets were allocated|
 
-### RedeemRequestCreated
+### BurnRequestCreated
 Emitted when a new redemption request is created and enters the batch queue
 
 
 ```solidity
-event RedeemRequestCreated(
+event BurnRequestCreated(
     bytes32 indexed requestId,
     address indexed user,
     address indexed kToken,
@@ -303,17 +456,17 @@ event RedeemRequestCreated(
 |----|----|-----------|
 |`requestId`|`bytes32`|The unique identifier assigned to this redemption request|
 |`user`|`address`|The address that initiated the redemption request|
-|`kToken`|`address`|The kToken contract address being redeemed|
-|`amount`|`uint256`|The amount of kTokens being redeemed|
+|`kToken`|`address`|The kToken contract address being burned|
+|`amount`|`uint256`|The amount of kTokens being burned|
 |`recipient`|`address`|The address that will receive the underlying assets|
 |`batchId`|`bytes32`|The batch identifier this request is associated with|
 
-### Redeemed
+### Burned
 Emitted when a redemption request is successfully executed after batch settlement
 
 
 ```solidity
-event Redeemed(bytes32 indexed requestId);
+event Burned(bytes32 indexed requestId);
 ```
 
 **Parameters**
@@ -336,15 +489,74 @@ event Cancelled(bytes32 indexed requestId);
 |----|----|-----------|
 |`requestId`|`bytes32`|The unique identifier of the cancelled redemption request|
 
+### BatchCreated
+Emitted when a new batch is created
+
+
+```solidity
+event BatchCreated(address indexed asset, bytes32 indexed batchId, uint256 batchNumber);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`asset`|`address`|The asset in which the batch will be created|
+|`batchId`|`bytes32`|The batch ID of the new batch|
+|`batchNumber`|`uint256`|the batch number used|
+
+### BatchSettled
+Emitted when a batch is settled
+
+
+```solidity
+event BatchSettled(bytes32 indexed batchId);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`batchId`|`bytes32`|The batch ID of the settled batch|
+
+### BatchClosed
+Emitted when a batch is closed
+
+
+```solidity
+event BatchClosed(bytes32 indexed batchId);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`batchId`|`bytes32`|The batch ID of the closed batch|
+
+### BatchReceiverCreated
+Emitted when a BatchReceiver is created
+
+
+```solidity
+event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`receiver`|`address`|The address of the created BatchReceiver|
+|`batchId`|`bytes32`|The batch ID of the BatchReceiver|
+
 ## Structs
-### RedeemRequest
+### BurnRequest
 Contains all information related to a redemption request
 
 *Stored on-chain to track redemption lifecycle and enable proper asset distribution*
 
 
 ```solidity
-struct RedeemRequest {
+struct BurnRequest {
     address user;
     uint256 amount;
     address asset;
@@ -352,6 +564,20 @@ struct RedeemRequest {
     RequestStatus status;
     bytes32 batchId;
     address recipient;
+}
+```
+
+### BatchInfo
+Batch information structure
+
+
+```solidity
+struct BatchInfo {
+    address asset;
+    address batchReceiver;
+    bool isClosed;
+    bool isSettled;
+    bytes32 batchId;
 }
 ```
 

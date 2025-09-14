@@ -1,5 +1,8 @@
 # IkToken
-[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/interfaces/IkToken.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/interfaces/IkToken.sol)
+
+**Inherits:**
+[IVersioned](/src/interfaces/IVersioned.sol/interface.IVersioned.md)
 
 Interface for kToken with role-based minting and burning capabilities
 
@@ -363,35 +366,5 @@ function revokeMinterRole(address minter) external;
 |Name|Type|Description|
 |----|----|-----------|
 |`minter`|`address`|The address to revoke minter role from|
-
-
-### contractName
-
-Returns the name identifier for this contract type
-
-
-```solidity
-function contractName() external pure returns (string memory);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`string`|The contract name as a string|
-
-
-### contractVersion
-
-Returns the version identifier for this contract
-
-
-```solidity
-function contractVersion() external pure returns (string memory);
-```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`string`|The contract version as a string|
 
 

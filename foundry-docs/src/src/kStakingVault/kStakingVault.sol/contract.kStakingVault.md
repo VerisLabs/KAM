@@ -1,8 +1,8 @@
 # kStakingVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/kStakingVault/kStakingVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/kStakingVault/kStakingVault.sol)
 
 **Inherits:**
-[IVault](/src/interfaces/IVault.sol/interface.IVault.md), [BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md), [Initializable](/src/vendor/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [Ownable](/src/vendor/Ownable.sol/abstract.Ownable.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.md)
+[IVault](/src/interfaces/IVault.sol/interface.IVault.md), [BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md), [Initializable](/src/vendor/solady/utils/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/solady/utils/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [Ownable](/src/vendor/solady/auth/Ownable.sol/abstract.Ownable.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.md)
 
 Retail staking vault enabling kToken holders to earn yield through batch-processed share tokens
 
@@ -252,35 +252,12 @@ function settleBatch(bytes32 _batchId) external;
 |`_batchId`|`bytes32`|The batch identifier to mark as settled (must be closed, not previously settled)|
 
 
-### createBatchReceiver
-
-Deploys a minimal proxy BatchReceiver for isolated asset distribution to unstaking users
-
-*This function creates batch-specific receivers for secure unstaking asset distribution. Process:
-(1) Checks if receiver already exists for batch to prevent duplicate deployments, (2) Clones minimal proxy
-from receiver implementation to minimize gas costs while maintaining isolation, (3) Initializes receiver with
-batch ID and asset type for proper operation, (4) Stores receiver address in batch info for claiming access.
-The receiver pattern provides several benefits: asset isolation between batches preventing cross-contamination,
-gas-efficient deployment through EIP-1167 minimal proxies, security through single-batch operation scope,
-and simplified distribution logic for unstaking claims. Only kAssetRouter can create receivers as part of
-settlement coordination.*
+### burnFees
 
 
 ```solidity
-function createBatchReceiver(bytes32 _batchId) external returns (address);
+function burnFees(uint256 shares) external;
 ```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`_batchId`|`bytes32`|The batch identifier requiring a receiver for asset distribution|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`address`|The address of the deployed BatchReceiver contract for this specific batch|
-
 
 ### _createNewBatch
 

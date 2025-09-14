@@ -1,5 +1,5 @@
 # Constants
-[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/errors/Errors.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/errors/Errors.sol)
 
 ### KASSETROUTER_ALREADY_REGISTERED
 *All error codes use contract-specific prefixes for easier debugging:
@@ -122,6 +122,12 @@ string constant KASSETROUTER_ZERO_ADDRESS = "A17";
 
 ```solidity
 string constant KASSETROUTER_ZERO_AMOUNT = "A18";
+```
+
+### KASSETROUTER_INVALID_MAX_DELTA
+
+```solidity
+string constant KASSETROUTER_INVALID_MAX_DELTA = "A19";
 ```
 
 ### ADAPTER_ALREADY_INITIALIZED
@@ -430,6 +436,18 @@ string constant KMINTER_BATCH_MINT_REACHED = "M12";
 string constant KMINTER_BATCH_REDEEM_REACHED = "M13";
 ```
 
+### KMINTER_BATCH_NOT_CLOSED
+
+```solidity
+string constant KMINTER_BATCH_NOT_CLOSED = "M14";
+```
+
+### KMINTER_BATCH_NOT_SET
+
+```solidity
+string constant KMINTER_BATCH_NOT_SET = "M15";
+```
+
 ### KREGISTRY_ADAPTER_ALREADY_SET
 
 ```solidity
@@ -488,6 +506,90 @@ string constant KREGISTRY_ZERO_AMOUNT = "R9";
 
 ```solidity
 string constant KREGISTRY_FEE_EXCEEDS_MAXIMUM = "R10";
+```
+
+### KREGISTRY_SELECTOR_ALREADY_SET
+
+```solidity
+string constant KREGISTRY_SELECTOR_ALREADY_SET = "R11";
+```
+
+### KREGISTRY_SELECTOR_NOT_FOUND
+
+```solidity
+string constant KREGISTRY_SELECTOR_NOT_FOUND = "R12";
+```
+
+### GUARDIANMODULE_UNAUTHORIZED
+
+```solidity
+string constant GUARDIANMODULE_UNAUTHORIZED = "GM1";
+```
+
+### GUARDIANMODULE_NOT_ALLOWED
+
+```solidity
+string constant GUARDIANMODULE_NOT_ALLOWED = "GM2";
+```
+
+### GUARDIANMODULE_INVALID_ADAPTER
+
+```solidity
+string constant GUARDIANMODULE_INVALID_ADAPTER = "GM3";
+```
+
+### GUARDIANMODULE_SELECTOR_ALREADY_SET
+
+```solidity
+string constant GUARDIANMODULE_SELECTOR_ALREADY_SET = "GM4";
+```
+
+### GUARDIANMODULE_SELECTOR_NOT_FOUND
+
+```solidity
+string constant GUARDIANMODULE_SELECTOR_NOT_FOUND = "GM5";
+```
+
+### GUARDIANMODULE_ZERO_ADDRESS
+
+```solidity
+string constant GUARDIANMODULE_ZERO_ADDRESS = "GM6";
+```
+
+### KROLESBASE_ALREADY_INITIALIZED
+
+```solidity
+string constant KROLESBASE_ALREADY_INITIALIZED = "KB1";
+```
+
+### KROLESBASE_WRONG_ROLE
+
+```solidity
+string constant KROLESBASE_WRONG_ROLE = "KB2";
+```
+
+### KROLESBASE_ZERO_ADDRESS
+
+```solidity
+string constant KROLESBASE_ZERO_ADDRESS = "KB3";
+```
+
+### KROLESBASE_NOT_INITIALIZED
+
+```solidity
+string constant KROLESBASE_NOT_INITIALIZED = "KB4";
+```
+
+### KROLESBASE_ZERO_AMOUNT
+
+```solidity
+string constant KROLESBASE_ZERO_AMOUNT = "KB5";
+```
+
+### KROLESBASE_TRANSFER_FAILED
+
+```solidity
+string constant KROLESBASE_TRANSFER_FAILED = "KB6";
 ```
 
 ### KSTAKINGVAULT_INSUFFICIENT_BALANCE
@@ -632,5 +734,95 @@ string constant VAULTFEES_FEE_EXCEEDS_MAXIMUM = "VF1";
 
 ```solidity
 string constant VAULTFEES_INVALID_TIMESTAMP = "VF2";
+```
+
+### VAULTADAPTER_EXPIRED_SIGNATURE
+
+```solidity
+string constant VAULTADAPTER_EXPIRED_SIGNATURE = "VA1";
+```
+
+### VAULTADAPTER_INVALID_SIGNATURE
+
+```solidity
+string constant VAULTADAPTER_INVALID_SIGNATURE = "VA2";
+```
+
+### VAULTADAPTER_ZERO_ADDRESS
+
+```solidity
+string constant VAULTADAPTER_ZERO_ADDRESS = "VA3";
+```
+
+### VAULTADAPTER_WRONG_ROLE
+
+```solidity
+string constant VAULTADAPTER_WRONG_ROLE = "VA4";
+```
+
+### VAULTADAPTER_IS_PAUSED
+
+```solidity
+string constant VAULTADAPTER_IS_PAUSED = "VA5";
+```
+
+### VAULTADAPTER_NOT_INITIALIZED
+
+```solidity
+string constant VAULTADAPTER_NOT_INITIALIZED = "VA6";
+```
+
+### VAULTADAPTER_ZERO_AMOUNT
+
+```solidity
+string constant VAULTADAPTER_ZERO_AMOUNT = "VA7";
+```
+
+### VAULTADAPTER_TRANSFER_FAILED
+
+```solidity
+string constant VAULTADAPTER_TRANSFER_FAILED = "VA8";
+```
+
+### VAULTADAPTER_WRONG_ASSET
+
+```solidity
+string constant VAULTADAPTER_WRONG_ASSET = "VA9";
+```
+
+### VAULTADAPTER_WRONG_SELECTOR
+
+```solidity
+string constant VAULTADAPTER_WRONG_SELECTOR = "VA10";
+```
+
+### VAULTADAPTER_INVALID_NONCE
+
+```solidity
+string constant VAULTADAPTER_INVALID_NONCE = "VA11";
+```
+
+### VAULTADAPTER_WRONG_TARGET
+
+```solidity
+string constant VAULTADAPTER_WRONG_TARGET = "VA12";
+```
+
+### VAULTADAPTER_SELECTOR_NOT_ALLOWED
+
+```solidity
+string constant VAULTADAPTER_SELECTOR_NOT_ALLOWED = "VA13";
+```
+
+### PARAMETERCHECKER_NOT_ALLOWED
+
+```solidity
+string constant PARAMETERCHECKER_NOT_ALLOWED = "PC1";
+```
+
+### PARAMETERCHECKER_ZERO_ADDRESS
+
+```solidity
+string constant PARAMETERCHECKER_ZERO_ADDRESS = "PC2";
 ```
 

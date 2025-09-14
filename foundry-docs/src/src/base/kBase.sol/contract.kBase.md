@@ -1,8 +1,8 @@
 # kBase
-[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/base/kBase.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/base/kBase.sol)
 
 **Inherits:**
-[OptimizedReentrancyGuardTransient](/src/abstracts/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)
+[OptimizedReentrancyGuardTransient](/src/vendor/solady/utils/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)
 
 Foundation contract providing essential shared functionality and registry integration for all KAM protocol
 contracts
@@ -480,13 +480,13 @@ Used to ensure only kMinter can trigger institutional deposit and redemption flo
 
 
 ```solidity
-function _isKMinter(address user) internal view returns (bool);
+function _isKMinter(address vault) internal view returns (bool);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`user`|`address`|The address to check against kMinter|
+|`vault`|`address`|The address to check against kMinter|
 
 **Returns**
 

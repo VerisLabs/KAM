@@ -1,5 +1,8 @@
 # IkAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/3f66acab797e6ddb71d2b17eb97d3be17c371dac/src/interfaces/IkAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/interfaces/IkAssetRouter.sol)
+
+**Inherits:**
+[IVersioned](/src/interfaces/IVersioned.sol/interface.IVersioned.md)
 
 Central money flow coordinator for the KAM protocol managing all asset movements and settlements
 
@@ -50,14 +53,13 @@ fair settlement across all institutional redemption requests in the batch.*
 
 
 ```solidity
-function kAssetRequestPull(address _asset, address _vault, uint256 amount, bytes32 batchId) external payable;
+function kAssetRequestPull(address _asset, uint256 amount, bytes32 batchId) external payable;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`_asset`|`address`|The underlying asset address being redeemed|
-|`_vault`|`address`|The DN vault address from which assets will be withdrawn|
 |`amount`|`uint256`|The quantity of assets requested for redemption|
 |`batchId`|`bytes32`|The batch identifier for coordinating this redemption with other requests|
 
@@ -161,9 +163,8 @@ function proposeSettleBatch(
     address vault,
     bytes32 batchId,
     uint256 totalAssets,
-    uint256 netted,
-    uint256 yield,
-    bool profit
+    uint64 lastFeesChargedManagement,
+    uint64 lastFeesChargedPerformance
 )
     external
     payable
@@ -177,15 +178,8 @@ function proposeSettleBatch(
 |`vault`|`address`|The DN vault address where yield was generated|
 |`batchId`|`bytes32`|The batch identifier for this settlement period|
 |`totalAssets`|`uint256`|Total asset value in the vault after yield generation/loss|
-|`netted`|`uint256`|Net amount of new deposits minus redemptions in this batch|
-|`yield`|`uint256`|Absolute amount of yield generated (positive) or lost (negative)|
-|`profit`|`bool`|True if yield is positive (will mint kTokens), false if negative (will burn kTokens)|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`proposalId`|`bytes32`|Unique identifier for this settlement proposal for tracking and execution|
+|`lastFeesChargedManagement`|`uint64`|Last management fees charged|
+|`lastFeesChargedPerformance`|`uint64`|Last performance fees charged|
 
 
 ### executeSettleBatch
@@ -250,6 +244,28 @@ function setSettlementCooldown(uint256 cooldown) external;
 |Name|Type|Description|
 |----|----|-----------|
 |`cooldown`|`uint256`|The new cooldown period in seconds before settlement proposals can be executed|
+
+
+### setMaxAllowedDelta
+
+Updates the yield tolerance threshold for settlement proposals
+
+*This function allows protocol governance to adjust the maximum acceptable yield deviation before
+settlement proposals are rejected. The yield tolerance acts as a safety mechanism to prevent settlement
+proposals with extremely high or low yield values that could indicate calculation errors, data corruption,
+or potential manipulation attempts. Setting an appropriate tolerance balances protocol safety with
+operational flexibility, allowing normal yield fluctuations while blocking suspicious proposals.
+Only admin roles can modify this parameter as it affects protocol safety.*
+
+
+```solidity
+function setMaxAllowedDelta(uint256 tolerance_) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`tolerance_`|`uint256`|The new yield tolerance in basis points (e.g., 1000 = 10%)|
 
 
 ### getPendingProposals
@@ -454,42 +470,51 @@ function getSettlementCooldown() external view returns (uint256 cooldown);
 |`cooldown`|`uint256`|The current cooldown period in seconds|
 
 
-### contractName
+### getYieldTolerance
 
-Returns the standard name identifier for this contract type within the KAM protocol
+Gets the current yield tolerance threshold for settlement proposals
 
-*Used for protocol identification and registry management. Provides a consistent way
-to identify kAssetRouter contracts across the protocol ecosystem, enabling automated
-contract discovery and validation by other protocol components.*
+*The yield tolerance determines the maximum acceptable yield deviation before settlement proposals
+are automatically rejected. This acts as a safety mechanism to prevent processing of settlement proposals
+with excessive yield values that could indicate calculation errors or potential manipulation. The tolerance
+is expressed in basis points where 10000 equals 100%.*
 
 
 ```solidity
-function contractName() external pure returns (string memory);
+function getYieldTolerance() external view returns (uint256 tolerance);
 ```
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`string`|The contract name as a string (typically "kAssetRouter")|
+|`tolerance`|`uint256`|The current yield tolerance in basis points|
 
 
-### contractVersion
+### virtualBalance
 
-Returns the version identifier for this contract implementation
+Retrieves the virtual balance of assets for a vault across all its adapters
 
-*Used for upgrade management and compatibility checking within the protocol. Enables
-the system to verify contract versions during upgrades and ensure compatibility between
-protocol components. Critical for protocol governance and maintenance procedures.*
+*This function aggregates asset balances across all adapters connected to a vault to determine
+the total virtual balance available for operations. Essential for coordination between physical
+asset locations and protocol accounting. Used for settlement calculations and ensuring sufficient
+assets are available for redemptions and transfers within the money flow system.*
 
 
 ```solidity
-function contractVersion() external pure returns (string memory);
+function virtualBalance(address vault, address asset) external view returns (uint256);
 ```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault`|`address`|The vault address to calculate virtual balance for|
+|`asset`|`address`|The underlying asset of the vault|
+
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`string`|The contract version as a string (e.g., "1.0.0")|
+|`<none>`|`uint256`|balance The total virtual asset balance across all vault adapters|
 
 
 ## Events
@@ -533,7 +558,7 @@ after batch settlement. The batchReceiver is deployed to hold assets for distrib
 
 
 ```solidity
-event AssetsRequestPulled(address indexed vault, address indexed asset, address indexed batchReceiver, uint256 amount);
+event AssetsRequestPulled(address indexed vault, address indexed asset, uint256 amount);
 ```
 
 **Parameters**
@@ -542,7 +567,6 @@ event AssetsRequestPulled(address indexed vault, address indexed asset, address 
 |----|----|-----------|
 |`vault`|`address`|The vault address from which assets are being requested|
 |`asset`|`address`|The underlying asset address being requested for redemption|
-|`batchReceiver`|`address`|The minimal proxy contract that will receive and distribute assets|
 |`amount`|`uint256`|The quantity of assets requested for redemption|
 
 ### AssetsTransfered
@@ -685,7 +709,7 @@ Positive yield increases kToken supply, negative yield (losses) decreases supply
 
 
 ```solidity
-event YieldDistributed(address indexed vault, uint256 yield, bool isProfit);
+event YieldDistributed(address indexed vault, int256 yield);
 ```
 
 **Parameters**
@@ -693,8 +717,7 @@ event YieldDistributed(address indexed vault, uint256 yield, bool isProfit);
 |Name|Type|Description|
 |----|----|-----------|
 |`vault`|`address`|The vault that generated the yield being distributed|
-|`yield`|`uint256`|The absolute amount of yield (positive or negative) being distributed|
-|`isProfit`|`bool`|True if yield is positive (minting kTokens), false if negative (burning kTokens)|
+|`yield`|`int256`|The amount of yield (positive or negative) being distributed|
 
 ### Deposited
 Emitted when assets are deposited into a vault through various protocol mechanisms
@@ -703,7 +726,7 @@ Emitted when assets are deposited into a vault through various protocol mechanis
 
 
 ```solidity
-event Deposited(address indexed vault, address indexed asset, uint256 amount, bool isKMinter);
+event Deposited(address indexed vault, address indexed asset, uint256 amount);
 ```
 
 **Parameters**
@@ -713,7 +736,6 @@ event Deposited(address indexed vault, address indexed asset, uint256 amount, bo
 |`vault`|`address`|The vault address receiving the deposit|
 |`asset`|`address`|The underlying asset address being deposited|
 |`amount`|`uint256`|The quantity of assets deposited|
-|`isKMinter`|`bool`|True if deposit originated from kMinter, false for other sources|
 
 ### SettlementProposed
 Emitted when a new settlement proposal is created with cooldown period
@@ -727,10 +749,11 @@ event SettlementProposed(
     address indexed vault,
     bytes32 indexed batchId,
     uint256 totalAssets,
-    uint256 netted,
-    uint256 yield,
-    bool profit,
-    uint256 executeAfter
+    int256 netted,
+    int256 yield,
+    uint256 executeAfter,
+    uint256 lastFeesChargedManagement,
+    uint256 lastFeesChargedPerformance
 );
 ```
 
@@ -742,10 +765,11 @@ event SettlementProposed(
 |`vault`|`address`|The vault address for which settlement is proposed|
 |`batchId`|`bytes32`|The batch identifier being settled|
 |`totalAssets`|`uint256`|Total asset value in the vault after yield generation|
-|`netted`|`uint256`|Net amount of new deposits/redemptions in this batch|
-|`yield`|`uint256`|Absolute yield amount generated in this batch|
-|`profit`|`bool`|True if yield is positive, false if negative|
+|`netted`|`int256`|Net amount of new deposits/redemptions in this batch|
+|`yield`|`int256`|Absolute yield amount generated in this batch|
 |`executeAfter`|`uint256`|Timestamp after which the proposal can be executed|
+|`lastFeesChargedManagement`|`uint256`|Last management fees charged|
+|`lastFeesChargedPerformance`|`uint256`|Last performance fees charged|
 
 ### SettlementExecuted
 Emitted when a settlement proposal is successfully executed
@@ -821,6 +845,42 @@ event SettlementCooldownUpdated(uint256 oldCooldown, uint256 newCooldown);
 |`oldCooldown`|`uint256`|The previous cooldown period in seconds|
 |`newCooldown`|`uint256`|The new cooldown period in seconds|
 
+### MaxAllowedDeltaUpdated
+Emitted when the yield tolerance threshold is updated by protocol governance
+
+*Yield tolerance acts as a safety mechanism to prevent settlement proposals with excessive
+yield deviations that could indicate calculation errors or potential manipulation attempts*
+
+
+```solidity
+event MaxAllowedDeltaUpdated(uint256 oldTolerance, uint256 newTolerance);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`oldTolerance`|`uint256`|The previous yield tolerance in basis points|
+|`newTolerance`|`uint256`|The new yield tolerance in basis points|
+
+### YieldExceedsMaxDeltaWarning
+Emitted when yield exceeds the tolerance threshold
+
+
+```solidity
+event YieldExceedsMaxDeltaWarning(address vault, address asset, bytes32 batchId, int256 yield, uint256 maxAllowedYield);
+```
+
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`vault`|`address`|The DN vault address|
+|`asset`|`address`|The underlying asset address|
+|`batchId`|`bytes32`|The batch identifier|
+|`yield`|`int256`|The yield amount|
+|`maxAllowedYield`|`uint256`|The maximum allowed yield|
+
 ## Structs
 ### Balances
 Tracks requested and deposited asset amounts for batch processing coordination
@@ -851,10 +911,11 @@ struct VaultSettlementProposal {
     address vault;
     bytes32 batchId;
     uint256 totalAssets;
-    uint256 netted;
-    uint256 yield;
-    bool profit;
-    uint256 executeAfter;
+    int256 netted;
+    int256 yield;
+    uint64 executeAfter;
+    uint64 lastFeesChargedManagement;
+    uint64 lastFeesChargedPerformance;
 }
 ```
 
