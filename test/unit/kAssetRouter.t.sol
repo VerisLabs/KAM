@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, MINTER_ROLE, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
+import { _1_USDC } from "../utils/Constants.sol";
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
@@ -14,22 +14,16 @@ import {
     KASSETROUTER_INSUFFICIENT_VIRTUAL_BALANCE,
     KASSETROUTER_INVALID_COOLDOWN,
     KASSETROUTER_IS_PAUSED,
-    KASSETROUTER_NO_PROPOSAL,
     KASSETROUTER_ONLY_KMINTER,
     KASSETROUTER_ONLY_KSTAKING_VAULT,
-    KASSETROUTER_PROPOSAL_EXECUTED,
-    KASSETROUTER_PROPOSAL_EXISTS,
     KASSETROUTER_PROPOSAL_NOT_FOUND,
     KASSETROUTER_WRONG_ROLE,
     KASSETROUTER_ZERO_ADDRESS,
     KASSETROUTER_ZERO_AMOUNT,
     KBASE_INVALID_REGISTRY,
-    KBASE_WRONG_ROLE,
-    KBASE_ZERO_ADDRESS
+    KBASE_WRONG_ROLE
 } from "src/errors/Errors.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { kAssetRouter } from "src/kAssetRouter.sol";
 
 /// @title kAssetRouterTest

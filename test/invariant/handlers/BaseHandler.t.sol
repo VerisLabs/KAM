@@ -3,7 +3,6 @@ pragma solidity 0.8.30;
 
 import { CommonBase } from "forge-std/Base.sol";
 import { StdUtils } from "forge-std/StdUtils.sol";
-import { console2 } from "forge-std/console2.sol";
 
 abstract contract BaseHandler is CommonBase, StdUtils {
     mapping(bytes32 => uint256) public calls;

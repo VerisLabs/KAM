@@ -20,6 +20,9 @@ optimizer_runs = 10_000
 [profile.solx]
 optimization = 3
 gas_limit = 100_000_000
+
+[lint]
+exclude_lints = ["mixed-case-function","screaming-snake-case-immutable","pascal-case-struct", "mixed-case-variable"]
                     
 [fuzz]
 runs = 1000

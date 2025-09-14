@@ -2,9 +2,9 @@
 pragma solidity 0.8.30;
 
 import { ERC20 } from "solady/tokens/ERC20.sol";
-import { PARAMETERCHECKER_NOT_ALLOWED, PARAMETERCHECKER_ZERO_ADDRESS } from "src/errors/Errors.sol";
+import { PARAMETERCHECKER_NOT_ALLOWED } from "src/errors/Errors.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
-import { IAdapterGuardian, IParametersChecker } from "src/interfaces/modules/IAdapterGuardian.sol";
+import { IParametersChecker } from "src/interfaces/modules/IAdapterGuardian.sol";
 
 /// @title ERC20ParameterChecker
 /// @notice A contract that checks parameters for ERC20 token operations

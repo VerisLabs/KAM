@@ -6,10 +6,8 @@ import { OptimizedOwnableRoles } from "solady/auth/OptimizedOwnableRoles.sol";
 import {
     KROLESBASE_ALREADY_INITIALIZED,
     KROLESBASE_NOT_INITIALIZED,
-    KROLESBASE_TRANSFER_FAILED,
     KROLESBASE_WRONG_ROLE,
-    KROLESBASE_ZERO_ADDRESS,
-    KROLESBASE_ZERO_AMOUNT
+    KROLESBASE_ZERO_ADDRESS
 } from "src/errors/Errors.sol";
 
 /// @title kBaseRoles

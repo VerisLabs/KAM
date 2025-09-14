@@ -4,11 +4,8 @@ pragma solidity 0.8.30;
 import { BaseVaultTest, DeploymentBaseTest } from "../utils/BaseVaultTest.sol";
 import { _1_USDC } from "../utils/Constants.sol";
 
-import { console2 } from "forge-std/console2.sol";
-import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 
 import {
@@ -17,9 +14,7 @@ import {
     VAULTCLAIMS_NOT_BENEFICIARY,
     VAULTCLAIMS_REQUEST_NOT_PENDING
 } from "src/errors/Errors.sol";
-import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title kStakingVaultClaimsTest
 /// @notice Tests for claim functionality in kStakingVault

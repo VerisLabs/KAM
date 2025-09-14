@@ -1,17 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { BaseTest, console2 } from "./BaseTest.sol";
+import { BaseTest } from "./BaseTest.sol";
 import {
     ADMIN_ROLE,
-    EMERGENCY_ADMIN_ROLE,
-    GUARDIAN_ROLE,
-    INSTITUTION_ROLE,
-    MINTER_ROLE,
-    RELAYER_ROLE,
-    _1000_USDC,
-    _100_USDC,
-    _10_USDC,
     _1_USDC,
     _1_WBTC
 } from "./Constants.sol";
@@ -29,7 +21,6 @@ import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { kToken } from "src/kToken.sol";
 
 // Modules
-import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 import { ReaderModule } from "src/kStakingVault/modules/ReaderModule.sol";
 
 // Adapters
