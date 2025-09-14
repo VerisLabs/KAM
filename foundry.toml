@@ -62,7 +62,6 @@ ignore = [
     "src/vendor/**",
 ]
 
-
 [dependencies]
 forge-std = "1.9.7"
 

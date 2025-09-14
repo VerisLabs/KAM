@@ -354,9 +354,16 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         uint256 lastTotalAssets = vault.totalAssets();
         _executeBatchSettlement(address(vault), stakeBatchId, lastTotalAssets + aliceDeposit);
 
+        uint256 sharePrice = vault.sharePrice();
+        uint256 netSharePrice = vault.netSharePrice();
+
+
         // Claim staked shares to get stkTokens
         vm.prank(users.alice);
         vault.claimStakedShares(stakeBatchId, stakeRequestId);
+
+        assertEq(vault.sharePrice(), sharePrice);
+        assertEq(vault.netSharePrice(), netSharePrice);
 
         uint256 stkBalance = vault.balanceOf(users.alice);
         assertEq(stkBalance, aliceDeposit);
@@ -370,12 +377,18 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         vm.prank(users.alice);
         bytes32 unstakeRequestId = vault.requestUnstake(users.alice, stkBalance);
 
+         assertEq(vault.sharePrice(), sharePrice);
+        assertEq(vault.netSharePrice(), netSharePrice);
+
         // Close and settle unstaking batch
         vm.prank(users.relayer);
         vault.closeBatch(unstakeBatchId, true);
 
         lastTotalAssets = vault.totalAssets();
         _executeBatchSettlement(address(vault), unstakeBatchId, lastTotalAssets - stkBalance);
+
+         assertEq(vault.sharePrice(), sharePrice);
+        assertEq(vault.netSharePrice(), netSharePrice);
 
         // Get kToken balance before claim
         uint256 kTokenBalanceBefore = kUSD.balanceOf(users.alice);
@@ -385,6 +398,9 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         vm.expectEmit(true, false, true, true);
         emit UnstakingAssetsClaimed(unstakeBatchId, unstakeRequestId, users.alice, 999_178_000);
         vault.claimUnstakedAssets(unstakeBatchId, unstakeRequestId);
+
+         assertEq(vault.sharePrice(), sharePrice);
+        assertEq(vault.netSharePrice(), netSharePrice);
 
         // Verify user received kTokens back
         uint256 kTokenBalanceAfter = kUSD.balanceOf(users.alice);
