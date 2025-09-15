@@ -17,7 +17,7 @@ import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 
 /// @title ReaderModule
 /// @notice Contains all the public getters for the Staking Vault
-contract ReaderModule is BaseVault, Extsload, IVaultReader {
+contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     using OptimizedFixedPointMathLib for uint256;
 
     /// @notice Interval for management fee (1 month)
@@ -250,8 +250,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader {
         return "1.0.0";
     }
 
-    /// @notice Returns the selectors for functions in this module
-    /// @return selectors Array of function selectors
+    /// @inheritdoc IModule
     function selectors() external pure returns (bytes4[] memory) {
         bytes4[] memory moduleSelectors = new bytes4[](27);
         moduleSelectors[0] = this.registry.selector;
