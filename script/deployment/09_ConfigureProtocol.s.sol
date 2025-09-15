@@ -5,7 +5,6 @@ import { DeploymentManager } from "../utils/DeploymentManager.sol";
 import { Script } from "forge-std/Script.sol";
 
 import { console } from "forge-std/console.sol";
-import { VaultAdapter } from "src/adapters/VaultAdapter.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 import { kRegistry } from "src/kRegistry/kRegistry.sol";
 import { kToken } from "src/kToken.sol";

@@ -2,24 +2,13 @@
 pragma solidity 0.8.30;
 
 import { Initializable } from "solady/utils/Initializable.sol";
-
-import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
-
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 import {
-    VAULTADAPTER_EXPIRED_SIGNATURE,
-    VAULTADAPTER_INVALID_NONCE,
-    VAULTADAPTER_INVALID_SIGNATURE,
     VAULTADAPTER_IS_PAUSED,
-    VAULTADAPTER_NOT_INITIALIZED,
-    VAULTADAPTER_SELECTOR_NOT_ALLOWED,
     VAULTADAPTER_TRANSFER_FAILED,
     VAULTADAPTER_WRONG_ASSET,
     VAULTADAPTER_WRONG_ROLE,
-    VAULTADAPTER_WRONG_SELECTOR,
-    VAULTADAPTER_WRONG_TARGET,
     VAULTADAPTER_ZERO_ADDRESS,
     VAULTADAPTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";

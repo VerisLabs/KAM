@@ -7,10 +7,8 @@ import {
     GUARDIANMODULE_NOT_ALLOWED,
     GUARDIANMODULE_SELECTOR_ALREADY_SET,
     GUARDIANMODULE_SELECTOR_NOT_FOUND,
-    GUARDIANMODULE_UNAUTHORIZED,
-    GUARDIANMODULE_ZERO_ADDRESS
+    GUARDIANMODULE_UNAUTHORIZED
 } from "src/errors/Errors.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 import { IAdapterGuardian, IParametersChecker } from "src/interfaces/modules/IAdapterGuardian.sol";
 import { OptimizedAddressEnumerableSetLib } from

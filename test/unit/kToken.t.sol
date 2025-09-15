@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, MINTER_ROLE, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
+import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, MINTER_ROLE, _1_USDC } from "../utils/Constants.sol";
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { KTOKEN_IS_PAUSED, KTOKEN_ZERO_ADDRESS, KTOKEN_ZERO_AMOUNT } from "src/errors/Errors.sol";
-import { kToken } from "src/kToken.sol";
 
 /// @title kTokenTest
 /// @notice Comprehensive unit tests for kToken contract

@@ -2,9 +2,8 @@
 pragma solidity 0.8.30;
 
 import { MockERC20 } from "../mocks/MockERC20.sol";
-import { ADMIN_ROLE, RELAYER_ROLE, _1_USDC, _1_WBTC } from "../utils/Constants.sol";
+import { ADMIN_ROLE, RELAYER_ROLE } from "../utils/Constants.sol";
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
-import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import {
     KREGISTRY_ALREADY_REGISTERED,

@@ -13,7 +13,6 @@ import {
     BASEVAULT_ALREADY_INITIALIZED,
     BASEVAULT_CONTRACT_NOT_FOUND,
     BASEVAULT_INVALID_REGISTRY,
-    BASEVAULT_INVALID_VAULT,
     BASEVAULT_NOT_INITIALIZED
 } from "src/errors/Errors.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";

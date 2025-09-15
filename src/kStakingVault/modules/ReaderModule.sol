@@ -13,7 +13,6 @@ import {
 import { IVersioned } from "src/interfaces/IVersioned.sol";
 import { IVaultReader } from "src/interfaces/modules/IVaultReader.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
-import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title ReaderModule
 /// @notice Contains all the public getters for the Staking Vault

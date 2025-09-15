@@ -16,8 +16,6 @@ import {
     KASSETROUTER_COOLDOOWN_IS_UP,
     KASSETROUTER_INSUFFICIENT_VIRTUAL_BALANCE,
     KASSETROUTER_INVALID_COOLDOWN,
-    KASSETROUTER_INVALID_MAX_DELTA,
-    KASSETROUTER_INVALID_VAULT,
     KASSETROUTER_IS_PAUSED,
     KASSETROUTER_NO_PROPOSAL,
     KASSETROUTER_ONLY_KMINTER,
@@ -27,8 +25,7 @@ import {
     KASSETROUTER_PROPOSAL_NOT_FOUND,
     KASSETROUTER_WRONG_ROLE,
     KASSETROUTER_ZERO_ADDRESS,
-    KASSETROUTER_ZERO_AMOUNT,
-    KBASE_NOT_INITIALIZED
+    KASSETROUTER_ZERO_AMOUNT
 } from "src/errors/Errors.sol";
 import { OptimizedBytes32EnumerableSetLib } from
     "src/vendor/solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
@@ -483,7 +480,8 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             // If there were withdrawals we take fees on them
             if (totalRequestedShares != 0) {
                 // Discount protocol fees
-                uint256 netRequestedShares = totalRequestedShares * IkStakingVault(vault).netSharePrice() / IkStakingVault(vault).sharePrice();
+                uint256 netRequestedShares =
+                    totalRequestedShares * IkStakingVault(vault).netSharePrice() / IkStakingVault(vault).sharePrice();
                 uint256 feeShares = totalRequestedShares - netRequestedShares;
                 uint256 feeAssets = IkStakingVault(vault).convertToAssets(feeShares);
 

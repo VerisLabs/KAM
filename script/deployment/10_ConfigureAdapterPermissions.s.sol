@@ -8,7 +8,6 @@ import { ERC20ParameterChecker } from "src/adapters/parameters/ERC20ParameterChe
 
 import { IERC7540 } from "src/interfaces/IERC7540.sol";
 import { IRegistry } from "src/interfaces/IRegistry.sol";
-import { kRegistry } from "src/kRegistry/kRegistry.sol";
 
 contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
     // Helper function to configure vault adapter permissions

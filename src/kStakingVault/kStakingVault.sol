@@ -8,7 +8,6 @@ import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 
 import { OptimizedEfficientHashLib } from "solady/utils/OptimizedEfficientHashLib.sol";
-import { OptimizedLibClone } from "solady/utils/OptimizedLibClone.sol";
 import { OptimizedSafeCastLib } from "solady/utils/OptimizedSafeCastLib.sol";
 
 import { Initializable } from "solady/utils/Initializable.sol";

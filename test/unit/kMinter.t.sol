@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { ADMIN_ROLE, EMERGENCY_ADMIN_ROLE, _1000_USDC, _100_USDC, _1_USDC } from "../utils/Constants.sol";
+import { _1_USDC } from "../utils/Constants.sol";
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
-import { kBase } from "src/base/kBase.sol";
 
 import {
     KBASE_WRONG_ROLE,
@@ -15,9 +14,7 @@ import {
     KMINTER_BATCH_NOT_SET,
     KMINTER_BATCH_NOT_SET,
     KMINTER_BATCH_REDEEM_REACHED,
-    KMINTER_INSUFFICIENT_BALANCE,
     KMINTER_IS_PAUSED,
-    KMINTER_REQUEST_NOT_ELIGIBLE,
     KMINTER_REQUEST_NOT_FOUND,
     KMINTER_WRONG_ASSET,
     KMINTER_WRONG_ROLE,
