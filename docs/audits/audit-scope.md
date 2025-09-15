@@ -14,7 +14,7 @@ The protocol's **two-phase settlement system** with mandatory cooldown periods p
 
 | Component | Purpose | Upgradeable | Key Security Feature |
 |-----------|---------|-------------|---------------------|
-| **kMinter** | Institutional gateway for minting/redeeming | ✅ UUPS | Role-based access + Batch limits |
+| **kMinter** | Institutional gateway for minting/burning | ✅ UUPS | Role-based access + Batch limits |
 | **kAssetRouter** | Virtual balance coordinator | ✅ UUPS | Guardian oversight + Yield tolerance |
 | **kRegistry** | Protocol configuration hub | ✅ UUPS | Single source of truth |
 | **kStakingVault** | Retail yield generation | ✅ UUPS | Share price appreciation |
@@ -86,7 +86,7 @@ The scope of audit involves the complete KAM protocol implementation in `src/`, 
 
 ### kMinter - Institutional Gateway
 
-**Primary Function**: Enables qualified institutions to mint and redeem kTokens through a sophisticated batch-based system with immediate minting and deferred redemption settlement.
+**Primary Function**: Enables qualified institutions to mint and burn kTokens through a sophisticated batch-based system with immediate minting and deferred burn settlement.
 
 **Minting Workflow**:
 
@@ -98,7 +98,7 @@ The scope of audit involves the complete KAM protocol implementation in `src/`, 
 
 **Redemption Workflow**:
 
-1. **Request Phase**: Institution calls `requestRedeem(asset, to, amount)` 
+1. **Request Phase**: Institution calls `requestBurn(asset, to, amount)` 
    - kTokens escrowed in kMinter contract
    - Unique request ID generated using multiple entropy sources
    - Request added to current active batch for the asset
@@ -106,7 +106,7 @@ The scope of audit involves the complete KAM protocol implementation in `src/`, 
    - kBatchReceiver minimal proxy deployed for isolated asset distribution
    - Assets transferred from kAssetRouter to BatchReceiver
    - Batch marked as settled, enabling claims
-3. **Claim Phase**: Institution calls `redeem(requestId)`
+3. **Claim Phase**: Institution calls `burn(requestId)`
    - Validates request exists and batch is settled
    - Burns escrowed kTokens
    - Pulls underlying assets from BatchReceiver to recipient
@@ -257,7 +257,7 @@ The scope of audit involves the complete KAM protocol implementation in `src/`, 
    - Creates new tokens backed by underlying assets in protocol vaults
    - Maintains 1:1 backing ratio through coordinated asset management
 3. **Burning Operations**: MINTER_ROLE calls `burn(from, amount)` or users call `burnFrom(from, amount)`
-   - Destroys tokens when underlying assets are redeemed
+   - Destroys tokens when underlying assets are burned
    - Validates sufficient balance and allowances
    - Maintains backing guarantee through asset release coordination
 
