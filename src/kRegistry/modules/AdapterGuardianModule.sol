@@ -11,13 +11,14 @@ import {
 } from "src/errors/Errors.sol";
 
 import { IAdapterGuardian, IParametersChecker } from "src/interfaces/modules/IAdapterGuardian.sol";
+import { IModule } from "src/interfaces/modules/IModule.sol";
 import { OptimizedAddressEnumerableSetLib } from
     "src/vendor/solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
 
 /// @title AdapterGuardianModule
 /// @notice Module for managing adapter permissions and parameter checking in kRegistry
 /// @dev Inherits from kBaseRoles for role-based access control
-contract AdapterGuardianModule is IAdapterGuardian, kBaseRoles {
+contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
 
     /*//////////////////////////////////////////////////////////////
@@ -170,7 +171,7 @@ contract AdapterGuardianModule is IAdapterGuardian, kBaseRoles {
 
     /// @notice Returns the selectors for functions in this module
     /// @return moduleSelectors Array of function selectors
-    function selectors() public pure returns (bytes4[] memory moduleSelectors) {
+    function selectors() external pure returns (bytes4[] memory moduleSelectors) {
         moduleSelectors = new bytes4[](5);
         moduleSelectors[0] = this.setAdapterAllowedSelector.selector;
         moduleSelectors[1] = this.setAdapterParametersChecker.selector;
