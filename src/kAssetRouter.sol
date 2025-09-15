@@ -105,8 +105,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         mapping(address vault => mapping(bytes32 batchId => uint256)) vaultRequestedShares;
         /// @dev Complete settlement proposal data indexed by unique proposal ID
         mapping(bytes32 proposalId => VaultSettlementProposal) settlementProposals;
-        /// @dev The total pending requests per batchId
-        mapping(address vault => mapping(bytes32 batchId => uint256)) totalAssetsPendingRequests;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kAssetRouter")) - 1)) & ~bytes32(uint256(0xff))
@@ -209,12 +207,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _checkVault(msg.sender);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
-        uint256 totalAssetsRequested = $.totalAssetsPendingRequests[sourceVault][batchId] += amount;
+        uint256 totalAssetsRequested = $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
 
         _checkSufficientVirtualBalance(sourceVault, _asset, totalAssetsRequested);
 
-        // Update batch tracking for settlement
-        $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
         $.vaultBatchBalances[targetVault][batchId].deposited += amount.toUint128();
 
         emit AssetsTransfered(sourceVault, targetVault, _asset, amount);
@@ -441,7 +437,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             delete $.vaultBatchBalances[vault][batchId];
 
             if (requested > 0) {
-                $.totalAssetsPendingRequests[vault][batchId] -= requested;
                 // Transfer assets to batch receiver for redemptions
                 address receiver = IkMinter(vault).getBatchReceiver(batchId);
                 _checkAddressNotZero(receiver);
