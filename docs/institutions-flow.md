@@ -220,7 +220,7 @@
 Request Status Flow:
 
 ┌─────────────┐
-│PENDING      │ ── Initial state when requestRedeem() is called
+│PENDING      │ ── Initial state when requestBurn() is called
 └──────┬──────┘
        │
        ├─────────────┐
@@ -252,7 +252,7 @@ Request Status Flow:
 │  │• mint()                 │      │• kAssetPush()           │    │
 │  │  Create kTokens 1:1     │      │  Track deposits         │    │
 │  │                         │      │                         │    │
-│  │• requestRedeem()        │      │• kAssetRequestPull()    │    │
+│  │• requestBurn()          │      │• kAssetRequestPull()    │    │
 │  │  Start redemption       │      │  Track withdrawals      │    │
 │  │                         │      │                         │    │
 │  │• burn()                 │      │• proposeSettleBatch()   │    │
