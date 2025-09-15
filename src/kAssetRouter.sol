@@ -483,9 +483,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             // If there were withdrawals we take fees on them
             if (totalRequestedShares != 0) {
                 // Discount protocol fees
-                uint256 netRequestedShares = totalRequestedShares.fullMulDiv(
-                    IkStakingVault(vault).netSharePrice(), IkStakingVault(vault).sharePrice()
-                );
+                uint256 netRequestedShares = totalRequestedShares * IkStakingVault(vault).netSharePrice() / IkStakingVault(vault).sharePrice();
                 uint256 feeShares = totalRequestedShares - netRequestedShares;
                 uint256 feeAssets = IkStakingVault(vault).convertToAssets(feeShares);
 
