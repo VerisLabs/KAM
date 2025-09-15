@@ -17,6 +17,7 @@ import {
 import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 /// @title DNVaultTest
 /// @notice Tests DNVault
+
 contract DNVaultTest is BaseVaultTest {
     using SafeTransferLib for address;
 

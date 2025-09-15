@@ -352,7 +352,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         uint256 sharePrice = vault.sharePrice();
         uint256 netSharePrice = vault.netSharePrice();
 
-
         // Claim staked shares to get stkTokens
         vm.prank(users.alice);
         vault.claimStakedShares(stakeBatchId, stakeRequestId);

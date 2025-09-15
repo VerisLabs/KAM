@@ -2,11 +2,7 @@
 pragma solidity 0.8.30;
 
 import { BaseTest } from "./BaseTest.sol";
-import {
-    ADMIN_ROLE,
-    _1_USDC,
-    _1_WBTC
-} from "./Constants.sol";
+import { ADMIN_ROLE, _1_USDC, _1_WBTC } from "./Constants.sol";
 import { OptimizedOwnableRoles } from "solady/auth/OptimizedOwnableRoles.sol";
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
