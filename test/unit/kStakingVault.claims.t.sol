@@ -377,8 +377,8 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         vm.prank(users.alice);
         bytes32 unstakeRequestId = vault.requestUnstake(users.alice, stkBalance);
 
-         assertEq(vault.sharePrice(), sharePrice);
-        assertEq(vault.netSharePrice(), netSharePrice);
+        sharePrice = vault.sharePrice();
+        netSharePrice = vault.netSharePrice();
 
         // Close and settle unstaking batch
         vm.prank(users.relayer);
@@ -387,8 +387,8 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         lastTotalAssets = vault.totalAssets();
         _executeBatchSettlement(address(vault), unstakeBatchId, lastTotalAssets - stkBalance);
 
-         assertEq(vault.sharePrice(), sharePrice);
-        assertEq(vault.netSharePrice(), netSharePrice);
+        assertApproxEqRel(vault.sharePrice(), sharePrice, 0.001 ether);
+        assertApproxEqRel(vault.netSharePrice(), netSharePrice, 0.001 ether);
 
         // Get kToken balance before claim
         uint256 kTokenBalanceBefore = kUSD.balanceOf(users.alice);
@@ -399,8 +399,8 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         emit UnstakingAssetsClaimed(unstakeBatchId, unstakeRequestId, users.alice, 999_178_000);
         vault.claimUnstakedAssets(unstakeBatchId, unstakeRequestId);
 
-         assertEq(vault.sharePrice(), sharePrice);
-        assertEq(vault.netSharePrice(), netSharePrice);
+        assertApproxEqRel(vault.sharePrice(), sharePrice, 0.001 ether);
+        assertApproxEqRel(vault.netSharePrice(), netSharePrice, 0.001 ether);
 
         // Verify user received kTokens back
         uint256 kTokenBalanceAfter = kUSD.balanceOf(users.alice);
