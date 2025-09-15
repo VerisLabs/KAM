@@ -11,13 +11,14 @@ import {
 } from "src/errors/Errors.sol";
 
 import { IAdapterGuardian, IParametersChecker } from "src/interfaces/modules/IAdapterGuardian.sol";
+import { IModule } from "src/interfaces/modules/IModule.sol";
 import { OptimizedAddressEnumerableSetLib } from
     "src/vendor/solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
 
 /// @title AdapterGuardianModule
 /// @notice Module for managing adapter permissions and parameter checking in kRegistry
 /// @dev Inherits from kBaseRoles for role-based access control
-contract AdapterGuardianModule is IAdapterGuardian, kBaseRoles {
+contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
 
     /*//////////////////////////////////////////////////////////////
@@ -55,12 +56,7 @@ contract AdapterGuardianModule is IAdapterGuardian, kBaseRoles {
                               MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Set whether a selector is allowed for an adapter on a target contract
-    /// @param adapter The adapter address
-    /// @param target The target contract address
-    /// @param selector The function selector
-    /// @param isAllowed Whether the selector is allowed
-    /// @dev Only callable by ADMIN_ROLE
+    /// @inheritdoc IAdapterGuardian
     function setAdapterAllowedSelector(address adapter, address target, bytes4 selector, bool isAllowed) external {
         _checkAdmin(msg.sender);
         _checkAddressNotZero(adapter);
@@ -86,12 +82,7 @@ contract AdapterGuardianModule is IAdapterGuardian, kBaseRoles {
         emit SelectorAllowed(adapter, target, selector, isAllowed);
     }
 
-    /// @notice Set a parameter checker for an adapter selector
-    /// @param adapter The adapter address
-    /// @param target The target contract address
-    /// @param selector The function selector
-    /// @param parametersChecker The parameter checker contract address (0x0 to remove)
-    /// @dev Only callable by ADMIN_ROLE
+    /// @inheritdoc IAdapterGuardian
     function setAdapterParametersChecker(
         address adapter,
         address target,
@@ -117,10 +108,7 @@ contract AdapterGuardianModule is IAdapterGuardian, kBaseRoles {
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Check if an adapter is authorized to call a specific function on a target
-    /// @param target The target contract address
-    /// @param selector The function selector
-    /// @param params The function parameters
+    /// @inheritdoc IAdapterGuardian
     function authorizeAdapterCall(address target, bytes4 selector, bytes calldata params) external view {
         AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
 
@@ -136,21 +124,13 @@ contract AdapterGuardianModule is IAdapterGuardian, kBaseRoles {
         );
     }
 
-    /// @notice Check if a selector is allowed for an adapter
-    /// @param adapter The adapter address
-    /// @param target The target contract address
-    /// @param selector The function selector
-    /// @return Whether the selector is allowed
+    /// @inheritdoc IAdapterGuardian
     function isAdapterSelectorAllowed(address adapter, address target, bytes4 selector) external view returns (bool) {
         AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
         return $.adapterAllowedSelectors[adapter][target][selector];
     }
 
-    /// @notice Get the parameter checker for an adapter selector
-    /// @param adapter The adapter address
-    /// @param target The target contract address
-    /// @param selector The function selector
-    /// @return The parameter checker address (address(0) if none)
+    /// @inheritdoc IAdapterGuardian
     function getAdapterParametersChecker(
         address adapter,
         address target,
@@ -168,9 +148,8 @@ contract AdapterGuardianModule is IAdapterGuardian, kBaseRoles {
                         MODULE SELECTORS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the selectors for functions in this module
-    /// @return moduleSelectors Array of function selectors
-    function selectors() public pure returns (bytes4[] memory moduleSelectors) {
+    /// @inheritdoc IModule
+    function selectors() external pure returns (bytes4[] memory moduleSelectors) {
         moduleSelectors = new bytes4[](5);
         moduleSelectors[0] = this.setAdapterAllowedSelector.selector;
         moduleSelectors[1] = this.setAdapterParametersChecker.selector;
