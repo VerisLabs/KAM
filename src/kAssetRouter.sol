@@ -207,11 +207,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _checkVault(msg.sender);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+        uint256 totalAssetsRequested = $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
 
-        _checkSufficientVirtualBalance(sourceVault, _asset, amount);
+        _checkSufficientVirtualBalance(sourceVault, _asset, totalAssetsRequested);
 
-        // Update batch tracking for settlement
-        $.vaultBatchBalances[sourceVault][batchId].requested += amount.toUint128();
         $.vaultBatchBalances[targetVault][batchId].deposited += amount.toUint128();
 
         emit AssetsTransfered(sourceVault, targetVault, _asset, amount);
