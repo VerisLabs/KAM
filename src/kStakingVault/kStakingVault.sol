@@ -553,8 +553,8 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         // Calculate total kTokens to return based on settlement-time share price
         // Multply redeemed shares for net and gross share price to obtain gross and net amount of assets
         uint8 decimals = _getDecimals($);
-        uint256 totalKTokensNet = (uint256(request.stkTokenAmount)).fullMulDiv(netSharePrice, 10 ** decimals);
-        uint256 netSharesToBurn = (uint256(request.stkTokenAmount)).fullMulDiv(netSharePrice, sharePrice);
+        uint256 totalKTokensNet = (uint256(request.stkTokenAmount)) * netSharePrice / (10 ** decimals);
+        uint256 netSharesToBurn = (uint256(request.stkTokenAmount)) * netSharePrice / sharePrice;
 
         // Burn stkTokens from vault (already transferred to vault during request)
         _burn(address(this), netSharesToBurn);
