@@ -6,14 +6,14 @@ This document describes the interfaces that make up the KAM protocol. The protoc
 
 ### IkMinter
 
-The institutional gateway for minting and redeeming kTokens. Implements a push-pull model where institutions can deposit assets to mint kTokens 1:1, and request redemptions that are fulfilled through batch settlements.
+The institutional gateway for minting and burning kTokens. Implements a push-pull model where institutions can deposit assets to mint kTokens 1:1, and request burns that are fulfilled through batch settlements.
 
 **Core Operations**
 
 - `mint(address asset, address to, uint256 amount)` - Creates new kTokens by accepting underlying asset deposits in a 1:1 ratio
-- `requestRedeem(address asset, address to, uint256 amount)` - Initiates redemption process by escrowing kTokens and creating batch redemption request
-- `redeem(bytes32 requestId)` - Executes redemption for a request in a settled batch, burning kTokens and transferring assets
-- `cancelRequest(bytes32 requestId)` - Cancels a redemption request before batch settlement
+- `requestBurn(address asset, address to, uint256 amount)` - Initiates burn process by escrowing kTokens and creating batch burn request
+- `burn(bytes32 requestId)` - Executes burn for a request in a settled batch, burning kTokens and transferring assets
+- `cancelRequest(bytes32 requestId)` - Cancels a burn request before batch settlement
 
 **Request Management**
 
@@ -35,7 +35,7 @@ The institutional gateway for minting and redeeming kTokens. Implements a push-p
 - `getBatchInfo(bytes32 batchId_)` - Returns complete BatchInfo struct with asset, receiver, and status
 - `getBatchReceiver(bytes32 batchId_)` - Returns BatchReceiver address for a batch
 - `isPaused()` - Checks if contract is currently paused
-- `getRedeemRequest(bytes32 requestId)` - Returns complete RedeemRequest struct with status and details
+- `getBurnRequest(bytes32 requestId)` - Returns complete BurnRequest struct with status and details
 - `getUserRequests(address user)` - Returns array of request IDs belonging to a user
 - `getRequestCounter()` - Returns current counter used for generating unique request IDs
 - `getTotalLockedAssets(address asset)` - Returns total amount of assets locked through mint operations

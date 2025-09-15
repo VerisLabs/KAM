@@ -268,7 +268,7 @@ The institutional gateway contract serving as the primary interface for institut
 
 The kMinter contract implements a "push-pull" model for institutional operations, where minting is immediate but redemptions are processed through a request queue system. When institutions mint kTokens, the process is synchronous - assets transfer to kAssetRouter, virtual balances update, and kTokens are minted 1:1 immediately, ensuring institutions receive tokens instantly without waiting for settlement.
 
-Redemptions use an asynchronous request-response pattern. Institutions call requestRedeem() which transfers kTokens to the kMinter contract for escrow (not burning immediately). A unique request ID is generated and stored with request details, and the request is added to the current batch for settlement processing. During settlement, assets are retrieved from strategies, and institutions later call burn() which burns the escrowed kTokens and claims underlying assets from the batch receiver.
+Burns use an asynchronous request-response pattern. Institutions call requestBurn() which transfers kTokens to the kMinter contract for escrow (not burning immediately). A unique request ID is generated and stored with request details, and the request is added to the current batch for settlement processing. During settlement, assets are retrieved from strategies, and institutions later call burn() which burns the escrowed kTokens and claims underlying assets from the batch receiver.
 
 The contract utilizes Solady's EnumerableSet for O(1) addition/removal of user requests, allowing efficient iteration over pending requests with automatic cleanup when processed or cancelled. Request states track the lifecycle from PENDING to REDEEMED or CANCELLED.
 
@@ -415,14 +415,14 @@ Institution                kMinter              kAssetRouter            kToken
 
 ### Institutional Redemption Flow
 
-The redemption process implements a secure request-queue system that protects both the protocol and institutions. The process begins with request creation where institutions call requestRedeem() with their kToken amount. A unique ID is created from user data, amount, and timestamp, and kTokens are transferred to kMinter for holding (not burned immediately). Virtual balances are updated in kAssetRouter to mark assets as requested for withdrawal.
+The burn process implements a secure request-queue system that protects both the protocol and institutions. The process begins with request creation where institutions call requestBurn() with their kToken amount. A unique ID is created from user data, amount, and timestamp, and kTokens are transferred to kMinter for holding (not burned immediately). Virtual balances are updated in kAssetRouter to mark assets as requested for withdrawal.
 
 During batch settlement, assets are retrieved from strategies and transferred to kBatchReceiver for distribution. Finally, institutions call burn() to burn the escrowed kTokens and receive underlying assets from the batch receiver, ensuring atomic exchange of tokens for assets.
 
 ```
 Institution            kMinter            kAssetRouter         BatchReceiver
     │                     │                    │                    │
-    ├──requestRedeem─────>│                    │                    │
+    ├──requestBurn───────>│                    │                    │
     │                     ├──escrow(kTokens)   │                    │
     │                     ├──requestPull──────>│                    │
     │                     │                    ├──queueForBatch()   │
