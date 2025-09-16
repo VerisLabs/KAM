@@ -7,4 +7,12 @@ contract KAMIntegrationInvariants is SetUp {
     function invariant_kMinterLockedAssets() public {
         minterHandler.INVARIANT_TOTAL_LOCKED_ASSETS();
     }
+
+    function invariant_kMinterAdapterBalance() public {
+        minterHandler.INVARIANT_ADAPTER_BALANCE();
+    }
+
+    // function invariant_kMinterTotalNetted() public {
+    //     minterHandler.INVARIANT_TOTAL_NETTED();
+    // }
 }

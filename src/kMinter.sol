@@ -68,12 +68,9 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         uint64 requestCounter;
         /// @dev receiverImplementation address
         address receiverImplementation;
-        /// @dev Tracks total minted and burned amounts per batch to enforce limits
-        mapping(bytes32 => uint256) mintedInBatch;
-        /// @dev Tracks total burned amounts per batch to enforce limits
-        mapping(bytes32 => uint256) burnedInBatch;
         /// @dev Tracks total assets locked in pending redemption requests per asset
         mapping(address => uint256) totalLockedAssets;
+        /// @dev Tracks total assets locked in pending redemption requests per asset
         mapping(bytes32 => BurnRequest) burnRequests;
         /// @dev Maps user addresses to their set of redemption request IDs for efficient lookup
         /// Enables quick retrieval of all requests associated with a specific user
@@ -152,7 +149,8 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         // Make sure we dont exceed the max mint per batch
         require(
-            ($.mintedInBatch[batchId] += amount_) <= _registry().getMaxMintPerBatch(asset_), KMINTER_BATCH_MINT_REACHED
+            ($.batches[batchId].mintedInBatch += amount_.toUint128()) <= _registry().getMaxMintPerBatch(asset_),
+            KMINTER_BATCH_MINT_REACHED
         );
         $.totalLockedAssets[asset_] += amount_;
 
@@ -188,7 +186,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         // Make sure we dont exceed the max burn per batch
         require(
-            ($.burnedInBatch[batchId] += amount_) <= _registry().getMaxRedeemPerBatch(asset_),
+            ($.batches[batchId].burnedInBatch += amount_.toUint128()) <= _registry().getMaxRedeemPerBatch(asset_),
             KMINTER_BATCH_REDEEM_REACHED
         );
 
@@ -288,7 +286,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         kToken.safeTransfer(burnRequest.user, burnRequest.amount);
 
         // Remove request from batch
-        $.burnedInBatch[burnRequest.batchId] -= burnRequest.amount;
+        $.batches[burnRequest.batchId].burnedInBatch -= burnRequest.amount.toUint128();
 
         emit Cancelled(requestId);
 

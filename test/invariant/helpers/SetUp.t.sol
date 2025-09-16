@@ -20,7 +20,15 @@ contract SetUp is StdInvariant, DeploymentBaseTest {
         _actors[1] = address(users.institution2);
         _actors[2] = address(users.institution3);
         _actors[3] = address(users.institution4);
-        minterHandler = new kMinterHandler(address(minter), address(assetRouter), getUSDC(), address(kUSD), _actors);
+        minterHandler = new kMinterHandler(
+            address(minter),
+            address(assetRouter),
+            address(vaultAdapter1),
+            getUSDC(),
+            address(kUSD),
+            users.relayer,
+            _actors
+        );
         targetContract(address(minterHandler));
         bytes4[] memory selectors = minterHandler.getEntryPoints();
         targetSelector(FuzzSelector({ addr: address(minterHandler), selectors: selectors }));
