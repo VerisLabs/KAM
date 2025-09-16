@@ -55,6 +55,10 @@ library LibBytes32Set {
         }
     }
 
+    function at(Bytes32Set storage s, uint256 index) internal view returns (bytes32) {
+        return s.values[index];
+    }
+
     function reduce(
         Bytes32Set storage s,
         uint256 acc,

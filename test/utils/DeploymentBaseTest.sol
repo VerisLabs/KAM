@@ -17,6 +17,8 @@ import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
 import { kToken } from "src/kToken.sol";
 
 // Modules
+
+import { AdapterGuardianModule } from "src/kRegistry/modules/AdapterGuardianModule.sol";
 import { ReaderModule } from "src/kStakingVault/modules/ReaderModule.sol";
 
 // Adapters
@@ -25,6 +27,8 @@ import { VaultAdapter } from "src/adapters/VaultAdapter.sol";
 // Interfaces
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+
+import { IRegistry } from "src/interfaces/IRegistry.sol";
 import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 /// @title DeploymentBaseTest
@@ -171,6 +175,14 @@ contract DeploymentBaseTest is BaseTest {
 
         address registryProxy = factory.deployAndCall(address(registryImpl), users.admin, initData);
         registry = kRegistry(payable(registryProxy));
+
+
+        AdapterGuardianModule registryModule = new AdapterGuardianModule();
+        bytes4[] memory registrySelectors = registryModule.selectors();
+
+        vm.prank(users.owner);
+        // Add registry module functions to all vaults
+        kRegistry(payable(address(registry))).addFunctions(registrySelectors, address(registryModule), true);
 
         // Label for debugging
         vm.label(address(registry), "kRegistry");
@@ -327,6 +339,10 @@ contract DeploymentBaseTest is BaseTest {
         registry.registerAdapter(address(dnVault), usdc, address(vaultAdapter3));
         registry.registerAdapter(address(alphaVault), usdc, address(vaultAdapter4));
         registry.registerAdapter(address(betaVault), usdc, address(vaultAdapter5));
+
+        IRegistry(address(registry)).setAdapterAllowedSelector(
+            address(vaultAdapter1), usdc, bytes4(keccak256("transfer(address,uint256)")), true
+        );
 
         vm.stopPrank();
 
