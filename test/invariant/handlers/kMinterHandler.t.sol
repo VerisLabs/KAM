@@ -13,17 +13,18 @@ contract kMinterHandler is BaseHandler {
     using SafeTransferLib for address;
     using LibBytes32Set for Bytes32Set;
 
+    IkMinter minter;
+    IkAssetRouter assetRouter;
+    address token;
+    address kToken;
+    mapping(address actor => Bytes32Set pendingRequestIds) actorRequests;
+
     ////////////////////////////////////////////////////////////////
     ///                      GHOST VARS                          ///
     ////////////////////////////////////////////////////////////////
 
     uint256 expectedTotalLockedAssets;
     uint256 actualTotalLockedAssets;
-    IkMinter minter;
-    IkAssetRouter assetRouter;
-    address token;
-    address kToken;
-    mapping(address actor => Bytes32Set pendingRequestIds) actorRequests;
 
     constructor(
         address _minter,
