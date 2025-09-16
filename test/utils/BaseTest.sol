@@ -18,6 +18,9 @@ contract BaseTest is Test {
         address payable admin;
         address payable emergencyAdmin;
         address payable institution;
+        address payable institution2;
+        address payable institution3;
+        address payable institution4;
         address payable relayer;
         address payable treasury;
         address payable owner;
@@ -78,6 +81,9 @@ contract BaseTest is Test {
         users.guardian = utils.createUser("Guardian", tokens);
         users.emergencyAdmin = utils.createUser("EmergencyAdmin", tokens);
         users.institution = utils.createUser("Institution", tokens);
+        users.institution2 = utils.createUser("Institution2", tokens);
+        users.institution3 = utils.createUser("Institution3", tokens);
+        users.institution4 = utils.createUser("Institution4", tokens);
         users.relayer = utils.createUser("relayer", tokens);
         users.treasury = utils.createUser("Treasury", tokens);
         users.owner = utils.createUser("Owner", tokens);
