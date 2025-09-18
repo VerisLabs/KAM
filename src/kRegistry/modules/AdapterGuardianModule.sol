@@ -14,12 +14,15 @@ import { IAdapterGuardian, IParametersChecker } from "src/interfaces/modules/IAd
 import { IModule } from "src/interfaces/modules/IModule.sol";
 import { OptimizedAddressEnumerableSetLib } from
     "src/vendor/solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
+import { OptimizedBytes32EnumerableSetLib } from
+    "src/vendor/solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 
 /// @title AdapterGuardianModule
 /// @notice Module for managing adapter permissions and parameter checking in kRegistry
 /// @dev Inherits from kBaseRoles for role-based access control
 contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
+    using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -35,6 +38,10 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         /// @dev Maps adapter address to target contract to selector to parameter checker
         /// Enables fine-grained parameter validation for adapter calls
         mapping(address => mapping(address => mapping(bytes4 => address))) adapterParametersChecker;
+        /// @dev Tracks all allowed targets for each adapter
+        mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) adapterTargets;
+        /// @dev Tracks all allowed selectors for each adapter-target pair
+        mapping(address => mapping(address => OptimizedBytes32EnumerableSetLib.Bytes32Set)) adapterTargetSelectors;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.AdapterGuardianModule")) - 1)) & ~bytes32(uint256(0xff))
@@ -74,8 +81,20 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
 
         $.adapterAllowedSelectors[adapter][target][selector] = isAllowed;
 
-        // If disallowing, also remove any parameter checker
-        if (!isAllowed) {
+        // Update tracking sets
+        if (isAllowed) {
+            // Add target to adapter's target set
+            $.adapterTargets[adapter].add(target);
+            // Add selector to adapter-target's selector set
+            $.adapterTargetSelectors[adapter][target].add(bytes32(selector));
+        } else {
+            // Remove selector from adapter-target's selector set
+            $.adapterTargetSelectors[adapter][target].remove(bytes32(selector));
+            // If no more selectors for this target, remove target from set
+            if ($.adapterTargetSelectors[adapter][target].length() == 0) {
+                $.adapterTargets[adapter].remove(target);
+            }
+            // Also remove any parameter checker
             delete $.adapterParametersChecker[adapter][target][selector];
         }
 
@@ -144,17 +163,36 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         return $.adapterParametersChecker[adapter][target][selector];
     }
 
+    /// @notice Gets all allowed targets for a specific adapter
+    /// @param adapter The adapter address to query targets for
+    /// @return targets An array of allowed target addresses for the adapter
+    function getAdapterTargets(address adapter) external view returns (address[] memory targets) {
+        AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
+        return $.adapterTargets[adapter].values();
+    }
+
+    /// @notice Gets all allowed selectors for a specific adapter-target pair
+    /// @param adapter The adapter address to query selectors for
+    /// @param target The target address to query selectors for
+    /// @return selectors An array of allowed selectors (as bytes32) for the adapter-target pair
+    function getAdapterTargetSelectors(address adapter, address target) external view returns (bytes32[] memory) {
+        AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
+        return $.adapterTargetSelectors[adapter][target].values();
+    }
+
     /*//////////////////////////////////////////////////////////////
                         MODULE SELECTORS
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IModule
     function selectors() external pure returns (bytes4[] memory moduleSelectors) {
-        moduleSelectors = new bytes4[](5);
+        moduleSelectors = new bytes4[](7);
         moduleSelectors[0] = this.setAdapterAllowedSelector.selector;
         moduleSelectors[1] = this.setAdapterParametersChecker.selector;
         moduleSelectors[2] = this.authorizeAdapterCall.selector;
         moduleSelectors[3] = this.isAdapterSelectorAllowed.selector;
         moduleSelectors[4] = this.getAdapterParametersChecker.selector;
+        moduleSelectors[5] = this.getAdapterTargets.selector;
+        moduleSelectors[6] = this.getAdapterTargetSelectors.selector;
     }
 }

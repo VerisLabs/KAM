@@ -10,7 +10,9 @@ import {
     VAULTADAPTER_WRONG_ASSET,
     VAULTADAPTER_WRONG_ROLE,
     VAULTADAPTER_ZERO_ADDRESS,
-    VAULTADAPTER_ZERO_AMOUNT
+    VAULTADAPTER_ZERO_AMOUNT,
+    VAULTADAPTER_ARRAY_MISMATCH,
+    VAULTADAPTER_ZERO_ARRAY
 } from "src/errors/Errors.sol";
 import { IVersioned } from "src/interfaces/IVersioned.sol";
 
@@ -115,21 +117,38 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
                             CORE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IVaultAdapter
-    function execute(address target, bytes calldata data, uint256 value) external returns (bytes memory result) {
+    /// @notice Batch execute multiple calls
+    function execute(address[] calldata targets, bytes[] calldata data, uint256[] calldata values) external returns (bytes[] memory result) {
+        uint256 length = targets.length;
+        require(length != 0, VAULTADAPTER_ZERO_ARRAY);
+        require(length == data.length && length == values.length, VAULTADAPTER_ARRAY_MISMATCH);
+
+        // Cache storage reads outside loop
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
         IRegistry registry = $.registry;
 
+        // Single authorization and pause check
         require(registry.isManager(msg.sender), VAULTADAPTER_WRONG_ROLE);
         _checkPaused();
 
-        // Extract selector and validate vault-specific permission
-        bytes4 functionSig = bytes4(data);
-        bytes memory params = data[4:];
-        registry.authorizeAdapterCall(target, functionSig, params);
+        // Pre-allocate result array
+        result = new bytes[](length);
 
-        result = target.callContract(value, data);
-        emit Executed(msg.sender, target, data, value, result);
+        // Execute calls with optimized loop
+        for(uint256 i; i < length;) {
+            // Extract selector and validate vault-specific permission
+            bytes4 functionSig = bytes4(data[i]);
+            bytes memory params = data[i][4:];
+            registry.authorizeAdapterCall(targets[i], functionSig, params);
+
+            // Execute and store result
+            result[i] = targets[i].callContract(values[i], data[i]);
+            emit Executed(msg.sender, targets[i], data[i], values[i], result[i]);
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /// @inheritdoc IVaultAdapter

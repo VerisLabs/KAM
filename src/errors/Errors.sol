@@ -178,6 +178,8 @@ string constant VAULTADAPTER_WRONG_SELECTOR = "VA10";
 string constant VAULTADAPTER_INVALID_NONCE = "VA11";
 string constant VAULTADAPTER_WRONG_TARGET = "VA12";
 string constant VAULTADAPTER_SELECTOR_NOT_ALLOWED = "VA13";
+string constant VAULTADAPTER_ARRAY_MISMATCH = "VA14";
+string constant VAULTADAPTER_ZERO_ARRAY = "VA15";
 
 // ParamsChecker Errors
 string constant PARAMETERCHECKER_NOT_ALLOWED = "PC1";

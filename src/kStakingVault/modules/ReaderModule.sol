@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
+import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 import { Extsload } from "uniswap/Extsload.sol";
 
 import {
@@ -14,11 +15,13 @@ import { IVersioned } from "src/interfaces/IVersioned.sol";
 import { IModule } from "src/interfaces/modules/IModule.sol";
 import { IVaultReader } from "src/interfaces/modules/IVaultReader.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title ReaderModule
 /// @notice Contains all the public getters for the Staking Vault
 contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     using OptimizedFixedPointMathLib for uint256;
+    using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
     /// @notice Interval for management fee (1 month)
     uint256 constant MANAGEMENT_FEE_INTERVAL = 657_436;
@@ -59,11 +62,11 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         uint256 lastSharePrice = $.sharePriceWatermark;
 
-        uint256 lastFeesChargedManagement = _getLastFeesChargedManagement($);
-        uint256 lastFeesChargedPerformance = _getLastFeesChargedPerformance($);
+        uint256 lastFeesChargedManagement_ = _getLastFeesChargedManagement($);
+        uint256 lastFeesChargedPerformance_ = _getLastFeesChargedPerformance($);
 
-        uint256 durationManagement = block.timestamp - lastFeesChargedManagement;
-        uint256 durationPerformance = block.timestamp - lastFeesChargedPerformance;
+        uint256 durationManagement = block.timestamp - lastFeesChargedManagement_;
+        uint256 durationPerformance = block.timestamp - lastFeesChargedPerformance_;
         uint256 currentTotalAssets = _totalAssets();
         uint256 lastTotalAssets = totalSupply().fullMulDiv(lastSharePrice, 10 ** _getDecimals($));
 
@@ -240,6 +243,32 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 
+    /// REQUEST GETTERS
+
+    /// @notice Gets all request IDs associated with a user
+    /// @param user The address to query requests for
+    /// @return requestIds An array of all request IDs (both stake and unstake) for the user
+    function getUserRequests(address user) external view returns (bytes32[] memory requestIds) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        return $.userRequests[user].values();
+    }
+
+    /// @notice Gets the details of a specific stake request
+    /// @param requestId The unique identifier of the stake request
+    /// @return stakeRequest The stake request struct containing all request details
+    function getStakeRequest(bytes32 requestId) external view returns (BaseVaultTypes.StakeRequest memory stakeRequest) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        return $.stakeRequests[requestId];
+    }
+
+    /// @notice Gets the details of a specific unstake request
+    /// @param requestId The unique identifier of the unstake request
+    /// @return unstakeRequest The unstake request struct containing all request details
+    function getUnstakeRequest(bytes32 requestId) external view returns (BaseVaultTypes.UnstakeRequest memory unstakeRequest) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        return $.unstakeRequests[requestId];
+    }
+
     /// @inheritdoc IVersioned
     function contractName() external pure returns (string memory) {
         return "kStakingVault";
@@ -252,7 +281,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
 
     /// @inheritdoc IModule
     function selectors() external pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](27);
+        bytes4[] memory moduleSelectors = new bytes4[](30);
         moduleSelectors[0] = this.registry.selector;
         moduleSelectors[1] = this.asset.selector;
         moduleSelectors[2] = this.underlyingAsset.selector;
@@ -280,6 +309,9 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         moduleSelectors[24] = this.convertToAssets.selector;
         moduleSelectors[25] = this.contractName.selector;
         moduleSelectors[26] = this.contractVersion.selector;
+        moduleSelectors[27] = this.getUserRequests.selector;
+        moduleSelectors[28] = this.getStakeRequest.selector;
+        moduleSelectors[29] = this.getUnstakeRequest.selector;
         return moduleSelectors;
     }
 }
