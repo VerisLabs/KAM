@@ -185,12 +185,14 @@ contract kMinterHandler is BaseHandler {
         bytes32 proposalId = pendingSettlementProposals.at(0);
         IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(proposalId);
         int256 netted = proposal.netted;
+        address[] memory targets = new address[](1);
+        bytes[] memory data = new bytes[](1);
+        uint256[] memory values = new uint256[](1);
+        targets[0] = address(token);
+        data[0] = abi.encodeWithSignature("transfer(address,uint256)", address(assetRouter), uint256(-netted));
+        values[0] = 0;
         if (netted < 0) {
-            adapter.execute(
-                address(token),
-                abi.encodeWithSignature("transfer(address,uint256)", address(assetRouter), uint256(-netted)),
-                0
-            );
+            adapter.execute(targets, data, values);
         }
         assetRouter.executeSettleBatch(proposalId);
         vm.stopPrank();

@@ -2,12 +2,14 @@
 pragma solidity 0.8.30;
 
 import { kMinterHandler } from "../handlers/kMinterHandler.t.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+
 import { kStakingVaultHandler } from "../handlers/kStakingVaultHandler.t.sol";
 import { StdInvariant } from "forge-std/StdInvariant.sol";
+
+import { console2 } from "forge-std/console2.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { DeploymentBaseTest } from "test/utils/DeploymentBaseTest.sol";
-import { console2 } from "forge-std/console2.sol";
 
 abstract contract SetUp is StdInvariant, DeploymentBaseTest {
     using SafeTransferLib for address;
@@ -77,7 +79,7 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
         address[] memory minters = _getMinterActors();
         uint256 amount = 10_000_000 * 10 ** 6;
         address token = getUSDC();
-        for(uint256 i = 0; i < minters.length; i++) {
+        for (uint256 i = 0; i < minters.length; i++) {
             vm.startPrank(minters[i]);
             console2.log("Minting", minters[i]);
             console2.log("Balance", token.balanceOf(minters[i]));
@@ -90,8 +92,9 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
         bytes32 batchId = minter.getBatchId(token);
 
         minter.closeBatch(batchId, true);
-       
-        bytes32 proposalId = assetRouter.proposeSettleBatch(token, address(minter), batchId, amount * minters.length, 0, 0);
+
+        bytes32 proposalId =
+            assetRouter.proposeSettleBatch(token, address(minter), batchId, amount * minters.length, 0, 0);
         assetRouter.executeSettleBatch(proposalId);
         vm.stopPrank();
     }

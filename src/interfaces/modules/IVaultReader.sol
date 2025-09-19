@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import { IVersioned } from "src/interfaces/IVersioned.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title IVaultReader
 /// @notice Read-only interface for querying vault state, calculations, and metrics without modifying contract state
@@ -143,5 +144,24 @@ interface IVaultReader is IVersioned {
     /// @return The equivalent amount of shares
     function convertToAssets(uint256 assets) external view returns (uint256);
 
-    // contractName() and contractVersion() functions are inherited from IVersioned
+    /// @notice Gets all request IDs associated with a user
+    /// @param user The address to query requests for
+    /// @return requestIds An array of all request IDs (both stake and unstake) for the user
+    function getUserRequests(address user) external view returns (bytes32[] memory requestIds);
+
+    /// @notice Gets the details of a specific stake request
+    /// @param requestId The unique identifier of the stake request
+    /// @return stakeRequest The stake request struct containing all request details
+    function getStakeRequest(bytes32 requestId)
+        external
+        view
+        returns (BaseVaultTypes.StakeRequest memory stakeRequest);
+
+    /// @notice Gets the details of a specific unstake request
+    /// @param requestId The unique identifier of the unstake request
+    /// @return unstakeRequest The unstake request struct containing all request details
+    function getUnstakeRequest(bytes32 requestId)
+        external
+        view
+        returns (BaseVaultTypes.UnstakeRequest memory unstakeRequest);
 }
