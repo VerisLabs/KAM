@@ -229,7 +229,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         BurnRequest storage burnRequest = $.burnRequests[requestId];
 
         // Validate request exists and belongs to the user
-        require($.userRequests[burnRequest.user].contains(requestId), KMINTER_REQUEST_NOT_FOUND);
+        require($.userRequests[burnRequest.user].remove(requestId), KMINTER_REQUEST_NOT_FOUND);
         // Ensure request is still pending (not already processed)
         require(burnRequest.status == RequestStatus.PENDING, KMINTER_REQUEST_NOT_ELIGIBLE);
         // Double-check request hasn't been burned (redundant but safe)
@@ -241,7 +241,6 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         burnRequest.status = RequestStatus.REDEEMED;
 
         // Clean up request tracking and update accounting
-        $.userRequests[burnRequest.user].remove(requestId);
         $.totalLockedAssets[burnRequest.asset] -= burnRequest.amount;
 
         address batchReceiver = $.batches[burnRequest.batchId].batchReceiver;
@@ -268,12 +267,11 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         BurnRequest storage burnRequest = $.burnRequests[requestId];
 
         // Validate request exists and is eligible for cancellation
-        require($.userRequests[burnRequest.user].contains(requestId), KMINTER_REQUEST_NOT_FOUND);
+        require($.userRequests[burnRequest.user].remove(requestId), KMINTER_REQUEST_NOT_FOUND);
         require(burnRequest.status == RequestStatus.PENDING, KMINTER_REQUEST_NOT_ELIGIBLE);
 
         // Update status and remove from tracking
         burnRequest.status = RequestStatus.CANCELLED;
-        $.userRequests[burnRequest.user].remove(requestId);
 
         // Ensure batch is still open - cannot cancel after batch closure or settlement
         IkMinter.BatchInfo storage batch = $.batches[burnRequest.batchId];
