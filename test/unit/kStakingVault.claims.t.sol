@@ -103,33 +103,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         vault.claimStakedShares(requestId);
     }
 
-    /// @dev Test claiming with wrong batch ID reverts
-    function test_ClaimStakedShares_InvalidBatchId() public {
-        // Setup: Create and settle a staking request
-        _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
-
-        vm.prank(users.alice);
-        kUSD.approve(address(vault), 1000 * _1_USDC);
-
-        bytes32 batchId = vault.getBatchId();
-
-        vm.prank(users.alice);
-        bytes32 requestId = vault.requestStake(users.alice, 1000 * _1_USDC);
-
-        // Close and settle batch
-        vm.prank(users.relayer);
-        vault.closeBatch(batchId, true);
-
-        uint256 lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + 1000 * _1_USDC);
-
-        // Try to claim with wrong batch ID
-        bytes32 wrongBatchId = keccak256("wrong");
-        vm.prank(users.alice);
-        vm.expectRevert(bytes(VAULTCLAIMS_BATCH_NOT_SETTLED));
-        vault.claimStakedShares(requestId);
-    }
-
     /// @dev Test claiming already claimed request reverts
     function test_ClaimStakedShares_RequestNotPending() public {
         // Setup: Create and settle a staking request

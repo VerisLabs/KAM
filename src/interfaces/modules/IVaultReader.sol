@@ -156,6 +156,18 @@ interface IVaultReader is IVersioned {
     /// @return The equivalent amount of shares
     function convertToAssets(uint256 assets) external view returns (uint256);
 
+    /// @notice Converts a given amount of shares to assets with a specified total assets
+    /// @param shares The amount of shares to convert
+    /// @param totalAssets The total assets available for conversion
+    /// @return The equivalent amount of assets
+    function convertToAssetsWithTotals(uint256 shares, uint256 totalAssets) external view returns (uint256);
+
+    /// @notice Converts a given amount of assets to shares with a specified total assets
+    /// @param assets The amount of assets to convert
+    /// @param totalAssets The total assets available for conversion
+    /// @return The equivalent amount of shares
+    function convertToSharesWithTotals(uint256 assets, uint256 totalAssets) external view returns (uint256);
+
     /// @notice Gets all request IDs associated with a user
     /// @param user The address to query requests for
     /// @return requestIds An array of all request IDs (both stake and unstake) for the user
