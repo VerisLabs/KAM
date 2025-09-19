@@ -3,7 +3,13 @@ pragma solidity 0.8.30;
 
 import { SetUp } from "test/invariant/helpers/SetUp.t.sol";
 
-contract KAMIntegrationInvariants is SetUp {
+contract kMinterInvariants is SetUp {
+
+    function setUp() public override {
+        _setUp();
+        _setUpkMinterHandler();
+    }
+
     function invariant_kMinterLockedAssets() public {
         minterHandler.INVARIANT_TOTAL_LOCKED_ASSETS();
     }

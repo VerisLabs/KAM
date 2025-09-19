@@ -135,7 +135,7 @@ contract kMinterHandler is BaseHandler {
     function proposeSettlement() public {
         vm.startPrank(relayer);
         bytes32 batchId = minter.getBatchId(token);
-        if(  pendingUnsettledBatches.count() != 0) {
+        if (pendingUnsettledBatches.count() != 0) {
             vm.stopPrank();
             return;
         }
@@ -144,7 +144,7 @@ contract kMinterHandler is BaseHandler {
             vm.stopPrank();
             return;
         }
-        if(pendingUnsettledBatches.contains(batchId)) {
+        if (pendingUnsettledBatches.contains(batchId)) {
             vm.stopPrank();
             return;
         }

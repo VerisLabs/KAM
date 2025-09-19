@@ -495,15 +495,15 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IVaultClaim
-    function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable {
+    function claimStakedShares(bytes32 requestId) external payable {
         // Open `nonRentrant`
         _lockReentrant();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         _checkPaused($);
+        bytes32 batchId = $.stakeRequests[requestId].batchId;
         require($.batches[batchId].isSettled, VAULTCLAIMS_BATCH_NOT_SETTLED);
 
         BaseVaultTypes.StakeRequest storage request = $.stakeRequests[requestId];
-        require(request.batchId == batchId, VAULTCLAIMS_INVALID_BATCH_ID);
         require(request.status == BaseVaultTypes.RequestStatus.PENDING, VAULTCLAIMS_REQUEST_NOT_PENDING);
         require(msg.sender == request.user, VAULTCLAIMS_NOT_BENEFICIARY);
 
@@ -530,17 +530,18 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     }
 
     /// @inheritdoc IVaultClaim
-    function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable {
+    function claimUnstakedAssets(bytes32 requestId) external payable {
         // Open `nonRentrant`
         _lockReentrant();
 
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         _checkPaused($);
 
+        bytes32 batchId = $.unstakeRequests[requestId].batchId;
+
         require($.batches[batchId].isSettled, VAULTCLAIMS_BATCH_NOT_SETTLED);
 
         BaseVaultTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
-        require(request.batchId == batchId, VAULTCLAIMS_INVALID_BATCH_ID);
         require(request.status == BaseVaultTypes.RequestStatus.PENDING, VAULTCLAIMS_REQUEST_NOT_PENDING);
         require(msg.sender == request.user, VAULTCLAIMS_NOT_BENEFICIARY);
 
