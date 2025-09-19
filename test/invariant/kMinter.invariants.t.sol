@@ -10,14 +10,14 @@ contract kMinterInvariants is SetUp {
     }
 
     function invariant_kMinterLockedAssets() public {
-        minterHandler.INVARIANT_TOTAL_LOCKED_ASSETS();
+        minterHandler.INVARIANT_A_TOTAL_LOCKED_ASSETS();
     }
 
     function invariant_kMinterAdapterBalance() public {
-        minterHandler.INVARIANT_ADAPTER_BALANCE();
+        minterHandler.INVARIANT_B_ADAPTER_BALANCE();
     }
 
     // function invariant_kMinterTotalNetted() public {
-    //     minterHandler.INVARIANT_TOTAL_NETTED();
+    //     minterHandler.INVARIANT_C_TOTAL_NETTED();
     // }
 }

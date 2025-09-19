@@ -89,10 +89,22 @@ interface IVaultReader is IVersioned {
     /// @return batchReceiver Address of batch receiver contract (may be zero if not created)
     /// @return isClosed Whether the batch is closed to new requests
     /// @return isSettled Whether the batch has been settled
-    function getBatchIdInfo()
+    function getCurrentBatchInfo()
         external
         view
         returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled);
+
+    /// @notice Returns comprehensive information about a specific batch
+    /// @param batchId The batch identifier to query
+    /// @return batchReceiver Address of batch receiver contract (may be zero if not deployed)
+    /// @return isClosed Whether the batch is closed to new requests
+    /// @return isSettled Whether the batch has been settled
+    /// @return sharePrice Share price of settlement
+    /// @return netSharePrice Net share price of settlement
+    function getBatchIdInfo(bytes32 batchId)
+        external
+        view
+        returns (address batchReceiver, bool isClosed, bool isSettled, uint256 sharePrice, uint256 netSharePrice);
 
     /// @notice Returns the batch receiver address for a specific batch ID
     /// @param batchId The batch identifier to query
@@ -164,4 +176,8 @@ interface IVaultReader is IVersioned {
         external
         view
         returns (BaseVaultTypes.UnstakeRequest memory unstakeRequest);
+
+    /// @notice Returns the total pending stake amount
+    /// @return Total pending stake amount
+    function getTotalPendingStake() external view returns (uint256);
 }

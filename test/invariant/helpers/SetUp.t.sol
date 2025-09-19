@@ -16,9 +16,18 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
 
     kMinterHandler public minterHandler;
     kStakingVaultHandler public vaultHandler;
+    uint16 public constant PERFORMANCE_FEE = 2000; // 20%
+    uint16 public constant MANAGEMENT_FEE = 100; // 1%
 
     function _setUp() internal {
         super.setUp();
+    }
+
+    function _setUpVaultFees(IkStakingVault vault) internal {
+        vm.startPrank(users.admin);
+        vault.setPerformanceFee(PERFORMANCE_FEE);
+        vault.setManagementFee(MANAGEMENT_FEE);
+        vm.stopPrank();
     }
 
     function _setUpkStakingVaultHandlerAlpha() internal {

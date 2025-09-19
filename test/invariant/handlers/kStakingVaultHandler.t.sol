@@ -9,6 +9,7 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 contract kStakingVaultHandler is BaseHandler {
     using SafeTransferLib for address;
@@ -27,12 +28,13 @@ contract kStakingVaultHandler is BaseHandler {
     uint256 lastFeesChargedPerformance;
     mapping(address actor => Bytes32Set pendingRequestIds) actorStakeRequests;
     mapping(address actor => Bytes32Set pendingRequestIds) actorUnstakeRequests;
+    mapping(bytes32 batchId => int256 netted) nettedInBatch;
+    mapping(bytes32 batchId => int256 yieldInBatch) totalYieldInBatch;
+    mapping(bytes32 batchId => uint256 chargedManagement) chargedManagementInBatch;
+    mapping(bytes32 batchId => uint256 chargedPerformance) chargedPerformanceInBatch;
+    mapping(bytes32 batchId => uint256 pendingStake) pendingStakeInBatch;
     Bytes32Set pendingUnsettledBatches;
     Bytes32Set pendingSettlementProposals;
-
-    int256 nettedInBatch;
-    int256 totalNetted;
-    int256 totalYield;
 
     ////////////////////////////////////////////////////////////////
     ///                      GHOST VARS                          ///
@@ -42,6 +44,8 @@ contract kStakingVaultHandler is BaseHandler {
     uint256 actualTotalAssets;
     uint256 expectedAdapterBalance;
     uint256 actualAdapterBalance;
+    uint256 expectedSupply;
+    uint256 actualSupply;
 
     constructor(
         address _vault,
@@ -66,13 +70,15 @@ contract kStakingVaultHandler is BaseHandler {
         token = _token;
         kToken = _kToken;
         relayer = _relayer;
+        lastFeesChargedManagement = 1; // initial timestamp
+        lastFeesChargedPerformance = 1;
     }
 
     ////////////////////////////////////////////////////////////////
     ///                      HELPERS                             ///
     ////////////////////////////////////////////////////////////////
     function getEntryPoints() public pure override returns (bytes4[] memory) {
-        bytes4[] memory _entryPoints = new bytes4[](8);
+        bytes4[] memory _entryPoints = new bytes4[](10);
         _entryPoints[0] = this.claimStakedShares.selector;
         _entryPoints[1] = this.requestStake.selector;
         _entryPoints[2] = this.claimUnstakedAssets.selector;
@@ -81,6 +87,8 @@ contract kStakingVaultHandler is BaseHandler {
         _entryPoints[5] = this.executeSettlement.selector;
         _entryPoints[6] = this.gain.selector;
         _entryPoints[7] = this.lose.selector;
+        _entryPoints[8] = this.advanceTime.selector;
+        _entryPoints[9] = this.chargeFees.selector;
         return _entryPoints;
     }
 
@@ -94,7 +102,9 @@ contract kStakingVaultHandler is BaseHandler {
         kToken.safeApprove(address(vault), amount);
         bytes32 requestId = vault.requestStake(currentActor, amount);
         actorStakeRequests[currentActor].add(requestId);
-        nettedInBatch += int256(amount);
+        nettedInBatch[vault.getBatchId()] += int256(amount);
+        pendingStakeInBatch[vault.getBatchId()] += amount;
+        expectedTotalAssets = actualTotalAssets;
         vm.stopPrank();
     }
 
@@ -113,17 +123,39 @@ contract kStakingVaultHandler is BaseHandler {
     function gain(uint256 amount) public {
         amount = bound(amount, 0, actualTotalAssets);
         if (amount == 0) return;
-        totalYield += int256(amount);
+        totalYieldInBatch[vault.getBatchId()] += int256(amount);
+        expectedTotalAssets = actualTotalAssets;
+    }
+
+    function advanceTime(uint256 amount) public {
+        amount = bound(amount, 0, 30 days);
+        vm.warp(block.timestamp + amount);
+    }
+
+    function chargeFees(bool management, bool performance) public {
+        (uint256 managementFee, uint256 performanceFee, uint256 totalFees) = vault.computeLastBatchFees();
+        if (management) {
+            chargedManagementInBatch[vault.getBatchId()] += managementFee;
+        }
+        if (performance) {
+            chargedPerformanceInBatch[vault.getBatchId()] += performanceFee;
+        }
+        lastFeesChargedManagement = block.timestamp;
+        lastFeesChargedPerformance = block.timestamp;
+        expectedTotalAssets = actualTotalAssets;
     }
 
     function lose(uint256 amount) public {
         amount = bound(
             amount,
             0,
-            totalYield < 0 ? actualTotalAssets - uint256(-totalYield) : actualTotalAssets + uint256(totalYield)
+            totalYieldInBatch[vault.getBatchId()] < 0
+                ? actualTotalAssets - uint256(-totalYieldInBatch[vault.getBatchId()])
+                : actualTotalAssets + uint256(totalYieldInBatch[vault.getBatchId()])
         );
         if (amount == 0) return;
-        totalYield -= int256(amount);
+        totalYieldInBatch[vault.getBatchId()] -= int256(amount);
+        expectedTotalAssets = actualTotalAssets;
     }
 
     function claimStakedShares(uint256 actorSeed, uint256 requestSeedIndex) public useActor(actorSeed) {
@@ -133,8 +165,22 @@ contract kStakingVaultHandler is BaseHandler {
             return;
         }
         bytes32 requestId = actorStakeRequests[currentActor].rand(requestSeedIndex);
-        vault.claimStakedShares(requestId);
-        actorStakeRequests[currentActor].remove(requestId);
+        BaseVaultTypes.StakeRequest memory stakeRequest = vault.getStakeRequest(requestId);
+        bytes32 batchId = stakeRequest.batchId;
+        (address batchReceiver, bool isClosed, bool isSettled, uint256 sharePrice, uint256 netSharePrice) =
+            vault.getBatchIdInfo(batchId);
+        if (!isSettled) {
+            vm.expectRevert();
+            vault.claimStakedShares(requestId);
+            vm.stopPrank();
+            return;
+        } else {
+            vault.claimStakedShares(requestId);
+            actorStakeRequests[currentActor].remove(requestId);
+            pendingStakeInBatch[batchId] -= stakeRequest.kTokenAmount;
+        }
+        expectedTotalAssets += stakeRequest.kTokenAmount;
+        actualTotalAssets = vault.totalAssets();
         vm.stopPrank();
     }
 
@@ -145,8 +191,10 @@ contract kStakingVaultHandler is BaseHandler {
             vm.stopPrank();
             return;
         }
+        nettedInBatch[vault.getBatchId()] += int256(amount);
         bytes32 requestId = vault.requestUnstake(currentActor, amount);
         actorUnstakeRequests[currentActor].add(requestId);
+        expectedTotalAssets = actualTotalAssets;
         vm.stopPrank();
     }
 
@@ -157,19 +205,52 @@ contract kStakingVaultHandler is BaseHandler {
             return;
         }
         bytes32 requestId = actorUnstakeRequests[currentActor].rand(requestSeedIndex);
-        vault.claimUnstakedAssets(requestId);
-        actorUnstakeRequests[currentActor].remove(requestId);
+        BaseVaultTypes.UnstakeRequest memory unstakeRequest = vault.getUnstakeRequest(requestId);
+        bytes32 batchId = unstakeRequest.batchId;
+        (address batchReceiver, bool isClosed, bool isSettled, uint256 sharePrice, uint256 netSharePrice) =
+            vault.getBatchIdInfo(batchId);
+        if (!isSettled) {
+            vm.expectRevert();
+            vault.claimUnstakedAssets(requestId);
+            return;
+        } else {
+            vault.claimUnstakedAssets(requestId);
+            actorUnstakeRequests[currentActor].remove(requestId);
+        }
+        expectedTotalAssets += (unstakeRequest.stkTokenAmount * sharePrice / 1e6);
+        actualTotalAssets = vault.totalAssets();
+
         vm.stopPrank();
     }
 
     function proposeSettlement() public {
-        vm.startPrank(relayer);
         bytes32 batchId = vault.getBatchId();
+        int256 netted = nettedInBatch[batchId];
+        uint256 chargedManagement = chargedManagementInBatch[batchId];
+        uint256 chargedPerformance = chargedPerformanceInBatch[batchId];
+        int256 yieldAmount = totalYieldInBatch[batchId] - int256(chargedPerformance) - int256(chargedManagement);
+        uint256 lastFeesChargedPerformance_ = vault.lastFeesChargedPerformance();
+        uint256 lastFeesChargedManagement_ = vault.lastFeesChargedManagement();
+
+        if (lastFeesChargedPerformance_ == lastFeesChargedPerformance) {
+            lastFeesChargedPerformance_ = 0;
+        } else {
+            lastFeesChargedPerformance_ = lastFeesChargedPerformance;
+        }
+
+        if (lastFeesChargedManagement_ == lastFeesChargedManagement) {
+            lastFeesChargedManagement_ = 0;
+        } else {
+            lastFeesChargedManagement_ = lastFeesChargedManagement;
+        }
+
+        vm.startPrank(relayer);
         if (pendingUnsettledBatches.count() != 0) {
             vm.stopPrank();
             return;
         }
-        uint256 newTotalAssets = uint256(int256(expectedAdapterBalance) + nettedInBatch + totalYield);
+        uint256 newTotalAssets =
+            uint256(int256(expectedAdapterBalance) + netted + yieldAmount);
         if (batchId == bytes32(0)) {
             vm.stopPrank();
             return;
@@ -185,25 +266,32 @@ contract kStakingVaultHandler is BaseHandler {
             address(vault),
             batchId,
             newTotalAssets,
-            nettedInBatch,
-            0,
+            netted,
+            yieldAmount,
             block.timestamp + assetRouter.getSettlementCooldown(),
-            0,
-            0
+            uint64(lastFeesChargedPerformance_),
+            uint64(lastFeesChargedManagement_)
         );
-        bytes32 proposalId = assetRouter.proposeSettleBatch(token, address(vault), batchId, newTotalAssets, 0, 0);
+        bytes32 proposalId = assetRouter.proposeSettleBatch(
+            token,
+            address(vault),
+            batchId,
+            newTotalAssets,
+            uint64(lastFeesChargedPerformance_),
+            uint64(lastFeesChargedManagement_)
+        );
         vm.stopPrank();
         pendingSettlementProposals.add(proposalId);
         pendingUnsettledBatches.add(batchId);
         IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(proposalId);
-        assertEq(proposal.batchId, batchId);
-        assertEq(proposal.asset, token);
-        assertEq(proposal.vault, address(vault));
-        assertEq(proposal.totalAssets, newTotalAssets);
-        assertEq(proposal.netted, nettedInBatch);
-        assertEq(proposal.yield, 0);
-        assertEq(proposal.executeAfter, block.timestamp + assetRouter.getSettlementCooldown());
-        nettedInBatch = 0;
+        assertEq(proposal.batchId, batchId, "Proposal batchId mismatch");
+        assertEq(proposal.asset, token, "Proposal asset mismatch");
+        assertEq(proposal.vault, address(vault), "Proposal vault mismatch");
+        assertEq(proposal.totalAssets, newTotalAssets, "Proposal totalAssets mismatch");
+        assertEq(proposal.netted, netted, "Proposal netted mismatch");
+        assertEq(proposal.yield, yieldAmount, "Proposal yield mismatch");
+        assertEq(proposal.executeAfter, block.timestamp + assetRouter.getSettlementCooldown(), "Proposal executeAfter mismatch");
+        expectedTotalAssets = actualTotalAssets;
     }
 
     function executeSettlement() public {
@@ -221,9 +309,16 @@ contract kStakingVaultHandler is BaseHandler {
         pendingUnsettledBatches.remove(proposal.batchId);
         expectedAdapterBalance = proposal.totalAssets;
         actualAdapterBalance = assetRouter.virtualBalance(address(vault), token);
+        expectedTotalAssets = uint256(
+            int256(actualTotalAssets) + netted + proposal.yield - int256(pendingStakeInBatch[proposal.batchId])
+        );
+        actualTotalAssets = vault.totalAssets();
     }
 
     ////////////////////////////////////////////////////////////////
     ///                      INVARIANTS                          ///
     ////////////////////////////////////////////////////////////////
+    function INVARIANT_A_TOTAL_ASSETS() public {
+        assertEq(vault.totalAssets(), expectedTotalAssets);
+    }
 }

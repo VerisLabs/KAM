@@ -8,9 +8,10 @@ contract kStakingVaultInvariants is SetUp {
         _setUp();
         _setUpkStakingVaultHandlerAlpha();
         _setUpInstitutionalMint();
+        _setUpVaultFees(alphaVault);
     }
 
-    function invariant_kStakingVaultLockedAssets() public {
-        assertTrue(true);
+    function invariant_kStakingVaultTotalAssets() public {
+        vaultHandler.INVARIANT_A_TOTAL_ASSETS();
     }
 }

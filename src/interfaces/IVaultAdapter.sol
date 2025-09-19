@@ -91,10 +91,18 @@ interface IVaultAdapter is IVersioned {
     /// role to prevent misuse, (2) Pause state check to ensure operations are halted during emergencies, (3) Validates
     /// target addresses are non-zero to prevent calls to the zero address, (4) Uses low-level calls to enable arbitrary
     /// function execution
-    /// @param targets The target contract to make a call to.
-    /// @param data The data to send to the target contract.
-    /// @param values The amount of assets to send with the call.
-    function execute(address[] calldata targets, bytes[] calldata data, uint256[] calldata values) external returns (bytes[] memory result);
+    /// @param targets Array of target contracts to make calls to
+    /// @param data Array of calldata to send to each target contract
+    /// @param values Array of asset amounts to send with each call
+    /// @return result The combined return data from all calls
+    function execute(
+        address[] calldata targets,
+        bytes[] calldata data,
+        uint256[] calldata values
+    )
+        external
+        payable
+        returns (bytes[] memory result);
 
     /// @notice Sets the last recorded total assets for vault accounting and performance tracking
     /// @dev This function allows the admin to update the lastTotalAssets variable, which is

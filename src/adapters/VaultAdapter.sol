@@ -138,7 +138,7 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
         result = new bytes[](length);
 
         // Execute calls with optimized loop
-        for(uint256 i; i < length;) {
+        for (uint256 i; i < length; ++i) {
             // Extract selector and validate vault-specific permission
             bytes4 functionSig = bytes4(data[i]);
             bytes memory params = data[i][4:];
@@ -147,10 +147,6 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
             // Execute and store result
             result[i] = targets[i].callContract(values[i], data[i]);
             emit Executed(msg.sender, targets[i], data[i], values[i], result[i]);
-
-            unchecked {
-                ++i;
-            }
         }
     }
 
