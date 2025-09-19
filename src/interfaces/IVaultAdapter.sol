@@ -89,7 +89,7 @@ interface IVaultAdapter is IVersioned {
     /// @dev This function enables the relayer role to perform flexible interactions with external contracts
     /// as part of protocol operations. Key aspects of this function include: (1) Authorization restricted to relayer
     /// role to prevent misuse, (2) Pause state check to ensure operations are halted during emergencies, (3) Validates
-    /// target address is non-zero to prevent calls to the zero address, (4) Uses low-level call to enable arbitrary
+    /// target addresses are non-zero to prevent calls to the zero address, (4) Uses low-level calls to enable arbitrary
     /// function execution
     /// @param targets The target contract to make a call to.
     /// @param data The data to send to the target contract.

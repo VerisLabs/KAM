@@ -522,7 +522,7 @@ contract DNVaultTest is BaseVaultTest {
         // Bob cannot claim yet (batch 2 not settled)
         vm.prank(users.bob);
         vm.expectRevert(bytes(VAULTCLAIMS_BATCH_NOT_SETTLED));
-        vault.claimUnstakedAssets( request2Id);
+        vault.claimUnstakedAssets(request2Id);
 
         // Settle batch 2
         lastTotalAssets = assetRouter.virtualBalance(address(vault), getUSDC());

@@ -5,6 +5,7 @@ import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 import {
+    VAULTADAPTER_ARRAY_MISMATCH,
     VAULTADAPTER_IS_PAUSED,
     VAULTADAPTER_TRANSFER_FAILED,
     VAULTADAPTER_WRONG_ASSET,
@@ -129,7 +130,9 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
 
         // Single authorization and pause check
         require(registry.isManager(msg.sender), VAULTADAPTER_WRONG_ROLE);
-        _checkPaused();
+
+        // Pre-allocate result array
+        result = new bytes[](length);
 
         // Pre-allocate result array
         result = new bytes[](length);
@@ -176,8 +179,7 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
     }
 
     /// @notice Ensures the contract is not paused
-    function _checkPaused() internal view {
-        VaultAdapterStorage storage $ = _getVaultAdapterStorage();
+    function _checkPaused(VaultAdapterStorage storage $) internal view {
         require(!$.paused, VAULTADAPTER_IS_PAUSED);
     }
 

@@ -4,16 +4,16 @@ pragma solidity 0.8.30;
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 import { Extsload } from "uniswap/Extsload.sol";
+import {OptimizedBytes32EnumerableSetLib} from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 
 import {
     KSTAKINGVAULT_NOT_INITIALIZED,
     KSTAKINGVAULT_VAULT_CLOSED,
     KSTAKINGVAULT_VAULT_SETTLED
 } from "src/errors/Errors.sol";
-
 import { IVersioned } from "src/interfaces/IVersioned.sol";
 import { IModule } from "src/interfaces/modules/IModule.sol";
-import { IVaultReader } from "src/interfaces/modules/IVaultReader.sol";
+import { IVaultReader, BaseVaultTypes} from "src/interfaces/modules/IVaultReader.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
@@ -238,6 +238,32 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     /// @inheritdoc IVaultReader
     function convertToAssets(uint256 assets) external view returns (uint256) {
         return _convertToAssets(assets);
+    }
+
+    /// @inheritdoc IVaultReader
+    function getUserRequests(address user) external view returns (bytes32[] memory requestIds) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        return $.userRequests[user].values();
+    }
+
+    /// @inheritdoc IVaultReader
+    function getStakeRequest(bytes32 requestId)
+        external
+        view
+        returns (BaseVaultTypes.StakeRequest memory stakeRequest)
+    {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        return $.stakeRequests[requestId];
+    }
+
+    /// @inheritdoc IVaultReader
+    function getUnstakeRequest(bytes32 requestId)
+        external
+        view
+        returns (BaseVaultTypes.UnstakeRequest memory unstakeRequest)
+    {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        return $.unstakeRequests[requestId];
     }
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO
