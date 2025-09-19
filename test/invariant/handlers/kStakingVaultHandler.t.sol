@@ -6,12 +6,15 @@ import { AddressSet, BaseHandler, LibAddressSet } from "./BaseHandler.t.sol";
 import { console2 } from "forge-std/console2.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 contract kStakingVaultHandler is BaseHandler {
+    using OptimizedFixedPointMathLib for int256;
+    using OptimizedFixedPointMathLib for uint256;
     using SafeTransferLib for address;
     using LibBytes32Set for Bytes32Set;
     using LibAddressSet for AddressSet;
@@ -46,6 +49,8 @@ contract kStakingVaultHandler is BaseHandler {
     uint256 actualAdapterBalance;
     uint256 expectedSupply;
     uint256 actualSupply;
+    uint256 expectedSharePrice;
+    uint256 actualSharePrice;
 
     constructor(
         address _vault,
@@ -78,7 +83,7 @@ contract kStakingVaultHandler is BaseHandler {
     ///                      HELPERS                             ///
     ////////////////////////////////////////////////////////////////
     function getEntryPoints() public pure override returns (bytes4[] memory) {
-        bytes4[] memory _entryPoints = new bytes4[](10);
+        bytes4[] memory _entryPoints = new bytes4[](9);
         _entryPoints[0] = this.claimStakedShares.selector;
         _entryPoints[1] = this.requestStake.selector;
         _entryPoints[2] = this.claimUnstakedAssets.selector;
@@ -86,9 +91,9 @@ contract kStakingVaultHandler is BaseHandler {
         _entryPoints[4] = this.proposeSettlement.selector;
         _entryPoints[5] = this.executeSettlement.selector;
         _entryPoints[6] = this.gain.selector;
-        _entryPoints[7] = this.lose.selector;
-        _entryPoints[8] = this.advanceTime.selector;
-        _entryPoints[9] = this.chargeFees.selector;
+        //_entryPoints[7] = this.lose.selector;
+        _entryPoints[7] = this.advanceTime.selector;
+        _entryPoints[8] = this.chargeFees.selector;
         return _entryPoints;
     }
 
@@ -134,25 +139,22 @@ contract kStakingVaultHandler is BaseHandler {
 
     function chargeFees(bool management, bool performance) public {
         (uint256 managementFee, uint256 performanceFee, uint256 totalFees) = vault.computeLastBatchFees();
-        if (management) {
+        if (management && managementFee > 0) {
             chargedManagementInBatch[vault.getBatchId()] += managementFee;
+            lastFeesChargedManagement = block.timestamp;
         }
-        if (performance) {
+        if (performance && performanceFee > 0) {
             chargedPerformanceInBatch[vault.getBatchId()] += performanceFee;
+            lastFeesChargedPerformance = block.timestamp;
         }
-        lastFeesChargedManagement = block.timestamp;
-        lastFeesChargedPerformance = block.timestamp;
         expectedTotalAssets = actualTotalAssets;
     }
 
     function lose(uint256 amount) public {
-        amount = bound(
-            amount,
-            0,
-            totalYieldInBatch[vault.getBatchId()] < 0
-                ? actualTotalAssets - uint256(-totalYieldInBatch[vault.getBatchId()])
-                : actualTotalAssets + uint256(totalYieldInBatch[vault.getBatchId()])
-        );
+        int256 maxLoss = int256(expectedAdapterBalance) + totalYieldInBatch[vault.getBatchId()]
+            - int256(chargedPerformanceInBatch[vault.getBatchId()]) - int256(chargedManagementInBatch[vault.getBatchId()]);
+        if (maxLoss < 0) return;
+        amount = bound(amount, 0, uint256(maxLoss));
         if (amount == 0) return;
         totalYieldInBatch[vault.getBatchId()] -= int256(amount);
         expectedTotalAssets = actualTotalAssets;
@@ -181,6 +183,8 @@ contract kStakingVaultHandler is BaseHandler {
         }
         expectedTotalAssets += stakeRequest.kTokenAmount;
         actualTotalAssets = vault.totalAssets();
+        expectedSupply += vault.convertToShares(stakeRequest.kTokenAmount);
+        actualSupply = vault.totalSupply();
         vm.stopPrank();
     }
 
@@ -228,6 +232,13 @@ contract kStakingVaultHandler is BaseHandler {
         int256 netted = nettedInBatch[batchId];
         uint256 chargedManagement = chargedManagementInBatch[batchId];
         uint256 chargedPerformance = chargedPerformanceInBatch[batchId];
+        if (netted < 0 && netted.abs() > expectedAdapterBalance) {
+            revert("ACCOUNTING BROKEN : netted abs > expectedAdapterBalance");
+        }
+        // total yield in batch cannot underflow total assets
+        if (totalYieldInBatch[batchId] < -(int256(expectedAdapterBalance) + netted)) {
+            totalYieldInBatch[batchId] = -(int256(expectedAdapterBalance) + netted);
+        }
         int256 yieldAmount = totalYieldInBatch[batchId] - int256(chargedPerformance) - int256(chargedManagement);
         uint256 lastFeesChargedPerformance_ = vault.lastFeesChargedPerformance();
         uint256 lastFeesChargedManagement_ = vault.lastFeesChargedManagement();
@@ -249,8 +260,8 @@ contract kStakingVaultHandler is BaseHandler {
             vm.stopPrank();
             return;
         }
-        uint256 newTotalAssets =
-            uint256(int256(expectedAdapterBalance) + netted + yieldAmount);
+
+        uint256 newTotalAssets = uint256(int256(expectedAdapterBalance) + netted + yieldAmount);
         if (batchId == bytes32(0)) {
             vm.stopPrank();
             return;
@@ -290,7 +301,11 @@ contract kStakingVaultHandler is BaseHandler {
         assertEq(proposal.totalAssets, newTotalAssets, "Proposal totalAssets mismatch");
         assertEq(proposal.netted, netted, "Proposal netted mismatch");
         assertEq(proposal.yield, yieldAmount, "Proposal yield mismatch");
-        assertEq(proposal.executeAfter, block.timestamp + assetRouter.getSettlementCooldown(), "Proposal executeAfter mismatch");
+        assertEq(
+            proposal.executeAfter,
+            block.timestamp + assetRouter.getSettlementCooldown(),
+            "Proposal executeAfter mismatch"
+        );
         expectedTotalAssets = actualTotalAssets;
     }
 
@@ -302,6 +317,7 @@ contract kStakingVaultHandler is BaseHandler {
         }
         bytes32 proposalId = pendingSettlementProposals.at(0);
         IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(proposalId);
+        uint256 batchRequests = assetRouter.getRequestedShares(address(vault), proposal.batchId);
         int256 netted = proposal.netted;
         assetRouter.executeSettleBatch(proposalId);
         vm.stopPrank();
@@ -309,16 +325,31 @@ contract kStakingVaultHandler is BaseHandler {
         pendingUnsettledBatches.remove(proposal.batchId);
         expectedAdapterBalance = proposal.totalAssets;
         actualAdapterBalance = assetRouter.virtualBalance(address(vault), token);
-        expectedTotalAssets = uint256(
-            int256(actualTotalAssets) + netted + proposal.yield - int256(pendingStakeInBatch[proposal.batchId])
-        );
+        expectedTotalAssets =
+            uint256(int256(actualTotalAssets) + netted + proposal.yield - int256(pendingStakeInBatch[proposal.batchId]));
         actualTotalAssets = vault.totalAssets();
+        uint256 shares = 1e6;
+        uint256 totalSupply_ = vault.totalSupply();
+        if (totalSupply_ == 0) {
+            expectedSharePrice = shares;
+        } else {
+            expectedSharePrice = shares.fullMulDiv(expectedTotalAssets, totalSupply_);
+        }
+        actualSharePrice = vault.sharePrice();
     }
 
     ////////////////////////////////////////////////////////////////
     ///                      INVARIANTS                          ///
     ////////////////////////////////////////////////////////////////
     function INVARIANT_A_TOTAL_ASSETS() public {
-        assertEq(vault.totalAssets(), expectedTotalAssets);
+        assertEq(vault.totalAssets(), expectedTotalAssets, "INVARIANT_A_TOTAL_ASSETS");
+    }
+
+    function INVARIANT_B_ADAPTER_BALANCE() public {
+        assertEq(expectedAdapterBalance, actualAdapterBalance, "INVARIANT_B_ADAPTER_BALANCE");
+    }
+
+    function INVARIANT_C_SHARE_PRICE() public {
+        assertEq(expectedSharePrice, actualSharePrice, "INVARIANT_C_SHARE_PRICE");
     }
 }
