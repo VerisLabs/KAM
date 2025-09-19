@@ -82,18 +82,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         $.adapterAllowedSelectors[adapter][target][selector] = isAllowed;
 
         // Update tracking sets
-        if (isAllowed) {
-            // Add target to adapter's target set
-            $.adapterTargets[adapter].add(target);
-            // Add selector to adapter-target's selector set
-            $.adapterTargetSelectors[adapter][target].add(bytes32(selector));
-        } else {
-            // Remove selector from adapter-target's selector set
-            $.adapterTargetSelectors[adapter][target].remove(bytes32(selector));
-            // If no more selectors for this target, remove target from set
-            if ($.adapterTargetSelectors[adapter][target].length() == 0) {
-                $.adapterTargets[adapter].remove(target);
-            }
+        if (!isAllowed) {
             // Also remove any parameter checker
             delete $.adapterParametersChecker[adapter][target][selector];
         }
@@ -163,36 +152,17 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         return $.adapterParametersChecker[adapter][target][selector];
     }
 
-    /// @notice Gets all allowed targets for a specific adapter
-    /// @param adapter The adapter address to query targets for
-    /// @return targets An array of allowed target addresses for the adapter
-    function getAdapterTargets(address adapter) external view returns (address[] memory targets) {
-        AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
-        return $.adapterTargets[adapter].values();
-    }
-
-    /// @notice Gets all allowed selectors for a specific adapter-target pair
-    /// @param adapter The adapter address to query selectors for
-    /// @param target The target address to query selectors for
-    /// @return selectors An array of allowed selectors (as bytes32) for the adapter-target pair
-    function getAdapterTargetSelectors(address adapter, address target) external view returns (bytes32[] memory) {
-        AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
-        return $.adapterTargetSelectors[adapter][target].values();
-    }
-
     /*//////////////////////////////////////////////////////////////
                         MODULE SELECTORS
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IModule
     function selectors() external pure returns (bytes4[] memory moduleSelectors) {
-        moduleSelectors = new bytes4[](7);
+        moduleSelectors = new bytes4[](5);
         moduleSelectors[0] = this.setAdapterAllowedSelector.selector;
         moduleSelectors[1] = this.setAdapterParametersChecker.selector;
         moduleSelectors[2] = this.authorizeAdapterCall.selector;
         moduleSelectors[3] = this.isAdapterSelectorAllowed.selector;
         moduleSelectors[4] = this.getAdapterParametersChecker.selector;
-        moduleSelectors[5] = this.getAdapterTargets.selector;
-        moduleSelectors[6] = this.getAdapterTargetSelectors.selector;
     }
 }
