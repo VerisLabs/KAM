@@ -176,7 +176,6 @@ contract DeploymentBaseTest is BaseTest {
         address registryProxy = factory.deployAndCall(address(registryImpl), users.admin, initData);
         registry = kRegistry(payable(registryProxy));
 
-
         AdapterGuardianModule registryModule = new AdapterGuardianModule();
         bytes4[] memory registrySelectors = registryModule.selectors();
 
@@ -413,6 +412,9 @@ contract DeploymentBaseTest is BaseTest {
         // and mint their own stkTokens. kMinter handles institutional flows, kAssetRouter handles yield.
 
         registry.grantInstitutionRole(users.institution);
+        registry.grantInstitutionRole(users.institution2);
+        registry.grantInstitutionRole(users.institution3);
+        registry.grantInstitutionRole(users.institution4);
         vm.stopPrank();
     }
 
@@ -423,6 +425,9 @@ contract DeploymentBaseTest is BaseTest {
         mockUSDC.mint(users.bob, 500_000 * _1_USDC);
         mockUSDC.mint(users.charlie, 250_000 * _1_USDC);
         mockUSDC.mint(users.institution, 10_000_000 * _1_USDC);
+        mockUSDC.mint(users.institution2, 10_000_000 * _1_USDC);
+        mockUSDC.mint(users.institution3, 10_000_000 * _1_USDC);
+        mockUSDC.mint(users.institution4, 10_000_000 * _1_USDC);
 
         // Fund users with WBTC
         mockWBTC.mint(users.alice, 100 * _1_WBTC);

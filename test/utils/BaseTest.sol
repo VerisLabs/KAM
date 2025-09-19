@@ -72,21 +72,19 @@ contract BaseTest is Test {
 
     /// @dev Creates test users with appropriate funding
     function _createUsers() internal {
-        address[] memory tokens = new address[](0);
-
-        users.alice = utils.createUser("Alice", tokens);
-        users.bob = utils.createUser("Bob", tokens);
-        users.charlie = utils.createUser("Charlie", tokens);
-        users.admin = utils.createUser("Admin", tokens);
-        users.guardian = utils.createUser("Guardian", tokens);
-        users.emergencyAdmin = utils.createUser("EmergencyAdmin", tokens);
-        users.institution = utils.createUser("Institution", tokens);
-        users.institution2 = utils.createUser("Institution2", tokens);
-        users.institution3 = utils.createUser("Institution3", tokens);
-        users.institution4 = utils.createUser("Institution4", tokens);
-        users.relayer = utils.createUser("relayer", tokens);
-        users.treasury = utils.createUser("Treasury", tokens);
-        users.owner = utils.createUser("Owner", tokens);
+        users.alice = utils.createUser("Alice");
+        users.bob = utils.createUser("Bob");
+        users.charlie = utils.createUser("Charlie");
+        users.admin = utils.createUser("Admin");
+        users.guardian = utils.createUser("Guardian");
+        users.emergencyAdmin = utils.createUser("EmergencyAdmin");
+        users.institution = utils.createUser("Institution");
+        users.institution2 = utils.createUser("Institution2");
+        users.institution3 = utils.createUser("Institution3");
+        users.institution4 = utils.createUser("Institution4");
+        users.relayer = utils.createUser("relayer");
+        users.treasury = utils.createUser("Treasury");
+        users.owner = utils.createUser("Owner");
     }
 
     /// @dev Setup test assets (deploy mock tokens)
