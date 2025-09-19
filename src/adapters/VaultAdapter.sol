@@ -143,7 +143,7 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
         result = new bytes[](length);
 
         // Execute calls with optimized loop
-        for (uint256 i; i < length;++i) {
+        for (uint256 i; i < length; ++i) {
             // Extract selector and validate vault-specific permission
             bytes4 functionSig = bytes4(data[i]);
             bytes memory params = data[i][4:];

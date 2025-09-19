@@ -95,7 +95,14 @@ interface IVaultAdapter is IVersioned {
     /// @param data Array of calldata to send to each target contract
     /// @param values Array of asset amounts to send with each call
     /// @return result The combined return data from all calls
-    function execute(address[] calldata targets, bytes[] calldata data, uint256[] calldata values) external payable returns (bytes[] memory result);
+    function execute(
+        address[] calldata targets,
+        bytes[] calldata data,
+        uint256[] calldata values
+    )
+        external
+        payable
+        returns (bytes[] memory result);
 
     /// @notice Sets the last recorded total assets for vault accounting and performance tracking
     /// @dev This function allows the admin to update the lastTotalAssets variable, which is

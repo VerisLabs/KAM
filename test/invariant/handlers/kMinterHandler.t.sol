@@ -205,15 +205,15 @@ contract kMinterHandler is BaseHandler {
     ////////////////////////////////////////////////////////////////
     ///                      INVARIANTS                          ///
     ////////////////////////////////////////////////////////////////
-    function INVARIANT_TOTAL_LOCKED_ASSETS() public view {
+    function INVARIANT_A_TOTAL_LOCKED_ASSETS() public view {
         assertEq(actualTotalLockedAssets, expectedTotalLockedAssets, "kMinter locked assets");
     }
 
-    function INVARIANT_ADAPTER_BALANCE() public view {
+    function INVARIANT_B_ADAPTER_BALANCE() public view {
         assertEq(actualAdapterBalance, expectedAdapterBalance, "kMinter adapter balance");
     }
 
-    function INVARIANT_TOTAL_NETTED() public view {
+    function INVARIANT_C_TOTAL_NETTED() public view {
         if (pendingSettlementProposals.count() == 0) {
             assertEq(actualAdapterBalance, uint256(totalNetted), "kMinter total netted");
         }

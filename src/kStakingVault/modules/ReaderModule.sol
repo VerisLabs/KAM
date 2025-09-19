@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 import { Extsload } from "uniswap/Extsload.sol";
-import {OptimizedBytes32EnumerableSetLib} from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 
 import {
     KSTAKINGVAULT_NOT_INITIALIZED,
@@ -12,7 +12,7 @@ import {
 } from "src/errors/Errors.sol";
 import { IVersioned } from "src/interfaces/IVersioned.sol";
 import { IModule } from "src/interfaces/modules/IModule.sol";
-import { IVaultReader, BaseVaultTypes} from "src/interfaces/modules/IVaultReader.sol";
+import { BaseVaultTypes, IVaultReader } from "src/interfaces/modules/IVaultReader.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 
 /// @title ReaderModule
@@ -169,7 +169,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     }
 
     /// @inheritdoc IVaultReader
-    function getBatchIdInfo()
+    function getCurrentBatchInfo()
         external
         view
         returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled)
@@ -179,6 +179,21 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
             _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].batchReceiver,
             _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].isClosed,
             _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].isSettled
+        );
+    }
+
+    /// @inheritdoc IVaultReader
+    function getBatchIdInfo(bytes32 batchId)
+        external
+        view
+        returns (address batchReceiver, bool isClosed, bool isSettled, uint256 sharePrice, uint256 netSharePrice)
+    {
+        return (
+            _getBaseVaultStorage().batches[batchId].batchReceiver,
+            _getBaseVaultStorage().batches[batchId].isClosed,
+            _getBaseVaultStorage().batches[batchId].isSettled,
+            _getBaseVaultStorage().batches[batchId].sharePrice,
+            _getBaseVaultStorage().batches[batchId].netSharePrice
         );
     }
 
@@ -263,6 +278,12 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return $.unstakeRequests[requestId];
     }
+
+    /// @inheritdoc IVaultReader
+    function getTotalPendingStake() external view returns (uint256) {
+        return _getBaseVaultStorage().totalPendingStake;
+    }
+
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
@@ -279,7 +300,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
 
     /// @inheritdoc IModule
     function selectors() external pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](30);
+        bytes4[] memory moduleSelectors = new bytes4[](32);
         moduleSelectors[0] = this.registry.selector;
         moduleSelectors[1] = this.asset.selector;
         moduleSelectors[2] = this.underlyingAsset.selector;
@@ -294,7 +315,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         moduleSelectors[11] = this.nextManagementFeeTimestamp.selector;
         moduleSelectors[12] = this.isBatchClosed.selector;
         moduleSelectors[13] = this.isBatchSettled.selector;
-        moduleSelectors[14] = this.getBatchIdInfo.selector;
+        moduleSelectors[14] = this.getCurrentBatchInfo.selector;
         moduleSelectors[15] = this.getBatchReceiver.selector;
         moduleSelectors[16] = this.getSafeBatchReceiver.selector;
         moduleSelectors[17] = this.sharePrice.selector;
@@ -310,6 +331,8 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         moduleSelectors[27] = this.getUserRequests.selector;
         moduleSelectors[28] = this.getStakeRequest.selector;
         moduleSelectors[29] = this.getUnstakeRequest.selector;
+        moduleSelectors[30] = this.getBatchIdInfo.selector;
+        moduleSelectors[31] = this.getTotalPendingStake.selector;
         return moduleSelectors;
     }
 }
