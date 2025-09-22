@@ -36,6 +36,7 @@ contract kStakingVaultHandler is BaseHandler {
     mapping(bytes32 batchId => uint256 chargedManagement) chargedManagementInBatch;
     mapping(bytes32 batchId => uint256 chargedPerformance) chargedPerformanceInBatch;
     mapping(bytes32 batchId => uint256 pendingStake) pendingStakeInBatch;
+    mapping(bytes32 batchId => uint256 lastComputedFees) lastComputedFeesInBatch;
     Bytes32Set pendingUnsettledBatches;
     Bytes32Set pendingSettlementProposals;
 
@@ -45,6 +46,8 @@ contract kStakingVaultHandler is BaseHandler {
 
     uint256 expectedTotalAssets;
     uint256 actualTotalAssets;
+    uint256 expectedNetTotalAssets;
+    uint256 actualNetTotalAssets;
     uint256 expectedAdapterBalance;
     uint256 actualAdapterBalance;
     uint256 expectedSupply;
@@ -109,7 +112,7 @@ contract kStakingVaultHandler is BaseHandler {
         actorStakeRequests[currentActor].add(requestId);
         nettedInBatch[vault.getBatchId()] += int256(amount);
         pendingStakeInBatch[vault.getBatchId()] += amount;
-        expectedTotalAssets = actualTotalAssets;
+
         vm.stopPrank();
     }
 
@@ -129,12 +132,16 @@ contract kStakingVaultHandler is BaseHandler {
         amount = bound(amount, 0, actualTotalAssets);
         if (amount == 0) return;
         totalYieldInBatch[vault.getBatchId()] += int256(amount);
-        expectedTotalAssets = actualTotalAssets;
     }
 
     function advanceTime(uint256 amount) public {
         amount = bound(amount, 0, 30 days);
         vm.warp(block.timestamp + amount);
+        (uint256 managementFee, uint256 performanceFee, uint256 totalFees) = vault.computeLastBatchFees();
+        uint256 totalFeesAlreadyCharged =
+            chargedPerformanceInBatch[vault.getBatchId()] + chargedManagementInBatch[vault.getBatchId()];
+        expectedNetTotalAssets -= (totalFees - totalFeesAlreadyCharged);
+        actualNetTotalAssets = vault.totalNetAssets();
     }
 
     function chargeFees(bool management, bool performance) public {
@@ -147,7 +154,6 @@ contract kStakingVaultHandler is BaseHandler {
             chargedPerformanceInBatch[vault.getBatchId()] += performanceFee;
             lastFeesChargedPerformance = block.timestamp;
         }
-        expectedTotalAssets = actualTotalAssets;
     }
 
     function lose(uint256 amount) public {
@@ -157,7 +163,6 @@ contract kStakingVaultHandler is BaseHandler {
         amount = bound(amount, 0, uint256(maxLoss));
         if (amount == 0) return;
         totalYieldInBatch[vault.getBatchId()] -= int256(amount);
-        expectedTotalAssets = actualTotalAssets;
     }
 
     function claimStakedShares(uint256 actorSeed, uint256 requestSeedIndex) public useActor(actorSeed) {
@@ -180,11 +185,12 @@ contract kStakingVaultHandler is BaseHandler {
             vault.claimStakedShares(requestId);
             actorStakeRequests[currentActor].remove(requestId);
             pendingStakeInBatch[batchId] -= stakeRequest.kTokenAmount;
+            expectedTotalAssets += stakeRequest.kTokenAmount;
+            actualTotalAssets = vault.totalAssets();
+            expectedSupply += vault.convertToShares(stakeRequest.kTokenAmount);
+            actualSupply = vault.totalSupply();
+            expectedNetTotalAssets += stakeRequest.kTokenAmount;
         }
-        expectedTotalAssets += stakeRequest.kTokenAmount;
-        actualTotalAssets = vault.totalAssets();
-        expectedSupply += vault.convertToShares(stakeRequest.kTokenAmount);
-        actualSupply = vault.totalSupply();
         vm.stopPrank();
     }
 
@@ -198,7 +204,7 @@ contract kStakingVaultHandler is BaseHandler {
         nettedInBatch[vault.getBatchId()] += int256(amount);
         bytes32 requestId = vault.requestUnstake(currentActor, amount);
         actorUnstakeRequests[currentActor].add(requestId);
-        expectedTotalAssets = actualTotalAssets;
+
         vm.stopPrank();
     }
 
@@ -221,7 +227,8 @@ contract kStakingVaultHandler is BaseHandler {
             vault.claimUnstakedAssets(requestId);
             actorUnstakeRequests[currentActor].remove(requestId);
         }
-        expectedTotalAssets += (unstakeRequest.stkTokenAmount * sharePrice / 1e6);
+        expectedTotalAssets -= (unstakeRequest.stkTokenAmount * sharePrice / 1e6);
+        expectedNetTotalAssets -= (unstakeRequest.stkTokenAmount * netSharePrice / 1e6);
         actualTotalAssets = vault.totalAssets();
 
         vm.stopPrank();
@@ -306,7 +313,6 @@ contract kStakingVaultHandler is BaseHandler {
             block.timestamp + assetRouter.getSettlementCooldown(),
             "Proposal executeAfter mismatch"
         );
-        expectedTotalAssets = actualTotalAssets;
     }
 
     function executeSettlement() public {
