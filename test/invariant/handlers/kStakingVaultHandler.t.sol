@@ -137,10 +137,9 @@ contract kStakingVaultHandler is BaseHandler {
     function advanceTime(uint256 amount) public {
         amount = bound(amount, 0, 30 days);
         vm.warp(block.timestamp + amount);
+        bytes32 batchId = vault.getBatchId();
         (uint256 managementFee, uint256 performanceFee, uint256 totalFees) = vault.computeLastBatchFees();
-        uint256 totalFeesAlreadyCharged =
-            chargedPerformanceInBatch[vault.getBatchId()] + chargedManagementInBatch[vault.getBatchId()];
-        expectedNetTotalAssets -= (totalFees - totalFeesAlreadyCharged);
+        expectedNetTotalAssets = expectedTotalAssets - totalFees;
         actualNetTotalAssets = vault.totalNetAssets();
     }
 
@@ -189,7 +188,8 @@ contract kStakingVaultHandler is BaseHandler {
             actualTotalAssets = vault.totalAssets();
             expectedSupply += vault.convertToShares(stakeRequest.kTokenAmount);
             actualSupply = vault.totalSupply();
-            expectedNetTotalAssets += stakeRequest.kTokenAmount;
+            expectedNetTotalAssets += (stakeRequest.kTokenAmount) * vault.netSharePrice() / vault.sharePrice();
+            actualNetTotalAssets = vault.totalNetAssets();
         }
         vm.stopPrank();
     }
@@ -227,9 +227,11 @@ contract kStakingVaultHandler is BaseHandler {
             vault.claimUnstakedAssets(requestId);
             actorUnstakeRequests[currentActor].remove(requestId);
         }
-        expectedTotalAssets -= (unstakeRequest.stkTokenAmount * sharePrice / 1e6);
-        expectedNetTotalAssets -= (unstakeRequest.stkTokenAmount * netSharePrice / 1e6);
+        uint256 expectedShareValue = unstakeRequest.stkTokenAmount * sharePrice / 1e6;
+        expectedTotalAssets -= expectedShareValue;
         actualTotalAssets = vault.totalAssets();
+        expectedNetTotalAssets -= expectedShareValue * netSharePrice / sharePrice;
+        actualNetTotalAssets = vault.totalNetAssets();
 
         vm.stopPrank();
     }
@@ -357,5 +359,9 @@ contract kStakingVaultHandler is BaseHandler {
 
     function INVARIANT_C_SHARE_PRICE() public {
         assertEq(expectedSharePrice, actualSharePrice, "INVARIANT_C_SHARE_PRICE");
+    }
+
+    function INVARIANT_D_TOTAL_NET_ASSETS() public {
+        assertApproxEqRel(expectedNetTotalAssets, actualNetTotalAssets, 0.01 ether, "INVARIANT_D_TOTAL_NET_ASSETS");
     }
 }
