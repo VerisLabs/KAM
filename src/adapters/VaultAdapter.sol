@@ -142,9 +142,6 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
         // Pre-allocate result array
         result = new bytes[](length);
 
-        // Pre-allocate result array
-        result = new bytes[](length);
-
         // Execute calls with optimized loop
         for (uint256 i; i < length; ++i) {
             // Extract selector and validate vault-specific permission
