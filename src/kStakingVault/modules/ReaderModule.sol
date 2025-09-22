@@ -2,8 +2,9 @@
 pragma solidity 0.8.30;
 
 import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
-import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
+
 import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 import { Extsload } from "uniswap/Extsload.sol";
 
 import {
@@ -266,32 +267,6 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     }
 
     /// @inheritdoc IVaultReader
-    function getUserRequests(address user) external view returns (bytes32[] memory requestIds) {
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        return $.userRequests[user].values();
-    }
-
-    /// @inheritdoc IVaultReader
-    function getStakeRequest(bytes32 requestId)
-        external
-        view
-        returns (BaseVaultTypes.StakeRequest memory stakeRequest)
-    {
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        return $.stakeRequests[requestId];
-    }
-
-    /// @inheritdoc IVaultReader
-    function getUnstakeRequest(bytes32 requestId)
-        external
-        view
-        returns (BaseVaultTypes.UnstakeRequest memory unstakeRequest)
-    {
-        BaseVaultStorage storage $ = _getBaseVaultStorage();
-        return $.unstakeRequests[requestId];
-    }
-
-    /// @inheritdoc IVaultReader
     function getTotalPendingStake() external view returns (uint256) {
         return _getBaseVaultStorage().totalPendingStake;
     }
@@ -313,7 +288,11 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     /// @notice Gets the details of a specific stake request
     /// @param requestId The unique identifier of the stake request
     /// @return stakeRequest The stake request struct containing all request details
-    function getStakeRequest(bytes32 requestId) external view returns (BaseVaultTypes.StakeRequest memory stakeRequest) {
+    function getStakeRequest(bytes32 requestId)
+        external
+        view
+        returns (BaseVaultTypes.StakeRequest memory stakeRequest)
+    {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return $.stakeRequests[requestId];
     }
@@ -321,7 +300,11 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     /// @notice Gets the details of a specific unstake request
     /// @param requestId The unique identifier of the unstake request
     /// @return unstakeRequest The unstake request struct containing all request details
-    function getUnstakeRequest(bytes32 requestId) external view returns (BaseVaultTypes.UnstakeRequest memory unstakeRequest) {
+    function getUnstakeRequest(bytes32 requestId)
+        external
+        view
+        returns (BaseVaultTypes.UnstakeRequest memory unstakeRequest)
+    {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return $.unstakeRequests[requestId];
     }
@@ -338,7 +321,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
 
     /// @inheritdoc IModule
     function selectors() external pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](32);
+        bytes4[] memory moduleSelectors = new bytes4[](34);
         moduleSelectors[0] = this.registry.selector;
         moduleSelectors[1] = this.asset.selector;
         moduleSelectors[2] = this.underlyingAsset.selector;
@@ -371,6 +354,8 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         moduleSelectors[29] = this.getUnstakeRequest.selector;
         moduleSelectors[30] = this.getBatchIdInfo.selector;
         moduleSelectors[31] = this.getTotalPendingStake.selector;
+        moduleSelectors[32] = this.convertToSharesWithTotals.selector;
+        moduleSelectors[33] = this.convertToAssetsWithTotals.selector;
         return moduleSelectors;
     }
 }
