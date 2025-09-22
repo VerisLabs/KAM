@@ -20,6 +20,7 @@ import {
     KASSETROUTER_NO_PROPOSAL,
     KASSETROUTER_ONLY_KMINTER,
     KASSETROUTER_ONLY_KSTAKING_VAULT,
+    KASSETROUTER_ONLY_ONE_PROPOSAL_AT_THE_TIME,
     KASSETROUTER_PROPOSAL_EXECUTED,
     KASSETROUTER_PROPOSAL_EXISTS,
     KASSETROUTER_PROPOSAL_NOT_FOUND,
@@ -273,8 +274,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
-        require(!$.batchIds.contains(batchId), KASSETROUTER_BATCH_ID_PROPOSED);
-        $.batchIds.add(batchId);
+        require($.batchIds.add(batchId), KASSETROUTER_BATCH_ID_PROPOSED);
 
         int256 netted;
         int256 yield;
@@ -284,6 +284,17 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         unchecked {
             $.proposalCounter++;
         }
+
+        proposalId = OptimizedEfficientHashLib.hash(
+            uint256(uint160(vault)), uint256(uint160(asset)), uint256(batchId), block.timestamp, $.proposalCounter
+        );
+
+        // At the moment we only allow one proposal per vault to make sure nothing breaks
+        require($.vaultPendingProposalIds[vault].length() == 0, KASSETROUTER_ONLY_ONE_PROPOSAL_AT_THE_TIME);
+
+        // Check if proposal already exists
+        require(!$.executedProposalIds.contains(proposalId), KASSETROUTER_PROPOSAL_EXECUTED);
+        require($.vaultPendingProposalIds[vault].add(proposalId), KASSETROUTER_PROPOSAL_EXISTS);
 
         // To calculate the strategy yield we need to discount the deposits and requests
         // First to match last total assets
@@ -317,15 +328,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                 emit YieldExceedsMaxDeltaWarning(vault, asset, batchId, yield, maxAllowedYield);
             }
         }
-
-        proposalId = OptimizedEfficientHashLib.hash(
-            uint256(uint160(vault)), uint256(uint160(asset)), uint256(batchId), block.timestamp, $.proposalCounter
-        );
-
-        // Check if proposal already exists
-        require(!$.executedProposalIds.contains(proposalId), KASSETROUTER_PROPOSAL_EXECUTED);
-        require(!_isPendingProposal(vault, proposalId), KASSETROUTER_PROPOSAL_EXISTS);
-        $.vaultPendingProposalIds[vault].add(proposalId);
 
         // Compute execution time in the future
         uint256 executeAfter;
@@ -371,12 +373,12 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         // Validations
         address vault = proposal.vault;
-        require(_isPendingProposal(vault, proposalId), KASSETROUTER_PROPOSAL_NOT_FOUND);
+        // Remove proposal from vault queue
+        require($.vaultPendingProposalIds[vault].remove(proposalId), KASSETROUTER_PROPOSAL_NOT_FOUND);
         require(block.timestamp >= proposal.executeAfter, KASSETROUTER_COOLDOOWN_IS_UP);
 
         // Mark the proposal as executed, add to the list of executed
         $.executedProposalIds.add(proposalId);
-        $.vaultPendingProposalIds[vault].remove(proposalId);
 
         // Execute the settlement logic
         _executeSettlement(proposal);
@@ -398,9 +400,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         VaultSettlementProposal storage proposal = $.settlementProposals[proposalId];
 
         address vault = proposal.vault;
-        require(_isPendingProposal(vault, proposalId), KASSETROUTER_PROPOSAL_NOT_FOUND);
+        // Remove proposal from vault queue
+        require($.vaultPendingProposalIds[vault].remove(proposalId), KASSETROUTER_PROPOSAL_NOT_FOUND);
 
-        $.vaultPendingProposalIds[vault].remove(proposalId);
         $.batchIds.remove(proposal.batchId);
 
         emit SettlementCancelled(proposalId, vault, proposal.batchId);
@@ -472,6 +474,15 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             require(kMinterTotalAssets >= 0, KASSETROUTER_ZERO_AMOUNT);
             kMinterAdapter.setTotalAssets(uint256(kMinterTotalAssets));
 
+            // If global fees were charged in the batch, notify the vault to udpate share price
+            if (proposal.lastFeesChargedManagement != 0) {
+                IkStakingVault(vault).notifyManagementFeesCharged(proposal.lastFeesChargedManagement);
+            }
+
+            if (proposal.lastFeesChargedPerformance != 0) {
+                IkStakingVault(vault).notifyPerformanceFeesCharged(proposal.lastFeesChargedPerformance);
+            }
+
             // Mark batch as settled in the vault
             ISettleBatch(vault).settleBatch(batchId);
             adapter.setTotalAssets(totalAssets_);
@@ -492,13 +503,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
                     IkToken(kToken).burn(vault, feeAssets);
                     IkToken(kToken).mint(_registry().getTreasury(), feeAssets);
                 }
-            }
-            if (proposal.lastFeesChargedManagement != 0) {
-                IkStakingVault(vault).notifyManagementFeesCharged(proposal.lastFeesChargedManagement);
-            }
-
-            if (proposal.lastFeesChargedPerformance != 0) {
-                IkStakingVault(vault).notifyPerformanceFeesCharged(proposal.lastFeesChargedPerformance);
             }
         }
 
@@ -655,12 +659,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// @notice Verifies contract is not paused
     function _checkPaused() private view {
         require(!_isPaused(), KASSETROUTER_IS_PAUSED);
-    }
-
-    /// @param proposalId the proposalId to verify
-    /// @return bool proposal exists or not
-    function _isPendingProposal(address vault, bytes32 proposalId) private view returns (bool) {
-        return _getkAssetRouterStorage().vaultPendingProposalIds[vault].contains(proposalId);
     }
 
     /// @inheritdoc IkAssetRouter
