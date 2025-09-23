@@ -6,7 +6,6 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 import {
     VAULTADAPTER_ARRAY_MISMATCH,
-    VAULTADAPTER_ARRAY_MISMATCH,
     VAULTADAPTER_IS_PAUSED,
     VAULTADAPTER_TRANSFER_FAILED,
     VAULTADAPTER_WRONG_ASSET,
@@ -118,7 +117,7 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
                             CORE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Batch execute multiple calls
+    /// @inheritdoc IVaultAdapter
     function execute(
         address[] calldata targets,
         bytes[] calldata data,
@@ -137,6 +136,7 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
         IRegistry registry = $.registry;
 
         // Single authorization and pause check
+        _checkPaused($);
         require(registry.isManager(msg.sender), VAULTADAPTER_WRONG_ROLE);
 
         // Pre-allocate result array

@@ -22,4 +22,8 @@ contract kStakingVaultInvariants is SetUp {
     function invariant_kStakingVaultSharePrice() public {
         vaultHandler.INVARIANT_C_SHARE_PRICE();
     }
+
+    function invariant_kStakingVaultTotalNetAssets() public {
+        vaultHandler.INVARIANT_D_TOTAL_NET_ASSETS();
+    }
 }
