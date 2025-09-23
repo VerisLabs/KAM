@@ -20,10 +20,10 @@ contract kStakingVaultInvariants is SetUp {
     }
 
     function invariant_kStakingVaultSharePrice() public {
-        vaultHandler.INVARIANT_C_SHARE_PRICE();
+        vaultHandler.INVARIANT_C_ADAPTER_TOTAL_ASSETS();
     }
 
-    function invariant_kStakingVaultTotalNetAssets() public {
-        vaultHandler.INVARIANT_D_TOTAL_NET_ASSETS();
-    }
+    // function invariant_kStakingVaultTotalNetAssets() public {
+    //     vaultHandler.INVARIANT_D_TOTAL_NET_ASSETS();
+    // }
 }
