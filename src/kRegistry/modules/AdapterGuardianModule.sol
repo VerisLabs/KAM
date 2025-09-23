@@ -23,6 +23,7 @@ import { OptimizedBytes32EnumerableSetLib } from
 contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
+    
 
     /*//////////////////////////////////////////////////////////////
                               STORAGE
@@ -40,6 +41,13 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         mapping(address => mapping(address => mapping(bytes4 => address))) adapterParametersChecker;
         /// @dev Tracks all allowed targets for each adapter
         mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) adapterTargets;
+        /// @dev Maps the type of each target
+        mapping(address => uint8 targetType) targetType;
+        /// For backend, in order to pick the right things.
+        /// @dev proccessId to target
+        mapping(bytes32 => address) processIdToTarget;
+        /// @dev processId to selector
+        mapping(bytes32 => bytes4) processIdToSelector;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.AdapterGuardianModule")) - 1)) & ~bytes32(uint256(0xff))
@@ -62,7 +70,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IAdapterGuardian
-    function setAdapterAllowedSelector(address adapter, address target, bytes4 selector, bool isAllowed) external {
+    function setAdapterAllowedSelector(address adapter, address target, uint8 targetType_, bytes4 selector, bool isAllowed) external {
         _checkAdmin(msg.sender);
         _checkAddressNotZero(adapter);
         _checkAddressNotZero(target);
@@ -78,6 +86,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         }
 
         $.adapterAllowedSelectors[adapter][target][selector] = isAllowed;
+        $.targetType[target] = targetType_;
 
         // Update tracking sets
         if (isAllowed) {
@@ -162,18 +171,25 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         return $.adapterTargets[adapter].values();
     }
 
+    /// @inheritdoc IAdapterGuardian
+    function getTargetType(address target) external view returns (uint8) {
+        AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
+        return $.targetType[target];
+    }
+
     /*//////////////////////////////////////////////////////////////
                         MODULE SELECTORS
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IModule
     function selectors() external pure returns (bytes4[] memory moduleSelectors) {
-        moduleSelectors = new bytes4[](6);
+        moduleSelectors = new bytes4[](7);
         moduleSelectors[0] = this.setAdapterAllowedSelector.selector;
         moduleSelectors[1] = this.setAdapterParametersChecker.selector;
         moduleSelectors[2] = this.authorizeAdapterCall.selector;
         moduleSelectors[3] = this.isAdapterSelectorAllowed.selector;
         moduleSelectors[4] = this.getAdapterParametersChecker.selector;
         moduleSelectors[5] = this.getAdapterTargets.selector;
+        moduleSelectors[6] = this.getTargetType.selector;
     }
 }

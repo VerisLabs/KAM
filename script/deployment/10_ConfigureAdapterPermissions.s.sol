@@ -30,14 +30,14 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         console.log(string.concat("Configuring ", adapterName, " permissions..."));
 
         // Allow ERC7540 vault functions
-        registry.setAdapterAllowedSelector(adapter, vault, requestDepositSelector, true);
-        registry.setAdapterAllowedSelector(adapter, vault, depositSelector, true);
-        registry.setAdapterAllowedSelector(adapter, vault, requestRedeemSelector, true);
-        registry.setAdapterAllowedSelector(adapter, vault, redeemSelector, true);
+        registry.setAdapterAllowedSelector(adapter, vault, 0, requestDepositSelector, true);
+        registry.setAdapterAllowedSelector(adapter, vault, 0, depositSelector, true);
+        registry.setAdapterAllowedSelector(adapter, vault, 0, requestRedeemSelector, true);
+        registry.setAdapterAllowedSelector(adapter, vault, 0, redeemSelector, true);
 
         // Allow transfer and approve for asset
-        registry.setAdapterAllowedSelector(adapter, asset, transferSelector, true);
-        registry.setAdapterAllowedSelector(adapter, asset, approveSelector, true);
+        registry.setAdapterAllowedSelector(adapter, asset, 1, transferSelector, true);
+        registry.setAdapterAllowedSelector(adapter, asset, 1, approveSelector, true);
 
         console.log("   - Allowed ERC7540 functions on vault");
         console.log("   - Allowed transfer and approve functions on asset");
@@ -117,13 +117,13 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         console.log("5. Configuring Alpha Vault Adapter permissions...");
         // Allow only wallet transfer for Alpha vault
         bytes4 transferSelector = IERC7540.transfer.selector;
-        registry.setAdapterAllowedSelector(existing.contracts.alphaVaultAdapter, usdc, transferSelector, true);
+        registry.setAdapterAllowedSelector(existing.contracts.alphaVaultAdapter, usdc, 1, transferSelector, true);
         console.log("   - Allowed transfer function on USDC wallet");
 
         console.log("");
         console.log("6. Configuring Beta Vault Adapter permissions...");
         // Allow only wallet transfer for Beta vault
-        registry.setAdapterAllowedSelector(existing.contracts.betaVaultAdapter, usdc, transferSelector, true);
+        registry.setAdapterAllowedSelector(existing.contracts.betaVaultAdapter, usdc, 1, transferSelector, true);
         console.log("   - Allowed transfer function on USDC wallet");
 
         console.log("");
