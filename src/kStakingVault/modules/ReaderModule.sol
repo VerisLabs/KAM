@@ -257,13 +257,13 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     }
 
     /// @inheritdoc IVaultReader
-    function convertToSharesWithTotals(uint256 shares, uint256 totalAssets) external view returns (uint256) {
-        return _convertToSharesWithTotals(shares, totalAssets);
+    function convertToSharesWithTotals(uint256 shares, uint256 totalAssets_) external view returns (uint256) {
+        return _convertToSharesWithTotals(shares, totalAssets_);
     }
 
     /// @inheritdoc IVaultReader
-    function convertToAssetsWithTotals(uint256 assets, uint256 totalAssets) external view returns (uint256) {
-        return _convertToAssetsWithTotals(assets, totalAssets);
+    function convertToAssetsWithTotals(uint256 assets, uint256 totalAssets_) external view returns (uint256) {
+        return _convertToAssetsWithTotals(assets, totalAssets_);
     }
 
     /// @inheritdoc IVaultReader
