@@ -3,7 +3,7 @@ pragma solidity 0.8.30;
 
 import { SetUp } from "test/invariant/helpers/SetUp.t.sol";
 
-contract kStakingVaultInvariants is SetUp {
+contract IntegrationInvariants is SetUp {
     function setUp() public override {
         useMinter = true;
         _setUp();
