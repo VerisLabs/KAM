@@ -513,7 +513,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _checkAmountNotZero(netSharePrice);
 
         // Divide the deposited assets by the share price of the batch to obtain stkTokens to mint
-        uint256 stkTokensToMint = (uint256(request.kTokenAmount)).fullMulDiv(10 ** _getDecimals($), netSharePrice);
+        uint256 stkTokensToMint = (uint256(request.kTokenAmount)) * 10 ** _getDecimals($) / netSharePrice;
 
         emit StakingSharesClaimed(batchId, requestId, request.user, stkTokensToMint);
 

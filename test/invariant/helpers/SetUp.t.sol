@@ -14,8 +14,11 @@ import { DeploymentBaseTest } from "test/utils/DeploymentBaseTest.sol";
 abstract contract SetUp is StdInvariant, DeploymentBaseTest {
     using SafeTransferLib for address;
 
+    bool useMinter;
     kMinterHandler public minterHandler;
-    kStakingVaultHandler public vaultHandler;
+    kStakingVaultHandler public vaultHandlerDeltaNeutral;
+    kStakingVaultHandler public vaultHandlerAlpha;
+    kStakingVaultHandler public vaultHandlerBeta;
     uint16 public constant PERFORMANCE_FEE = 2000; // 20%
     uint16 public constant MANAGEMENT_FEE = 100; // 1%
 
@@ -30,24 +33,67 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
         vm.stopPrank();
     }
 
-    function _setUpkStakingVaultHandlerAlpha() internal {
+    function _setUpkStakingVaultHandlerDeltaNeutral() internal {
         address[] memory _minterActors = _getMinterActors();
         address[] memory _vaultActors = _getVaultActors();
-        vaultHandler = new kStakingVaultHandler(
-            address(alphaVault),
+        vaultHandlerDeltaNeutral = new kStakingVaultHandler(
+            address(dnVault),
             address(assetRouter),
-            address(vaultAdapter4),
-            address(vaultAdapter1),
+            address(DNVaultAdapterUSDC),
+            address(minterAdapterUSDC),
             getUSDC(),
             address(kUSD),
             users.relayer,
             _minterActors,
-            _vaultActors
+            _vaultActors,
+            useMinter ? address(minterHandler) : address(0)
         );
-        targetContract(address(vaultHandler));
-        bytes4[] memory selectors = vaultHandler.getEntryPoints();
-        targetSelector(FuzzSelector({ addr: address(vaultHandler), selectors: selectors }));
-        vm.label(address(vaultHandler), "kStakingVaultHandler");
+        targetContract(address(vaultHandlerDeltaNeutral));
+        bytes4[] memory selectors = vaultHandlerDeltaNeutral.getEntryPoints();
+        targetSelector(FuzzSelector({ addr: address(vaultHandlerDeltaNeutral), selectors: selectors }));
+        vm.label(address(vaultHandlerDeltaNeutral), "kStakingVaultHandlerDeltaNeutral");
+    }
+
+    function _setUpkStakingVaultHandlerAlpha() internal {
+        address[] memory _minterActors = _getMinterActors();
+        address[] memory _vaultActors = _getVaultActors();
+        vaultHandlerAlpha = new kStakingVaultHandler(
+            address(alphaVault),
+            address(assetRouter),
+            address(ALPHAVaultAdapterUSDC),
+            address(minterAdapterUSDC),
+            getUSDC(),
+            address(kUSD),
+            users.relayer,
+            _minterActors,
+            _vaultActors,
+            useMinter ? address(minterHandler) : address(0)
+        );
+        targetContract(address(vaultHandlerAlpha));
+        bytes4[] memory selectors = vaultHandlerAlpha.getEntryPoints();
+        targetSelector(FuzzSelector({ addr: address(vaultHandlerAlpha), selectors: selectors }));
+        vm.label(address(vaultHandlerAlpha), "kStakingVaultHandlerAlpha");
+    }
+
+    function _setUpkStakingVaultHandlerBeta() internal {
+        address[] memory _minterActors = _getMinterActors();
+        address[] memory _vaultActors = _getVaultActors();
+        vaultHandlerBeta = new kStakingVaultHandler(
+            address(betaVault),
+            address(assetRouter),
+            address(BETHAVaultAdapterUSDC),
+            address(minterAdapterUSDC),
+            getUSDC(),
+            address(kUSD),
+            users.relayer,
+            _minterActors,
+            _vaultActors,
+            useMinter ? address(minterHandler) : address(0)
+        );
+        targetContract(address(vaultHandlerBeta));
+        bytes4[] memory selectors = vaultHandlerBeta.getEntryPoints();
+        targetSelector(FuzzSelector({ addr: address(vaultHandlerBeta), selectors: selectors }));
+        vm.label(address(vaultHandlerBeta), "kStakingVaultHandlerBeta");
     }
 
     function _setUpkMinterHandler() internal {
@@ -55,7 +101,7 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
         minterHandler = new kMinterHandler(
             address(minter),
             address(assetRouter),
-            address(vaultAdapter1),
+            address(minterAdapterUSDC),
             getUSDC(),
             address(kUSD),
             users.relayer,
@@ -87,6 +133,7 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
     function _setUpInstitutionalMint() internal {
         address[] memory minters = _getMinterActors();
         uint256 amount = 10_000_000 * 10 ** 6;
+        uint256 totalAmount = amount * minters.length;
         address token = getUSDC();
         for (uint256 i = 0; i < minters.length; i++) {
             vm.startPrank(minters[i]);
@@ -102,9 +149,16 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
 
         minter.closeBatch(batchId, true);
 
-        bytes32 proposalId =
-            assetRouter.proposeSettleBatch(token, address(minter), batchId, amount * minters.length, 0, 0);
+        bytes32 proposalId = assetRouter.proposeSettleBatch(token, address(minter), batchId, totalAmount, 0, 0);
         assetRouter.executeSettleBatch(proposalId);
         vm.stopPrank();
+        if (useMinter) {
+            minterHandler.set_kMinter_actualAdapterBalance(totalAmount);
+            minterHandler.set_kMinter_expectedAdapterBalance(totalAmount);
+            minterHandler.set_kMinter_actualAdapterTotalAssets(totalAmount);
+            minterHandler.set_kMinter_expectedAdapterTotalAssets(totalAmount);
+            minterHandler.set_kMinter_actualTotalLockedAssets(totalAmount);
+            minterHandler.set_kMinter_expectedTotalLockedAssets(totalAmount);
+        }
     }
 }

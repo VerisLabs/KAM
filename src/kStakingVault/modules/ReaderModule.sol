@@ -135,6 +135,12 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     }
 
     /// @inheritdoc IVaultReader
+    function isHardHurdleRate() external view returns (bool) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        return _getIsHardHurdleRate($);
+    }
+
+    /// @inheritdoc IVaultReader
     function performanceFee() external view returns (uint16) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _getPerformanceFee($);

@@ -66,11 +66,11 @@ contract DeploymentBaseTest is BaseTest {
     ReaderModule public readerModule;
 
     // Adapters
-    VaultAdapter public vaultAdapter1;
-    VaultAdapter public vaultAdapter2;
-    VaultAdapter public vaultAdapter3;
-    VaultAdapter public vaultAdapter4;
-    VaultAdapter public vaultAdapter5;
+    VaultAdapter public minterAdapterUSDC;
+    VaultAdapter public minterAdapterWBTC;
+    VaultAdapter public DNVaultAdapterUSDC;
+    VaultAdapter public ALPHAVaultAdapterUSDC;
+    VaultAdapter public BETHAVaultAdapterUSDC;
     VaultAdapter public vaultAdapter6;
     VaultAdapter public vaultAdapterImpl;
 
@@ -302,19 +302,22 @@ contract DeploymentBaseTest is BaseTest {
         bytes memory adapterInitData = abi.encodeWithSelector(VaultAdapter.initialize.selector, address(registry));
 
         // Deploy proxy with initialization using ERC1967Factory
-        vaultAdapter1 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
-        vaultAdapter2 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
-        vaultAdapter3 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
-        vaultAdapter4 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
-        vaultAdapter5 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        minterAdapterUSDC = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        minterAdapterWBTC = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        DNVaultAdapterUSDC =
+            VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        ALPHAVaultAdapterUSDC =
+            VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        BETHAVaultAdapterUSDC =
+            VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
         vaultAdapter6 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
 
         // Label for debugging
-        vm.label(address(vaultAdapter1), "VaultAdapter1");
-        vm.label(address(vaultAdapter2), "VaultAdapter2");
-        vm.label(address(vaultAdapter3), "VaultAdapter3");
-        vm.label(address(vaultAdapter4), "VaultAdapter4");
-        vm.label(address(vaultAdapter5), "VaultAdapter5");
+        vm.label(address(minterAdapterUSDC), "VaultAdapter1");
+        vm.label(address(minterAdapterWBTC), "VaultAdapter2");
+        vm.label(address(DNVaultAdapterUSDC), "VaultAdapter3");
+        vm.label(address(ALPHAVaultAdapterUSDC), "VaultAdapter4");
+        vm.label(address(BETHAVaultAdapterUSDC), "VaultAdapter5");
         vm.label(address(vaultAdapter6), "VaultAdapter6");
         vm.label(address(vaultAdapterImpl), "VaultAdapterImpl");
     }
@@ -333,11 +336,15 @@ contract DeploymentBaseTest is BaseTest {
         registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, usdc);
 
         // Register adapters for vaults (if adapters were deployed)
-        registry.registerAdapter(address(minter), usdc, address(vaultAdapter1));
-        registry.registerAdapter(address(minter), wbtc, address(vaultAdapter2));
-        registry.registerAdapter(address(dnVault), usdc, address(vaultAdapter3));
-        registry.registerAdapter(address(alphaVault), usdc, address(vaultAdapter4));
-        registry.registerAdapter(address(betaVault), usdc, address(vaultAdapter5));
+        registry.registerAdapter(address(minter), usdc, address(minterAdapterUSDC));
+        registry.registerAdapter(address(minter), wbtc, address(minterAdapterWBTC));
+        registry.registerAdapter(address(dnVault), usdc, address(DNVaultAdapterUSDC));
+        registry.registerAdapter(address(alphaVault), usdc, address(ALPHAVaultAdapterUSDC));
+        registry.registerAdapter(address(betaVault), usdc, address(BETHAVaultAdapterUSDC));
+
+        IRegistry(address(registry)).setAdapterAllowedSelector(
+            address(minterAdapterUSDC), usdc, bytes4(keccak256("transfer(address,uint256)")), true
+        );
 
         IRegistry(address(registry)).setAdapterAllowedSelector(
             address(vaultAdapter1), usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
@@ -524,11 +531,11 @@ contract DeploymentBaseTest is BaseTest {
         assertTrue(registry.isVault(address(betaVault)));
 
         // Check adapters are deployed and initialized (disabled for debugging)
-        assertTrue(address(vaultAdapter1) != address(0));
-        assertTrue(address(vaultAdapter2) != address(0));
-        assertTrue(address(vaultAdapter3) != address(0));
-        assertTrue(address(vaultAdapter4) != address(0));
-        assertTrue(address(vaultAdapter5) != address(0));
+        assertTrue(address(minterAdapterUSDC) != address(0));
+        assertTrue(address(minterAdapterWBTC) != address(0));
+        assertTrue(address(DNVaultAdapterUSDC) != address(0));
+        assertTrue(address(ALPHAVaultAdapterUSDC) != address(0));
+        assertTrue(address(BETHAVaultAdapterUSDC) != address(0));
     }
 
     /// @dev Get current protocol state for debugging
