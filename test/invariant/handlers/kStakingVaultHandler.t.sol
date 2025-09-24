@@ -209,8 +209,7 @@ contract kStakingVaultHandler is BaseHandler {
             (,, uint256 expectedNewFees) = VaultMathLib.computeLastBatchFeesWithAssetsAndSupply(
                 kStakingVault_vault, kStakingVault_expectedTotalAssets, kStakingVault_expectedSupply
             );
-            kStakingVault_expectedNetTotalAssets =
-                kStakingVault_expectedNetTotalAssets + stakeRequest.kTokenAmount - expectedNewFees;
+            kStakingVault_expectedNetTotalAssets = kStakingVault_expectedTotalAssets - expectedNewFees;
             kStakingVault_actualNetTotalAssets = kStakingVault_vault.totalNetAssets();
         }
         vm.stopPrank();
@@ -261,9 +260,11 @@ contract kStakingVaultHandler is BaseHandler {
         uint256 expectedShareValue = unstakeRequest.stkTokenAmount * sharePrice / (10 ** kStakingVault_vault.decimals());
         kStakingVault_expectedTotalAssets -= expectedShareValue;
         kStakingVault_actualTotalAssets = kStakingVault_vault.totalAssets();
-        //kStakingVault_expectedNetTotalAssets -= expectedShareValue * netSharePrice / sharePrice;
+        (,, uint256 expectedNewFees) = VaultMathLib.computeLastBatchFeesWithAssetsAndSupply(
+            kStakingVault_vault, kStakingVault_expectedTotalAssets, kStakingVault_expectedSupply
+        );
+        kStakingVault_expectedNetTotalAssets = kStakingVault_expectedTotalAssets - expectedNewFees;
         kStakingVault_actualNetTotalAssets = kStakingVault_vault.totalNetAssets();
-        kStakingVault_expectedNetTotalAssets = kStakingVault_actualNetTotalAssets; // TESTING
 
         vm.stopPrank();
     }
@@ -394,22 +395,23 @@ contract kStakingVaultHandler is BaseHandler {
             int256(kStakingVault_actualTotalAssets) + netted + proposal.yield
                 - int256(kStakingVault_pendingStakeInBatch[proposal.batchId])
         );
-    
-        (address batchReceiver, bool isClosed, bool isSettled, uint256 sharePrice, uint256 netSharePrice) = kStakingVault_vault.getBatchIdInfo(proposal.batchId);
-        uint256 expectedSharesToBurn;
-        if(totalRequestedShares != 0) {
-                // Discount protocol fees
-                uint256 netRequestedShares =
-                    totalRequestedShares * netSharePrice / sharePrice;
-                expectedSharesToBurn = totalRequestedShares - netRequestedShares;
-                uint256 feeAssets =  VaultMathLib.convertToAssetsWithAssetsAndSupply(expectedSharesToBurn, kStakingVault_expectedTotalAssets, kStakingVault_expectedSupply);
 
-                // Move fees as ktokens to treasury
-                if (feeAssets != 0) {
-                   kStakingVault_expectedTotalAssets -= feeAssets;
-                }
+        (address batchReceiver, bool isClosed, bool isSettled, uint256 sharePrice, uint256 netSharePrice) =
+            kStakingVault_vault.getBatchIdInfo(proposal.batchId);
+        uint256 expectedSharesToBurn;
+        if (totalRequestedShares != 0) {
+            // Discount protocol fees
+            uint256 netRequestedShares = totalRequestedShares * netSharePrice / sharePrice;
+            expectedSharesToBurn = totalRequestedShares - netRequestedShares;
+            uint256 feeAssets = VaultMathLib.convertToAssetsWithAssetsAndSupply(
+                expectedSharesToBurn, kStakingVault_expectedTotalAssets, kStakingVault_expectedSupply
+            );
+
+            // Move fees as ktokens to treasury
+            if (feeAssets != 0) {
+                kStakingVault_expectedTotalAssets -= feeAssets;
             }
-        
+        }
 
         kStakingVault_expectedSupply -= expectedSharesToBurn;
         (,, uint256 expectedFees) = VaultMathLib.computeLastBatchFeesWithAssetsAndSupply(
@@ -589,12 +591,18 @@ contract kStakingVaultHandler is BaseHandler {
     ///                      INVARIANTS                          ///
     ////////////////////////////////////////////////////////////////
     function INVARIANT_A_TOTAL_ASSETS() public {
-        assertEq(kStakingVault_vault.totalAssets(), kStakingVault_expectedTotalAssets, "INVARIANT_A_TOTAL_ASSETS");
+        assertEq(
+            kStakingVault_vault.totalAssets(),
+            kStakingVault_expectedTotalAssets,
+            "KSTAKING_VAULT: INVARIANT_A_TOTAL_ASSETS"
+        );
     }
 
     function INVARIANT_B_ADAPTER_BALANCE() public {
         assertEq(
-            kStakingVault_expectedAdapterBalance, kStakingVault_actualAdapterBalance, "INVARIANT_B_ADAPTER_BALANCE"
+            kStakingVault_expectedAdapterBalance,
+            kStakingVault_actualAdapterBalance,
+            "KSTAKING_VAULT: INVARIANT_B_ADAPTER_BALANCE"
         );
     }
 
@@ -607,7 +615,9 @@ contract kStakingVaultHandler is BaseHandler {
     }
 
     function INVARIANT_D_SHARE_PRICE() public {
-        assertEq(kStakingVault_expectedSharePrice, kStakingVault_actualSharePrice, "INVARIANT_C_SHARE_PRICE");
+        assertEq(
+            kStakingVault_expectedSharePrice, kStakingVault_actualSharePrice, "KSTAKING_VAULT: INVARIANT_C_SHARE_PRICE"
+        );
     }
 
     function INVARIANT_E_TOTAL_NET_ASSETS() public {
@@ -620,6 +630,6 @@ contract kStakingVaultHandler is BaseHandler {
     }
 
     function INVARIANT_F_SUPPLY() public {
-        assertEq(kStakingVault_expectedSupply, kStakingVault_actualSupply, "INVARIANT_F_SUPPLY");
+        assertEq(kStakingVault_expectedSupply, kStakingVault_actualSupply, "KSTAKING_VAULT: INVARIANT_F_SUPPLY");
     }
 }

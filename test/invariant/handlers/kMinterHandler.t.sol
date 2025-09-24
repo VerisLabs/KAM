@@ -20,8 +20,6 @@ contract kMinterHandler is BaseHandler {
     address kMinter_token;
     address kMinter_kToken;
     address kMinter_relayer;
-    uint256 kMinter_lastFeesChargedManagement;
-    uint256 kMinter_lastFeesChargedPerformance;
     mapping(address actor => Bytes32Set pendingRequestIds) kMinter_actorRequests;
     Bytes32Set kMinter_pendingUnsettledBatches;
     Bytes32Set kMinter_pendingSettlementProposals;
@@ -36,6 +34,8 @@ contract kMinterHandler is BaseHandler {
     uint256 public kMinter_actualTotalLockedAssets;
     uint256 public kMinter_expectedAdapterBalance;
     uint256 public kMinter_actualAdapterBalance;
+    uint256 public kMinter_expectedAdapterTotalAssets;
+    uint256 public kMinter_actualAdapterTotalAssets;
 
     constructor(
         address _minter,
@@ -81,7 +81,8 @@ contract kMinterHandler is BaseHandler {
         vm.stopPrank();
         kMinter_expectedTotalLockedAssets += amount;
         kMinter_actualTotalLockedAssets = kMinter_minter.getTotalLockedAssets(kMinter_token);
-        kMinter_actualAdapterBalance = kMinter_assetRouter.virtualBalance(address(kMinter_minter), kMinter_token);
+        kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
+        kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();
         kMinter_nettedInBatch += int256(amount);
         kMinter_totalNetted += int256(amount);
     }
@@ -104,7 +105,8 @@ contract kMinterHandler is BaseHandler {
         vm.stopPrank();
         kMinter_actorRequests[currentActor].add(requestId);
         kMinter_actualTotalLockedAssets = kMinter_minter.getTotalLockedAssets(kMinter_token);
-        kMinter_actualAdapterBalance = kMinter_assetRouter.virtualBalance(address(kMinter_minter), kMinter_token);
+        kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
+        kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();
         kMinter_nettedInBatch -= int256(amount);
         kMinter_totalNetted -= int256(amount);
     }
@@ -129,7 +131,8 @@ contract kMinterHandler is BaseHandler {
         vm.stopPrank();
         kMinter_expectedTotalLockedAssets -= amount;
         kMinter_actualTotalLockedAssets = kMinter_minter.getTotalLockedAssets(kMinter_token);
-        kMinter_actualAdapterBalance = kMinter_assetRouter.virtualBalance(address(kMinter_minter), kMinter_token);
+        kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
+        kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();
     }
 
     function kMinter_proposeSettlement() public {
@@ -149,6 +152,21 @@ contract kMinterHandler is BaseHandler {
             return;
         }
         kMinter_minter.closeBatch(batchId, true);
+
+        vm.startPrank(kMinter_relayer);
+        address[] memory targets = new address[](1);
+        bytes[] memory data = new bytes[](1);
+        uint256[] memory values = new uint256[](1);
+        targets[0] = address(kMinter_token);
+        data[0] = abi.encodeWithSignature(
+            "transfer(address,uint256)", address(kMinter_assetRouter), uint256(-kMinter_nettedInBatch)
+        );
+        values[0] = 0;
+        if (kMinter_nettedInBatch < 0) {
+            kMinter_adapter.execute(targets, data, values);
+            kMinter_expectedAdapterBalance = newTotalAssets;
+        }
+
         vm.expectEmit(false, true, true, true);
         emit IkAssetRouter.SettlementProposed(
             bytes32(0),
@@ -176,6 +194,8 @@ contract kMinterHandler is BaseHandler {
         assertEq(proposal.yield, 0);
         assertEq(proposal.executeAfter, block.timestamp + kMinter_assetRouter.getSettlementCooldown());
         kMinter_nettedInBatch = 0;
+        kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
+        kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();
     }
 
     function kMinter_executeSettlement() public {
@@ -187,21 +207,15 @@ contract kMinterHandler is BaseHandler {
         bytes32 proposalId = kMinter_pendingSettlementProposals.at(0);
         IkAssetRouter.VaultSettlementProposal memory proposal = kMinter_assetRouter.getSettlementProposal(proposalId);
         int256 netted = proposal.netted;
-        address[] memory targets = new address[](1);
-        bytes[] memory data = new bytes[](1);
-        uint256[] memory values = new uint256[](1);
-        targets[0] = address(kMinter_token);
-        data[0] = abi.encodeWithSignature("transfer(address,uint256)", address(kMinter_assetRouter), uint256(-netted));
-        values[0] = 0;
-        if (netted < 0) {
-            kMinter_adapter.execute(targets, data, values);
-        }
+
         kMinter_assetRouter.executeSettleBatch(proposalId);
         vm.stopPrank();
         kMinter_pendingSettlementProposals.remove(proposalId);
         kMinter_pendingUnsettledBatches.remove(proposal.batchId);
         kMinter_expectedAdapterBalance = proposal.totalAssets;
-        kMinter_actualAdapterBalance = kMinter_assetRouter.virtualBalance(address(kMinter_minter), kMinter_token);
+        kMinter_expectedAdapterTotalAssets = proposal.totalAssets;
+        kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
+        kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();
     }
 
     ////////////////////////////////////////////////////////////////
@@ -232,15 +246,6 @@ contract kMinterHandler is BaseHandler {
 
     function set_kMinter_relayer(address _relayer) public {
         kMinter_relayer = _relayer;
-    }
-
-    // Value setters
-    function set_kMinter_lastFeesChargedManagement(uint256 _value) public {
-        kMinter_lastFeesChargedManagement = _value;
-    }
-
-    function set_kMinter_lastFeesChargedPerformance(uint256 _value) public {
-        kMinter_lastFeesChargedPerformance = _value;
     }
 
     // Ghost var setters
@@ -297,16 +302,22 @@ contract kMinterHandler is BaseHandler {
     ///                      INVARIANTS                          ///
     ////////////////////////////////////////////////////////////////
     function INVARIANT_A_TOTAL_LOCKED_ASSETS() public view {
-        assertEq(kMinter_actualTotalLockedAssets, kMinter_expectedTotalLockedAssets, "kMinter locked assets");
+        assertEq(
+            kMinter_expectedTotalLockedAssets,
+            kMinter_actualTotalLockedAssets,
+            "KMINTER: INVARIANT_A_TOTAL_LOCKED_ASSETS"
+        );
     }
 
     function INVARIANT_B_ADAPTER_BALANCE() public view {
-        assertEq(kMinter_actualAdapterBalance, kMinter_expectedAdapterBalance, "kMinter adapter balance");
+        assertEq(kMinter_expectedAdapterBalance, kMinter_actualAdapterBalance, "KMINTER: INVARIANT_B_ADAPTER_BALANCE");
     }
 
-    function INVARIANT_C_TOTAL_NETTED() public view {
-        if (kMinter_pendingSettlementProposals.count() == 0) {
-            assertEq(kMinter_actualAdapterBalance, uint256(kMinter_totalNetted), "kMinter total netted");
-        }
+    function INVARIANT_C_ADAPTER_TOTAL_ASSETS() public view {
+        assertEq(
+            kMinter_expectedAdapterTotalAssets,
+            kMinter_actualAdapterTotalAssets,
+            "KMINTER: INVARIANT_C_ADAPTER_TOTAL_ASSETS"
+        );
     }
 }

@@ -17,7 +17,7 @@ contract kMinterInvariants is SetUp {
         minterHandler.INVARIANT_B_ADAPTER_BALANCE();
     }
 
-    // function invariant_kMinterTotalNetted() public {
-    //     minterHandler.INVARIANT_C_TOTAL_NETTED();
-    // }
+    function invariant_kMinterAdapterTotalAssets() public {
+        minterHandler.INVARIANT_C_ADAPTER_TOTAL_ASSETS();
+    }
 }
