@@ -14,8 +14,8 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
     function configureVaultAdapterPermissions(
         IRegistry registry,
         address adapter,
-        address vault,
-        address asset,
+        address target,
+        bool isERC7540,
         string memory adapterName
     )
         internal
@@ -34,8 +34,11 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         registry.setAdapterAllowedSelector(adapter, vault, 0, depositSelector, true);
         registry.setAdapterAllowedSelector(adapter, vault, 0, requestRedeemSelector, true);
         registry.setAdapterAllowedSelector(adapter, vault, 0, redeemSelector, true);
+        registry.setAdapterAllowedSelector(adapter, vault, 0, approveSelector, true);
 
         // Allow transfer and approve for asset
+        registry.setAdapterAllowedSelector(adapter, asset, 0, transferSelector, true);
+        registry.setAdapterAllowedSelector(adapter, asset, 0, approveSelector, true);
         registry.setAdapterAllowedSelector(adapter, asset, 1, transferSelector, true);
         registry.setAdapterAllowedSelector(adapter, asset, 1, approveSelector, true);
 
@@ -47,7 +50,7 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
     function configureParameterChecker(
         IRegistry registry,
         address adapter,
-        address asset,
+        address target,
         address paramChecker
     )
         internal
@@ -55,8 +58,8 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         bytes4 transferSelector = IERC7540.transfer.selector;
         bytes4 approveSelector = IERC7540.approve.selector;
 
-        registry.setAdapterParametersChecker(adapter, asset, transferSelector, paramChecker);
-        registry.setAdapterParametersChecker(adapter, asset, approveSelector, paramChecker);
+        registry.setAdapterParametersChecker(adapter, target, transferSelector, paramChecker);
+        registry.setAdapterParametersChecker(adapter, target, approveSelector, paramChecker);
     }
 
     function run() public {
@@ -89,6 +92,8 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         address usdcWallet = existing.contracts.WalletUSDC;
         address usdc = config.assets.USDC;
         address wbtc = config.assets.WBTC;
+        address usdcERC7540 = config.ERC7540s.USDC;
+        address wbtcERC7540 = config.ERC7540s.WBTC;
 
         console.log("1. ");
         configureVaultAdapterPermissions(
@@ -111,6 +116,18 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         console.log("4. ");
         configureVaultAdapterPermissions(
             registry, existing.contracts.dnVaultAdapterWBTC, wbtcVault, wbtc, "DN Vault WBTC Adapter"
+        );
+
+        console.log("");
+        console.log("5. ");
+        configureVaultAdapterPermissions(
+            registry, existing.contracts.dnVaultAdapterUSDC, usdcVault, usdcERC7540, "DN Vault USDC Adapter"
+        );
+
+        console.log("");
+        console.log("6. ");
+        configureVaultAdapterPermissions(
+            registry, existing.contracts.dnVaultAdapterWBTC, wbtcVault, wbtcERC7540, "DN Vault WBTC Adapter"
         );
 
         console.log("");
@@ -138,6 +155,11 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         configureParameterChecker(registry, existing.contracts.dnVaultAdapterUSDC, usdc, address(erc20ParameterChecker));
         configureParameterChecker(registry, existing.contracts.dnVaultAdapterWBTC, wbtc, address(erc20ParameterChecker));
         console.log("   - Set parameter checker for DN Vault USDC and WBTC transfer/approve");
+        
+        // Activate param checker for ERC7540 adapters
+        configureParameterChecker(registry, existing.contracts.dnVaultAdapterUSDC, usdcERC7540, address(erc20ParameterChecker));
+        configureParameterChecker(registry, existing.contracts.dnVaultAdapterWBTC, wbtcERC7540, address(erc20ParameterChecker));
+        console.log("   - Set parameter checker for ERC7540 USDC and WBTC transfer/approve");
 
         console.log("");
         console.log("8. Configuring parameter checker permissions...");

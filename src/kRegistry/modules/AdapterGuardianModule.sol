@@ -43,11 +43,6 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) adapterTargets;
         /// @dev Maps the type of each target
         mapping(address => uint8 targetType) targetType;
-        /// For backend, in order to pick the right things.
-        /// @dev proccessId to target
-        mapping(bytes32 => address) processIdToTarget;
-        /// @dev processId to selector
-        mapping(bytes32 => bytes4) processIdToSelector;
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.AdapterGuardianModule")) - 1)) & ~bytes32(uint256(0xff))

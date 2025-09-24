@@ -32,17 +32,17 @@ help:
 # Network-specific deployments
 deploy-mainnet:
 	@echo "🔴 Deploying to MAINNET..."
-	@$(MAKE) deploy-all FORGE_ARGS="--rpc-url ${RPC_MAINNET} --broadcast --account maxDeployer --sender ${DEPLOYER_ADDRESS} --verify --etherscan-api-key ${ETHERSCAN_MAINNET_KEY}"
+	@$(MAKE) deploy-all FORGE_ARGS="--rpc-url ${RPC_MAINNET} --broadcast --account keyDeployer --sender ${DEPLOYER_ADDRESS} --slow --verify --etherscan-api-key ${ETHERSCAN_MAINNET_KEY}"
 
 deploy-sepolia:
 	@echo "🟡 Deploying to SEPOLIA..."
-	@$(MAKE) deploy-mock-assets FORGE_ARGS="--rpc-url ${RPC_SEPOLIA} --broadcast --account maxDeployer --sender ${DEPLOYER_ADDRESS}"
-	@$(MAKE) deploy-all FORGE_ARGS="--rpc-url ${RPC_SEPOLIA} --broadcast --account maxDeployer --sender ${DEPLOYER_ADDRESS}"
+	@$(MAKE) deploy-mock-assets FORGE_ARGS="--rpc-url ${RPC_SEPOLIA} --broadcast --account keyDeployer --sender ${DEPLOYER_ADDRESS}	--slow"
+	@$(MAKE) deploy-all FORGE_ARGS="--rpc-url ${RPC_SEPOLIA} --broadcast --account keyDeployer --sender ${DEPLOYER_ADDRESS}	--slow"
 
 deploy-localhost:
 	@echo "🟢 Deploying to LOCALHOST..."
-	@$(MAKE) deploy-mock-assets FORGE_ARGS="--rpc-url http://localhost:8545 --broadcast --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-	@$(MAKE) deploy-all FORGE_ARGS="--rpc-url http://localhost:8545 --broadcast --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+	@$(MAKE) deploy-mock-assets FORGE_ARGS="--rpc-url http://localhost:8545 --broadcast --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --slow"
+	@$(MAKE) deploy-all FORGE_ARGS="--rpc-url http://localhost:8545 --broadcast --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --slow"
 
 # Complete deployment sequence
 deploy-all: deploy-core setup-singletons deploy-tokens deploy-modules deploy-vaults deploy-adapters configure configure-adapters format-output

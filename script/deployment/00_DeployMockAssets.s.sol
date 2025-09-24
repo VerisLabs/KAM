@@ -58,7 +58,7 @@ contract DeployMockAssetsScript is Script, DeploymentManager {
         console.log("Mock Wallet USDC deployed at:", address(mockWalletUSDC));
 
         // Update network config with deployed addresses
-        _updateNetworkConfig(config.network, address(mockUSDC), address(mockWBTC));
+        _updateNetworkConfig(config.network, address(mockUSDC), address(mockWBTC), address(mockERC7540USDC), address(mockERC7540WBTC));
 
         // Write mock target addresses to deployment output
         writeContractAddress("ERC7540USDC", address(mockERC7540USDC));
@@ -90,7 +90,7 @@ contract DeployMockAssetsScript is Script, DeploymentManager {
         return usdcDeployed && wbtcDeployed;
     }
 
-    function _updateNetworkConfig(string memory network, address mockUSDC, address mockWBTC) internal {
+    function _updateNetworkConfig(string memory network, address mockUSDC, address mockWBTC, address mockERC7540USDC, address mockERC7540WBTC) internal {
         string memory configPath = string.concat("deployments/config/", network, ".json");
         string memory json = vm.readFile(configPath);
 
@@ -118,6 +118,10 @@ contract DeployMockAssetsScript is Script, DeploymentManager {
             vm.toString(mockUSDC),
             '","WBTC":"',
             vm.toString(mockWBTC),
+            '"},"ERC7540s":{"USDC":"',
+            vm.toString(mockERC7540USDC),
+            '","WBTC":"',
+            vm.toString(mockERC7540WBTC),
             '"}}'
         );
 
