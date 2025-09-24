@@ -142,7 +142,9 @@ contract kMinterHandler is BaseHandler {
             vm.stopPrank();
             return;
         }
-        uint256 newTotalAssets = uint256(int256(kMinter_expectedAdapterBalance) + kMinter_nettedInBatch);
+        console2.log("kMinter_expectedAdapterTotalAssets", kMinter_expectedAdapterTotalAssets);
+        console2.log("kMinter_nettedInBatch", kMinter_nettedInBatch);
+        uint256 newTotalAssets = uint256(int256(kMinter_expectedAdapterTotalAssets) + kMinter_nettedInBatch);
         if (batchId == bytes32(0)) {
             vm.stopPrank();
             return;
@@ -151,18 +153,18 @@ contract kMinterHandler is BaseHandler {
             vm.stopPrank();
             return;
         }
+        vm.startPrank(kMinter_relayer);
         kMinter_minter.closeBatch(batchId, true);
 
-        vm.startPrank(kMinter_relayer);
-        address[] memory targets = new address[](1);
-        bytes[] memory data = new bytes[](1);
-        uint256[] memory values = new uint256[](1);
-        targets[0] = address(kMinter_token);
-        data[0] = abi.encodeWithSignature(
-            "transfer(address,uint256)", address(kMinter_assetRouter), uint256(-kMinter_nettedInBatch)
-        );
-        values[0] = 0;
         if (kMinter_nettedInBatch < 0) {
+            address[] memory targets = new address[](1);
+            bytes[] memory data = new bytes[](1);
+            uint256[] memory values = new uint256[](1);
+            targets[0] = address(kMinter_token);
+            data[0] = abi.encodeWithSignature(
+                "transfer(address,uint256)", address(kMinter_assetRouter), uint256(-kMinter_nettedInBatch)
+            );
+            values[0] = 0;
             kMinter_adapter.execute(targets, data, values);
             kMinter_expectedAdapterBalance = newTotalAssets;
         }
@@ -206,7 +208,6 @@ contract kMinterHandler is BaseHandler {
         }
         bytes32 proposalId = kMinter_pendingSettlementProposals.at(0);
         IkAssetRouter.VaultSettlementProposal memory proposal = kMinter_assetRouter.getSettlementProposal(proposalId);
-        int256 netted = proposal.netted;
 
         kMinter_assetRouter.executeSettleBatch(proposalId);
         vm.stopPrank();
@@ -263,6 +264,14 @@ contract kMinterHandler is BaseHandler {
 
     function set_kMinter_actualTotalLockedAssets(uint256 _value) public {
         kMinter_actualTotalLockedAssets = _value;
+    }
+
+    function set_kMinter_expectedAdapterTotalAssets(uint256 _value) public {
+        kMinter_expectedAdapterTotalAssets = _value;
+    }
+
+    function set_kMinter_actualAdapterTotalAssets(uint256 _value) public {
+        kMinter_actualAdapterTotalAssets = _value;
     }
 
     function set_kMinter_expectedAdapterBalance(uint256 _value) public {

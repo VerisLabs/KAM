@@ -12,6 +12,7 @@ import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
 import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
 import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
 import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
+import { kMinterHandler } from "test/invariant/handlers/kMinterHandler.t.sol";
 
 contract kStakingVaultHandler is BaseHandler {
     using OptimizedFixedPointMathLib for int256;
@@ -25,6 +26,7 @@ contract kStakingVaultHandler is BaseHandler {
     IkAssetRouter kStakingVault_assetRouter;
     IVaultAdapter kStakingVault_vaultAdapter;
     IVaultAdapter kStakingVault_minterAdapter;
+    kMinterHandler kStakingVault_minterHandler;
     address kStakingVault_token;
     address kStakingVault_kToken;
     address kStakingVault_relayer;
@@ -67,7 +69,8 @@ contract kStakingVaultHandler is BaseHandler {
         address _kToken,
         address _relayer,
         address[] memory _minterActors,
-        address[] memory _vaultActors
+        address[] memory _vaultActors,
+        address _minterHandler
     )
         BaseHandler(_vaultActors)
     {
@@ -78,6 +81,7 @@ contract kStakingVaultHandler is BaseHandler {
         kStakingVault_assetRouter = IkAssetRouter(_assetRouter);
         kStakingVault_vaultAdapter = IVaultAdapter(_vaultAdapter);
         kStakingVault_minterAdapter = IVaultAdapter(_minterAdapter);
+        kStakingVault_minterHandler = kMinterHandler(_minterHandler);
         kStakingVault_token = _token;
         kStakingVault_kToken = _kToken;
         kStakingVault_relayer = _relayer;
@@ -88,6 +92,7 @@ contract kStakingVaultHandler is BaseHandler {
     ////////////////////////////////////////////////////////////////
     ///                      HELPERS                             ///
     ////////////////////////////////////////////////////////////////
+
     function getEntryPoints() public pure override returns (bytes4[] memory) {
         bytes4[] memory _entryPoints = new bytes4[](9);
         _entryPoints[0] = this.kStakingVault_claimStakedShares.selector;
@@ -323,12 +328,45 @@ contract kStakingVaultHandler is BaseHandler {
                 vm.prank(address(kStakingVault_minterAdapter));
                 kStakingVault_token.safeTransfer(address(kStakingVault_vaultAdapter), transferAmount);
                 kStakingVault_expectedAdapterBalance += transferAmount;
+                if (address(kStakingVault_minterHandler) != address(0)) {
+                    uint256 oldValue = kStakingVault_minterHandler.kMinter_expectedAdapterBalance();
+                    uint256 newValue = oldValue - transferAmount;
+                    console2.log(
+                        "kStakingVault_proposeSettlement: Updating minterHandler.kMinter_expectedAdapterBalance"
+                    );
+                    console2.log("  Old Value:", oldValue);
+                    console2.log("  Subtracting:", transferAmount);
+                    console2.log("  New Value:", newValue);
+                    kStakingVault_minterHandler.set_kMinter_expectedAdapterBalance(newValue);
+                }
             } else {
                 uint256 transferAmount = uint256(-netted);
                 vm.prank(address(kStakingVault_vaultAdapter));
                 kStakingVault_token.safeTransfer(address(kStakingVault_minterAdapter), transferAmount);
                 kStakingVault_expectedAdapterBalance -= transferAmount;
+                if (address(kStakingVault_minterHandler) != address(0)) {
+                    uint256 oldValue = kStakingVault_minterHandler.kMinter_expectedAdapterBalance();
+                    uint256 newValue = oldValue + transferAmount;
+                    console2.log(
+                        "kStakingVault_proposeSettlement: Updating minterHandler.kMinter_expectedAdapterBalance"
+                    );
+                    console2.log("  Old Value:", oldValue);
+                    console2.log("  Adding:", transferAmount);
+                    console2.log("  New Value:", newValue);
+                    kStakingVault_minterHandler.set_kMinter_expectedAdapterBalance(newValue);
+                }
             }
+        }
+        if (address(kStakingVault_minterHandler) != address(0)) {
+            uint256 newBalance = (kStakingVault_token).balanceOf(address(kStakingVault_minterAdapter));
+            console2.log("kStakingVault_proposeSettlement: Updating minterHandler.kMinter_actualAdapterBalance");
+            console2.log("  New Value:", newBalance);
+            kStakingVault_minterHandler.set_kMinter_actualAdapterBalance(newBalance);
+
+            uint256 newTotalAssets = kStakingVault_minterAdapter.totalAssets();
+            console2.log("kStakingVault_proposeSettlement: Updating minterHandler.kMinter_actualAdapterTotalAssets");
+            console2.log("  New Value:", newTotalAssets);
+            kStakingVault_minterHandler.set_kMinter_actualAdapterTotalAssets(newTotalAssets);
         }
         kStakingVault_actualAdapterBalance = (kStakingVault_token).balanceOf(address(kStakingVault_vaultAdapter));
 
@@ -431,8 +469,21 @@ contract kStakingVaultHandler is BaseHandler {
         }
         kStakingVault_actualAdapterBalance = kStakingVault_token.balanceOf(address(kStakingVault_vaultAdapter));
         kStakingVault_actualSharePrice = kStakingVault_vault.sharePrice();
-    }
+        if (address(kStakingVault_minterHandler) != address(0)) {
+            uint256 oldExpectedAdapterTotalAssets = kStakingVault_minterHandler.kMinter_expectedAdapterTotalAssets();
+            uint256 newExpectedAdapterTotalAssets = uint256(int256(oldExpectedAdapterTotalAssets) - netted);
+            console2.log("kStakingVault_executeSettlement: Updating minterHandler.kMinter_expectedAdapterTotalAssets");
+            console2.log("  Old Value:", oldExpectedAdapterTotalAssets);
+            console2.log("  Adding netted:", int256(netted));
+            console2.log("  New Value:", newExpectedAdapterTotalAssets);
+            kStakingVault_minterHandler.set_kMinter_expectedAdapterTotalAssets(newExpectedAdapterTotalAssets);
 
+            uint256 newActualAdapterTotalAssets = kStakingVault_minterAdapter.totalAssets();
+            console2.log("kStakingVault_executeSettlement: Updating minterHandler.kMinter_actualAdapterTotalAssets");
+            console2.log("  New Value:", newActualAdapterTotalAssets);
+            kStakingVault_minterHandler.set_kMinter_actualAdapterTotalAssets(newActualAdapterTotalAssets);
+        }
+    }
     ////////////////////////////////////////////////////////////////
     ///                      SETTER FUNCTIONS                    ///
     ////////////////////////////////////////////////////////////////
