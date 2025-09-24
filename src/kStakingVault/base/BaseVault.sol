@@ -349,11 +349,12 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// maintains precision through fullMulDiv to prevent rounding errors that could accumulate over time. This
     /// function is critical for determining redemption values, share price calculations, and user balance queries.
     /// @param shares The quantity of stkTokens to convert to underlying asset terms
+    /// @param totalAssets The total asset value managed by the vault including yields but excluding pending operations
     /// @return assets The equivalent value in underlying assets based on current vault performance
-    function _convertToAssets(uint256 shares) internal view returns (uint256 assets) {
+    function _convertToAssetsWithTotals(uint256 shares, uint256 totalAssets) internal view returns (uint256 assets) {
         uint256 totalSupply_ = totalSupply();
         if (totalSupply_ == 0) return shares;
-        return shares.fullMulDiv(_totalNetAssets(), totalSupply_);
+        return shares.fullMulDiv(totalAssets, totalSupply_);
     }
 
     /// @notice Converts underlying asset amount to equivalent stkToken shares at current vault valuation
@@ -364,11 +365,12 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// fixed-point mathematics prevent dilution attacks and ensure fair pricing for all participants. This function
     /// is essential for determining share issuance during staking operations and maintaining equitable vault ownership.
     /// @param assets The underlying asset amount to convert to share terms
+    /// @param totalAssets The total asset value managed by the vault including yields but excluding pending operations
     /// @return shares The equivalent stkToken amount based on current share price
-    function _convertToShares(uint256 assets) internal view returns (uint256 shares) {
+    function _convertToSharesWithTotals(uint256 assets, uint256 totalAssets) internal view returns (uint256 shares) {
         uint256 totalSupply_ = totalSupply();
         if (totalSupply_ == 0) return assets;
-        return assets.fullMulDiv(totalSupply_, _totalNetAssets());
+        return assets.fullMulDiv(totalSupply_, totalAssets);
     }
 
     /// @notice Calculates net share price per stkToken after deducting accumulated fees
@@ -381,7 +383,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @return Net price per stkToken in underlying asset terms (scaled to vault decimals)
     function _netSharePrice() internal view returns (uint256) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        return _convertToAssets(10 ** _getDecimals($));
+        return _convertToAssetsWithTotals(10 ** _getDecimals($), _totalNetAssets());
     }
 
     /// @notice Calculates gross share price per stkToken including accumulated fees
@@ -395,10 +397,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @return Gross price per stkToken in underlying asset terms (scaled to vault decimals)
     function _sharePrice() internal view returns (uint256) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
-        uint256 shares = 10 ** _getDecimals($);
-        uint256 totalSupply_ = totalSupply();
-        if (totalSupply_ == 0) return shares;
-        return shares.fullMulDiv(_totalAssets(), totalSupply_);
+        return _convertToAssetsWithTotals(10 ** _getDecimals($), _totalAssets());
     }
 
     /// @notice Calculates total assets under management including pending stakes and accrued yields

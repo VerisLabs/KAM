@@ -204,7 +204,7 @@ Read-only interface for querying vault state, calculations, and metrics without 
 
 - `getBatchId()` - Current active batch identifier
 - `getSafeBatchId()` - Batch ID with safety validation
-- `getBatchIdInfo()` - Comprehensive batch information
+- `getCurrentBatchInfo()` - Comprehensive batch information
 - `getBatchReceiver(bytes32 batchId)` - Batch receiver address
 - `isBatchClosed()` - Check if current batch is closed
 - `isBatchSettled()` - Check if current batch is settled

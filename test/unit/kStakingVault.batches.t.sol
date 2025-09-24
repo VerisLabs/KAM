@@ -255,7 +255,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         // 5. User can claim from settled batch
         vm.prank(users.alice);
-        vault.claimStakedShares(batch1, requestId);
+        vault.claimStakedShares(requestId);
 
         // Verify user received stkTokens
         assertGt(vault.balanceOf(users.alice), 0);

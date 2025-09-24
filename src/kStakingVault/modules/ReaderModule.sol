@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 import { Extsload } from "uniswap/Extsload.sol";
 
@@ -9,16 +10,16 @@ import {
     KSTAKINGVAULT_VAULT_CLOSED,
     KSTAKINGVAULT_VAULT_SETTLED
 } from "src/errors/Errors.sol";
-
 import { IVersioned } from "src/interfaces/IVersioned.sol";
 import { IModule } from "src/interfaces/modules/IModule.sol";
-import { IVaultReader } from "src/interfaces/modules/IVaultReader.sol";
+import { BaseVaultTypes, IVaultReader } from "src/interfaces/modules/IVaultReader.sol";
 import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
 
 /// @title ReaderModule
 /// @notice Contains all the public getters for the Staking Vault
 contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     using OptimizedFixedPointMathLib for uint256;
+    using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
     /// @notice Interval for management fee (1 month)
     uint256 constant MANAGEMENT_FEE_INTERVAL = 657_436;
@@ -59,11 +60,11 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         uint256 lastSharePrice = $.sharePriceWatermark;
 
-        uint256 lastFeesChargedManagement = _getLastFeesChargedManagement($);
-        uint256 lastFeesChargedPerformance = _getLastFeesChargedPerformance($);
+        uint256 lastFeesChargedManagement_ = _getLastFeesChargedManagement($);
+        uint256 lastFeesChargedPerformance_ = _getLastFeesChargedPerformance($);
 
-        uint256 durationManagement = block.timestamp - lastFeesChargedManagement;
-        uint256 durationPerformance = block.timestamp - lastFeesChargedPerformance;
+        uint256 durationManagement = block.timestamp - lastFeesChargedManagement_;
+        uint256 durationPerformance = block.timestamp - lastFeesChargedPerformance_;
         uint256 currentTotalAssets = _totalAssets();
         uint256 lastTotalAssets = totalSupply().fullMulDiv(lastSharePrice, 10 ** _getDecimals($));
 
@@ -131,6 +132,12 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     }
 
     /// @inheritdoc IVaultReader
+    function isHardHurdleRate() external view returns (bool) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        return _getIsHardHurdleRate($);
+    }
+
+    /// @inheritdoc IVaultReader
     function performanceFee() external view returns (uint16) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _getPerformanceFee($);
@@ -168,7 +175,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     }
 
     /// @inheritdoc IVaultReader
-    function getBatchIdInfo()
+    function getCurrentBatchInfo()
         external
         view
         returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled)
@@ -178,6 +185,21 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
             _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].batchReceiver,
             _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].isClosed,
             _getBaseVaultStorage().batches[_getBaseVaultStorage().currentBatchId].isSettled
+        );
+    }
+
+    /// @inheritdoc IVaultReader
+    function getBatchIdInfo(bytes32 batchId)
+        external
+        view
+        returns (address batchReceiver, bool isClosed, bool isSettled, uint256 sharePrice, uint256 netSharePrice)
+    {
+        return (
+            _getBaseVaultStorage().batches[batchId].batchReceiver,
+            _getBaseVaultStorage().batches[batchId].isClosed,
+            _getBaseVaultStorage().batches[batchId].isSettled,
+            _getBaseVaultStorage().batches[batchId].sharePrice,
+            _getBaseVaultStorage().batches[batchId].netSharePrice
         );
     }
 
@@ -229,13 +251,55 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
 
     /// @inheritdoc IVaultReader
     function convertToShares(uint256 shares) external view returns (uint256) {
-        return _convertToShares(shares);
+        return _convertToSharesWithTotals(shares, _totalNetAssets());
     }
 
     /// @inheritdoc IVaultReader
     function convertToAssets(uint256 assets) external view returns (uint256) {
-        return _convertToAssets(assets);
+        return _convertToAssetsWithTotals(assets, _totalNetAssets());
     }
+
+    /// @inheritdoc IVaultReader
+    function convertToSharesWithTotals(uint256 shares, uint256 totalAssets) external view returns (uint256) {
+        return _convertToSharesWithTotals(shares, totalAssets);
+    }
+
+    /// @inheritdoc IVaultReader
+    function convertToAssetsWithTotals(uint256 assets, uint256 totalAssets) external view returns (uint256) {
+        return _convertToAssetsWithTotals(assets, totalAssets);
+    }
+
+    /// @inheritdoc IVaultReader
+    function getUserRequests(address user) external view returns (bytes32[] memory requestIds) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        return $.userRequests[user].values();
+    }
+
+    /// @inheritdoc IVaultReader
+    function getStakeRequest(bytes32 requestId)
+        external
+        view
+        returns (BaseVaultTypes.StakeRequest memory stakeRequest)
+    {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        return $.stakeRequests[requestId];
+    }
+
+    /// @inheritdoc IVaultReader
+    function getUnstakeRequest(bytes32 requestId)
+        external
+        view
+        returns (BaseVaultTypes.UnstakeRequest memory unstakeRequest)
+    {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        return $.unstakeRequests[requestId];
+    }
+
+    /// @inheritdoc IVaultReader
+    function getTotalPendingStake() external view returns (uint256) {
+        return _getBaseVaultStorage().totalPendingStake;
+    }
+
     /*//////////////////////////////////////////////////////////////
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
@@ -252,7 +316,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
 
     /// @inheritdoc IModule
     function selectors() external pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](27);
+        bytes4[] memory moduleSelectors = new bytes4[](33);
         moduleSelectors[0] = this.registry.selector;
         moduleSelectors[1] = this.asset.selector;
         moduleSelectors[2] = this.underlyingAsset.selector;
@@ -267,7 +331,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         moduleSelectors[11] = this.nextManagementFeeTimestamp.selector;
         moduleSelectors[12] = this.isBatchClosed.selector;
         moduleSelectors[13] = this.isBatchSettled.selector;
-        moduleSelectors[14] = this.getBatchIdInfo.selector;
+        moduleSelectors[14] = this.getCurrentBatchInfo.selector;
         moduleSelectors[15] = this.getBatchReceiver.selector;
         moduleSelectors[16] = this.getSafeBatchReceiver.selector;
         moduleSelectors[17] = this.sharePrice.selector;
@@ -280,6 +344,12 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         moduleSelectors[24] = this.convertToAssets.selector;
         moduleSelectors[25] = this.contractName.selector;
         moduleSelectors[26] = this.contractVersion.selector;
+        moduleSelectors[27] = this.getUserRequests.selector;
+        moduleSelectors[28] = this.getStakeRequest.selector;
+        moduleSelectors[29] = this.getUnstakeRequest.selector;
+        moduleSelectors[30] = this.getBatchIdInfo.selector;
+        moduleSelectors[31] = this.getTotalPendingStake.selector;
+        moduleSelectors[32] = this.isHardHurdleRate.selector;
         return moduleSelectors;
     }
 }

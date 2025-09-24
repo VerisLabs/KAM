@@ -14,7 +14,7 @@ contract Utilities is StdCheats {
         addr = payable(makeAddr(name));
         vm.deal({ account: addr, newBalance: 1000 ether });
         for (uint256 i; i < tokens.length;) {
-            deal({ token: tokens[i], to: addr, give: 2000 * 10 ** _getDecimals(tokens[i]) });
+            deal({ token: tokens[i], to: addr, give: 500_000_000 * 10 ** _getDecimals(tokens[i]) });
             unchecked {
                 ++i;
             }

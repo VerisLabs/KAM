@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import { IVersioned } from "src/interfaces/IVersioned.sol";
+import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title IVaultReader
 /// @notice Read-only interface for querying vault state, calculations, and metrics without modifying contract state
@@ -52,6 +53,10 @@ interface IVaultReader is IVersioned {
     /// @return Hurdle rate in basis points that vault performance must exceed
     function hurdleRate() external view returns (uint16);
 
+    /// @notice Returns whether the current hurdle rate is a hard hurdle rate
+    /// @return True if the current hurdle rate is a hard hurdle rate, false otherwise
+    function isHardHurdleRate() external view returns (bool);
+
     /// @notice Returns the current performance fee rate charged on excess returns
     /// @return Performance fee rate in basis points (1% = 100)
     function performanceFee() external view returns (uint16);
@@ -88,10 +93,22 @@ interface IVaultReader is IVersioned {
     /// @return batchReceiver Address of batch receiver contract (may be zero if not created)
     /// @return isClosed Whether the batch is closed to new requests
     /// @return isSettled Whether the batch has been settled
-    function getBatchIdInfo()
+    function getCurrentBatchInfo()
         external
         view
         returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled);
+
+    /// @notice Returns comprehensive information about a specific batch
+    /// @param batchId The batch identifier to query
+    /// @return batchReceiver Address of batch receiver contract (may be zero if not deployed)
+    /// @return isClosed Whether the batch is closed to new requests
+    /// @return isSettled Whether the batch has been settled
+    /// @return sharePrice Share price of settlement
+    /// @return netSharePrice Net share price of settlement
+    function getBatchIdInfo(bytes32 batchId)
+        external
+        view
+        returns (address batchReceiver, bool isClosed, bool isSettled, uint256 sharePrice, uint256 netSharePrice);
 
     /// @notice Returns the batch receiver address for a specific batch ID
     /// @param batchId The batch identifier to query
@@ -143,5 +160,40 @@ interface IVaultReader is IVersioned {
     /// @return The equivalent amount of shares
     function convertToAssets(uint256 assets) external view returns (uint256);
 
-    // contractName() and contractVersion() functions are inherited from IVersioned
+    /// @notice Converts a given amount of shares to assets with a specified total assets
+    /// @param shares The amount of shares to convert
+    /// @param totalAssets The total assets available for conversion
+    /// @return The equivalent amount of assets
+    function convertToAssetsWithTotals(uint256 shares, uint256 totalAssets) external view returns (uint256);
+
+    /// @notice Converts a given amount of assets to shares with a specified total assets
+    /// @param assets The amount of assets to convert
+    /// @param totalAssets The total assets available for conversion
+    /// @return The equivalent amount of shares
+    function convertToSharesWithTotals(uint256 assets, uint256 totalAssets) external view returns (uint256);
+
+    /// @notice Gets all request IDs associated with a user
+    /// @param user The address to query requests for
+    /// @return requestIds An array of all request IDs (both stake and unstake) for the user
+    function getUserRequests(address user) external view returns (bytes32[] memory requestIds);
+
+    /// @notice Gets the details of a specific stake request
+    /// @param requestId The unique identifier of the stake request
+    /// @return stakeRequest The stake request struct containing all request details
+    function getStakeRequest(bytes32 requestId)
+        external
+        view
+        returns (BaseVaultTypes.StakeRequest memory stakeRequest);
+
+    /// @notice Gets the details of a specific unstake request
+    /// @param requestId The unique identifier of the unstake request
+    /// @return unstakeRequest The unstake request struct containing all request details
+    function getUnstakeRequest(bytes32 requestId)
+        external
+        view
+        returns (BaseVaultTypes.UnstakeRequest memory unstakeRequest);
+
+    /// @notice Returns the total pending stake amount
+    /// @return Total pending stake amount
+    function getTotalPendingStake() external view returns (uint256);
 }

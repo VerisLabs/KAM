@@ -36,6 +36,7 @@ string constant KASSETROUTER_WRONG_ROLE = "A16";
 string constant KASSETROUTER_ZERO_ADDRESS = "A17";
 string constant KASSETROUTER_ZERO_AMOUNT = "A18";
 string constant KASSETROUTER_INVALID_MAX_DELTA = "A19";
+string constant KASSETROUTER_ONLY_ONE_PROPOSAL_AT_THE_TIME = "A20";
 
 // Base Adapter Errors
 string constant ADAPTER_ALREADY_INITIALIZED = "BA1";
@@ -178,6 +179,8 @@ string constant VAULTADAPTER_WRONG_SELECTOR = "VA10";
 string constant VAULTADAPTER_INVALID_NONCE = "VA11";
 string constant VAULTADAPTER_WRONG_TARGET = "VA12";
 string constant VAULTADAPTER_SELECTOR_NOT_ALLOWED = "VA13";
+string constant VAULTADAPTER_ARRAY_MISMATCH = "VA14";
+string constant VAULTADAPTER_ZERO_ARRAY = "VA15";
 
 // ParamsChecker Errors
 string constant PARAMETERCHECKER_NOT_ALLOWED = "PC1";

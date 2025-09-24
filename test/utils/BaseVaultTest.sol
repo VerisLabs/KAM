@@ -75,7 +75,7 @@ contract BaseVaultTest is DeploymentBaseTest {
         assetRouter.executeSettleBatch(proposalId);
 
         vm.prank(user);
-        vault.claimStakedShares(batchId, requestId);
+        vault.claimStakedShares(requestId);
     }
 
     /// @dev Setup test fees for comprehensive testing

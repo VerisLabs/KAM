@@ -151,7 +151,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assetRouter.executeSettleBatch(proposalId);
 
         vm.prank(users.bob);
-        vault.claimStakedShares(batchId, requestId);
+        vault.claimStakedShares(requestId);
 
         // Total assets should be 1.5M USDC
         assertEq(vault.totalAssets(), INITIAL_DEPOSIT + bobDeposit);
