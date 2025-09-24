@@ -132,6 +132,12 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     }
 
     /// @inheritdoc IVaultReader
+    function isHardHurdleRate() external view returns (bool) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        return _getIsHardHurdleRate($);
+    }
+
+    /// @inheritdoc IVaultReader
     function performanceFee() external view returns (uint16) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return _getPerformanceFee($);
@@ -310,7 +316,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
 
     /// @inheritdoc IModule
     function selectors() external pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](32);
+        bytes4[] memory moduleSelectors = new bytes4[](33);
         moduleSelectors[0] = this.registry.selector;
         moduleSelectors[1] = this.asset.selector;
         moduleSelectors[2] = this.underlyingAsset.selector;
@@ -343,6 +349,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         moduleSelectors[29] = this.getUnstakeRequest.selector;
         moduleSelectors[30] = this.getBatchIdInfo.selector;
         moduleSelectors[31] = this.getTotalPendingStake.selector;
+        moduleSelectors[32] = this.isHardHurdleRate.selector;
         return moduleSelectors;
     }
 }

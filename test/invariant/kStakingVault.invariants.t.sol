@@ -19,11 +19,19 @@ contract kStakingVaultInvariants is SetUp {
         vaultHandler.INVARIANT_B_ADAPTER_BALANCE();
     }
 
-    function invariant_kStakingVaultSharePrice() public {
+    function invariant_kStakingVaultAdapterTotalAssets() public {
         vaultHandler.INVARIANT_C_ADAPTER_TOTAL_ASSETS();
     }
 
-    // function invariant_kStakingVaultTotalNetAssets() public {
-    //     vaultHandler.INVARIANT_D_TOTAL_NET_ASSETS();
-    // }
+    function invariant_kStakingVaultSharePrice() public {
+        vaultHandler.INVARIANT_D_SHARE_PRICE();
+    }
+
+    function invariant_kStakingVaultTotalNetAssets() public {
+        vaultHandler.INVARIANT_E_TOTAL_NET_ASSETS();
+    }
+
+    function invariant_kStakingVaultSupply() public {
+        vaultHandler.INVARIANT_F_SUPPLY();
+    }
 }

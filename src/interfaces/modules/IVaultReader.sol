@@ -53,6 +53,10 @@ interface IVaultReader is IVersioned {
     /// @return Hurdle rate in basis points that vault performance must exceed
     function hurdleRate() external view returns (uint16);
 
+    /// @notice Returns whether the current hurdle rate is a hard hurdle rate
+    /// @return True if the current hurdle rate is a hard hurdle rate, false otherwise
+    function isHardHurdleRate() external view returns (bool);
+
     /// @notice Returns the current performance fee rate charged on excess returns
     /// @return Performance fee rate in basis points (1% = 100)
     function performanceFee() external view returns (uint16);
