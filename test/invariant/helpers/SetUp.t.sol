@@ -153,19 +153,12 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
         assetRouter.executeSettleBatch(proposalId);
         vm.stopPrank();
         if (useMinter) {
-            console2.log("----------------------SETTING GHOST-----------------");
-            // Update ghost variables to not break invariants
-            // uint256 minterAdapterBalance = getUSDC().balanceOf(address(minterHandler));
-            // uint256 minterAdapterTotalAssets = minterAdapterUSDC.totalAssets();
-            // uint256 minterTotalLockedAssets = minter.getTotalLockedAssets(getUSDC());
             minterHandler.set_kMinter_actualAdapterBalance(totalAmount);
             minterHandler.set_kMinter_expectedAdapterBalance(totalAmount);
             minterHandler.set_kMinter_actualAdapterTotalAssets(totalAmount);
             minterHandler.set_kMinter_expectedAdapterTotalAssets(totalAmount);
             minterHandler.set_kMinter_actualTotalLockedAssets(totalAmount);
             minterHandler.set_kMinter_expectedTotalLockedAssets(totalAmount);
-        } else {
-            console2.log("______________MINTER NOT ACTIVE______________________");
         }
     }
 }

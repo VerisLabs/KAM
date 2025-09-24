@@ -81,7 +81,10 @@ contract kMinterHandler is BaseHandler {
         vm.stopPrank();
         kMinter_expectedTotalLockedAssets += amount;
         kMinter_actualTotalLockedAssets = kMinter_minter.getTotalLockedAssets(kMinter_token);
+        
+        uint256 oldActualAdapterBalance = kMinter_actualAdapterBalance;
         kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
+        
         kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();
         kMinter_nettedInBatch += int256(amount);
         kMinter_totalNetted += int256(amount);
@@ -105,7 +108,10 @@ contract kMinterHandler is BaseHandler {
         vm.stopPrank();
         kMinter_actorRequests[currentActor].add(requestId);
         kMinter_actualTotalLockedAssets = kMinter_minter.getTotalLockedAssets(kMinter_token);
+        
+        uint256 oldActualAdapterBalance = kMinter_actualAdapterBalance;
         kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
+        
         kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();
         kMinter_nettedInBatch -= int256(amount);
         kMinter_totalNetted -= int256(amount);
@@ -131,7 +137,10 @@ contract kMinterHandler is BaseHandler {
         vm.stopPrank();
         kMinter_expectedTotalLockedAssets -= amount;
         kMinter_actualTotalLockedAssets = kMinter_minter.getTotalLockedAssets(kMinter_token);
+        
+        uint256 oldActualAdapterBalance = kMinter_actualAdapterBalance;
         kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
+        
         kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();
     }
 
@@ -142,8 +151,6 @@ contract kMinterHandler is BaseHandler {
             vm.stopPrank();
             return;
         }
-        console2.log("kMinter_expectedAdapterTotalAssets", kMinter_expectedAdapterTotalAssets);
-        console2.log("kMinter_nettedInBatch", kMinter_nettedInBatch);
         uint256 newTotalAssets = uint256(int256(kMinter_expectedAdapterTotalAssets) + kMinter_nettedInBatch);
         if (batchId == bytes32(0)) {
             vm.stopPrank();
@@ -166,7 +173,8 @@ contract kMinterHandler is BaseHandler {
             );
             values[0] = 0;
             kMinter_adapter.execute(targets, data, values);
-            kMinter_expectedAdapterBalance = newTotalAssets;
+            
+            kMinter_expectedAdapterBalance = uint256(int256(kMinter_expectedAdapterBalance) + kMinter_nettedInBatch);
         }
 
         vm.expectEmit(false, true, true, true);
@@ -196,7 +204,10 @@ contract kMinterHandler is BaseHandler {
         assertEq(proposal.yield, 0);
         assertEq(proposal.executeAfter, block.timestamp + kMinter_assetRouter.getSettlementCooldown());
         kMinter_nettedInBatch = 0;
+        
+        uint256 oldActualAdapterBalance = kMinter_actualAdapterBalance;
         kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
+        
         kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();
     }
 
@@ -213,9 +224,16 @@ contract kMinterHandler is BaseHandler {
         vm.stopPrank();
         kMinter_pendingSettlementProposals.remove(proposalId);
         kMinter_pendingUnsettledBatches.remove(proposal.batchId);
-        kMinter_expectedAdapterBalance = proposal.totalAssets;
+        
+        if(proposal.netted > 0) {
+            kMinter_expectedAdapterBalance += uint256(proposal.netted);
+        }
+        
         kMinter_expectedAdapterTotalAssets = proposal.totalAssets;
+        
+        uint256 oldActualAdapterBalance = kMinter_actualAdapterBalance;
         kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
+        
         kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();
     }
 
