@@ -315,7 +315,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
             newBatchId = _createNewBatch(batchAsset); // Create new batch for same asset
         }
 
-        emit BatchClosed(newBatchId);
+        emit BatchClosed(_batchId);
     }
 
     /// @inheritdoc IkMinter

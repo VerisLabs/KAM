@@ -343,11 +343,11 @@ contract DeploymentBaseTest is BaseTest {
         registry.registerAdapter(address(betaVault), usdc, address(BETHAVaultAdapterUSDC));
 
         IRegistry(address(registry)).setAdapterAllowedSelector(
-            address(minterAdapterUSDC), usdc, bytes4(keccak256("transfer(address,uint256)")), true
+            address(minterAdapterUSDC), usdc, 1,bytes4(keccak256("transfer(address,uint256)")), true
         );
 
         IRegistry(address(registry)).setAdapterAllowedSelector(
-            address(vaultAdapter1), usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
+            address(ALPHAVaultAdapterUSDC), usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
         );
 
         vm.stopPrank();

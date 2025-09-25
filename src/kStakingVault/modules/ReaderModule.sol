@@ -327,7 +327,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
 
     /// @inheritdoc IModule
     function selectors() external pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](34);
+        bytes4[] memory moduleSelectors = new bytes4[](35);
         moduleSelectors[0] = this.registry.selector;
         moduleSelectors[1] = this.asset.selector;
         moduleSelectors[2] = this.underlyingAsset.selector;
@@ -362,6 +362,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         moduleSelectors[31] = this.getTotalPendingStake.selector;
         moduleSelectors[32] = this.convertToSharesWithTotals.selector;
         moduleSelectors[33] = this.convertToAssetsWithTotals.selector;
+        moduleSelectors[34] = this.isHardHurdleRate.selector;
         return moduleSelectors;
     }
 }
