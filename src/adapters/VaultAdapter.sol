@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { Initializable } from "solady/utils/Initializable.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 import {
     VAULTADAPTER_ARRAY_MISMATCH,
     VAULTADAPTER_IS_PAUSED,
@@ -13,11 +10,14 @@ import {
     VAULTADAPTER_ZERO_ADDRESS,
     VAULTADAPTER_ZERO_AMOUNT,
     VAULTADAPTER_ZERO_ARRAY
-} from "src/errors/Errors.sol";
-import { IVersioned } from "src/interfaces/IVersioned.sol";
+} from "kam/src/errors/Errors.sol";
+import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
+import { Initializable } from "solady/utils/Initializable.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import { IRegistry } from "src/interfaces/IRegistry.sol";
-import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
+import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
+import { IVaultAdapter } from "kam/src/interfaces/IVaultAdapter.sol";
 
 import { OptimizedAddressEnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
 import { OptimizedLibCall } from "solady/utils/OptimizedLibCall.sol";

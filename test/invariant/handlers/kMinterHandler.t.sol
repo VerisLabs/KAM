@@ -6,9 +6,9 @@ import { BaseHandler } from "./BaseHandler.t.sol";
 import { console2 } from "forge-std/console2.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
-import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
-import { IkMinter } from "src/interfaces/IkMinter.sol";
+import { IVaultAdapter } from "kam/src/interfaces/IVaultAdapter.sol";
+import { IkAssetRouter } from "kam/src/interfaces/IkAssetRouter.sol";
+import { IkMinter } from "kam/src/interfaces/IkMinter.sol";
 
 contract kMinterHandler is BaseHandler {
     using SafeTransferLib for address;

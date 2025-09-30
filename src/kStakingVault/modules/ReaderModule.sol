@@ -9,11 +9,11 @@ import {
     KSTAKINGVAULT_NOT_INITIALIZED,
     KSTAKINGVAULT_VAULT_CLOSED,
     KSTAKINGVAULT_VAULT_SETTLED
-} from "src/errors/Errors.sol";
-import { IVersioned } from "src/interfaces/IVersioned.sol";
-import { IModule } from "src/interfaces/modules/IModule.sol";
-import { BaseVaultTypes, IVaultReader } from "src/interfaces/modules/IVaultReader.sol";
-import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
+} from "kam/src/errors/Errors.sol";
+import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
+import { IModule } from "kam/src/interfaces/modules/IModule.sol";
+import { BaseVaultTypes, IVaultReader } from "kam/src/interfaces/modules/IVaultReader.sol";
+import { BaseVault } from "kam/src/kStakingVault/base/BaseVault.sol";
 
 /// @title ReaderModule
 /// @notice Contains all the public getters for the Staking Vault

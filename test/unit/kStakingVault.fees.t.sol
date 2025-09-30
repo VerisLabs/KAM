@@ -7,11 +7,13 @@ import { _1_USDC } from "../utils/Constants.sol";
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
+import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 
 import {
-    KSTAKINGVAULT_WRONG_ROLE, VAULTFEES_FEE_EXCEEDS_MAXIMUM, VAULTFEES_INVALID_TIMESTAMP
-} from "src/errors/Errors.sol";
+    KSTAKINGVAULT_WRONG_ROLE,
+    VAULTFEES_FEE_EXCEEDS_MAXIMUM,
+    VAULTFEES_INVALID_TIMESTAMP
+} from "kam/src/errors/Errors.sol";
 
 /// @title kStakingVaultFeesTest
 /// @notice Tests for fee mechanics in kStakingVault

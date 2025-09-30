@@ -3,11 +3,11 @@ pragma solidity ^0.8.20;
 
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
 import { Script } from "forge-std/Script.sol";
-import { console } from "forge-std/console.sol";
-import { ERC20ParameterChecker } from "src/adapters/parameters/ERC20ParameterChecker.sol";
+import { console2 as console } from "forge-std/console2.sol";
+import { ERC20ParameterChecker } from "kam/src/adapters/parameters/ERC20ParameterChecker.sol";
 
-import { IERC7540 } from "src/interfaces/IERC7540.sol";
-import { IRegistry } from "src/interfaces/IRegistry.sol";
+import { IERC7540 } from "kam/src/interfaces/IERC7540.sol";
+import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
 
 contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
     // Helper function to configure vault adapter permissions

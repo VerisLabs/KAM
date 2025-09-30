@@ -6,8 +6,7 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
-import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
-import { kBase } from "src/base/kBase.sol";
+import { kBase } from "kam/src/base/kBase.sol";
 import {
     KASSETROUTER_BATCH_ID_PROPOSED,
     KASSETROUTER_COOLDOOWN_IS_UP,
@@ -22,9 +21,10 @@ import {
     KASSETROUTER_ZERO_AMOUNT,
     KBASE_INVALID_REGISTRY,
     KBASE_WRONG_ROLE
-} from "src/errors/Errors.sol";
-import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
-import { kAssetRouter } from "src/kAssetRouter.sol";
+} from "kam/src/errors/Errors.sol";
+import { IkAssetRouter } from "kam/src/interfaces/IkAssetRouter.sol";
+import { kAssetRouter } from "kam/src/kAssetRouter.sol";
+import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 /// @title kAssetRouterTest
 /// @notice Comprehensive unit tests for kAssetRouter contract with timelock settlement

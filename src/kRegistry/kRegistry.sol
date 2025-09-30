@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import { MultiFacetProxy } from "kam/src/base/MultiFacetProxy.sol";
 import { OptimizedAddressEnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
-import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import { kBaseRoles } from "src/base/kBaseRoles.sol";
+import { kBaseRoles } from "kam/src/base/kBaseRoles.sol";
 import {
     KREGISTRY_ADAPTER_ALREADY_SET,
     KREGISTRY_ALREADY_REGISTERED,
@@ -19,11 +19,11 @@ import {
     KREGISTRY_WRONG_ASSET,
     KREGISTRY_ZERO_ADDRESS,
     KREGISTRY_ZERO_AMOUNT
-} from "src/errors/Errors.sol";
+} from "kam/src/errors/Errors.sol";
 
-import { IVersioned } from "src/interfaces/IVersioned.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { kToken } from "src/kToken.sol";
+import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
+import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
+import { kToken } from "kam/src/kToken.sol";
 
 /// @title kRegistry
 /// @notice Central configuration hub and contract registry for the KAM protocol ecosystem

@@ -12,9 +12,9 @@ import {
     KREGISTRY_INVALID_ADAPTER,
     KREGISTRY_ZERO_ADDRESS,
     KROLESBASE_ZERO_ADDRESS
-} from "src/errors/Errors.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { kRegistry } from "src/kRegistry/kRegistry.sol";
+} from "kam/src/errors/Errors.sol";
+import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
+import { kRegistry } from "kam/src/kRegistry/kRegistry.sol";
 
 /// @title kRegistryTest
 /// @notice Comprehensive unit tests for kRegistry contract
