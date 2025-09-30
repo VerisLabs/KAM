@@ -2,10 +2,10 @@
 pragma solidity ^0.8.20;
 
 import { Script } from "forge-std/Script.sol";
-import { console } from "forge-std/console.sol";
+import { console2 as console } from "forge-std/console2.sol";
 
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
-import { kRegistry } from "src/kRegistry/kRegistry.sol";
+import { kRegistry } from "kam/src/kRegistry/kRegistry.sol";
 
 contract RegisterSingletonsScript is Script, DeploymentManager {
     function run() public {

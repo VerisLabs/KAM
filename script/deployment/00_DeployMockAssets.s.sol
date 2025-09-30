@@ -4,10 +4,10 @@ pragma solidity ^0.8.20;
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
 import { Script } from "forge-std/Script.sol";
 
-import { console } from "forge-std/console.sol";
-import { MockERC20 } from "test/mocks/MockERC20.sol";
-import { MockERC7540 } from "test/mocks/MockERC7540.sol";
-import { MockWallet } from "test/mocks/MockWallet.sol";
+import { console2 as console } from "forge-std/console2.sol";
+import { MockERC20 } from "kam/test/mocks/MockERC20.sol";
+import { MockERC7540 } from "kam/test/mocks/MockERC7540.sol";
+import { MockWallet } from "kam/test/mocks/MockWallet.sol";
 
 contract DeployMockAssetsScript is Script, DeploymentManager {
     function run() public {

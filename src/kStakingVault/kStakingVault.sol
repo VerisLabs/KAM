@@ -14,10 +14,10 @@ import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
+import { IkAssetRouter } from "kam/src/interfaces/IkAssetRouter.sol";
 
-import { IVault, IVaultBatch, IVaultClaim, IVaultFees } from "src/interfaces/IVault.sol";
-import { IkToken } from "src/interfaces/IkToken.sol";
+import { IVault, IVaultBatch, IVaultClaim, IVaultFees } from "kam/src/interfaces/IVault.sol";
+import { IkToken } from "kam/src/interfaces/IkToken.sol";
 
 import {
     KSTAKINGVAULT_INSUFFICIENT_BALANCE,
@@ -39,12 +39,12 @@ import {
     VAULTCLAIMS_REQUEST_NOT_PENDING,
     VAULTFEES_FEE_EXCEEDS_MAXIMUM,
     VAULTFEES_INVALID_TIMESTAMP
-} from "src/errors/Errors.sol";
+} from "kam/src/errors/Errors.sol";
 
-import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
-import { kBatchReceiver } from "src/kBatchReceiver.sol";
-import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
-import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
+import { MultiFacetProxy } from "kam/src/base/MultiFacetProxy.sol";
+import { kBatchReceiver } from "kam/src/kBatchReceiver.sol";
+import { BaseVault } from "kam/src/kStakingVault/base/BaseVault.sol";
+import { BaseVaultTypes } from "kam/src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title kStakingVault
 /// @notice Retail staking vault enabling kToken holders to earn yield through batch-processed share tokens

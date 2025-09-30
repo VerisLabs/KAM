@@ -7,29 +7,29 @@ import { OptimizedOwnableRoles } from "solady/auth/OptimizedOwnableRoles.sol";
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 // Protocol contracts
-import { kAssetRouter } from "src/kAssetRouter.sol";
+import { kAssetRouter } from "kam/src/kAssetRouter.sol";
 
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
-import { kBatchReceiver } from "src/kBatchReceiver.sol";
-import { kMinter } from "src/kMinter.sol";
-import { kRegistry } from "src/kRegistry/kRegistry.sol";
-import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-import { kToken } from "src/kToken.sol";
+import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
+import { kBatchReceiver } from "kam/src/kBatchReceiver.sol";
+import { kMinter } from "kam/src/kMinter.sol";
+import { kRegistry } from "kam/src/kRegistry/kRegistry.sol";
+import { kStakingVault } from "kam/src/kStakingVault/kStakingVault.sol";
+import { kToken } from "kam/src/kToken.sol";
 
 // Modules
 
-import { AdapterGuardianModule } from "src/kRegistry/modules/AdapterGuardianModule.sol";
-import { ReaderModule } from "src/kStakingVault/modules/ReaderModule.sol";
+import { AdapterGuardianModule } from "kam/src/kRegistry/modules/AdapterGuardianModule.sol";
+import { ReaderModule } from "kam/src/kStakingVault/modules/ReaderModule.sol";
 
 // Adapters
-import { VaultAdapter } from "src/adapters/VaultAdapter.sol";
+import { VaultAdapter } from "kam/src/adapters/VaultAdapter.sol";
 
 // Interfaces
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
-import { IRegistry } from "src/interfaces/IRegistry.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
+import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 
 /// @title DeploymentBaseTest
 /// @notice Comprehensive base test contract that deploys the complete KAM protocol

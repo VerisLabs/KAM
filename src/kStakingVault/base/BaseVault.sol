@@ -14,10 +14,10 @@ import {
     BASEVAULT_CONTRACT_NOT_FOUND,
     BASEVAULT_INVALID_REGISTRY,
     BASEVAULT_NOT_INITIALIZED
-} from "src/errors/Errors.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { IVaultReader } from "src/interfaces/modules/IVaultReader.sol";
-import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
+} from "kam/src/errors/Errors.sol";
+import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
+import { IVaultReader } from "kam/src/interfaces/modules/IVaultReader.sol";
+import { BaseVaultTypes } from "kam/src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title BaseVault
 /// @notice Foundation contract providing essential shared functionality for all kStakingVault implementations

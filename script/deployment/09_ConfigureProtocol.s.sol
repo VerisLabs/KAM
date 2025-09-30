@@ -4,10 +4,10 @@ pragma solidity ^0.8.20;
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
 import { Script } from "forge-std/Script.sol";
 
-import { console } from "forge-std/console.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { kRegistry } from "src/kRegistry/kRegistry.sol";
-import { kToken } from "src/kToken.sol";
+import { console2 as console } from "forge-std/console2.sol";
+import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
+import { kRegistry } from "kam/src/kRegistry/kRegistry.sol";
+import { kToken } from "kam/src/kToken.sol";
 
 contract ConfigureProtocolScript is Script, DeploymentManager {
     function run() public {

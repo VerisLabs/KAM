@@ -2,10 +2,10 @@
 pragma solidity ^0.8.20;
 
 import { Script } from "forge-std/Script.sol";
-import { console } from "forge-std/console.sol";
+import { console2 as console } from "forge-std/console2.sol";
 
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
-import { ReaderModule } from "src/kStakingVault/modules/ReaderModule.sol";
+import { ReaderModule } from "kam/src/kStakingVault/modules/ReaderModule.sol";
 
 contract DeployVaultModulesScript is Script, DeploymentManager {
     function run() public {

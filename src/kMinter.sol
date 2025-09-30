@@ -11,9 +11,9 @@ import { OptimizedSafeCastLib } from "solady/utils/OptimizedSafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import { kBase } from "src/base/kBase.sol";
-import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
-import { kBatchReceiver } from "src/kBatchReceiver.sol";
+import { kBase } from "kam/src/base/kBase.sol";
+import { IkAssetRouter } from "kam/src/interfaces/IkAssetRouter.sol";
+import { kBatchReceiver } from "kam/src/kBatchReceiver.sol";
 import { Extsload } from "uniswap/Extsload.sol";
 
 import {
@@ -32,11 +32,11 @@ import {
     KMINTER_WRONG_ROLE,
     KMINTER_ZERO_ADDRESS,
     KMINTER_ZERO_AMOUNT
-} from "src/errors/Errors.sol";
+} from "kam/src/errors/Errors.sol";
 
-import { IVersioned } from "src/interfaces/IVersioned.sol";
-import { IkMinter } from "src/interfaces/IkMinter.sol";
-import { IkToken } from "src/interfaces/IkToken.sol";
+import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
+import { IkMinter } from "kam/src/interfaces/IkMinter.sol";
+import { IkToken } from "kam/src/interfaces/IkToken.sol";
 
 /// @title kMinter
 /// @notice Institutional gateway for kToken minting and redemption with batch settlement processing

@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { kBaseRoles } from "src/base/kBaseRoles.sol";
+import { kBaseRoles } from "kam/src/base/kBaseRoles.sol";
 import {
     GUARDIANMODULE_INVALID_ADAPTER,
     GUARDIANMODULE_NOT_ALLOWED,
     GUARDIANMODULE_SELECTOR_ALREADY_SET,
     GUARDIANMODULE_SELECTOR_NOT_FOUND,
     GUARDIANMODULE_UNAUTHORIZED
-} from "src/errors/Errors.sol";
+} from "kam/src/errors/Errors.sol";
 
-import { IAdapterGuardian, IParametersChecker } from "src/interfaces/modules/IAdapterGuardian.sol";
-import { IModule } from "src/interfaces/modules/IModule.sol";
+import { IAdapterGuardian, IParametersChecker } from "kam/src/interfaces/modules/IAdapterGuardian.sol";
+import { IModule } from "kam/src/interfaces/modules/IModule.sol";
 import { OptimizedAddressEnumerableSetLib } from
     "src/vendor/solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
 

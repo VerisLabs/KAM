@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import { IExtsload } from "src/interfaces/IExtsload.sol";
+import { IExtsload } from "kam/src/interfaces/IExtsload.sol";
 
 /// @title Extsload
 /// @author Uniswap

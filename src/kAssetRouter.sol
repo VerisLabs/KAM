@@ -10,7 +10,7 @@ import { OptimizedSafeCastLib } from "solady/utils/OptimizedSafeCastLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import { kBase } from "src/base/kBase.sol";
+import { kBase } from "kam/src/base/kBase.sol";
 import {
     KASSETROUTER_BATCH_ID_PROPOSED,
     KASSETROUTER_COOLDOOWN_IS_UP,
@@ -27,18 +27,18 @@ import {
     KASSETROUTER_WRONG_ROLE,
     KASSETROUTER_ZERO_ADDRESS,
     KASSETROUTER_ZERO_AMOUNT
-} from "src/errors/Errors.sol";
+} from "kam/src/errors/Errors.sol";
 import { OptimizedBytes32EnumerableSetLib } from
     "src/vendor/solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 
-import { IVaultAdapter } from "src/interfaces/IVaultAdapter.sol";
-import { ISettleBatch, IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
+import { IVaultAdapter } from "kam/src/interfaces/IVaultAdapter.sol";
+import { ISettleBatch, IkAssetRouter } from "kam/src/interfaces/IkAssetRouter.sol";
 
-import { IVersioned } from "src/interfaces/IVersioned.sol";
-import { IkMinter } from "src/interfaces/IkMinter.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
-import { IkToken } from "src/interfaces/IkToken.sol";
+import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
+import { IkMinter } from "kam/src/interfaces/IkMinter.sol";
+import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
+import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
+import { IkToken } from "kam/src/interfaces/IkToken.sol";
 
 /// @title kAssetRouter
 /// @notice Central money flow coordinator for the KAM protocol, orchestrating all asset movements and yield

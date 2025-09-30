@@ -4,3 +4,5 @@ solady/=src/vendor/solady/
 src/=src/
 test/=test/
 uniswap/=src/vendor/uniswap/
+kam/src/=src/
+kam/test/=test/
