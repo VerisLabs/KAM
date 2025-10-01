@@ -8,7 +8,6 @@ import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 // Protocol contracts
 import { kAssetRouter } from "kam/src/kAssetRouter.sol";
-
 import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 import { kBatchReceiver } from "kam/src/kBatchReceiver.sol";
 import { kMinter } from "kam/src/kMinter.sol";
@@ -17,7 +16,6 @@ import { kStakingVault } from "kam/src/kStakingVault/kStakingVault.sol";
 import { kToken } from "kam/src/kToken.sol";
 
 // Modules
-
 import { AdapterGuardianModule } from "kam/src/kRegistry/modules/AdapterGuardianModule.sol";
 import { ReaderModule } from "kam/src/kStakingVault/modules/ReaderModule.sol";
 
@@ -25,9 +23,6 @@ import { ReaderModule } from "kam/src/kStakingVault/modules/ReaderModule.sol";
 import { VaultAdapter } from "kam/src/adapters/VaultAdapter.sol";
 
 // Interfaces
-
-import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-
 import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
 import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 
@@ -455,24 +450,12 @@ contract DeploymentBaseTest is BaseTest {
         kToken(token).mint(to, amount);
     }
 
-    /// @dev Helper to approve and transfer underlying assets
-    /// @param token Asset token
-    /// @param from Sender address
-    /// @param to Recipient address
-    /// @param amount Amount to transfer
-    function transferAsset(address token, address from, address to, uint256 amount) internal {
-        vm.startPrank(from);
-        IERC20(token).approve(to, amount);
-        IERC20(token).transfer(to, amount);
-        vm.stopPrank();
-    }
-
     /// @dev Helper to get asset balance
     /// @param token Asset token
     /// @param user User address
     /// @return Balance of user
     function getAssetBalance(address token, address user) internal view returns (uint256) {
-        return IERC20(token).balanceOf(user);
+        return kToken(token).balanceOf(user);
     }
 
     /// @dev Helper to get kToken balance

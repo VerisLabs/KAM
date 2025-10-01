@@ -6,9 +6,10 @@ import { console2 as console } from "forge-std/console2.sol";
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
-import { ProcessRouterModule } from "kam/src/kRegistry/modules/ProcessRouterModule.sol";
+
 import { kRegistry } from "kam/src/kRegistry/kRegistry.sol";
 import { AdapterGuardianModule } from "kam/src/kRegistry/modules/AdapterGuardianModule.sol";
+import { ProcessRouterModule } from "kam/src/kRegistry/modules/ProcessRouterModule.sol";
 
 contract DeployRegistryScript is Script, DeploymentManager {
     function run() public {

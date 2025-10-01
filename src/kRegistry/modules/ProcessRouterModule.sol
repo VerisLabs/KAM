@@ -4,8 +4,8 @@ pragma solidity 0.8.30;
 import { kBaseRoles } from "kam/src/base/kBaseRoles.sol";
 //import { REGISTRYREADERMODULE_UNAUTHORIZED } from "kam/src/errors/Errors.sol";
 
-import { IProcessRouterModule } from "kam/src/interfaces/modules/IProcessRouterModule.sol";
 import { IModule } from "kam/src/interfaces/modules/IModule.sol";
+import { IProcessRouterModule } from "kam/src/interfaces/modules/IProcessRouterModule.sol";
 
 /// @title ProcessRouterModule
 /// @notice Module for reading the registry

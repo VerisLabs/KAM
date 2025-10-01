@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.30;
+pragma solidity ^0.8.4;
 
 /// @title IModule
 /// @notice Modules are special contracts that extend the functionality of other contracts

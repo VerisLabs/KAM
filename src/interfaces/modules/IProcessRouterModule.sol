@@ -1,5 +1,5 @@
 /// SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity ^0.8.4;
 
 interface IProcessRouterModule {
     /// @dev Sets the processId to target and selector
