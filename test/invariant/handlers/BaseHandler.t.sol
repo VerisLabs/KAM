@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { Actors, AddressSet, LibAddressSet } from "../helpers/Actors.sol";
+import { Actors } from "../helpers/Actors.sol";
 
 import { AddressSet, LibAddressSet } from "../helpers/AddressSet.sol";
 import { CommonBase } from "forge-std/Base.sol";

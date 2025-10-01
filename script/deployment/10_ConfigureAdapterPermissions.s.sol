@@ -7,12 +7,12 @@ import { console2 as console } from "forge-std/console2.sol";
 import { ERC20ParameterChecker } from "kam/src/adapters/parameters/ERC20ParameterChecker.sol";
 
 import { IERC7540 } from "kam/src/interfaces/IERC7540.sol";
-import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
+import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 
 contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
     // Helper function to configure kMinter adapter permissions (full ERC7540 access)
     function configureKMinterAdapterPermissions(
-        IRegistry registry,
+        IkRegistry registry,
         address adapter,
         address vault,
         address asset
@@ -40,7 +40,7 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
     }
 
     // Helper function to configure metavault adapter permissions (targetType = 0)
-    function configureMetavaultAdapterPermissions(IRegistry registry, address adapter, address metavault) internal {
+    function configureMetavaultAdapterPermissions(IkRegistry registry, address adapter, address metavault) internal {
         bytes4 approveSelector = IERC7540.approve.selector;
         bytes4 transferSelector = IERC7540.transfer.selector;
 
@@ -50,7 +50,7 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
 
     // Helper function to configure custodial adapter permissions (targetType = 1)
     function configureCustodialAdapterPermissions(
-        IRegistry registry,
+        IkRegistry registry,
         address adapter,
         address custodialAddress
     )
@@ -65,7 +65,7 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
 
     // Helper function to configure parameter checkers
     function configureParameterChecker(
-        IRegistry registry,
+        IkRegistry registry,
         address adapter,
         address target,
         address paramChecker
@@ -95,7 +95,7 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
 
         vm.startBroadcast();
 
-        IRegistry registry = IRegistry(payable(existing.contracts.kRegistry));
+        IkRegistry registry = IkRegistry(payable(existing.contracts.kRegistry));
 
         // Deploy ERC20 parameters checker
         ERC20ParameterChecker erc20ParameterChecker = new ERC20ParameterChecker(address(registry));

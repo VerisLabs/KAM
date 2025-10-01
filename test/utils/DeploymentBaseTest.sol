@@ -23,8 +23,7 @@ import { ReaderModule } from "kam/src/kStakingVault/modules/ReaderModule.sol";
 import { VaultAdapter } from "kam/src/adapters/VaultAdapter.sol";
 
 // Interfaces
-import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
-import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
+import { IkRegistry, IRegistry } from "kam/src/interfaces/IkRegistry.sol";
 
 /// @title DeploymentBaseTest
 /// @notice Comprehensive base test contract that deploys the complete KAM protocol
@@ -325,10 +324,10 @@ contract DeploymentBaseTest is BaseTest {
     function _configureProtocol() internal {
         // Register Vaults
         vm.startPrank(users.admin);
-        registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, usdc);
-        registry.registerVault(address(dnVault), IkRegistry.VaultType.DN, usdc);
-        registry.registerVault(address(alphaVault), IkRegistry.VaultType.ALPHA, usdc);
-        registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, usdc);
+        registry.registerVault(address(minter), IRegistry.VaultType.MINTER, usdc);
+        registry.registerVault(address(dnVault), IRegistry.VaultType.DN, usdc);
+        registry.registerVault(address(alphaVault), IRegistry.VaultType.ALPHA, usdc);
+        registry.registerVault(address(betaVault), IRegistry.VaultType.BETA, usdc);
 
         // Register adapters for vaults (if adapters were deployed)
         registry.registerAdapter(address(minter), usdc, address(minterAdapterUSDC));
@@ -337,11 +336,11 @@ contract DeploymentBaseTest is BaseTest {
         registry.registerAdapter(address(alphaVault), usdc, address(ALPHAVaultAdapterUSDC));
         registry.registerAdapter(address(betaVault), usdc, address(BETHAVaultAdapterUSDC));
 
-        IRegistry(address(registry)).setAdapterAllowedSelector(
+        IkRegistry(address(registry)).setAdapterAllowedSelector(
             address(minterAdapterUSDC), usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
         );
 
-        IRegistry(address(registry)).setAdapterAllowedSelector(
+        IkRegistry(address(registry)).setAdapterAllowedSelector(
             address(ALPHAVaultAdapterUSDC), usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
         );
 
@@ -549,10 +548,10 @@ contract DeploymentBaseTest is BaseTest {
     }
 
     /// @dev Helper to get vault by type for testing
-    function getVaultByType(IkRegistry.VaultType vaultType) internal view returns (IkStakingVault) {
-        if (vaultType == IkRegistry.VaultType.DN) return dnVault;
-        if (vaultType == IkRegistry.VaultType.ALPHA) return alphaVault;
-        if (vaultType == IkRegistry.VaultType.BETA) return betaVault;
+    function getVaultByType(IRegistry.VaultType vaultType) internal view returns (IkStakingVault) {
+        if (vaultType == IRegistry.VaultType.DN) return dnVault;
+        if (vaultType == IRegistry.VaultType.ALPHA) return alphaVault;
+        if (vaultType == IRegistry.VaultType.BETA) return betaVault;
         revert("Unknown vault type");
     }
 }

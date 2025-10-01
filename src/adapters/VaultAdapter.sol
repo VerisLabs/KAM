@@ -16,7 +16,7 @@ import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
+import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 import { IVaultAdapter } from "kam/src/interfaces/IVaultAdapter.sol";
 
 import { OptimizedAddressEnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
@@ -38,7 +38,7 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
     /// @custom:storage-location erc7201:kam.storage.VaultAdapter
     struct VaultAdapterStorage {
         /// @dev Address of the kRegistry singleton that serves as the protocol's configuration hub
-        IRegistry registry;
+        IkRegistry registry;
         /// @dev Emergency pause state affecting all protocol operations in inheriting contracts
         bool paused;
         /// @dev Last recorded total assets for vault accounting and performance tracking
@@ -74,7 +74,7 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
     function initialize(address registry_) external initializer {
         _checkZeroAddress(registry_);
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
-        $.registry = IRegistry(registry_);
+        $.registry = IkRegistry(registry_);
         emit ContractInitialized(registry_);
     }
 
@@ -133,7 +133,7 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
 
         // Cache storage reads outside loop
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
-        IRegistry registry = $.registry;
+        IkRegistry registry = $.registry;
 
         // Single authorization and pause check
         _checkPaused($);

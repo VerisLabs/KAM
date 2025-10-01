@@ -5,7 +5,7 @@ import { DeploymentManager } from "../utils/DeploymentManager.sol";
 import { Script } from "forge-std/Script.sol";
 
 import { console2 as console } from "forge-std/console2.sol";
-import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
+import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
 import { kRegistry } from "kam/src/kRegistry/kRegistry.sol";
 import { kToken } from "kam/src/kToken.sol";
 
@@ -29,23 +29,23 @@ contract ConfigureProtocolScript is Script, DeploymentManager {
         console.log("1. Registering vaults with kRegistry...");
 
         // Register kMinter as MINTER vault type for both assets
-        registry.registerVault(existing.contracts.kMinter, IkRegistry.VaultType.MINTER, config.assets.USDC);
+        registry.registerVault(existing.contracts.kMinter, IRegistry.VaultType.MINTER, config.assets.USDC);
         console.log("   - Registered kMinter as MINTER vault for USDC");
-        registry.registerVault(existing.contracts.kMinter, IkRegistry.VaultType.MINTER, config.assets.WBTC);
+        registry.registerVault(existing.contracts.kMinter, IRegistry.VaultType.MINTER, config.assets.WBTC);
         console.log("   - Registered kMinter as MINTER vault for WBTC");
 
         // Register DN Vaults
-        registry.registerVault(existing.contracts.dnVaultUSDC, IkRegistry.VaultType.DN, config.assets.USDC);
+        registry.registerVault(existing.contracts.dnVaultUSDC, IRegistry.VaultType.DN, config.assets.USDC);
         console.log("   - Registered DN Vault USDC as DN vault for USDC");
-        registry.registerVault(existing.contracts.dnVaultWBTC, IkRegistry.VaultType.DN, config.assets.WBTC);
+        registry.registerVault(existing.contracts.dnVaultWBTC, IRegistry.VaultType.DN, config.assets.WBTC);
         console.log("   - Registered DN Vault WBTC as DN vault for WBTC");
 
         // Register Alpha Vault as ALPHA vault type
-        registry.registerVault(existing.contracts.alphaVault, IkRegistry.VaultType.ALPHA, config.assets.USDC);
+        registry.registerVault(existing.contracts.alphaVault, IRegistry.VaultType.ALPHA, config.assets.USDC);
         console.log("   - Registered Alpha Vault as ALPHA vault for USDC");
 
         // Register Beta Vault as BETA vault type
-        registry.registerVault(existing.contracts.betaVault, IkRegistry.VaultType.BETA, config.assets.USDC);
+        registry.registerVault(existing.contracts.betaVault, IRegistry.VaultType.BETA, config.assets.USDC);
         console.log("   - Registered Beta Vault as BETA vault for USDC");
 
         console.log("");

@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-interface IProcessRouterModule {
+interface IProcessRouter {
     /// @dev Sets the processId to target and selector
     /// @param processId The processId to set
     /// @param targets The targets to set

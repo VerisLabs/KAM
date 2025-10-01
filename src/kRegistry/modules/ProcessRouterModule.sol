@@ -5,12 +5,12 @@ import { kBaseRoles } from "kam/src/base/kBaseRoles.sol";
 //import { REGISTRYREADERMODULE_UNAUTHORIZED } from "kam/src/errors/Errors.sol";
 
 import { IModule } from "kam/src/interfaces/modules/IModule.sol";
-import { IProcessRouterModule } from "kam/src/interfaces/modules/IProcessRouterModule.sol";
+import { IProcessRouter } from "kam/src/interfaces/modules/IProcessRouter.sol";
 
 /// @title ProcessRouterModule
 /// @notice Module for reading the registry
 /// @dev Inherits from kBaseRoles for role-based access control
-contract ProcessRouterModule is IModule, IProcessRouterModule, kBaseRoles {
+contract ProcessRouterModule is IModule, IProcessRouter, kBaseRoles {
     /*//////////////////////////////////////////////////////////////
                               STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -44,14 +44,14 @@ contract ProcessRouterModule is IModule, IProcessRouterModule, kBaseRoles {
                               MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IProcessRouterModule
+    /// @inheritdoc IProcessRouter
     function setProcessId(bytes32 processId, address[] memory targets, bytes4[] memory selectors_) external {
         ProcessRouterModuleStorage storage $ = _getProcessRouterModuleStorage();
         $.processIdToTargets[processId] = targets;
         $.processIdToSelectors[processId] = selectors_;
     }
 
-    /// @inheritdoc IProcessRouterModule
+    /// @inheritdoc IProcessRouter
     function getProcess(bytes32 processId)
         external
         view
@@ -62,7 +62,7 @@ contract ProcessRouterModule is IModule, IProcessRouterModule, kBaseRoles {
         selectors_ = $.processIdToSelectors[processId];
     }
 
-    /// @inheritdoc IProcessRouterModule
+    /// @inheritdoc IProcessRouter
     function getfunctionSelector(string memory functionSignature) external pure returns (bytes4 selector) {
         selector = bytes4(abi.encodeWithSignature(functionSignature));
     }

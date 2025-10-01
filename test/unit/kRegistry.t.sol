@@ -13,7 +13,7 @@ import {
     KREGISTRY_ZERO_ADDRESS,
     KROLESBASE_ZERO_ADDRESS
 } from "kam/src/errors/Errors.sol";
-import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
+import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
 import { kRegistry } from "kam/src/kRegistry/kRegistry.sol";
 
 /// @title kRegistryTest
@@ -106,7 +106,7 @@ contract kRegistryTest is DeploymentBaseTest {
 
         // Expect events
         vm.expectEmit(true, false, false, false);
-        emit IkRegistry.AssetSupported(TEST_ASSET);
+        emit IRegistry.AssetSupported(TEST_ASSET);
 
         address testKToken = registry.registerAsset(
             TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max
@@ -181,16 +181,16 @@ contract kRegistryTest is DeploymentBaseTest {
 
         // Expect event
         vm.expectEmit(true, true, true, false);
-        emit IkRegistry.VaultRegistered(TEST_VAULT, TEST_ASSET, IkRegistry.VaultType.ALPHA);
+        emit IRegistry.VaultRegistered(TEST_VAULT, TEST_ASSET, IRegistry.VaultType.ALPHA);
 
-        registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
+        registry.registerVault(TEST_VAULT, IRegistry.VaultType.ALPHA, TEST_ASSET);
 
         // Verify vault registration
         assertTrue(registry.isVault(TEST_VAULT), "Vault not registered");
-        assertEq(registry.getVaultType(TEST_VAULT), uint8(IkRegistry.VaultType.ALPHA), "Vault type incorrect");
+        assertEq(registry.getVaultType(TEST_VAULT), uint8(IRegistry.VaultType.ALPHA), "Vault type incorrect");
         assertEq(registry.getVaultAssets(TEST_VAULT)[0], TEST_ASSET, "Vault asset incorrect");
         assertEq(
-            registry.getVaultByAssetAndType(TEST_ASSET, uint8(IkRegistry.VaultType.ALPHA)),
+            registry.getVaultByAssetAndType(TEST_ASSET, uint8(IRegistry.VaultType.ALPHA)),
             TEST_VAULT,
             "Asset->Vault mapping incorrect"
         );
@@ -210,12 +210,12 @@ contract kRegistryTest is DeploymentBaseTest {
         // Test with a user who has no roles at all
         vm.prank(users.alice);
         vm.expectRevert(); // Should revert with Unauthorized()
-        registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
+        registry.registerVault(TEST_VAULT, IRegistry.VaultType.ALPHA, TEST_ASSET);
 
         // Test with user who has different role (charlie as emergency admin)
         vm.prank(users.emergencyAdmin);
         vm.expectRevert(); // Should revert with Unauthorized()
-        registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
+        registry.registerVault(TEST_VAULT, IRegistry.VaultType.ALPHA, TEST_ASSET);
     }
 
     /// @dev Test vault registration reverts with zero address
@@ -226,7 +226,7 @@ contract kRegistryTest is DeploymentBaseTest {
 
         vm.prank(users.admin);
         vm.expectRevert(bytes(KROLESBASE_ZERO_ADDRESS));
-        registry.registerVault(address(0), IkRegistry.VaultType.ALPHA, TEST_ASSET);
+        registry.registerVault(address(0), IRegistry.VaultType.ALPHA, TEST_ASSET);
     }
 
     /// @dev Test vault registration reverts when already registered
@@ -238,11 +238,11 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.startPrank(users.admin);
 
         // First registration
-        registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
+        registry.registerVault(TEST_VAULT, IRegistry.VaultType.ALPHA, TEST_ASSET);
 
         // Second registration should fail
         vm.expectRevert(bytes(KREGISTRY_ALREADY_REGISTERED));
-        registry.registerVault(TEST_VAULT, IkRegistry.VaultType.BETA, TEST_ASSET);
+        registry.registerVault(TEST_VAULT, IRegistry.VaultType.BETA, TEST_ASSET);
 
         vm.stopPrank();
     }
@@ -251,7 +251,7 @@ contract kRegistryTest is DeploymentBaseTest {
     function test_RegisterVault_RevertAssetNotSupported() public {
         vm.prank(users.admin);
         vm.expectRevert(bytes(KREGISTRY_ASSET_NOT_SUPPORTED));
-        registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
+        registry.registerVault(TEST_VAULT, IRegistry.VaultType.ALPHA, TEST_ASSET);
     }
 
     /// @dev Test multiple vault types for same asset
@@ -268,18 +268,18 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.startPrank(users.admin);
 
         // Register all four vault types
-        registry.registerVault(kMinter, IkRegistry.VaultType.MINTER, TEST_ASSET);
-        registry.registerVault(dnVault, IkRegistry.VaultType.DN, TEST_ASSET);
-        registry.registerVault(alphaVault, IkRegistry.VaultType.ALPHA, TEST_ASSET);
-        registry.registerVault(betaVault, IkRegistry.VaultType.BETA, TEST_ASSET);
+        registry.registerVault(kMinter, IRegistry.VaultType.MINTER, TEST_ASSET);
+        registry.registerVault(dnVault, IRegistry.VaultType.DN, TEST_ASSET);
+        registry.registerVault(alphaVault, IRegistry.VaultType.ALPHA, TEST_ASSET);
+        registry.registerVault(betaVault, IRegistry.VaultType.BETA, TEST_ASSET);
 
         vm.stopPrank();
 
         // Verify all registrations
-        assertEq(registry.getVaultByAssetAndType(TEST_ASSET, uint8(IkRegistry.VaultType.MINTER)), kMinter);
-        assertEq(registry.getVaultByAssetAndType(TEST_ASSET, uint8(IkRegistry.VaultType.DN)), dnVault);
-        assertEq(registry.getVaultByAssetAndType(TEST_ASSET, uint8(IkRegistry.VaultType.ALPHA)), alphaVault);
-        assertEq(registry.getVaultByAssetAndType(TEST_ASSET, uint8(IkRegistry.VaultType.BETA)), betaVault);
+        assertEq(registry.getVaultByAssetAndType(TEST_ASSET, uint8(IRegistry.VaultType.MINTER)), kMinter);
+        assertEq(registry.getVaultByAssetAndType(TEST_ASSET, uint8(IRegistry.VaultType.DN)), dnVault);
+        assertEq(registry.getVaultByAssetAndType(TEST_ASSET, uint8(IRegistry.VaultType.ALPHA)), alphaVault);
+        assertEq(registry.getVaultByAssetAndType(TEST_ASSET, uint8(IRegistry.VaultType.BETA)), betaVault);
 
         // Verify getVaultsByAsset returns all three
         address[] memory vaultsByAsset = registry.getVaultsByAsset(TEST_ASSET);
@@ -297,7 +297,7 @@ contract kRegistryTest is DeploymentBaseTest {
         registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
 
         vm.prank(users.admin);
-        registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
+        registry.registerVault(TEST_VAULT, IRegistry.VaultType.ALPHA, TEST_ASSET);
 
         // Test that only admin can register adapters
         vm.prank(users.alice);
@@ -521,7 +521,7 @@ contract kRegistryTest is DeploymentBaseTest {
         address kToken = registry.registerAsset(
             TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max
         );
-        registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
+        registry.registerVault(TEST_VAULT, IRegistry.VaultType.ALPHA, TEST_ASSET);
         registry.registerAdapter(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);
         vm.stopPrank();
 
@@ -658,20 +658,20 @@ contract kRegistryTest is DeploymentBaseTest {
         testVaults[4] = address(0x1005);
 
         // Register different vault types
-        registry.registerVault(testVaults[0], IkRegistry.VaultType.MINTER, TEST_ASSET);
-        registry.registerVault(testVaults[1], IkRegistry.VaultType.DN, TEST_ASSET);
-        registry.registerVault(testVaults[2], IkRegistry.VaultType.ALPHA, TEST_ASSET);
-        registry.registerVault(testVaults[3], IkRegistry.VaultType.BETA, TEST_ASSET);
-        registry.registerVault(testVaults[4], IkRegistry.VaultType.GAMMA, TEST_ASSET);
+        registry.registerVault(testVaults[0], IRegistry.VaultType.MINTER, TEST_ASSET);
+        registry.registerVault(testVaults[1], IRegistry.VaultType.DN, TEST_ASSET);
+        registry.registerVault(testVaults[2], IRegistry.VaultType.ALPHA, TEST_ASSET);
+        registry.registerVault(testVaults[3], IRegistry.VaultType.BETA, TEST_ASSET);
+        registry.registerVault(testVaults[4], IRegistry.VaultType.GAMMA, TEST_ASSET);
 
         vm.stopPrank();
 
         // Verify all vault types are correctly set
-        assertEq(registry.getVaultType(testVaults[0]), uint8(IkRegistry.VaultType.MINTER), "MINTER type incorrect");
-        assertEq(registry.getVaultType(testVaults[1]), uint8(IkRegistry.VaultType.DN), "DN type incorrect");
-        assertEq(registry.getVaultType(testVaults[2]), uint8(IkRegistry.VaultType.ALPHA), "ALPHA type incorrect");
-        assertEq(registry.getVaultType(testVaults[3]), uint8(IkRegistry.VaultType.BETA), "BETA type incorrect");
-        assertEq(registry.getVaultType(testVaults[4]), uint8(IkRegistry.VaultType.GAMMA), "GAMMA type incorrect");
+        assertEq(registry.getVaultType(testVaults[0]), uint8(IRegistry.VaultType.MINTER), "MINTER type incorrect");
+        assertEq(registry.getVaultType(testVaults[1]), uint8(IRegistry.VaultType.DN), "DN type incorrect");
+        assertEq(registry.getVaultType(testVaults[2]), uint8(IRegistry.VaultType.ALPHA), "ALPHA type incorrect");
+        assertEq(registry.getVaultType(testVaults[3]), uint8(IRegistry.VaultType.BETA), "BETA type incorrect");
+        assertEq(registry.getVaultType(testVaults[4]), uint8(IRegistry.VaultType.GAMMA), "GAMMA type incorrect");
     }
 
     /// @dev Test vault registration with multiple assets per vault
@@ -680,13 +680,13 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.startPrank(users.admin);
 
         address vault1 = address(0x3001);
-        registry.registerVault(vault1, IkRegistry.VaultType.ALPHA, getUSDC());
+        registry.registerVault(vault1, IRegistry.VaultType.ALPHA, getUSDC());
 
         vm.stopPrank();
 
         // Verify vault-asset relationship
         assertTrue(registry.isVault(vault1), "Vault should be registered");
-        assertEq(registry.getVaultType(vault1), uint8(IkRegistry.VaultType.ALPHA), "Vault type should be ALPHA");
+        assertEq(registry.getVaultType(vault1), uint8(IRegistry.VaultType.ALPHA), "Vault type should be ALPHA");
 
         // Verify vault appears in asset's vault list
         address[] memory usdcVaults = registry.getVaultsByAsset(getUSDC());
@@ -713,8 +713,8 @@ contract kRegistryTest is DeploymentBaseTest {
         address highTypeVault = address(0x4001);
 
         // Test with higher vault type numbers
-        registry.registerVault(highTypeVault, IkRegistry.VaultType.TAU, TEST_ASSET); // Higher in enum
-        assertEq(registry.getVaultType(highTypeVault), uint8(IkRegistry.VaultType.TAU), "High vault type incorrect");
+        registry.registerVault(highTypeVault, IRegistry.VaultType.TAU, TEST_ASSET); // Higher in enum
+        assertEq(registry.getVaultType(highTypeVault), uint8(IRegistry.VaultType.TAU), "High vault type incorrect");
 
         vm.stopPrank();
     }
@@ -731,9 +731,9 @@ contract kRegistryTest is DeploymentBaseTest {
         testVaults[2] = address(0x5003);
 
         vm.startPrank(users.admin);
-        registry.registerVault(testVaults[0], IkRegistry.VaultType.ALPHA, TEST_ASSET);
-        registry.registerVault(testVaults[1], IkRegistry.VaultType.BETA, TEST_ASSET);
-        registry.registerVault(testVaults[2], IkRegistry.VaultType.GAMMA, TEST_ASSET);
+        registry.registerVault(testVaults[0], IRegistry.VaultType.ALPHA, TEST_ASSET);
+        registry.registerVault(testVaults[1], IRegistry.VaultType.BETA, TEST_ASSET);
+        registry.registerVault(testVaults[2], IRegistry.VaultType.GAMMA, TEST_ASSET);
         vm.stopPrank();
 
         // Verify all vaults are tracked
@@ -758,11 +758,11 @@ contract kRegistryTest is DeploymentBaseTest {
         // Setup: Register asset and vault
         vm.startPrank(users.admin);
         registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
-        registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
+        registry.registerVault(TEST_VAULT, IRegistry.VaultType.ALPHA, TEST_ASSET);
 
         // Test adapter registration
         vm.expectEmit(true, true, true, false);
-        emit IkRegistry.AdapterRegistered(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);
+        emit IRegistry.AdapterRegistered(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);
         registry.registerAdapter(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);
 
         vm.stopPrank();
@@ -780,7 +780,7 @@ contract kRegistryTest is DeploymentBaseTest {
         // Setup vault with adapters
         vm.startPrank(users.admin);
         registry.registerAsset(TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max);
-        registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
+        registry.registerVault(TEST_VAULT, IRegistry.VaultType.ALPHA, TEST_ASSET);
         registry.registerAdapter(TEST_VAULT, TEST_ASSET, TEST_ADAPTER);
 
         // Verify adapter is registered
@@ -861,7 +861,7 @@ contract kRegistryTest is DeploymentBaseTest {
         address test_kToken = registry.registerAsset(
             TEST_NAME, TEST_SYMBOL, TEST_ASSET, TEST_ASSET_ID, type(uint256).max, type(uint256).max
         );
-        registry.registerVault(TEST_VAULT, IkRegistry.VaultType.ALPHA, TEST_ASSET);
+        registry.registerVault(TEST_VAULT, IRegistry.VaultType.ALPHA, TEST_ASSET);
         vm.stopPrank();
 
         // Step 3: Verify complete registration
@@ -871,7 +871,7 @@ contract kRegistryTest is DeploymentBaseTest {
         // Step 4: Verify relationships
         assertEq(registry.assetToKToken(TEST_ASSET), test_kToken, "Asset->kToken mapping");
         assertEq(registry.getVaultAssets(TEST_VAULT)[0], TEST_ASSET, "Vault->Asset mapping");
-        assertEq(registry.getVaultType(TEST_VAULT), uint8(IkRegistry.VaultType.ALPHA), "Vault type");
+        assertEq(registry.getVaultType(TEST_VAULT), uint8(IRegistry.VaultType.ALPHA), "Vault type");
 
         // Step 5: Verify in arrays
         address[] memory assets = registry.getAllAssets();
@@ -892,7 +892,7 @@ contract kRegistryTest is DeploymentBaseTest {
 
         // Expect event emission
         vm.expectEmit(true, false, false, true);
-        emit IkRegistry.HurdleRateSet(getUSDC(), TEST_HURDLE_RATE);
+        emit IRegistry.HurdleRateSet(getUSDC(), TEST_HURDLE_RATE);
 
         registry.setHurdleRate(getUSDC(), TEST_HURDLE_RATE);
 
