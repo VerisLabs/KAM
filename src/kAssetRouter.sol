@@ -34,9 +34,9 @@ import { OptimizedBytes32EnumerableSetLib } from
 import { IVaultAdapter } from "kam/src/interfaces/IVaultAdapter.sol";
 import { ISettleBatch, IkAssetRouter } from "kam/src/interfaces/IkAssetRouter.sol";
 
+import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
 import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
 import { IkMinter } from "kam/src/interfaces/IkMinter.sol";
-import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 import { IkToken } from "kam/src/interfaces/IkToken.sol";
 
@@ -668,7 +668,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
     /// @inheritdoc IkAssetRouter
     function getDNVaultByAsset(address asset) external view returns (address vault) {
-        vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN));
+        vault = _registry().getVaultByAssetAndType(asset, uint8(IRegistry.VaultType.DN));
         _checkAddressNotZero(vault);
     }
 

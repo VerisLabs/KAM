@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.30;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
 
 /// @title IVaultClaim
 /// @notice Interface for claiming settled staking rewards and unstaking assets after batch processing completion

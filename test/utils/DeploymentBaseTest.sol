@@ -7,9 +7,9 @@ import { OptimizedOwnableRoles } from "solady/auth/OptimizedOwnableRoles.sol";
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 // Protocol contracts
-import { kAssetRouter } from "kam/src/kAssetRouter.sol";
 
 import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
+import { kAssetRouter } from "kam/src/kAssetRouter.sol";
 import { kBatchReceiver } from "kam/src/kBatchReceiver.sol";
 import { kMinter } from "kam/src/kMinter.sol";
 import { kRegistry } from "kam/src/kRegistry/kRegistry.sol";
@@ -17,7 +17,6 @@ import { kStakingVault } from "kam/src/kStakingVault/kStakingVault.sol";
 import { kToken } from "kam/src/kToken.sol";
 
 // Modules
-
 import { AdapterGuardianModule } from "kam/src/kRegistry/modules/AdapterGuardianModule.sol";
 import { ReaderModule } from "kam/src/kStakingVault/modules/ReaderModule.sol";
 
@@ -25,11 +24,7 @@ import { ReaderModule } from "kam/src/kStakingVault/modules/ReaderModule.sol";
 import { VaultAdapter } from "kam/src/adapters/VaultAdapter.sol";
 
 // Interfaces
-
-import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-
-import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
-import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
+import { IRegistry, IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 
 /// @title DeploymentBaseTest
 /// @notice Comprehensive base test contract that deploys the complete KAM protocol
@@ -330,10 +325,10 @@ contract DeploymentBaseTest is BaseTest {
     function _configureProtocol() internal {
         // Register Vaults
         vm.startPrank(users.admin);
-        registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, usdc);
-        registry.registerVault(address(dnVault), IkRegistry.VaultType.DN, usdc);
-        registry.registerVault(address(alphaVault), IkRegistry.VaultType.ALPHA, usdc);
-        registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, usdc);
+        registry.registerVault(address(minter), IRegistry.VaultType.MINTER, usdc);
+        registry.registerVault(address(dnVault), IRegistry.VaultType.DN, usdc);
+        registry.registerVault(address(alphaVault), IRegistry.VaultType.ALPHA, usdc);
+        registry.registerVault(address(betaVault), IRegistry.VaultType.BETA, usdc);
 
         // Register adapters for vaults (if adapters were deployed)
         registry.registerAdapter(address(minter), usdc, address(minterAdapterUSDC));
@@ -342,8 +337,12 @@ contract DeploymentBaseTest is BaseTest {
         registry.registerAdapter(address(alphaVault), usdc, address(ALPHAVaultAdapterUSDC));
         registry.registerAdapter(address(betaVault), usdc, address(BETHAVaultAdapterUSDC));
 
-        IRegistry(address(registry)).setAdapterAllowedSelector(
-            address(minterAdapterUSDC), usdc, bytes4(keccak256("transfer(address,uint256)")), true
+        IkRegistry(address(registry)).setAdapterAllowedSelector(
+            address(minterAdapterUSDC), usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
+        );
+
+        IkRegistry(address(registry)).setAdapterAllowedSelector(
+            address(ALPHAVaultAdapterUSDC), usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
         );
 
         vm.stopPrank();
@@ -451,24 +450,12 @@ contract DeploymentBaseTest is BaseTest {
         kToken(token).mint(to, amount);
     }
 
-    /// @dev Helper to approve and transfer underlying assets
-    /// @param token Asset token
-    /// @param from Sender address
-    /// @param to Recipient address
-    /// @param amount Amount to transfer
-    function transferAsset(address token, address from, address to, uint256 amount) internal {
-        vm.startPrank(from);
-        IERC20(token).approve(to, amount);
-        IERC20(token).transfer(to, amount);
-        vm.stopPrank();
-    }
-
     /// @dev Helper to get asset balance
     /// @param token Asset token
     /// @param user User address
     /// @return Balance of user
     function getAssetBalance(address token, address user) internal view returns (uint256) {
-        return IERC20(token).balanceOf(user);
+        return kToken(token).balanceOf(user);
     }
 
     /// @dev Helper to get kToken balance
@@ -562,10 +549,10 @@ contract DeploymentBaseTest is BaseTest {
     }
 
     /// @dev Helper to get vault by type for testing
-    function getVaultByType(IkRegistry.VaultType vaultType) internal view returns (IkStakingVault) {
-        if (vaultType == IkRegistry.VaultType.DN) return dnVault;
-        if (vaultType == IkRegistry.VaultType.ALPHA) return alphaVault;
-        if (vaultType == IkRegistry.VaultType.BETA) return betaVault;
+    function getVaultByType(IRegistry.VaultType vaultType) internal view returns (IkStakingVault) {
+        if (vaultType == IRegistry.VaultType.DN) return dnVault;
+        if (vaultType == IRegistry.VaultType.ALPHA) return alphaVault;
+        if (vaultType == IRegistry.VaultType.BETA) return betaVault;
         revert("Unknown vault type");
     }
 }
