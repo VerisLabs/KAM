@@ -6,15 +6,15 @@ import { _1_USDC } from "../utils/Constants.sol";
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
+import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 
 import {
     KSTAKINGVAULT_IS_PAUSED,
     VAULTCLAIMS_BATCH_NOT_SETTLED,
     VAULTCLAIMS_NOT_BENEFICIARY,
     VAULTCLAIMS_REQUEST_NOT_PENDING
-} from "src/errors/Errors.sol";
-import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
+} from "kam/src/errors/Errors.sol";
+import { kStakingVault } from "kam/src/kStakingVault/kStakingVault.sol";
 /// @title DNVaultTest
 /// @notice Tests DNVault
 

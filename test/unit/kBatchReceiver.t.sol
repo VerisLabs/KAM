@@ -13,9 +13,9 @@ import {
     KBATCHRECEIVER_ONLY_KMINTER,
     KBATCHRECEIVER_ZERO_ADDRESS,
     KBATCHRECEIVER_ZERO_AMOUNT
-} from "src/errors/Errors.sol";
-import { IkBatchReceiver } from "src/interfaces/IkBatchReceiver.sol";
-import { kBatchReceiver } from "src/kBatchReceiver.sol";
+} from "kam/src/errors/Errors.sol";
+import { IkBatchReceiver } from "kam/src/interfaces/IkBatchReceiver.sol";
+import { kBatchReceiver } from "kam/src/kBatchReceiver.sol";
 
 /// @title kBatchReceiverTest
 /// @notice Unit tests for kBatchReceiver contract

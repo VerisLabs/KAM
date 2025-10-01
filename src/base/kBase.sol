@@ -16,9 +16,9 @@ import {
     KBASE_WRONG_ROLE,
     KBASE_ZERO_ADDRESS,
     KBASE_ZERO_AMOUNT
-} from "src/errors/Errors.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
+} from "kam/src/errors/Errors.sol";
+import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
+import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 
 /// @title kBase
 /// @notice Foundation contract providing essential shared functionality and registry integration for all KAM protocol

@@ -2,11 +2,11 @@
 pragma solidity ^0.8.20;
 
 import { Script } from "forge-std/Script.sol";
-import { console } from "forge-std/console.sol";
+import { console2 as console } from "forge-std/console2.sol";
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
-import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
+import { kStakingVault } from "kam/src/kStakingVault/kStakingVault.sol";
 
 contract DeployVaultsScript is Script, DeploymentManager {
     ERC1967Factory factory;

@@ -8,7 +8,7 @@ import {
     KROLESBASE_NOT_INITIALIZED,
     KROLESBASE_WRONG_ROLE,
     KROLESBASE_ZERO_ADDRESS
-} from "src/errors/Errors.sol";
+} from "kam/src/errors/Errors.sol";
 
 /// @title kBaseRoles
 /// @notice Foundation contract providing essential shared functionality and registry integration for all KAM protocol

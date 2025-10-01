@@ -8,8 +8,11 @@ import { OptimizedReentrancyGuardTransient } from "solady/utils/OptimizedReentra
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import {
-    KTOKEN_IS_PAUSED, KTOKEN_TRANSFER_FAILED, KTOKEN_ZERO_ADDRESS, KTOKEN_ZERO_AMOUNT
-} from "src/errors/Errors.sol";
+    KTOKEN_IS_PAUSED,
+    KTOKEN_TRANSFER_FAILED,
+    KTOKEN_ZERO_ADDRESS,
+    KTOKEN_ZERO_AMOUNT
+} from "kam/src/errors/Errors.sol";
 
 /// @title kToken
 /// @notice ERC20 representation of underlying assets with guaranteed 1:1 backing in the KAM protocol

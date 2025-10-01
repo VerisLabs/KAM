@@ -20,9 +20,9 @@ import {
     KMINTER_WRONG_ROLE,
     KMINTER_ZERO_ADDRESS,
     KMINTER_ZERO_AMOUNT
-} from "src/errors/Errors.sol";
-import { IkMinter } from "src/interfaces/IkMinter.sol";
-import { kMinter } from "src/kMinter.sol";
+} from "kam/src/errors/Errors.sol";
+import { IkMinter } from "kam/src/interfaces/IkMinter.sol";
+import { kMinter } from "kam/src/kMinter.sol";
 
 /// @title kMinterTest
 /// @notice Comprehensive unit tests for kMinter contract

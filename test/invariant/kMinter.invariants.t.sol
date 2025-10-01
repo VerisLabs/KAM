@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { SetUp } from "test/invariant/helpers/SetUp.t.sol";
+import { SetUp } from "kam/test/invariant/helpers/SetUp.t.sol";
 
 contract kMinterInvariants is SetUp {
     function setUp() public override {

@@ -40,7 +40,14 @@ interface IAdapterGuardian {
     /// @param selector The function selector
     /// @param isAllowed Whether the selector is allowed
     /// @dev Only callable by ADMIN_ROLE
-    function setAdapterAllowedSelector(address adapter, address target, uint8 targetType_, bytes4 selector, bool isAllowed) external;
+    function setAdapterAllowedSelector(
+        address adapter,
+        address target,
+        uint8 targetType_,
+        bytes4 selector,
+        bool isAllowed
+    )
+        external;
 
     /// @notice Set a parameter checker for an adapter selector
     /// @param adapter The adapter address
@@ -123,7 +130,7 @@ interface IAdapterGuardian {
         TARGET_23,
         TARGET_24,
         TARGET_25,
-        TARGET_26, 
+        TARGET_26,
         TARGET_27,
         TARGET_28,
         TARGET_29,

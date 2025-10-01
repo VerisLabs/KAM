@@ -7,7 +7,7 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
+import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 
 /// @title BaseVaultTest
 /// @notice Base test contract for shared functionality

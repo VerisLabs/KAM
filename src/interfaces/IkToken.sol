@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import { IVersioned } from "src/interfaces/IVersioned.sol";
+import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
 
 /// @title IkToken
 /// @notice Interface for kToken with role-based minting and burning capabilities

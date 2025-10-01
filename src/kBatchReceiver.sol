@@ -11,8 +11,8 @@ import {
     KBATCHRECEIVER_WRONG_ASSET,
     KBATCHRECEIVER_ZERO_ADDRESS,
     KBATCHRECEIVER_ZERO_AMOUNT
-} from "src/errors/Errors.sol";
-import { IkBatchReceiver } from "src/interfaces/IkBatchReceiver.sol";
+} from "kam/src/errors/Errors.sol";
+import { IkBatchReceiver } from "kam/src/interfaces/IkBatchReceiver.sol";
 
 /// @title kBatchReceiver
 /// @notice Minimal proxy contract implementation for isolated batch asset distribution in the KAM protocol

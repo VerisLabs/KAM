@@ -12,7 +12,10 @@ interface IProcessRouterModule {
     /// @param processId The processId to get
     /// @return targets The targets to get
     /// @return selectors_ The selectors to get
-    function getProcess(bytes32 processId) external view returns (address[] memory targets, bytes4[] memory selectors_);
+    function getProcess(bytes32 processId)
+        external
+        view
+        returns (address[] memory targets, bytes4[] memory selectors_);
 
     /// @dev Gets the function selector for a function signature
     /// @param functionSignature The function signature to get the selector for

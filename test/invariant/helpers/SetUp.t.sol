@@ -7,9 +7,10 @@ import { kStakingVaultHandler } from "../handlers/kStakingVaultHandler.t.sol";
 import { StdInvariant } from "forge-std/StdInvariant.sol";
 
 import { console2 } from "forge-std/console2.sol";
+
+import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
+import { DeploymentBaseTest } from "kam/test/utils/DeploymentBaseTest.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
-import { DeploymentBaseTest } from "test/utils/DeploymentBaseTest.sol";
 
 abstract contract SetUp is StdInvariant, DeploymentBaseTest {
     using SafeTransferLib for address;

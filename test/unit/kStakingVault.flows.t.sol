@@ -6,7 +6,7 @@ import { BaseVaultTest, DeploymentBaseTest } from "../utils/BaseVaultTest.sol";
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
+import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 
 /// @title kStakingVaultFlowsTest
 /// @notice Tests for fee mechanics in kStakingVault

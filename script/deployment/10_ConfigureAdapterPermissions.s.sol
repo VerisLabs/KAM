@@ -3,11 +3,11 @@ pragma solidity ^0.8.20;
 
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
 import { Script } from "forge-std/Script.sol";
-import { console } from "forge-std/console.sol";
-import { ERC20ParameterChecker } from "src/adapters/parameters/ERC20ParameterChecker.sol";
+import { console2 as console } from "forge-std/console2.sol";
+import { ERC20ParameterChecker } from "kam/src/adapters/parameters/ERC20ParameterChecker.sol";
 
-import { IERC7540 } from "src/interfaces/IERC7540.sol";
-import { IRegistry } from "src/interfaces/IRegistry.sol";
+import { IERC7540 } from "kam/src/interfaces/IERC7540.sol";
+import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
 
 contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
     // Helper function to configure kMinter adapter permissions (full ERC7540 access)
@@ -40,13 +40,7 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
     }
 
     // Helper function to configure metavault adapter permissions (targetType = 0)
-    function configureMetavaultAdapterPermissions(
-        IRegistry registry,
-        address adapter,
-        address metavault
-    )
-        internal
-    {
+    function configureMetavaultAdapterPermissions(IRegistry registry, address adapter, address metavault) internal {
         bytes4 approveSelector = IERC7540.approve.selector;
         bytes4 transferSelector = IERC7540.transfer.selector;
 
@@ -156,13 +150,21 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         console.log("   - Set parameter checker for kMinter USDC and WBTC transfer/approve");
 
         // Activate param checker for DN vault adapters (on metavault shares)
-        configureParameterChecker(registry, existing.contracts.dnVaultAdapterUSDC, usdcVault, address(erc20ParameterChecker));
-        configureParameterChecker(registry, existing.contracts.dnVaultAdapterWBTC, wbtcVault, address(erc20ParameterChecker));
+        configureParameterChecker(
+            registry, existing.contracts.dnVaultAdapterUSDC, usdcVault, address(erc20ParameterChecker)
+        );
+        configureParameterChecker(
+            registry, existing.contracts.dnVaultAdapterWBTC, wbtcVault, address(erc20ParameterChecker)
+        );
         console.log("   - Set parameter checker for DN Vault USDC and WBTC metavault share transfer/approve");
 
         // Activate param checker for Alpha and Beta vault adapters (on custodial addresses)
-        configureParameterChecker(registry, existing.contracts.alphaVaultAdapter, usdcWallet, address(erc20ParameterChecker));
-        configureParameterChecker(registry, existing.contracts.betaVaultAdapter, usdcWallet, address(erc20ParameterChecker));
+        configureParameterChecker(
+            registry, existing.contracts.alphaVaultAdapter, usdcWallet, address(erc20ParameterChecker)
+        );
+        configureParameterChecker(
+            registry, existing.contracts.betaVaultAdapter, usdcWallet, address(erc20ParameterChecker)
+        );
         console.log("   - Set parameter checker for Alpha and Beta Vault USDC custodial transfer/approve");
 
         console.log("");
@@ -178,7 +180,8 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         console.log("   - Set allowed spenders for USDC and WBTC");
 
         // Set metavault share permissions
-        erc20ParameterChecker.setAllowedReceiver(usdcVault, usdcVault, true); // Metavault shares can be transferred between vaults
+        erc20ParameterChecker.setAllowedReceiver(usdcVault, usdcVault, true); // Metavault shares can be transferred
+            // between vaults
         erc20ParameterChecker.setAllowedReceiver(wbtcVault, wbtcVault, true);
         erc20ParameterChecker.setAllowedSpender(usdcVault, usdcVault, true);
         erc20ParameterChecker.setAllowedSpender(wbtcVault, wbtcVault, true);
