@@ -47,3 +47,71 @@ jobs:
         id: test
         env:
           RPC_MAINNET: ${{ secrets.RPC_MAINNET }}
+
+  deploy-abis:
+    name: Deploy ABIs
+    runs-on: ubuntu-latest
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/development'
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install dependencies
+        run: |
+          forge soldeer install
+
+      - name: Build contracts
+        run: |
+          forge build
+
+      - name: Extract ABIs
+        run: |
+          mkdir -p abis
+          # Extract ABIs from the out directory
+          for file in out/**/*.sol/*.json; do
+            if [ -f "$file" ]; then
+              # Get contract name from filename
+              contract_name=$(basename "$file" .json)
+              # Extract ABI using jq and save it
+              jq '.abi' "$file" > "abis/${contract_name}.json"
+            fi
+          done
+          # Remove empty files
+          find abis -size 0 -delete
+
+      - name: Setup SSH for ABI repository
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ABI_DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Clone ABI repository
+        run: |
+          git clone git@github.com:YOUR_ORG/YOUR_ABI_REPO_NAME.git abi-repo
+
+      - name: Copy ABIs to ABI repository
+        run: |
+          # Determine branch-specific directory
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          mkdir -p abi-repo/$BRANCH_NAME
+          cp -r abis/* abi-repo/$BRANCH_NAME/
+
+      - name: Commit and push ABIs
+        run: |
+          cd abi-repo
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update ABIs from ${{ github.repository }}@${{ github.sha }}"
+            git push
+          fi
