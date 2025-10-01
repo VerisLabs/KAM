@@ -34,9 +34,9 @@ import { OptimizedBytes32EnumerableSetLib } from
 import { IVaultAdapter } from "kam/src/interfaces/IVaultAdapter.sol";
 import { ISettleBatch, IkAssetRouter } from "kam/src/interfaces/IkAssetRouter.sol";
 
+import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
 import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
 import { IkMinter } from "kam/src/interfaces/IkMinter.sol";
-import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
 import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 import { IkToken } from "kam/src/interfaces/IkToken.sol";
 

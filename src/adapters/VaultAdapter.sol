@@ -16,8 +16,8 @@ import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 import { IVaultAdapter } from "kam/src/interfaces/IVaultAdapter.sol";
+import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 
 import { OptimizedAddressEnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
 import { OptimizedLibCall } from "solady/utils/OptimizedLibCall.sol";

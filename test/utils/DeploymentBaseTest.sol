@@ -7,8 +7,9 @@ import { OptimizedOwnableRoles } from "solady/auth/OptimizedOwnableRoles.sol";
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 // Protocol contracts
-import { kAssetRouter } from "kam/src/kAssetRouter.sol";
+
 import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
+import { kAssetRouter } from "kam/src/kAssetRouter.sol";
 import { kBatchReceiver } from "kam/src/kBatchReceiver.sol";
 import { kMinter } from "kam/src/kMinter.sol";
 import { kRegistry } from "kam/src/kRegistry/kRegistry.sol";
@@ -23,7 +24,7 @@ import { ReaderModule } from "kam/src/kStakingVault/modules/ReaderModule.sol";
 import { VaultAdapter } from "kam/src/adapters/VaultAdapter.sol";
 
 // Interfaces
-import { IkRegistry, IRegistry } from "kam/src/interfaces/IkRegistry.sol";
+import { IRegistry, IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 
 /// @title DeploymentBaseTest
 /// @notice Comprehensive base test contract that deploys the complete KAM protocol

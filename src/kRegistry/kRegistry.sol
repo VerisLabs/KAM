@@ -21,8 +21,8 @@ import {
     KREGISTRY_ZERO_AMOUNT
 } from "kam/src/errors/Errors.sol";
 
-import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
 import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
+import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
 import { kToken } from "kam/src/kToken.sol";
 
 /// @title kRegistry
