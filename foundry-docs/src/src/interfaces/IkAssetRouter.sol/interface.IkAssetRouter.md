@@ -1,5 +1,5 @@
 # IkAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/interfaces/IkAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7810ef786f844ebd78831ee424b7ee896113d92b/src/interfaces/IkAssetRouter.sol)
 
 **Inherits:**
 [IVersioned](/src/interfaces/IVersioned.sol/interface.IVersioned.md)
