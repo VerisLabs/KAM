@@ -16,9 +16,9 @@ import {
     KBASE_WRONG_ROLE,
     KBASE_ZERO_ADDRESS,
     KBASE_ZERO_AMOUNT
-} from "src/errors/Errors.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
+} from "kam/src/errors/Errors.sol";
+import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
+import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 
 /// @title kBase
 /// @notice Foundation contract providing essential shared functionality and registry integration for all KAM protocol
@@ -213,12 +213,12 @@ contract kBase is OptimizedReentrancyGuardTransient {
     }
 
     /// @notice Returns the registry contract interface
-    /// @return IkRegistry interface for registry interaction
+    /// @return IRegistry interface for registry interaction
     /// @dev Internal helper for typed registry access
-    function _registry() internal view returns (IkRegistry) {
+    function _registry() internal view returns (IRegistry) {
         kBaseStorage storage $ = _getBaseStorage();
         require($.initialized, KBASE_NOT_INITIALIZED);
-        return IkRegistry($.registry);
+        return IRegistry($.registry);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -282,7 +282,7 @@ contract kBase is OptimizedReentrancyGuardTransient {
     /// @return vault The corresponding DN vault address
     /// @dev Reverts if asset not supported
     function _getDNVaultByAsset(address asset) internal view returns (address vault) {
-        vault = _registry().getVaultByAssetAndType(asset, uint8(IkRegistry.VaultType.DN));
+        vault = _registry().getVaultByAssetAndType(asset, uint8(IRegistry.VaultType.DN));
         require(vault != address(0), KBASE_INVALID_VAULT);
     }
 

@@ -7,25 +7,24 @@ import { OptimizedOwnableRoles } from "solady/auth/OptimizedOwnableRoles.sol";
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 // Protocol contracts
-import { kAssetRouter } from "src/kAssetRouter.sol";
 
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
-import { kBatchReceiver } from "src/kBatchReceiver.sol";
-import { kMinter } from "src/kMinter.sol";
-import { kRegistry } from "src/kRegistry/kRegistry.sol";
-import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
-import { kToken } from "src/kToken.sol";
+import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
+import { kAssetRouter } from "kam/src/kAssetRouter.sol";
+import { kBatchReceiver } from "kam/src/kBatchReceiver.sol";
+import { kMinter } from "kam/src/kMinter.sol";
+import { kRegistry } from "kam/src/kRegistry/kRegistry.sol";
+import { kStakingVault } from "kam/src/kStakingVault/kStakingVault.sol";
+import { kToken } from "kam/src/kToken.sol";
 
 // Modules
-import { ReaderModule } from "src/kStakingVault/modules/ReaderModule.sol";
+import { AdapterGuardianModule } from "kam/src/kRegistry/modules/AdapterGuardianModule.sol";
+import { ReaderModule } from "kam/src/kStakingVault/modules/ReaderModule.sol";
 
 // Adapters
-import { VaultAdapter } from "src/adapters/VaultAdapter.sol";
+import { VaultAdapter } from "kam/src/adapters/VaultAdapter.sol";
 
 // Interfaces
-
-import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
+import { IRegistry, IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 
 /// @title DeploymentBaseTest
 /// @notice Comprehensive base test contract that deploys the complete KAM protocol
@@ -62,11 +61,11 @@ contract DeploymentBaseTest is BaseTest {
     ReaderModule public readerModule;
 
     // Adapters
-    VaultAdapter public vaultAdapter1;
-    VaultAdapter public vaultAdapter2;
-    VaultAdapter public vaultAdapter3;
-    VaultAdapter public vaultAdapter4;
-    VaultAdapter public vaultAdapter5;
+    VaultAdapter public minterAdapterUSDC;
+    VaultAdapter public minterAdapterWBTC;
+    VaultAdapter public DNVaultAdapterUSDC;
+    VaultAdapter public ALPHAVaultAdapterUSDC;
+    VaultAdapter public BETHAVaultAdapterUSDC;
     VaultAdapter public vaultAdapter6;
     VaultAdapter public vaultAdapterImpl;
 
@@ -171,6 +170,13 @@ contract DeploymentBaseTest is BaseTest {
 
         address registryProxy = factory.deployAndCall(address(registryImpl), users.admin, initData);
         registry = kRegistry(payable(registryProxy));
+
+        AdapterGuardianModule registryModule = new AdapterGuardianModule();
+        bytes4[] memory registrySelectors = registryModule.selectors();
+
+        vm.prank(users.owner);
+        // Add registry module functions to all vaults
+        kRegistry(payable(address(registry))).addFunctions(registrySelectors, address(registryModule), true);
 
         // Label for debugging
         vm.label(address(registry), "kRegistry");
@@ -291,19 +297,22 @@ contract DeploymentBaseTest is BaseTest {
         bytes memory adapterInitData = abi.encodeWithSelector(VaultAdapter.initialize.selector, address(registry));
 
         // Deploy proxy with initialization using ERC1967Factory
-        vaultAdapter1 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
-        vaultAdapter2 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
-        vaultAdapter3 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
-        vaultAdapter4 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
-        vaultAdapter5 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        minterAdapterUSDC = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        minterAdapterWBTC = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        DNVaultAdapterUSDC =
+            VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        ALPHAVaultAdapterUSDC =
+            VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
+        BETHAVaultAdapterUSDC =
+            VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
         vaultAdapter6 = VaultAdapter(factory.deployAndCall(address(vaultAdapterImpl), users.admin, adapterInitData));
 
         // Label for debugging
-        vm.label(address(vaultAdapter1), "VaultAdapter1");
-        vm.label(address(vaultAdapter2), "VaultAdapter2");
-        vm.label(address(vaultAdapter3), "VaultAdapter3");
-        vm.label(address(vaultAdapter4), "VaultAdapter4");
-        vm.label(address(vaultAdapter5), "VaultAdapter5");
+        vm.label(address(minterAdapterUSDC), "VaultAdapter1");
+        vm.label(address(minterAdapterWBTC), "VaultAdapter2");
+        vm.label(address(DNVaultAdapterUSDC), "VaultAdapter3");
+        vm.label(address(ALPHAVaultAdapterUSDC), "VaultAdapter4");
+        vm.label(address(BETHAVaultAdapterUSDC), "VaultAdapter5");
         vm.label(address(vaultAdapter6), "VaultAdapter6");
         vm.label(address(vaultAdapterImpl), "VaultAdapterImpl");
     }
@@ -316,17 +325,25 @@ contract DeploymentBaseTest is BaseTest {
     function _configureProtocol() internal {
         // Register Vaults
         vm.startPrank(users.admin);
-        registry.registerVault(address(minter), IkRegistry.VaultType.MINTER, usdc);
-        registry.registerVault(address(dnVault), IkRegistry.VaultType.DN, usdc);
-        registry.registerVault(address(alphaVault), IkRegistry.VaultType.ALPHA, usdc);
-        registry.registerVault(address(betaVault), IkRegistry.VaultType.BETA, usdc);
+        registry.registerVault(address(minter), IRegistry.VaultType.MINTER, usdc);
+        registry.registerVault(address(dnVault), IRegistry.VaultType.DN, usdc);
+        registry.registerVault(address(alphaVault), IRegistry.VaultType.ALPHA, usdc);
+        registry.registerVault(address(betaVault), IRegistry.VaultType.BETA, usdc);
 
         // Register adapters for vaults (if adapters were deployed)
-        registry.registerAdapter(address(minter), usdc, address(vaultAdapter1));
-        registry.registerAdapter(address(minter), wbtc, address(vaultAdapter2));
-        registry.registerAdapter(address(dnVault), usdc, address(vaultAdapter3));
-        registry.registerAdapter(address(alphaVault), usdc, address(vaultAdapter4));
-        registry.registerAdapter(address(betaVault), usdc, address(vaultAdapter5));
+        registry.registerAdapter(address(minter), usdc, address(minterAdapterUSDC));
+        registry.registerAdapter(address(minter), wbtc, address(minterAdapterWBTC));
+        registry.registerAdapter(address(dnVault), usdc, address(DNVaultAdapterUSDC));
+        registry.registerAdapter(address(alphaVault), usdc, address(ALPHAVaultAdapterUSDC));
+        registry.registerAdapter(address(betaVault), usdc, address(BETHAVaultAdapterUSDC));
+
+        IkRegistry(address(registry)).setAdapterAllowedSelector(
+            address(minterAdapterUSDC), usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
+        );
+
+        IkRegistry(address(registry)).setAdapterAllowedSelector(
+            address(ALPHAVaultAdapterUSDC), usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
+        );
 
         vm.stopPrank();
 
@@ -397,6 +414,9 @@ contract DeploymentBaseTest is BaseTest {
         // and mint their own stkTokens. kMinter handles institutional flows, kAssetRouter handles yield.
 
         registry.grantInstitutionRole(users.institution);
+        registry.grantInstitutionRole(users.institution2);
+        registry.grantInstitutionRole(users.institution3);
+        registry.grantInstitutionRole(users.institution4);
         vm.stopPrank();
     }
 
@@ -407,6 +427,9 @@ contract DeploymentBaseTest is BaseTest {
         mockUSDC.mint(users.bob, 500_000 * _1_USDC);
         mockUSDC.mint(users.charlie, 250_000 * _1_USDC);
         mockUSDC.mint(users.institution, 10_000_000 * _1_USDC);
+        mockUSDC.mint(users.institution2, 10_000_000 * _1_USDC);
+        mockUSDC.mint(users.institution3, 10_000_000 * _1_USDC);
+        mockUSDC.mint(users.institution4, 10_000_000 * _1_USDC);
 
         // Fund users with WBTC
         mockWBTC.mint(users.alice, 100 * _1_WBTC);
@@ -427,24 +450,12 @@ contract DeploymentBaseTest is BaseTest {
         kToken(token).mint(to, amount);
     }
 
-    /// @dev Helper to approve and transfer underlying assets
-    /// @param token Asset token
-    /// @param from Sender address
-    /// @param to Recipient address
-    /// @param amount Amount to transfer
-    function transferAsset(address token, address from, address to, uint256 amount) internal {
-        vm.startPrank(from);
-        IERC20(token).approve(to, amount);
-        IERC20(token).transfer(to, amount);
-        vm.stopPrank();
-    }
-
     /// @dev Helper to get asset balance
     /// @param token Asset token
     /// @param user User address
     /// @return Balance of user
     function getAssetBalance(address token, address user) internal view returns (uint256) {
-        return IERC20(token).balanceOf(user);
+        return kToken(token).balanceOf(user);
     }
 
     /// @dev Helper to get kToken balance
@@ -503,11 +514,11 @@ contract DeploymentBaseTest is BaseTest {
         assertTrue(registry.isVault(address(betaVault)));
 
         // Check adapters are deployed and initialized (disabled for debugging)
-        assertTrue(address(vaultAdapter1) != address(0));
-        assertTrue(address(vaultAdapter2) != address(0));
-        assertTrue(address(vaultAdapter3) != address(0));
-        assertTrue(address(vaultAdapter4) != address(0));
-        assertTrue(address(vaultAdapter5) != address(0));
+        assertTrue(address(minterAdapterUSDC) != address(0));
+        assertTrue(address(minterAdapterWBTC) != address(0));
+        assertTrue(address(DNVaultAdapterUSDC) != address(0));
+        assertTrue(address(ALPHAVaultAdapterUSDC) != address(0));
+        assertTrue(address(BETHAVaultAdapterUSDC) != address(0));
     }
 
     /// @dev Get current protocol state for debugging
@@ -538,10 +549,10 @@ contract DeploymentBaseTest is BaseTest {
     }
 
     /// @dev Helper to get vault by type for testing
-    function getVaultByType(IkRegistry.VaultType vaultType) internal view returns (IkStakingVault) {
-        if (vaultType == IkRegistry.VaultType.DN) return dnVault;
-        if (vaultType == IkRegistry.VaultType.ALPHA) return alphaVault;
-        if (vaultType == IkRegistry.VaultType.BETA) return betaVault;
+    function getVaultByType(IRegistry.VaultType vaultType) internal view returns (IkStakingVault) {
+        if (vaultType == IRegistry.VaultType.DN) return dnVault;
+        if (vaultType == IRegistry.VaultType.ALPHA) return alphaVault;
+        if (vaultType == IRegistry.VaultType.BETA) return betaVault;
         revert("Unknown vault type");
     }
 }

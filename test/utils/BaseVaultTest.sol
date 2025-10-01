@@ -7,7 +7,7 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
+import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 
 /// @title BaseVaultTest
 /// @notice Base test contract for shared functionality
@@ -75,7 +75,7 @@ contract BaseVaultTest is DeploymentBaseTest {
         assetRouter.executeSettleBatch(proposalId);
 
         vm.prank(user);
-        vault.claimStakedShares(batchId, requestId);
+        vault.claimStakedShares(requestId);
     }
 
     /// @dev Setup test fees for comprehensive testing

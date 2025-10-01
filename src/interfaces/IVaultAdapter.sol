@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.30;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
 
-import { IVersioned } from "src/interfaces/IVersioned.sol";
+import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
 
 interface IVaultAdapter is IVersioned {
     /*//////////////////////////////////////////////////////////////
@@ -89,12 +89,20 @@ interface IVaultAdapter is IVersioned {
     /// @dev This function enables the relayer role to perform flexible interactions with external contracts
     /// as part of protocol operations. Key aspects of this function include: (1) Authorization restricted to relayer
     /// role to prevent misuse, (2) Pause state check to ensure operations are halted during emergencies, (3) Validates
-    /// target address is non-zero to prevent calls to the zero address, (4) Uses low-level call to enable arbitrary
+    /// target addresses are non-zero to prevent calls to the zero address, (4) Uses low-level calls to enable arbitrary
     /// function execution
-    /// @param target The target contract to make a call to.
-    /// @param data The data to send to the target contract.
-    /// @param value The amount of assets to send with the call.
-    function execute(address target, bytes calldata data, uint256 value) external returns (bytes memory result);
+    /// @param targets Array of target contracts to make calls to
+    /// @param data Array of calldata to send to each target contract
+    /// @param values Array of asset amounts to send with each call
+    /// @return result The combined return data from all calls
+    function execute(
+        address[] calldata targets,
+        bytes[] calldata data,
+        uint256[] calldata values
+    )
+        external
+        payable
+        returns (bytes[] memory result);
 
     /// @notice Sets the last recorded total assets for vault accounting and performance tracking
     /// @dev This function allows the admin to update the lastTotalAssets variable, which is

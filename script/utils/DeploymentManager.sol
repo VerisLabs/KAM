@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import { Script } from "forge-std/Script.sol";
 
 import { stdJson } from "forge-std/StdJson.sol";
-import { console } from "forge-std/console.sol";
+import { console2 as console } from "forge-std/console2.sol";
 
 /// @title DeploymentManager
 /// @notice Utility for managing JSON-based deployment configurations and outputs
@@ -17,6 +17,7 @@ abstract contract DeploymentManager is Script {
         uint256 chainId;
         RoleAddresses roles;
         AssetAddresses assets;
+        ERC7540Addresses ERC7540s;
     }
 
     struct RoleAddresses {
@@ -30,6 +31,11 @@ abstract contract DeploymentManager is Script {
     }
 
     struct AssetAddresses {
+        address USDC;
+        address WBTC;
+    }
+
+    struct ERC7540Addresses {
         address USDC;
         address WBTC;
     }
@@ -121,6 +127,10 @@ abstract contract DeploymentManager is Script {
         // Parse asset addresses
         config.assets.USDC = json.readAddress(".assets.USDC");
         config.assets.WBTC = json.readAddress(".assets.WBTC");
+
+        // Parse ERC7540 addresses
+        config.ERC7540s.USDC = json.readAddress(".ERC7540s.USDC");
+        config.ERC7540s.WBTC = json.readAddress(".ERC7540s.WBTC");
 
         return config;
     }
@@ -389,6 +399,8 @@ abstract contract DeploymentManager is Script {
         require(config.roles.treasury != address(0), "Missing treasury address");
         require(config.assets.USDC != address(0), "Missing USDC address");
         require(config.assets.WBTC != address(0), "Missing WBTC address");
+        require(config.ERC7540s.USDC != address(0), "Missing ERC7540USDC address");
+        require(config.ERC7540s.WBTC != address(0), "Missing ERC7540WBTC address");
     }
 
     /// @notice Validates that required deployment outputs are not zero for adapter configuration

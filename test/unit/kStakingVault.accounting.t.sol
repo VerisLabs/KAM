@@ -7,9 +7,9 @@ import { _1_USDC } from "../utils/Constants.sol";
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
+import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 
-import { KSTAKINGVAULT_INSUFFICIENT_BALANCE, KSTAKINGVAULT_ZERO_AMOUNT } from "src/errors/Errors.sol";
+import { KSTAKINGVAULT_INSUFFICIENT_BALANCE, KSTAKINGVAULT_ZERO_AMOUNT } from "kam/src/errors/Errors.sol";
 
 /// @title kStakingVaultAccountingTest
 /// @notice Tests for core accounting mechanics in kStakingVault
@@ -151,7 +151,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assetRouter.executeSettleBatch(proposalId);
 
         vm.prank(users.bob);
-        vault.claimStakedShares(batchId, requestId);
+        vault.claimStakedShares(requestId);
 
         // Total assets should be 1.5M USDC
         assertEq(vault.totalAssets(), INITIAL_DEPOSIT + bobDeposit);

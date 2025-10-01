@@ -7,15 +7,15 @@ import { _1_USDC } from "../utils/Constants.sol";
 import { console2 } from "forge-std/console2.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IkStakingVault } from "src/interfaces/IkStakingVault.sol";
+import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 
 import {
     KASSETROUTER_BATCH_ID_PROPOSED,
     KASSETROUTER_PROPOSAL_NOT_FOUND,
     KSTAKINGVAULT_WRONG_ROLE,
     VAULTBATCHES_VAULT_CLOSED
-} from "src/errors/Errors.sol";
-import { kStakingVault } from "src/kStakingVault/kStakingVault.sol";
+} from "kam/src/errors/Errors.sol";
+import { kStakingVault } from "kam/src/kStakingVault/kStakingVault.sol";
 
 /// @title kStakingVaultBatchesTest
 /// @notice Tests for batch management functionality in kStakingVault
@@ -255,7 +255,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         // 5. User can claim from settled batch
         vm.prank(users.alice);
-        vault.claimStakedShares(batch1, requestId);
+        vault.claimStakedShares(requestId);
 
         // Verify user received stkTokens
         assertGt(vault.balanceOf(users.alice), 0);

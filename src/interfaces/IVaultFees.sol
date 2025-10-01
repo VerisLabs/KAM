@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.30;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
 
 /// @title IVaultFees
 /// @notice Interface for vault fee management including performance and management fees with hurdle rate mechanisms

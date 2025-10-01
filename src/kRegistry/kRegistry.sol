@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import { MultiFacetProxy } from "kam/src/base/MultiFacetProxy.sol";
 import { OptimizedAddressEnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
 import { Initializable } from "solady/utils/Initializable.sol";
-import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import { kBaseRoles } from "src/base/kBaseRoles.sol";
+import { kBaseRoles } from "kam/src/base/kBaseRoles.sol";
 import {
     KREGISTRY_ADAPTER_ALREADY_SET,
     KREGISTRY_ALREADY_REGISTERED,
@@ -19,11 +19,11 @@ import {
     KREGISTRY_WRONG_ASSET,
     KREGISTRY_ZERO_ADDRESS,
     KREGISTRY_ZERO_AMOUNT
-} from "src/errors/Errors.sol";
+} from "kam/src/errors/Errors.sol";
 
-import { IVersioned } from "src/interfaces/IVersioned.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
-import { kToken } from "src/kToken.sol";
+import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
+import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
+import { kToken } from "kam/src/kToken.sol";
 
 /// @title kRegistry
 /// @notice Central configuration hub and contract registry for the KAM protocol ecosystem
@@ -37,7 +37,7 @@ import { kToken } from "src/kToken.sol";
 /// and VENDOR roles to enforce protocol security, (5) Adapter management - registers and tracks external protocol
 /// adapters per vault enabling yield strategy integrations. The registry uses upgradeable architecture with UUPS
 /// pattern and ERC-7201 namespaced storage to ensure future extensibility while maintaining state consistency.
-contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, MultiFacetProxy {
+contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, MultiFacetProxy {
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
     using SafeTransferLib for address;
 
@@ -169,7 +169,7 @@ contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mu
                           SINGLETON MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function setSingletonContract(bytes32 id, address contractAddress) external payable {
         _checkAdmin(msg.sender);
         _checkAddressNotZero(contractAddress);
@@ -183,31 +183,31 @@ contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mu
                           ROLES MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function grantInstitutionRole(address institution_) external payable {
         _checkVendor(msg.sender);
         _grantRoles(institution_, INSTITUTION_ROLE);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function grantVendorRole(address vendor_) external payable {
         _checkAdmin(msg.sender);
         _grantRoles(vendor_, VENDOR_ROLE);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function grantRelayerRole(address relayer_) external payable {
         _checkAdmin(msg.sender);
         _grantRoles(relayer_, RELAYER_ROLE);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function grantManagerRole(address manager_) external payable {
         _checkAdmin(msg.sender);
         _grantRoles(manager_, MANAGER_ROLE);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function setTreasury(address treasury_) external payable {
         _checkAdmin(msg.sender);
         kRegistryStorage storage $ = _getkRegistryStorage();
@@ -216,7 +216,7 @@ contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mu
         emit TreasurySet(treasury_);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function setHurdleRate(address asset, uint16 hurdleRate) external payable {
         // Only relayer can set hurdle rates (performance thresholds)
         _checkRelayer(msg.sender);
@@ -232,7 +232,7 @@ contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mu
         emit HurdleRateSet(asset, hurdleRate);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function rescueAssets(address asset_, address to_, uint256 amount_) external payable {
         _checkAdmin(msg.sender);
         _checkAddressNotZero(to_);
@@ -348,7 +348,7 @@ contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mu
                           VAULT MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function registerVault(address vault, VaultType type_, address asset) external payable {
         _checkAdmin(msg.sender);
         _checkAddressNotZero(vault);
@@ -377,7 +377,7 @@ contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mu
         emit VaultRegistered(vault, asset, type_);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function removeVault(address vault) external payable {
         _checkAdmin(msg.sender);
         kRegistryStorage storage $ = _getkRegistryStorage();
@@ -390,7 +390,7 @@ contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mu
                           ADAPTER MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function registerAdapter(address vault, address asset, address adapter) external payable {
         _checkAdmin(msg.sender);
         _checkAddressNotZero(vault);
@@ -409,7 +409,7 @@ contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mu
         emit AdapterRegistered(vault, asset, adapter);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function removeAdapter(address vault, address asset, address adapter) external payable {
         _checkAdmin(msg.sender);
         kRegistryStorage storage $ = _getkRegistryStorage();
@@ -462,27 +462,27 @@ contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mu
         return addr;
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function getAllAssets() external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         require($.supportedAssets.length() > 0, KREGISTRY_ZERO_ADDRESS);
         return $.supportedAssets.values();
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function getAllVaults() external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         require($.allVaults.length() > 0, KREGISTRY_ZERO_ADDRESS);
         return $.allVaults.values();
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function getTreasury() external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.treasury;
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function getCoreContracts() external view returns (address, address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address kMinter_ = $.singletonContracts[K_MINTER];
@@ -492,14 +492,14 @@ contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mu
         return (kMinter_, kAssetRouter_);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function getVaultsByAsset(address asset) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         require($.vaultsByAsset[asset].values().length > 0, KREGISTRY_ZERO_ADDRESS);
         return $.vaultsByAsset[asset].values();
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function getVaultByAssetAndType(address asset, uint8 vaultType) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address assetToVault = $.assetToVault[asset][vaultType];
@@ -507,60 +507,60 @@ contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mu
         return assetToVault;
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function getVaultType(address vault) external view returns (uint8) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.vaultType[vault];
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function isAdmin(address user) external view returns (bool) {
         return _hasRole(user, ADMIN_ROLE);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function isEmergencyAdmin(address user) external view returns (bool) {
         return _hasRole(user, EMERGENCY_ADMIN_ROLE);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function isGuardian(address user) external view returns (bool) {
         return _hasRole(user, GUARDIAN_ROLE);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function isRelayer(address user) external view returns (bool) {
         return _hasRole(user, RELAYER_ROLE);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function isInstitution(address user) external view returns (bool) {
         return _hasRole(user, INSTITUTION_ROLE);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function isVendor(address user) external view returns (bool) {
         return _hasRole(user, VENDOR_ROLE);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function isManager(address user) external view returns (bool) {
         return _hasRole(user, MANAGER_ROLE);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function isAsset(address asset) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.supportedAssets.contains(asset);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function isVault(address vault) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.allVaults.contains(vault);
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function getAdapter(address vault, address asset) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address adapter = $.vaultAdaptersByAsset[vault][asset];
@@ -568,20 +568,20 @@ contract kRegistry is IkRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mu
         return adapter;
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function isAdapterRegistered(address vault, address asset, address adapter) external view returns (bool) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         return $.vaultAdaptersByAsset[vault][asset] == adapter;
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function getVaultAssets(address vault) external view returns (address[] memory) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         require($.vaultAsset[vault].values().length > 0, KREGISTRY_ZERO_ADDRESS);
         return $.vaultAsset[vault].values();
     }
 
-    /// @inheritdoc IkRegistry
+    /// @inheritdoc IRegistry
     function assetToKToken(address asset) external view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address assetToToken_ = $.assetToKToken[asset];

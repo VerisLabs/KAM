@@ -242,13 +242,13 @@ function isBatchSettled() external view returns (bool);
 |`<none>`|`bool`|True if current batch is settled and ready for claims|
 
 
-### getBatchIdInfo
+### getCurrentBatchInfo
 
 Returns comprehensive information about the current batch
 
 
 ```solidity
-function getBatchIdInfo()
+function getCurrentBatchInfo()
     external
     view
     returns (bytes32 batchId, address batchReceiver, bool isClosed, bool isSettled);

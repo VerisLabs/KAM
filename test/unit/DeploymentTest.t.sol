@@ -5,8 +5,8 @@ import { ADMIN_ROLE, INSTITUTION_ROLE, MINTER_ROLE, _1_USDC, _1_WBTC } from "../
 
 import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
+import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
 import { OptimizedOwnableRoles } from "solady/auth/OptimizedOwnableRoles.sol";
-import { IkRegistry } from "src/interfaces/IkRegistry.sol";
 
 /// @title DeploymentTest
 /// @notice Test contract to verify protocol deployment works correctly
@@ -209,10 +209,10 @@ contract DeploymentTest is DeploymentBaseTest {
     /// @dev Test vault type helper function
     function test_VaultTypeHelper() public {
         // Test getVaultByType helper
-        assertEq(address(getVaultByType(IkRegistry.VaultType.DN)), address(dnVault), "DN vault helper incorrect");
+        assertEq(address(getVaultByType(IRegistry.VaultType.DN)), address(dnVault), "DN vault helper incorrect");
         assertEq(
-            address(getVaultByType(IkRegistry.VaultType.ALPHA)), address(alphaVault), "Alpha vault helper incorrect"
+            address(getVaultByType(IRegistry.VaultType.ALPHA)), address(alphaVault), "Alpha vault helper incorrect"
         );
-        assertEq(address(getVaultByType(IkRegistry.VaultType.BETA)), address(betaVault), "Beta vault helper incorrect");
+        assertEq(address(getVaultByType(IRegistry.VaultType.BETA)), address(betaVault), "Beta vault helper incorrect");
     }
 }

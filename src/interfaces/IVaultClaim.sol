@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.30;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
 
 /// @title IVaultClaim
 /// @notice Interface for claiming settled staking rewards and unstaking assets after batch processing completion
@@ -24,9 +24,8 @@ interface IVaultClaim {
     /// future reprocessing. The net share price accounts for management and performance fees, ensuring users receive
     /// their accurate yield-adjusted position. stkTokens are ERC20-compatible shares that continue accruing yield
     /// through share price appreciation until unstaking.
-    /// @param batchId The settled batch identifier containing this staking request
     /// @param requestId The specific staking request identifier to claim rewards for
-    function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable;
+    function claimStakedShares(bytes32 requestId) external payable;
 
     /// @notice Claims kTokens plus accrued yield from a settled unstaking batch through batch receiver distribution
     /// @dev This function completes the unstaking process by distributing redeemed assets to users after settlement.
@@ -38,7 +37,6 @@ interface IVaultClaim {
     /// (6) Marks request as claimed completing the unstaking cycle. The batch receiver pattern ensures asset isolation
     /// between settlement periods while enabling efficient distribution. Users receive their original investment plus
     /// proportional share of vault yields earned during their staking period.
-    /// @param batchId The settled batch identifier containing this unstaking request
     /// @param requestId The specific unstaking request identifier to claim assets for
-    function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable;
+    function claimUnstakedAssets(bytes32 requestId) external payable;
 }

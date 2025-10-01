@@ -4,10 +4,10 @@ pragma solidity ^0.8.20;
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
 import { Script } from "forge-std/Script.sol";
 
-import { console } from "forge-std/console.sol";
-import { MockERC20 } from "test/mocks/MockERC20.sol";
-import { MockERC7540 } from "test/mocks/MockERC7540.sol";
-import { MockWallet } from "test/mocks/MockWallet.sol";
+import { console2 as console } from "forge-std/console2.sol";
+import { MockERC20 } from "kam/test/mocks/MockERC20.sol";
+import { MockERC7540 } from "kam/test/mocks/MockERC7540.sol";
+import { MockWallet } from "kam/test/mocks/MockWallet.sol";
 
 contract DeployMockAssetsScript is Script, DeploymentManager {
     function run() public {
@@ -58,7 +58,9 @@ contract DeployMockAssetsScript is Script, DeploymentManager {
         console.log("Mock Wallet USDC deployed at:", address(mockWalletUSDC));
 
         // Update network config with deployed addresses
-        _updateNetworkConfig(config.network, address(mockUSDC), address(mockWBTC));
+        _updateNetworkConfig(
+            config.network, address(mockUSDC), address(mockWBTC), address(mockERC7540USDC), address(mockERC7540WBTC)
+        );
 
         // Write mock target addresses to deployment output
         writeContractAddress("ERC7540USDC", address(mockERC7540USDC));
@@ -90,7 +92,15 @@ contract DeployMockAssetsScript is Script, DeploymentManager {
         return usdcDeployed && wbtcDeployed;
     }
 
-    function _updateNetworkConfig(string memory network, address mockUSDC, address mockWBTC) internal {
+    function _updateNetworkConfig(
+        string memory network,
+        address mockUSDC,
+        address mockWBTC,
+        address mockERC7540USDC,
+        address mockERC7540WBTC
+    )
+        internal
+    {
         string memory configPath = string.concat("deployments/config/", network, ".json");
         string memory json = vm.readFile(configPath);
 
@@ -118,6 +128,10 @@ contract DeployMockAssetsScript is Script, DeploymentManager {
             vm.toString(mockUSDC),
             '","WBTC":"',
             vm.toString(mockWBTC),
+            '"},"ERC7540s":{"USDC":"',
+            vm.toString(mockERC7540USDC),
+            '","WBTC":"',
+            vm.toString(mockERC7540WBTC),
             '"}}'
         );
 

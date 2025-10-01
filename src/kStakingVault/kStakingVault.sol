@@ -14,10 +14,10 @@ import { Initializable } from "solady/utils/Initializable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { UUPSUpgradeable } from "solady/utils/UUPSUpgradeable.sol";
 
-import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
+import { IkAssetRouter } from "kam/src/interfaces/IkAssetRouter.sol";
 
-import { IVault, IVaultBatch, IVaultClaim, IVaultFees } from "src/interfaces/IVault.sol";
-import { IkToken } from "src/interfaces/IkToken.sol";
+import { IVault, IVaultBatch, IVaultClaim, IVaultFees } from "kam/src/interfaces/IVault.sol";
+import { IkToken } from "kam/src/interfaces/IkToken.sol";
 
 import {
     KSTAKINGVAULT_INSUFFICIENT_BALANCE,
@@ -39,12 +39,12 @@ import {
     VAULTCLAIMS_REQUEST_NOT_PENDING,
     VAULTFEES_FEE_EXCEEDS_MAXIMUM,
     VAULTFEES_INVALID_TIMESTAMP
-} from "src/errors/Errors.sol";
+} from "kam/src/errors/Errors.sol";
 
-import { MultiFacetProxy } from "src/base/MultiFacetProxy.sol";
-import { kBatchReceiver } from "src/kBatchReceiver.sol";
-import { BaseVault } from "src/kStakingVault/base/BaseVault.sol";
-import { BaseVaultTypes } from "src/kStakingVault/types/BaseVaultTypes.sol";
+import { MultiFacetProxy } from "kam/src/base/MultiFacetProxy.sol";
+import { kBatchReceiver } from "kam/src/kBatchReceiver.sol";
+import { BaseVault } from "kam/src/kStakingVault/base/BaseVault.sol";
+import { BaseVaultTypes } from "kam/src/kStakingVault/types/BaseVaultTypes.sol";
 
 /// @title kStakingVault
 /// @notice Retail staking vault enabling kToken holders to earn yield through batch-processed share tokens
@@ -293,12 +293,11 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _checkPaused($);
         BaseVaultTypes.StakeRequest storage request = $.stakeRequests[requestId];
 
-        require($.userRequests[msg.sender].contains(requestId), KSTAKINGVAULT_REQUEST_NOT_FOUND);
+        require($.userRequests[msg.sender].remove(requestId), KSTAKINGVAULT_REQUEST_NOT_FOUND);
         require(msg.sender == request.user, KSTAKINGVAULT_UNAUTHORIZED);
         require(request.status == BaseVaultTypes.RequestStatus.PENDING, KSTAKINGVAULT_REQUEST_NOT_ELIGIBLE);
 
         request.status = BaseVaultTypes.RequestStatus.CANCELLED;
-        $.userRequests[msg.sender].remove(requestId);
 
         $.totalPendingStake -= request.kTokenAmount;
         require(!$.batches[request.batchId].isClosed, KSTAKINGVAULT_VAULT_CLOSED);
@@ -326,11 +325,10 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         BaseVaultTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
 
         require(msg.sender == request.user, KSTAKINGVAULT_UNAUTHORIZED);
-        require($.userRequests[msg.sender].contains(requestId), KSTAKINGVAULT_REQUEST_NOT_FOUND);
+        require($.userRequests[msg.sender].remove(requestId), KSTAKINGVAULT_REQUEST_NOT_FOUND);
         require(request.status == BaseVaultTypes.RequestStatus.PENDING, KSTAKINGVAULT_REQUEST_NOT_ELIGIBLE);
 
         request.status = BaseVaultTypes.RequestStatus.CANCELLED;
-        $.userRequests[msg.sender].remove(requestId);
 
         require(!$.batches[request.batchId].isClosed, KSTAKINGVAULT_VAULT_CLOSED);
         require(!$.batches[request.batchId].isSettled, KSTAKINGVAULT_VAULT_SETTLED);
@@ -495,17 +493,18 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IVaultClaim
-    function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable {
+    function claimStakedShares(bytes32 requestId) external payable {
         // Open `nonRentrant`
         _lockReentrant();
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         _checkPaused($);
+        bytes32 batchId = $.stakeRequests[requestId].batchId;
         require($.batches[batchId].isSettled, VAULTCLAIMS_BATCH_NOT_SETTLED);
 
         BaseVaultTypes.StakeRequest storage request = $.stakeRequests[requestId];
-        require(request.batchId == batchId, VAULTCLAIMS_INVALID_BATCH_ID);
         require(request.status == BaseVaultTypes.RequestStatus.PENDING, VAULTCLAIMS_REQUEST_NOT_PENDING);
         require(msg.sender == request.user, VAULTCLAIMS_NOT_BENEFICIARY);
+        require($.userRequests[msg.sender].remove(requestId), KSTAKINGVAULT_REQUEST_NOT_FOUND);
 
         request.status = BaseVaultTypes.RequestStatus.CLAIMED;
 
@@ -514,12 +513,11 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _checkAmountNotZero(netSharePrice);
 
         // Divide the deposited assets by the share price of the batch to obtain stkTokens to mint
-        uint256 stkTokensToMint = (uint256(request.kTokenAmount)).fullMulDiv(10 ** _getDecimals($), netSharePrice);
+        uint256 stkTokensToMint = (uint256(request.kTokenAmount)) * 10 ** _getDecimals($) / netSharePrice;
 
         emit StakingSharesClaimed(batchId, requestId, request.user, stkTokensToMint);
 
         // Reduce total pending stake and remove user stake request
-        $.userRequests[msg.sender].remove(requestId);
         $.totalPendingStake -= request.kTokenAmount;
 
         // Mint stkTokens to user
@@ -530,19 +528,21 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     }
 
     /// @inheritdoc IVaultClaim
-    function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable {
+    function claimUnstakedAssets(bytes32 requestId) external payable {
         // Open `nonRentrant`
         _lockReentrant();
 
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         _checkPaused($);
 
+        bytes32 batchId = $.unstakeRequests[requestId].batchId;
+
         require($.batches[batchId].isSettled, VAULTCLAIMS_BATCH_NOT_SETTLED);
 
         BaseVaultTypes.UnstakeRequest storage request = $.unstakeRequests[requestId];
-        require(request.batchId == batchId, VAULTCLAIMS_INVALID_BATCH_ID);
         require(request.status == BaseVaultTypes.RequestStatus.PENDING, VAULTCLAIMS_REQUEST_NOT_PENDING);
         require(msg.sender == request.user, VAULTCLAIMS_NOT_BENEFICIARY);
+        require($.userRequests[msg.sender].remove(requestId), KSTAKINGVAULT_REQUEST_NOT_FOUND);
 
         request.status = BaseVaultTypes.RequestStatus.CLAIMED;
 

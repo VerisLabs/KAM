@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.30;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
 
-import { IVersioned } from "src/interfaces/IVersioned.sol";
+import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
 
 /// @title IkMinter
 /// @notice Interface for institutional minting and redemption operations in the KAM protocol
@@ -49,6 +49,10 @@ interface IkMinter is IVersioned {
         address asset;
         /// @notice Batch receiver address
         address batchReceiver;
+        /// @notice Assets minted in this batch
+        uint128 mintedInBatch;
+        /// @notice Assets redeemed in this batch
+        uint128 burnedInBatch;
         /// @notice Whether the batch is closed
         bool isClosed;
         /// @notice Whether the batch is settled

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.30;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
 
 /// @title IVaultBatch
 /// @notice Interface for batch lifecycle management enabling gas-efficient settlement of multiple user operations

@@ -2,11 +2,11 @@
 pragma solidity ^0.8.20;
 
 import { Script } from "forge-std/Script.sol";
-import { console } from "forge-std/console.sol";
+import { console2 } from "forge-std/console2.sol";
 import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 import { DeploymentManager } from "../utils/DeploymentManager.sol";
-import { kMinter } from "src/kMinter.sol";
+import { kMinter } from "kam/src/kMinter.sol";
 
 contract DeployMinterScript is Script, DeploymentManager {
     function run() public {
@@ -35,12 +35,12 @@ contract DeployMinterScript is Script, DeploymentManager {
 
         vm.stopBroadcast();
 
-        console.log("=== DEPLOYMENT COMPLETE ===");
-        console.log("kMinter implementation deployed at:", address(minterImpl));
-        console.log("kMinter proxy deployed at:", minterProxy);
-        console.log("Registry:", existing.contracts.kRegistry);
-        console.log("Network:", config.network);
-        console.log("Note: kMinter inherits roles from registry via kBase");
+        console2.log("=== DEPLOYMENT COMPLETE ===");
+        console2.log("kMinter implementation deployed at:", address(minterImpl));
+        console2.log("kMinter proxy deployed at:", minterProxy);
+        console2.log("Registry:", existing.contracts.kRegistry);
+        console2.log("Network:", config.network);
+        console2.log("Note: kMinter inherits roles from registry via kBase");
 
         // Auto-write contract addresses to deployment JSON
         writeContractAddress("kMinterImpl", address(minterImpl));

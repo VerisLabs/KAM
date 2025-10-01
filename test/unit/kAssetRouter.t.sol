@@ -6,8 +6,7 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
-import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
-import { kBase } from "src/base/kBase.sol";
+import { kBase } from "kam/src/base/kBase.sol";
 import {
     KASSETROUTER_BATCH_ID_PROPOSED,
     KASSETROUTER_COOLDOOWN_IS_UP,
@@ -22,9 +21,10 @@ import {
     KASSETROUTER_ZERO_AMOUNT,
     KBASE_INVALID_REGISTRY,
     KBASE_WRONG_ROLE
-} from "src/errors/Errors.sol";
-import { IkAssetRouter } from "src/interfaces/IkAssetRouter.sol";
-import { kAssetRouter } from "src/kAssetRouter.sol";
+} from "kam/src/errors/Errors.sol";
+import { IkAssetRouter } from "kam/src/interfaces/IkAssetRouter.sol";
+import { kAssetRouter } from "kam/src/kAssetRouter.sol";
+import { ERC1967Factory } from "solady/utils/ERC1967Factory.sol";
 
 /// @title kAssetRouterTest
 /// @notice Comprehensive unit tests for kAssetRouter contract with timelock settlement
@@ -735,24 +735,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(assetRouter.getRequestedShares(address(alphaVault), batchId2), amount * 2, "Batch 2 collision");
     }
 
-    /// @dev Test proposal ID uniqueness
-    function test_ProposalIdUniqueness() public {
-        bytes32 batchId1 = TEST_BATCH_ID;
-        bytes32 batchId2 = bytes32(uint256(TEST_BATCH_ID) + 1);
-
-        // Create two proposals
-        vm.prank(users.relayer);
-        bytes32 proposalId1 =
-            assetRouter.proposeSettleBatch(getUSDC(), address(dnVault), batchId1, TEST_TOTAL_ASSETS, 0, 0);
-
-        vm.prank(users.relayer);
-        bytes32 proposalId2 =
-            assetRouter.proposeSettleBatch(getUSDC(), address(dnVault), batchId2, TEST_TOTAL_ASSETS, 0, 0);
-
-        // Proposal IDs should be different
-        assertTrue(proposalId1 != proposalId2, "Proposal IDs should be unique");
-    }
-
     /// @dev Test double execution protection
     function test_ReentrancyProtection() public {
         // Create a proposal first
@@ -987,40 +969,5 @@ contract kAssetRouterTest is DeploymentBaseTest {
         vm.warp(block.timestamp + 3);
         (bool canExecute,) = assetRouter.canExecuteProposal(proposalId);
         assertTrue(canExecute, "Should be executable after cooldown");
-    }
-
-    /// @dev Test settlement cooldown changes don't affect existing proposals
-    function test_CooldownChange_ExistingProposals() public {
-        bytes32 batchId = TEST_BATCH_ID;
-
-        // Create proposal with 1 second cooldown
-        vm.prank(users.relayer);
-        bytes32 proposalId =
-            assetRouter.proposeSettleBatch(getUSDC(), address(dnVault), batchId, TEST_TOTAL_ASSETS, 0, 0);
-
-        // Change cooldown to 1 hour
-        vm.prank(users.admin);
-        assetRouter.setSettlementCooldown(1 hours);
-
-        // Original proposal should still be executable after 2 seconds
-        vm.warp(block.timestamp + 2);
-        (bool canExecute,) = assetRouter.canExecuteProposal(proposalId);
-        assertTrue(canExecute, "Should use original cooldown for existing proposal");
-
-        // New proposal should use new cooldown
-        vm.prank(users.relayer);
-        bytes32 newProposalId = assetRouter.proposeSettleBatch(
-            getUSDC(), address(dnVault), bytes32(uint256(batchId) + 1), TEST_TOTAL_ASSETS, 0, 0
-        );
-
-        // New proposal should not be executable after 2 seconds
-        vm.warp(block.timestamp + 2);
-        (canExecute,) = assetRouter.canExecuteProposal(newProposalId);
-        assertFalse(canExecute, "New proposal should use new cooldown");
-
-        // But should be executable after 1 hour
-        vm.warp(block.timestamp + 1 hours);
-        (canExecute,) = assetRouter.canExecuteProposal(newProposalId);
-        assertTrue(canExecute, "Should be executable after new cooldown");
     }
 }

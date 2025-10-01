@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity ^0.8.4;
 
 import { IVaultBatch } from "./IVaultBatch.sol";
 import { IVaultClaim } from "./IVaultClaim.sol";
