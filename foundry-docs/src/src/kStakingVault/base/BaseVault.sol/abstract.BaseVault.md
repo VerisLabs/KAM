@@ -1,5 +1,5 @@
 # BaseVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/kStakingVault/base/BaseVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7810ef786f844ebd78831ee424b7ee896113d92b/src/kStakingVault/base/BaseVault.sol)
 
 **Inherits:**
 [ERC20](/src/vendor/solady/tokens/ERC20.sol/abstract.ERC20.md), [OptimizedReentrancyGuardTransient](/src/vendor/solady/utils/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)
@@ -435,7 +435,7 @@ function _setPaused(bool paused_) internal;
 |`paused_`|`bool`|The desired pause state (true = halt operations, false = resume normal operation)|
 
 
-### _convertToAssets
+### _convertToAssetsWithTotals
 
 Converts stkToken shares to underlying asset value based on current vault performance
 
@@ -448,13 +448,14 @@ function is critical for determining redemption values, share price calculations
 
 
 ```solidity
-function _convertToAssets(uint256 shares) internal view returns (uint256 assets);
+function _convertToAssetsWithTotals(uint256 shares, uint256 totalAssets) internal view returns (uint256 assets);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`shares`|`uint256`|The quantity of stkTokens to convert to underlying asset terms|
+|`totalAssets`|`uint256`|The total asset value managed by the vault including yields but excluding pending operations|
 
 **Returns**
 
@@ -463,7 +464,7 @@ function _convertToAssets(uint256 shares) internal view returns (uint256 assets)
 |`assets`|`uint256`|The equivalent value in underlying assets based on current vault performance|
 
 
-### _convertToShares
+### _convertToSharesWithTotals
 
 Converts underlying asset amount to equivalent stkToken shares at current vault valuation
 
@@ -476,13 +477,14 @@ is essential for determining share issuance during staking operations and mainta
 
 
 ```solidity
-function _convertToShares(uint256 assets) internal view returns (uint256 shares);
+function _convertToSharesWithTotals(uint256 assets, uint256 totalAssets) internal view returns (uint256 shares);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`assets`|`uint256`|The underlying asset amount to convert to share terms|
+|`totalAssets`|`uint256`|The total asset value managed by the vault including yields but excluding pending operations|
 
 **Returns**
 
