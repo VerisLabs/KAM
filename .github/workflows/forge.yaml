@@ -68,7 +68,7 @@ jobs:
 
       - name: Build contracts
         run: |
-          forge build
+          forge build --skip test
 
       - name: Setup SSH for ABI repository
         run: |
@@ -76,7 +76,7 @@ jobs:
           echo "${{ secrets.ABI_DEPLOY_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts
-          
+
       - name: Clone ABI repository
         run: |
           git clone git@github.com:VerisLabs/KAM-abis.git abi-repo
