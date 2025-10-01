@@ -94,7 +94,7 @@ jobs:
 
       - name: Clone ABI repository
         run: |
-          git clone git@github.com:YOUR_ORG/YOUR_ABI_REPO_NAME.git abi-repo
+          git clone git@github.com:VerisLabs/KAM-abis.git abi-repo
 
       - name: Copy ABIs to ABI repository
         run: |
