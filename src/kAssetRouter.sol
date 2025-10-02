@@ -29,7 +29,7 @@ import {
     KASSETROUTER_ZERO_AMOUNT
 } from "kam/src/errors/Errors.sol";
 import { OptimizedBytes32EnumerableSetLib } from
-    "src/vendor/solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
+    "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 
 import { IVaultAdapter } from "kam/src/interfaces/IVaultAdapter.sol";
 import { ISettleBatch, IkAssetRouter } from "kam/src/interfaces/IkAssetRouter.sol";
