@@ -12,6 +12,8 @@ import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 import {
     KASSETROUTER_BATCH_ID_PROPOSED,
     KASSETROUTER_PROPOSAL_NOT_FOUND,
+    KSTAKINGVAULT_BATCH_DEPOSIT_REACHED,
+    KSTAKINGVAULT_MAX_TOTAL_ASSETS_REACHED,
     KSTAKINGVAULT_WRONG_ROLE,
     VAULTBATCHES_VAULT_CLOSED
 } from "kam/src/errors/Errors.sol";
@@ -314,5 +316,27 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vm.prank(users.alice);
         vm.expectRevert(bytes(KSTAKINGVAULT_WRONG_ROLE));
         vault.settleBatch(maxBatchId);
+    }
+
+    function test_reach_max_total_assets() public {
+        vm.prank(users.admin);
+        vault.setMaxTotalAssets(0);
+
+        vm.startPrank(users.alice);
+        kUSD.approve(address(vault), 1000 * _1_USDC);
+        vm.expectRevert(bytes(KSTAKINGVAULT_MAX_TOTAL_ASSETS_REACHED));
+        vault.requestStake(users.alice, 1000 * _1_USDC);
+        vm.stopPrank();
+    }
+
+    function test_exceed_batch_deposit_limit() public {
+        vm.prank(users.admin);
+        registry.setAssetBatchLimits(address(vault), 999 * _1_USDC, 0);
+
+        vm.startPrank(users.alice);
+        kUSD.approve(address(vault), 1000 * _1_USDC);
+        vm.expectRevert(bytes(KSTAKINGVAULT_BATCH_DEPOSIT_REACHED));
+        vault.requestStake(users.alice, 1000 * _1_USDC);
+        vm.stopPrank();
     }
 }
