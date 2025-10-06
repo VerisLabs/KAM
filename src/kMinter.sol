@@ -186,7 +186,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         // Make sure we dont exceed the max burn per batch
         require(
-            ($.batches[batchId].burnedInBatch += amount_.toUint128()) <= _registry().getMaxRedeemPerBatch(asset_),
+            ($.batches[batchId].burnedInBatch += amount_.toUint128()) <= _registry().getMaxBurnPerBatch(asset_),
             KMINTER_BATCH_REDEEM_REACHED
         );
 
