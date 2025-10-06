@@ -143,8 +143,10 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
         // 8
         address kToken;
         // 9
-        string name;
+        uint128 maxTotalAssets;
         // 10
+        string name;
+        // 11
         string symbol;
         mapping(bytes32 => BaseVaultTypes.BatchInfo) batches;
         mapping(bytes32 => BaseVaultTypes.StakeRequest) stakeRequests;

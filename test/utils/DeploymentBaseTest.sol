@@ -345,6 +345,14 @@ contract DeploymentBaseTest is BaseTest {
             address(ALPHAVaultAdapterUSDC), usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
         );
 
+        registry.setAssetBatchLimits(address(dnVault), type(uint256).max, type(uint256).max);
+        registry.setAssetBatchLimits(address(alphaVault), type(uint256).max, type(uint256).max);
+        registry.setAssetBatchLimits(address(betaVault), type(uint256).max, type(uint256).max);
+
+        dnVault.setMaxTotalAssets(type(uint128).max);
+        alphaVault.setMaxTotalAssets(type(uint128).max);
+        betaVault.setMaxTotalAssets(type(uint128).max);
+
         vm.stopPrank();
 
         // Give admin permissions to router
