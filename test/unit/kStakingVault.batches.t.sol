@@ -12,7 +12,7 @@ import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 import {
     KASSETROUTER_BATCH_ID_PROPOSED,
     KASSETROUTER_PROPOSAL_NOT_FOUND,
-    KSTAKINGVAULT_BATCH_DEPOSIT_REACHED,
+    KSTAKINGVAULT_BATCH_LIMIT_REACHED,
     KSTAKINGVAULT_MAX_TOTAL_ASSETS_REACHED,
     KSTAKINGVAULT_WRONG_ROLE,
     VAULTBATCHES_VAULT_CLOSED
@@ -335,7 +335,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         vm.startPrank(users.alice);
         kUSD.approve(address(vault), 1000 * _1_USDC);
-        vm.expectRevert(bytes(KSTAKINGVAULT_BATCH_DEPOSIT_REACHED));
+        vm.expectRevert(bytes(KSTAKINGVAULT_BATCH_LIMIT_REACHED));
         vault.requestStake(users.alice, 1000 * _1_USDC);
         vm.stopPrank();
     }

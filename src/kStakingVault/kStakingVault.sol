@@ -20,8 +20,7 @@ import { IVault, IVaultBatch, IVaultClaim, IVaultFees } from "kam/src/interfaces
 import { IkToken } from "kam/src/interfaces/IkToken.sol";
 
 import {
-    KSTAKINGVAULT_BATCH_DEPOSIT_REACHED,
-    KSTAKINGVAULT_BATCH_WITHDRAW_REACHED,
+    KSTAKINGVAULT_BATCH_LIMIT_REACHED,
     KSTAKINGVAULT_INSUFFICIENT_BALANCE,
     KSTAKINGVAULT_IS_PAUSED,
     KSTAKINGVAULT_MAX_TOTAL_ASSETS_REACHED,
@@ -210,7 +209,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         // Make sure we dont exceed the max deposit per batch
         require(
             ($.batches[batchId].depositedInBatch += amount128) <= _registry().getMaxMintPerBatch(address(this)),
-            KSTAKINGVAULT_BATCH_DEPOSIT_REACHED
+            KSTAKINGVAULT_BATCH_LIMIT_REACHED
         );
 
         // Make sure we dont exceed the max total assets
@@ -269,7 +268,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         // Make sure we dont exceed the max withdraw per batch
         require(
             ($.batches[batchId].withdrawnInBatch += withdrawn) <= _registry().getMaxBurnPerBatch(address(this)),
-            KSTAKINGVAULT_BATCH_WITHDRAW_REACHED
+            KSTAKINGVAULT_BATCH_LIMIT_REACHED
         );
 
         // Generate request ID
