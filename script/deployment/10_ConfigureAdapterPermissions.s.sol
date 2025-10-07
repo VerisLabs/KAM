@@ -27,7 +27,7 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         registry.setAdapterAllowedSelector(adapter, vault, 0, approveSelector, true);
         registry.setAdapterAllowedSelector(adapter, vault, 0, transferSelector, true);
         registry.setAdapterAllowedSelector(adapter, vault, 0, transferFromSelector, true);
-        
+
         if (isKMinterAdapter) {
             bytes4 requestDepositSelector = IERC7540.requestDeposit.selector;
             bytes4 depositSelector = bytes4(abi.encodeWithSignature("deposit(uint256,address,address)"));
@@ -76,7 +76,7 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
 
         registry.setAdapterParametersChecker(adapter, target, transferSelector, paramChecker);
         registry.setAdapterParametersChecker(adapter, target, approveSelector, paramChecker);
-        
+
         if (isTransferFrom) {
             bytes4 transferFromSelector = IERC7540.transferFrom.selector;
             registry.setAdapterParametersChecker(adapter, target, transferFromSelector, paramChecker);
@@ -123,24 +123,25 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         configureAdapterPermissions(registry, existing.contracts.kMinterAdapterWBTC, wbtcVault, wbtc, true);
         configureAdapterPermissions(registry, existing.contracts.dnVaultAdapterUSDC, usdcVault, usdc, false);
         configureAdapterPermissions(registry, existing.contracts.dnVaultAdapterWBTC, wbtcVault, wbtc, false);
-        
+
         console.log("");
         console.log("2. Configuring parameter checkers...");
         configureParameterChecker(registry, existing.contracts.kMinterAdapterUSDC, usdc, paramChecker, true);
         configureParameterChecker(registry, existing.contracts.kMinterAdapterWBTC, wbtc, paramChecker, true);
         configureParameterChecker(registry, existing.contracts.kMinterAdapterUSDC, usdcVault, paramChecker, true);
         configureParameterChecker(registry, existing.contracts.kMinterAdapterWBTC, wbtcVault, paramChecker, true);
-        configureParameterChecker(registry, existing.contracts.dnVaultAdapterUSDC, usdcVault, paramChecker, false);  
+        configureParameterChecker(registry, existing.contracts.dnVaultAdapterUSDC, usdcVault, paramChecker, false);
         configureParameterChecker(registry, existing.contracts.dnVaultAdapterWBTC, wbtcVault, paramChecker, false);
         configureParameterChecker(registry, existing.contracts.alphaVaultAdapter, usdcWallet, paramChecker, false);
         configureParameterChecker(registry, existing.contracts.betaVaultAdapter, usdcWallet, paramChecker, false);
-        
+
         console.log("");
         console.log("3. Configuring parameter checker permissions...");
         console.log("   - Set allowed receivers for USDC and WBTC");
         erc20ParameterChecker.setAllowedReceiver(usdc, usdcWallet, true);
         erc20ParameterChecker.setAllowedReceiver(wbtc, usdcWallet, true); // WBTC can also go to USDC wallet
-        erc20ParameterChecker.setAllowedReceiver(usdcVault, kMinterAdapterUSDC, true); // Metavault shares can be transferred
+        erc20ParameterChecker.setAllowedReceiver(usdcVault, kMinterAdapterUSDC, true); // Metavault shares can be
+            // transferred
         erc20ParameterChecker.setAllowedReceiver(wbtcVault, kMinterAdapterWBTC, true);
         erc20ParameterChecker.setAllowedReceiver(usdcVault, dnVaultAdapterUSDC, true);
         erc20ParameterChecker.setAllowedReceiver(wbtcVault, dnVaultAdapterWBTC, true);
