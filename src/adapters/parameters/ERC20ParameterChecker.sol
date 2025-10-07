@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import { PARAMETERCHECKER_NOT_ALLOWED } from "kam/src/errors/Errors.sol";
-import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
+import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 import { IParametersChecker } from "kam/src/interfaces/modules/IAdapterGuardian.sol";
 import { ERC20 } from "solady/tokens/ERC20.sol";
 
@@ -11,7 +11,7 @@ import { ERC20 } from "solady/tokens/ERC20.sol";
 /// @dev Implements IParametersChecker to authorize adapter calls for ERC20 tokens
 contract ERC20ParameterChecker is IParametersChecker {
     /// @notice The registry contract reference
-    IRegistry public immutable registry;
+    IkRegistry public immutable registry;
 
     /// @notice Mapping of allowed receivers for each token
     mapping(address token => mapping(address receiver => bool)) private _allowedReceivers;
@@ -51,7 +51,7 @@ contract ERC20ParameterChecker is IParametersChecker {
     /// @notice Constructs the ERC20ParameterChecker
     /// @param _registry The address of the registry contract
     constructor(address _registry) {
-        registry = IRegistry(_registry);
+        registry = IkRegistry(_registry);
     }
 
     /// @notice Sets whether a receiver is allowed for a specific token
@@ -109,8 +109,6 @@ contract ERC20ParameterChecker is IParametersChecker {
         view
         returns (bool)
     {
-        if (!registry.isAsset(token)) return false;
-
         if (selector == ERC20.transfer.selector) {
             (address to, uint256 amount) = abi.decode(params, (address, uint256));
             if (amount > maxSingleTransfer(token)) return false;
