@@ -116,7 +116,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
         // Approve asset router to spend
         vm.prank(address(minter));
-        IERC20(getUSDC()).approve(address(assetRouter), amount);
+        IERC20(getUSDC()).transfer(address(assetRouter), amount);
 
         // Test asset push
         vm.prank(address(minter));
@@ -517,7 +517,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // Deposit via kMinter
         mockUSDC.mint(address(minter), depositAmount);
         vm.prank(address(minter));
-        IERC20(getUSDC()).approve(address(assetRouter), depositAmount);
+        IERC20(getUSDC()).transfer(address(assetRouter), depositAmount);
         vm.prank(address(minter));
         assetRouter.kAssetPush(getUSDC(), depositAmount, batchId);
 
@@ -682,7 +682,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // Test with maximum amount in asset push
         mockUSDC.mint(address(minter), maxAmount);
         vm.prank(address(minter));
-        IERC20(getUSDC()).approve(address(assetRouter), maxAmount);
+        IERC20(getUSDC()).transfer(address(assetRouter), maxAmount);
         vm.prank(address(minter));
         assetRouter.kAssetPush(getUSDC(), maxAmount, batchId);
 
@@ -699,14 +699,14 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // Test USDC
         mockUSDC.mint(address(minter), amount);
         vm.prank(address(minter));
-        IERC20(getUSDC()).approve(address(assetRouter), amount);
+        IERC20(getUSDC()).transfer(address(assetRouter), amount);
         vm.prank(address(minter));
         assetRouter.kAssetPush(getUSDC(), amount, batchId1);
 
         // Test WBTC
         mockWBTC.mint(address(minter), amount);
         vm.prank(address(minter));
-        IERC20(getWBTC()).approve(address(assetRouter), amount);
+        IERC20(getWBTC()).transfer(address(assetRouter), amount);
         vm.prank(address(minter));
         assetRouter.kAssetPush(getWBTC(), amount, batchId2);
 
@@ -805,7 +805,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // Test all events are properly emitted
         mockUSDC.mint(address(minter), amount);
         vm.prank(address(minter));
-        IERC20(getUSDC()).approve(address(assetRouter), amount);
+        IERC20(getUSDC()).transfer(address(assetRouter), amount);
 
         vm.prank(address(minter));
         vm.expectEmit(true, false, false, true);

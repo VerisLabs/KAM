@@ -118,4 +118,9 @@ interface IVaultAdapter is IVersioned {
     /// managed by the vault at the last recorded time.
     /// @return The last recorded total assets value.
     function totalAssets() external view returns (uint256);
+
+    /// @notice This function provides a way for the router to withdraw assets from the adapter
+    /// @param asset_ The asset to pull (use address(0) for native ETH, otherwise ERC20 token address)
+    /// @param amount_ The quantity to pull
+    function pull(address asset_, uint256 amount_) external;
 }
