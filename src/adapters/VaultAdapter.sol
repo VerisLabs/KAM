@@ -49,6 +49,12 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
     bytes32 private constant VAULTADAPTER_STORAGE_LOCATION =
         0xf3245d0f4654bfd28a91ebbd673859481bdc20aeda8fc19798f835927d79aa00;
 
+    /// @notice Registry lookup key for the kAssetRouter singleton contract
+    /// @dev This hash is used to retrieve the kAssetRouter address from the registry's contract mapping.
+    /// kAssetRouter coordinates all asset movements and settlements, making it a critical dependency
+    /// for vaults and other protocol components. The hash-based lookup enables dynamic upgrades.
+    bytes32 internal constant K_ASSET_ROUTER = keccak256("K_ASSET_ROUTER");
+
     /// @notice Retrieves the VaultAdapter storage struct from its designated storage slot
     /// @dev Uses ERC-7201 namespaced storage pattern to access the storage struct at a deterministic location.
     /// This approach prevents storage collisions in upgradeable contracts and allows safe addition of new
@@ -168,6 +174,12 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
         return $.lastTotalAssets;
     }
 
+    /// @inheritdoc IVaultAdapter
+    function pull(address asset_, uint256 amount_) external {
+        _checkRouter(_getVaultAdapterStorage());
+        asset_.safeTransfer(msg.sender, amount_);
+    }
+
     /*//////////////////////////////////////////////////////////////
                               INTERNAL VIEW
     //////////////////////////////////////////////////////////////*/
@@ -182,6 +194,12 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
     /// @notice Ensures the contract is not paused
     function _checkPaused(VaultAdapterStorage storage $) internal view {
         require(!$.paused, VAULTADAPTER_IS_PAUSED);
+    }
+
+    /// @notice Ensures the caller is the kAssetRouter
+    function _checkRouter(VaultAdapterStorage storage $) internal view {
+        address router = $.registry.getContractById(K_ASSET_ROUTER);
+        require(msg.sender == router, VAULTADAPTER_WRONG_ROLE);
     }
 
     /// @notice Validates that a vault can call a specific selector on a target

@@ -28,8 +28,7 @@ import {
     KASSETROUTER_ZERO_ADDRESS,
     KASSETROUTER_ZERO_AMOUNT
 } from "kam/src/errors/Errors.sol";
-import { OptimizedBytes32EnumerableSetLib } from
-    "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 
 import { IVaultAdapter } from "kam/src/interfaces/IVaultAdapter.sol";
 import { ISettleBatch, IkAssetRouter } from "kam/src/interfaces/IkAssetRouter.sol";
@@ -161,6 +160,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _checkKMinter(kMinter);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+
+        // Send deposits to kMinter adapter
+        IVaultAdapter adapter = IVaultAdapter(_registry().getAdapter(kMinter, _asset));
+        _asset.safeTransfer(address(adapter), amount);
 
         // Increase deposits in the batch for kMinter
         $.vaultBatchBalances[kMinter][batchId].deposited += amount.toUint128();
@@ -436,18 +439,16 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         // kMinter settlement
         if (vault == kMinter) {
-            delete $.vaultBatchBalances[vault][batchId];
-
             if (requested > 0) {
                 // Transfer assets to batch receiver for redemptions
                 address receiver = IkMinter(vault).getBatchReceiver(batchId);
                 _checkAddressNotZero(receiver);
+                adapter.pull(asset, requested);
                 asset.safeTransfer(receiver, requested);
             }
 
             // If netted assets are positive(it means more deposits than withdrawals)
             if (netted > 0) {
-                asset.safeTransfer(address(adapter), uint256(netted));
                 emit Deposited(vault, asset, uint256(netted));
             }
 
@@ -456,8 +457,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             adapter.setTotalAssets(totalAssets_);
         } else {
             uint256 totalRequestedShares = $.vaultRequestedShares[vault][batchId];
-            delete $.vaultRequestedShares[vault][batchId];
-
             // kMinter yield is sent to insuranceFund, cannot be minted.
             if (yield != 0) {
                 if (profit) {
