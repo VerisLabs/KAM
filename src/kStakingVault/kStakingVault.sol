@@ -20,8 +20,10 @@ import { IVault, IVaultBatch, IVaultClaim, IVaultFees } from "kam/src/interfaces
 import { IkToken } from "kam/src/interfaces/IkToken.sol";
 
 import {
+    KSTAKINGVAULT_BATCH_LIMIT_REACHED,
     KSTAKINGVAULT_INSUFFICIENT_BALANCE,
     KSTAKINGVAULT_IS_PAUSED,
+    KSTAKINGVAULT_MAX_TOTAL_ASSETS_REACHED,
     KSTAKINGVAULT_REQUEST_NOT_ELIGIBLE,
     KSTAKINGVAULT_REQUEST_NOT_FOUND,
     KSTAKINGVAULT_UNAUTHORIZED,
@@ -34,7 +36,6 @@ import {
     VAULTBATCHES_VAULT_CLOSED,
     VAULTBATCHES_VAULT_SETTLED,
     VAULTCLAIMS_BATCH_NOT_SETTLED,
-    VAULTCLAIMS_INVALID_BATCH_ID,
     VAULTCLAIMS_NOT_BENEFICIARY,
     VAULTCLAIMS_REQUEST_NOT_PENDING,
     VAULTFEES_FEE_EXCEEDS_MAXIMUM,
@@ -205,6 +206,15 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         bytes32 batchId = $.currentBatchId;
         uint128 amount128 = amount.toUint128();
 
+        // Make sure we dont exceed the max deposit per batch
+        require(
+            ($.batches[batchId].depositedInBatch += amount128) <= _registry().getMaxMintPerBatch(address(this)),
+            KSTAKINGVAULT_BATCH_LIMIT_REACHED
+        );
+
+        // Make sure we dont exceed the max total assets
+        require(_totalAssets() + amount128 <= $.maxTotalAssets, KSTAKINGVAULT_MAX_TOTAL_ASSETS_REACHED);
+
         // Generate request ID
         requestId = _createStakeRequestId(msg.sender, amount, block.timestamp);
 
@@ -253,6 +263,13 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         require(balanceOf(msg.sender) >= stkTokenAmount, KSTAKINGVAULT_INSUFFICIENT_BALANCE);
 
         bytes32 batchId = $.currentBatchId;
+        uint128 withdrawn = _convertToAssetsWithTotals(stkTokenAmount, _totalNetAssets()).toUint128();
+
+        // Make sure we dont exceed the max withdraw per batch
+        require(
+            ($.batches[batchId].withdrawnInBatch += withdrawn) <= _registry().getMaxBurnPerBatch(address(this)),
+            KSTAKINGVAULT_BATCH_LIMIT_REACHED
+        );
 
         // Generate request ID
         requestId = _createStakeRequestId(msg.sender, stkTokenAmount, block.timestamp);
@@ -262,7 +279,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
             user: msg.sender,
             stkTokenAmount: stkTokenAmount.toUint128(),
             recipient: to,
-            requestTimestamp: (block.timestamp).toUint64(),
+            requestTimestamp: uint64(block.timestamp),
             status: BaseVaultTypes.RequestStatus.PENDING,
             batchId: batchId
         });
@@ -381,6 +398,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit BatchSettled(_batchId);
     }
 
+    /// @inheritdoc IVaultFees
     function burnFees(uint256 shares) external {
         _checkAdmin(msg.sender);
         _burn(address(this), shares);
@@ -649,8 +667,14 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     }
 
     /*//////////////////////////////////////////////////////////////
-                            PAUSE FUNCTIONS
+                            ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IVault
+    function setMaxTotalAssets(uint256 maxTotalAssets_) external {
+        _checkAdmin(msg.sender);
+        _getBaseVaultStorage().maxTotalAssets = maxTotalAssets_.toUint128();
+    }
 
     /// @inheritdoc IVault
     function setPaused(bool paused_) external {
@@ -658,20 +682,12 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _setPaused(paused_);
     }
 
-    /*//////////////////////////////////////////////////////////////
-                        UUPS UPGRADE
-    //////////////////////////////////////////////////////////////*/
-
     /// @notice Authorize upgrade (only owner can upgrade)
     /// @dev This allows upgrading the main contract while keeping modules separate
     function _authorizeUpgrade(address newImplementation) internal view override {
         _checkAdmin(msg.sender);
         require(newImplementation != address(0), KSTAKINGVAULT_ZERO_ADDRESS);
     }
-
-    /*//////////////////////////////////////////////////////////////
-                        FUNCTIONS UPGRADE
-    //////////////////////////////////////////////////////////////*/
 
     /// @notice Authorize function modification
     /// @dev This allows modifying functions while keeping modules separate

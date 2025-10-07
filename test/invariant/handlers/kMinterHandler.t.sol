@@ -82,7 +82,7 @@ contract kMinterHandler is BaseHandler {
         kMinter_expectedTotalLockedAssets += amount;
         kMinter_actualTotalLockedAssets = kMinter_minter.getTotalLockedAssets(kMinter_token);
 
-        uint256 oldActualAdapterBalance = kMinter_actualAdapterBalance;
+        kMinter_expectedAdapterBalance += amount;
         kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
 
         kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();
@@ -163,19 +163,19 @@ contract kMinterHandler is BaseHandler {
         vm.startPrank(kMinter_relayer);
         kMinter_minter.closeBatch(batchId, true);
 
-        if (kMinter_nettedInBatch < 0) {
-            address[] memory targets = new address[](1);
-            bytes[] memory data = new bytes[](1);
-            uint256[] memory values = new uint256[](1);
-            targets[0] = address(kMinter_token);
-            data[0] = abi.encodeWithSignature(
-                "transfer(address,uint256)", address(kMinter_assetRouter), uint256(-kMinter_nettedInBatch)
-            );
-            values[0] = 0;
-            kMinter_adapter.execute(targets, data, values);
+        // if (kMinter_nettedInBatch < 0) {
+        //     address[] memory targets = new address[](1);
+        //     bytes[] memory data = new bytes[](1);
+        //     uint256[] memory values = new uint256[](1);
+        //     targets[0] = address(kMinter_token);
+        //     data[0] = abi.encodeWithSignature(
+        //         "transfer(address,uint256)", address(kMinter_assetRouter), uint256(-kMinter_nettedInBatch)
+        //     );
+        //     values[0] = 0;
+        //     kMinter_adapter.execute(targets, data, values);
 
-            kMinter_expectedAdapterBalance = uint256(int256(kMinter_expectedAdapterBalance) + kMinter_nettedInBatch);
-        }
+        //     kMinter_expectedAdapterBalance = uint256(int256(kMinter_expectedAdapterBalance) + kMinter_nettedInBatch);
+        // }
 
         vm.expectEmit(false, true, true, true);
         emit IkAssetRouter.SettlementProposed(
@@ -225,13 +225,10 @@ contract kMinterHandler is BaseHandler {
         kMinter_pendingSettlementProposals.remove(proposalId);
         kMinter_pendingUnsettledBatches.remove(proposal.batchId);
 
-        if (proposal.netted > 0) {
-            kMinter_expectedAdapterBalance += uint256(proposal.netted);
-        }
-
         kMinter_expectedAdapterTotalAssets = proposal.totalAssets;
 
-        uint256 oldActualAdapterBalance = kMinter_actualAdapterBalance;
+        (, uint256 requested) = kMinter_assetRouter.getBatchIdBalances(address(kMinter_minter), proposal.batchId);
+        kMinter_expectedAdapterBalance -= requested;
         kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
 
         kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();

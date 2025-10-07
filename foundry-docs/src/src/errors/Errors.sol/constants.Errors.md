@@ -1,5 +1,5 @@
 # Constants
-[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/errors/Errors.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7810ef786f844ebd78831ee424b7ee896113d92b/src/errors/Errors.sol)
 
 ### KASSETROUTER_ALREADY_REGISTERED
 *All error codes use contract-specific prefixes for easier debugging:
@@ -128,6 +128,12 @@ string constant KASSETROUTER_ZERO_AMOUNT = "A18";
 
 ```solidity
 string constant KASSETROUTER_INVALID_MAX_DELTA = "A19";
+```
+
+### KASSETROUTER_ONLY_ONE_PROPOSAL_AT_THE_TIME
+
+```solidity
+string constant KASSETROUTER_ONLY_ONE_PROPOSAL_AT_THE_TIME = "A20";
 ```
 
 ### ADAPTER_ALREADY_INITIALIZED
@@ -812,6 +818,18 @@ string constant VAULTADAPTER_WRONG_TARGET = "VA12";
 
 ```solidity
 string constant VAULTADAPTER_SELECTOR_NOT_ALLOWED = "VA13";
+```
+
+### VAULTADAPTER_ARRAY_MISMATCH
+
+```solidity
+string constant VAULTADAPTER_ARRAY_MISMATCH = "VA14";
+```
+
+### VAULTADAPTER_ZERO_ARRAY
+
+```solidity
+string constant VAULTADAPTER_ZERO_ARRAY = "VA15";
 ```
 
 ### PARAMETERCHECKER_NOT_ALLOWED

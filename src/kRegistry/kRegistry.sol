@@ -82,7 +82,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
         /// @dev Maps assets to their maximum mint amount per batch
         mapping(address => uint256) maxMintPerBatch;
         /// @dev Maps assets to their maximum redeem amount per batch
-        mapping(address => uint256) maxRedeemPerBatch;
+        mapping(address => uint256) maxBurnPerBatch;
         /// @dev Maps singleton contract identifiers to their deployed addresses
         mapping(bytes32 => address) singletonContracts;
         /// @dev Maps vault addresses to their type classification (DN, ALPHA, BETA, etc.)
@@ -259,37 +259,23 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
                           ASSET MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Set the maximum mint and redeem limits for a given asset
-    /// @param asset_ The asset address
-    /// @param maxMintPerBatch_ The maximum mint amount per batch
-    /// @param maxRedeemPerBatch_ The maximum redeem amount per batch
-    /// @dev Only callable by ADMIN_ROLE
-    function setAssetBatchLimits(
-        address asset_,
-        uint256 maxMintPerBatch_,
-        uint256 maxRedeemPerBatch_
-    )
-        external
-        payable
-    {
+    /// @inheritdoc IRegistry
+    function setAssetBatchLimits(address asset_, uint256 maxMintPerBatch_, uint256 maxBurnPerBatch_) external payable {
         _checkAdmin(msg.sender);
-        _checkAssetRegistered(asset_);
 
         kRegistryStorage storage $ = _getkRegistryStorage();
         $.maxMintPerBatch[asset_] = maxMintPerBatch_;
-        $.maxRedeemPerBatch[asset_] = maxRedeemPerBatch_;
+        $.maxBurnPerBatch[asset_] = maxBurnPerBatch_;
     }
 
-    /// @notice Register support for a new asset and its corresponding kToken
-    /// @param asset Underlying asset address (e.g., USDC, WBTC)
-    /// @dev Only callable by ADMIN_ROLE, establishes bidirectional mapping
+    /// @inheritdoc IRegistry
     function registerAsset(
         string memory name_,
         string memory symbol_,
         address asset,
         bytes32 id,
         uint256 maxMintPerBatch,
-        uint256 maxRedeemPerBatch
+        uint256 maxBurnPerBatch
     )
         external
         payable
@@ -333,7 +319,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
         );
 
         $.maxMintPerBatch[asset] = maxMintPerBatch;
-        $.maxRedeemPerBatch[asset] = maxRedeemPerBatch;
+        $.maxBurnPerBatch[asset] = maxBurnPerBatch;
 
         // Register kToken
         $.assetToKToken[asset] = kToken_;
@@ -424,22 +410,16 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Gets the max mint per batch for a specific asset
-    /// @param asset The asset address
-    /// @return The max mint per batch
+    /// @inheritdoc IRegistry
     function getMaxMintPerBatch(address asset) external view returns (uint256) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        _checkAssetRegistered(asset);
         return $.maxMintPerBatch[asset];
     }
 
-    /// @notice Gets the max redeem per batch for a specific asset
-    /// @param asset The asset address
-    /// @return The max redeem per batch
-    function getMaxRedeemPerBatch(address asset) external view returns (uint256) {
+    /// @inheritdoc IRegistry
+    function getMaxBurnPerBatch(address asset) external view returns (uint256) {
         kRegistryStorage storage $ = _getkRegistryStorage();
-        _checkAssetRegistered(asset);
-        return $.maxRedeemPerBatch[asset];
+        return $.maxBurnPerBatch[asset];
     }
 
     /// @notice Gets the hurdle rate for a specific asset
@@ -451,10 +431,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
         return $.assetHurdleRate[asset];
     }
 
-    /// @notice Get a singleton contract address by its identifier
-    /// @param id Contract identifier (e.g., K_MINTER, K_BATCH)
-    /// @return Contract address
-    /// @dev Reverts if contract not set
+    /// @inheritdoc IRegistry
     function getContractById(bytes32 id) public view returns (address) {
         kRegistryStorage storage $ = _getkRegistryStorage();
         address addr = $.singletonContracts[id];
@@ -661,7 +638,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
 
     /// @notice Authorize function modification
     /// @dev This allows modifying functions while keeping modules separate
-    function _authorizeModifyFunctions(address sender) internal override {
+    function _authorizeModifyFunctions(address) internal view override {
         _checkOwner();
     }
 

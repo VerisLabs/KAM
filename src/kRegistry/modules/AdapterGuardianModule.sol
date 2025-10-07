@@ -12,10 +12,8 @@ import {
 
 import { IAdapterGuardian, IParametersChecker } from "kam/src/interfaces/modules/IAdapterGuardian.sol";
 import { IModule } from "kam/src/interfaces/modules/IModule.sol";
-import { OptimizedAddressEnumerableSetLib } from
-    "src/vendor/solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
-import { OptimizedBytes32EnumerableSetLib } from
-    "src/vendor/solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedAddressEnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
+import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 
 /// @title AdapterGuardianModule
 /// @notice Module for managing adapter permissions and parameter checking in kRegistry

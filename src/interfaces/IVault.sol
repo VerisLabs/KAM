@@ -91,4 +91,8 @@ interface IVault is IVaultBatch, IVaultClaim, IVaultFees {
     /// situations without compromising decentralization principles.
     /// @param paused_ The desired operational state (true = pause operations, false = resume operations)
     function setPaused(bool paused_) external;
+
+    /// @notice Sets the maximum total assets
+    /// @param maxTotalAssets_ Maximum total assets
+    function setMaxTotalAssets(uint256 maxTotalAssets_) external;
 }
