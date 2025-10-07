@@ -82,7 +82,6 @@ contract kMinterHandler is BaseHandler {
         kMinter_expectedTotalLockedAssets += amount;
         kMinter_actualTotalLockedAssets = kMinter_minter.getTotalLockedAssets(kMinter_token);
 
-
         kMinter_expectedAdapterBalance += amount;
         kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
 
