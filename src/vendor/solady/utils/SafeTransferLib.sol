@@ -9,9 +9,9 @@ pragma solidity 0.8.30;
 /// @dev Note:
 /// - For ETH transfers, please use `forceSafeTransferETH` for DoS protection.
 library SafeTransferLib {
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                       CUSTOM ERRORS                        */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* CUSTOM ERRORS */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev The ETH transfer has failed.
     error ETHTransferFailed();
@@ -40,9 +40,9 @@ library SafeTransferLib {
     /// @dev The Permit2 lockdown operation has failed.
     error Permit2LockdownFailed();
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                         CONSTANTS                          */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* CONSTANTS */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev Suggested gas stipend for contract receiving ETH that disallows any storage writes.
     uint256 internal constant GAS_STIPEND_NO_STORAGE_WRITES = 2300;
@@ -62,9 +62,9 @@ library SafeTransferLib {
     /// [Etherscan](https://etherscan.io/address/0x000000000022D473030F116dDEE9F6B43aC78BA3)
     address internal constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                       ETH OPERATIONS                       */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* ETH OPERATIONS */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     // If the ETH transfer MUST succeed with a reasonable gas budget, use the force variants.
     //
@@ -75,10 +75,10 @@ library SafeTransferLib {
     //
     // The force variants:
     // - Forwards with an optional gas stipend
-    //   (defaults to `GAS_STIPEND_NO_GRIEF`, which is sufficient for most cases).
+    // (defaults to `GAS_STIPEND_NO_GRIEF`, which is sufficient for most cases).
     // - If the target reverts, or if the gas stipend is exhausted,
-    //   creates a temporary contract to force send the ETH via `SELFDESTRUCT`.
-    //   Future compatible with `SENDALL`: https://eips.ethereum.org/EIPS/eip-4758.
+    // creates a temporary contract to force send the ETH via `SELFDESTRUCT`.
+    // Future compatible with `SENDALL`: https://eips.ethereum.org/EIPS/eip-4758.
     // - Reverts if the current contract has insufficient balance.
     //
     // The try variants:
@@ -159,6 +159,7 @@ library SafeTransferLib {
     function forceSafeTransferAllETH(address to) internal {
         /// @solidity memory-safe-assembly
         assembly {
+
             // forgefmt: disable-next-item
             if iszero(call(GAS_STIPEND_NO_GRIEF, to, selfbalance(), codesize(), 0x00, codesize(), 0x00)) {
                 mstore(0x00, to) // Store the address in scratch space.
@@ -185,9 +186,9 @@ library SafeTransferLib {
         }
     }
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                      ERC20 OPERATIONS                      */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* ERC20 OPERATIONS */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev Sends `amount` of ERC20 `token` from `from` to `to`.
     /// Reverts upon failure.
@@ -217,12 +218,7 @@ library SafeTransferLib {
     /// @dev Sends `amount` of ERC20 `token` from `from` to `to`.
     ///
     /// The `from` account must have at least `amount` approved for the current contract to manage.
-    function trySafeTransferFrom(
-        address token,
-        address from,
-        address to,
-        uint256 amount
-    )
+    function trySafeTransferFrom(address token, address from, address to, uint256 amount)
         internal
         returns (bool success)
     {
@@ -253,7 +249,7 @@ library SafeTransferLib {
             mstore(0x40, to) // Store the `to` argument.
             mstore(0x2c, shl(96, from)) // Store the `from` argument.
             mstore(0x0c, 0x70a08231000000000000000000000000) // `balanceOf(address)`.
-            // Read the balance, reverting upon failure.
+                // Read the balance, reverting upon failure.
             if iszero(
                 and( // The arguments of `and` are evaluated from right to left.
                     gt(returndatasize(), 0x1f), // At least 32 bytes returned.
@@ -265,7 +261,7 @@ library SafeTransferLib {
             }
             mstore(0x00, 0x23b872dd) // `transferFrom(address,address,uint256)`.
             amount := mload(0x60) // The `amount` is already at 0x60. We'll need to return it.
-            // Perform the transfer, reverting upon failure.
+                // Perform the transfer, reverting upon failure.
             let success := call(gas(), token, 0, 0x1c, 0x64, 0x00, 0x20)
             if iszero(and(eq(mload(0x00), 1), success)) {
                 if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
@@ -286,7 +282,7 @@ library SafeTransferLib {
             mstore(0x14, to) // Store the `to` argument.
             mstore(0x34, amount) // Store the `amount` argument.
             mstore(0x00, 0xa9059cbb000000000000000000000000) // `transfer(address,uint256)`.
-            // Perform the transfer, reverting upon failure.
+                // Perform the transfer, reverting upon failure.
             let success := call(gas(), token, 0, 0x10, 0x44, 0x00, 0x20)
             if iszero(and(eq(mload(0x00), 1), success)) {
                 if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
@@ -305,7 +301,7 @@ library SafeTransferLib {
         assembly {
             mstore(0x00, 0x70a08231) // Store the function selector of `balanceOf(address)`.
             mstore(0x20, address()) // Store the address of the current contract.
-            // Read the balance, reverting upon failure.
+                // Read the balance, reverting upon failure.
             if iszero(
                 and( // The arguments of `and` are evaluated from right to left.
                     gt(returndatasize(), 0x1f), // At least 32 bytes returned.
@@ -318,7 +314,7 @@ library SafeTransferLib {
             mstore(0x14, to) // Store the `to` argument.
             amount := mload(0x34) // The `amount` is already at 0x34. We'll need to return it.
             mstore(0x00, 0xa9059cbb000000000000000000000000) // `transfer(address,uint256)`.
-            // Perform the transfer, reverting upon failure.
+                // Perform the transfer, reverting upon failure.
             let success := call(gas(), token, 0, 0x10, 0x44, 0x00, 0x20)
             if iszero(and(eq(mload(0x00), 1), success)) {
                 if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
@@ -359,7 +355,7 @@ library SafeTransferLib {
             mstore(0x14, to) // Store the `to` argument.
             mstore(0x34, amount) // Store the `amount` argument.
             mstore(0x00, 0x095ea7b3000000000000000000000000) // `approve(address,uint256)`.
-            // Perform the approval, retrying upon failure.
+                // Perform the approval, retrying upon failure.
             let success := call(gas(), token, 0, 0x10, 0x44, 0x00, 0x20)
             if iszero(and(eq(mload(0x00), 1), success)) {
                 if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
@@ -367,7 +363,7 @@ library SafeTransferLib {
                     mstore(0x00, 0x095ea7b3000000000000000000000000) // `approve(address,uint256)`.
                     pop(call(gas(), token, 0, 0x10, 0x44, codesize(), 0x00)) // Reset the approval.
                     mstore(0x34, amount) // Store back the original `amount`.
-                    // Retry the approval, reverting upon failure.
+                        // Retry the approval, reverting upon failure.
                     success := call(gas(), token, 0, 0x10, 0x44, 0x00, 0x20)
                     if iszero(and(eq(mload(0x00), 1), success)) {
                         // Check the `extcodesize` again just in case the token selfdestructs lol.
@@ -389,14 +385,13 @@ library SafeTransferLib {
         assembly {
             mstore(0x14, account) // Store the `account` argument.
             mstore(0x00, 0x70a08231000000000000000000000000) // `balanceOf(address)`.
-            amount :=
-                mul( // The arguments of `mul` are evaluated from right to left.
-                    mload(0x20),
-                    and( // The arguments of `and` are evaluated from right to left.
-                        gt(returndatasize(), 0x1f), // At least 32 bytes returned.
-                        staticcall(gas(), token, 0x10, 0x24, 0x20, 0x20)
-                    )
+            amount := mul( // The arguments of `mul` are evaluated from right to left.
+                mload(0x20),
+                and( // The arguments of `and` are evaluated from right to left.
+                    gt(returndatasize(), 0x1f), // At least 32 bytes returned.
+                    staticcall(gas(), token, 0x10, 0x24, 0x20, 0x20)
                 )
+            )
         }
     }
 
@@ -408,11 +403,10 @@ library SafeTransferLib {
         assembly {
             mstore(0x14, account) // Store the `account` argument.
             mstore(0x00, 0x70a08231000000000000000000000000) // `balanceOf(address)`.
-            implemented :=
-                and( // The arguments of `and` are evaluated from right to left.
-                    gt(returndatasize(), 0x1f), // At least 32 bytes returned.
-                    staticcall(gas(), token, 0x10, 0x24, 0x20, 0x20)
-                )
+            implemented := and( // The arguments of `and` are evaluated from right to left.
+                gt(returndatasize(), 0x1f), // At least 32 bytes returned.
+                staticcall(gas(), token, 0x10, 0x24, 0x20, 0x20)
+            )
             amount := mul(mload(0x20), implemented)
         }
     }
@@ -492,8 +486,8 @@ library SafeTransferLib {
                 if iszero(
                     and( // The arguments of `and` are evaluated from right to left.
                         lt(iszero(mload(0x00)), eq(returndatasize(), 0x20)), // Returns 1 non-zero word.
-                        // Gas stipend to limit gas burn for tokens that don't refund gas when
-                        // an non-existing function is called. 5K should be enough for a SLOAD.
+                            // Gas stipend to limit gas burn for tokens that don't refund gas when
+                            // an non-existing function is called. 5K should be enough for a SLOAD.
                         staticcall(5000, token, 0x1c, 0x04, 0x00, 0x20)
                     )
                 ) { break }
@@ -507,8 +501,8 @@ library SafeTransferLib {
                     mstore(0x00, 0x7ecebe00000000000000000000000000) // `nonces(address)`.
                     mstore(add(m, 0x94), lt(iszero(amount), staticcall(gas(), token, 0x10, 0x24, add(m, 0x54), 0x20)))
                     mstore(m, 0x8fcbaf0c000000000000000000000000) // `IDAIPermit.permit`.
-                    // `nonces` is already at `add(m, 0x54)`.
-                    // `amount != 0` is already stored at `add(m, 0x94)`.
+                        // `nonces` is already at `add(m, 0x54)`.
+                        // `amount != 0` is already stored at `add(m, 0x94)`.
                     mstore(add(m, 0xb4), and(0xff, v))
                     mstore(add(m, 0xd4), r)
                     mstore(add(m, 0xf4), s)
@@ -562,12 +556,12 @@ library SafeTransferLib {
                 revert(add(0x18, shl(2, iszero(p))), 0x04)
             }
             mstore(m, 0x2b67b570) // `Permit2.permit` (PermitSingle variant).
-            // `owner` is already `add(m, 0x20)`.
-            // `token` is already at `add(m, 0x40)`.
+                // `owner` is already `add(m, 0x20)`.
+                // `token` is already at `add(m, 0x40)`.
             mstore(add(m, 0x60), amount)
             mstore(add(m, 0x80), 0xffffffffffff) // `expiration = type(uint48).max`.
-            // `nonce` is already at `add(m, 0xa0)`.
-            // `spender` is already at `add(m, 0xc0)`.
+                // `nonce` is already at `add(m, 0xa0)`.
+                // `spender` is already at `add(m, 0xc0)`.
             mstore(add(m, 0xe0), deadline)
             mstore(add(m, 0x100), 0x100) // `signature` offset.
             mstore(add(m, 0x120), 0x41) // `signature` length.
@@ -575,7 +569,8 @@ library SafeTransferLib {
             mstore(add(m, 0x160), s)
             mstore(add(m, 0x180), shl(248, v))
             if iszero( // Revert if token does not have code, or if the call fails.
-            mul(extcodesize(token), call(gas(), p, 0, add(m, 0x1c), 0x184, codesize(), 0x00))) {
+                mul(extcodesize(token), call(gas(), p, 0, add(m, 0x1c), 0x184, codesize(), 0x00))
+            ) {
                 mstore(0x00, 0x6b836e6b) // `Permit2Failed()`.
                 revert(0x1c, 0x04)
             }

@@ -8,7 +8,6 @@ import { DeploymentBaseTest } from "../utils/DeploymentBaseTest.sol";
 import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
 import { OptimizedOwnableRoles } from "solady/auth/OptimizedOwnableRoles.sol";
 
-
 contract DeploymentTest is DeploymentBaseTest {
     function test_ProtocolDeployment() public view {
         // Check that all contracts are deployed
@@ -87,7 +86,7 @@ contract DeploymentTest is DeploymentBaseTest {
         );
     }
 
-    function test_AssetRegistration() public view{
+    function test_AssetRegistration() public view {
         // Check USDC registration
         assertTrue(registry.isAsset(tokens.usdc), "tokens.usdc not registered");
         assertEq(registry.assetToKToken(tokens.usdc), address(kUSD), "USDC->kUSD mapping incorrect");
@@ -97,7 +96,7 @@ contract DeploymentTest is DeploymentBaseTest {
         assertEq(registry.assetToKToken(tokens.wbtc), address(kBTC), "WBTC->kBTC mapping incorrect");
     }
 
-    function test_VaultRegistration() public view{
+    function test_VaultRegistration() public view {
         // Check all vaults are registered
         assertTrue(registry.isVault(address(minter)), "Minter Vault not registered");
         assertTrue(registry.isVault(address(dnVault)), "DN Vault not registered");
@@ -116,7 +115,7 @@ contract DeploymentTest is DeploymentBaseTest {
         assertEq(registry.getVaultType(address(betaVault)), uint8(3), "Beta Vault type incorrect"); // BETA = 3
     }
 
-    function test_UserFunding() public view{
+    function test_UserFunding() public view {
         assertEq(getAssetBalance(tokens.usdc, users.alice), 1_000_000 * _1_USDC, "Alice USDC balance incorrect");
         assertEq(getAssetBalance(tokens.usdc, users.bob), 500_000 * _1_USDC, "Bob USDC balance incorrect");
         assertEq(
@@ -140,7 +139,7 @@ contract DeploymentTest is DeploymentBaseTest {
         assertEq(kUSD.totalSupply(), mintAmount, "Total supply incorrect");
     }
 
-    function test_ContractOwnership() public view{
+    function test_ContractOwnership() public view {
         // Check owners
         assertEq(registry.owner(), users.owner, "Registry owner incorrect");
         assertEq(kUSD.owner(), users.owner, "kUSD owner incorrect");
@@ -150,7 +149,7 @@ contract DeploymentTest is DeploymentBaseTest {
         assertEq(betaVault.owner(), users.owner, "Beta Vault owner incorrect");
     }
 
-    function test_ProtocolState() public view{
+    function test_ProtocolState() public view {
         (
             address registryAddr,
             address assetRouterAddr,

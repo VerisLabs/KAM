@@ -18,7 +18,7 @@ import { IVaultFees } from "./IVaultFees.sol";
 /// than token rebasing. This approach maintains compatibility with existing DeFi infrastructure while providing
 /// transparent yield accrual for retail participants.
 interface IVault is IVaultBatch, IVaultClaim, IVaultFees {
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         USER STAKING OPERATIONS
     //////////////////////////////////////////////////////////////*/
 

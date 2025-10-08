@@ -67,13 +67,13 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     using OptimizedSafeCastLib for uint64;
     using OptimizedFixedPointMathLib for uint256;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
     // VaultBatches Events
-    /// @notice Emitted when a new batch is created
-    /// @param batchId The batch ID of the new batch
+    // / @notice Emitted when a new batch is created
+    // / @param batchId The batch ID of the new batch
     event BatchCreated(bytes32 indexed batchId);
 
     /// @notice Emitted when a batch is settled
@@ -90,7 +90,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
 
     // VaultClaims Events
-    /// @notice Emitted when a user claims staking shares
+    // / @notice Emitted when a user claims staking shares
     event StakingSharesClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 shares);
 
     /// @notice Emitted when a user claims unstaking assets
@@ -100,9 +100,9 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
 
     // VaultFees Events
-    /// @notice Emitted when the management fee is updated
-    /// @param oldFee Previous management fee in basis points
-    /// @param newFee New management fee in basis points
+    // / @notice Emitted when the management fee is updated
+    // / @param oldFee Previous management fee in basis points
+    // / @param newFee New management fee in basis points
     event ManagementFeeUpdated(uint16 oldFee, uint16 newFee);
 
     /// @notice Emitted when the performance fee is updated
@@ -131,7 +131,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     /// @param timestamp Timestamp of the fee charge
     event PerformanceFeesCharged(uint256 timestamp);
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -187,7 +187,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit Initialized(registry_, name_, symbol_, decimals_, asset_);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           CORE OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -240,9 +240,8 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         // Notify the router to move underlying assets from DN strategy
         // To the strategy of this vault
         // That movement will happen from the wallet managing the portfolio
-        IkAssetRouter(_getKAssetRouter()).kAssetTransfer(
-            _getKMinter(), address(this), $.underlyingAsset, amount, batchId
-        );
+        IkAssetRouter(_getKAssetRouter())
+            .kAssetTransfer(_getKMinter(), address(this), $.underlyingAsset, amount, batchId);
 
         emit StakeRequestCreated(bytes32(requestId), msg.sender, $.kToken, amount, to, batchId);
 
@@ -320,9 +319,8 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         require(!$.batches[request.batchId].isClosed, KSTAKINGVAULT_VAULT_CLOSED);
         require(!$.batches[request.batchId].isSettled, KSTAKINGVAULT_VAULT_SETTLED);
 
-        IkAssetRouter(_getKAssetRouter()).kAssetTransfer(
-            address(this), _getKMinter(), $.underlyingAsset, request.kTokenAmount, request.batchId
-        );
+        IkAssetRouter(_getKAssetRouter())
+            .kAssetTransfer(address(this), _getKMinter(), $.underlyingAsset, request.kTokenAmount, request.batchId);
 
         $.kToken.safeTransfer(request.user, request.kTokenAmount);
 
@@ -360,7 +358,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _unlockReentrant();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             VAULT BATCHES FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -506,7 +504,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         require(timestamp >= lastTimestamp && timestamp <= block.timestamp, VAULTFEES_INVALID_TIMESTAMP);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           VAULT CLAIMS FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -586,7 +584,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _unlockReentrant();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           VAULT FEES FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -647,7 +645,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -666,7 +664,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         );
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 

@@ -21,7 +21,7 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
     kStakingVaultHandler public vaultHandlerAlpha;
     kStakingVaultHandler public vaultHandlerBeta;
     uint16 public constant PERFORMANCE_FEE = 2000; // 20%
-    uint16 public constant MANAGEMENT_FEE = 100; // 1%
+    uint16 public constant MANAGEMENT_FEE = 100; //1%
 
     function _setUp() internal {
         super.setUp();

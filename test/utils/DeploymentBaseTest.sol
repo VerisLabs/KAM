@@ -57,7 +57,7 @@ contract DeploymentBaseTest is BaseTest {
     kMinter public minterImpl;
     kStakingVault public stakingVaultImpl;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         TEST CONFIGURATION
     //////////////////////////////////////////////////////////////*/
 
@@ -76,7 +76,7 @@ contract DeploymentBaseTest is BaseTest {
     string public constant BETA_VAULT_NAME = "Beta KAM Vault";
     string public constant BETA_VAULT_SYMBOL = "bkUSD";
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         SETUP & DEPLOYMENT
     //////////////////////////////////////////////////////////////*/
 
@@ -129,7 +129,7 @@ contract DeploymentBaseTest is BaseTest {
         _configureProtocol();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         DEPLOYMENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -189,8 +189,9 @@ contract DeploymentBaseTest is BaseTest {
         kUSD = kToken(payable(kUSDAddress));
         kUSD.grantEmergencyRole(users.emergencyAdmin);
 
-        address kBTCAddress =
-            registry.registerAsset(KBTC_NAME, KBTC_SYMBOL, tokens.wbtc, registry.WBTC(), type(uint256).max, type(uint256).max);
+        address kBTCAddress = registry.registerAsset(
+            KBTC_NAME, KBTC_SYMBOL, tokens.wbtc, registry.WBTC(), type(uint256).max, type(uint256).max
+        );
         kBTC = kToken(payable(kBTCAddress));
         kBTC.grantEmergencyRole(users.emergencyAdmin);
         vm.stopPrank();
@@ -235,11 +236,7 @@ contract DeploymentBaseTest is BaseTest {
         vm.label(address(readerModule), "ReaderModule");
     }
 
-    function _deployVault(
-        string memory name,
-        string memory symbol,
-        string memory label
-    )
+    function _deployVault(string memory name, string memory symbol, string memory label)
         internal
         returns (IkStakingVault vault)
     {
@@ -292,7 +289,7 @@ contract DeploymentBaseTest is BaseTest {
         vm.label(address(vaultAdapterImpl), "VaultAdapterImpl");
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         CONFIGURATION FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -311,13 +308,15 @@ contract DeploymentBaseTest is BaseTest {
         registry.registerAdapter(address(alphaVault), tokens.usdc, address(ALPHAVaultAdapterUSDC));
         registry.registerAdapter(address(betaVault), tokens.usdc, address(BETHAVaultAdapterUSDC));
 
-        IkRegistry(address(registry)).setAdapterAllowedSelector(
-            address(minterAdapterUSDC), tokens.usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
-        );
+        IkRegistry(address(registry))
+            .setAdapterAllowedSelector(
+                address(minterAdapterUSDC), tokens.usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
+            );
 
-        IkRegistry(address(registry)).setAdapterAllowedSelector(
-            address(ALPHAVaultAdapterUSDC), tokens.usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
-        );
+        IkRegistry(address(registry))
+            .setAdapterAllowedSelector(
+                address(ALPHAVaultAdapterUSDC), tokens.usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
+            );
 
         registry.setAssetBatchLimits(address(dnVault), type(uint256).max, type(uint256).max);
         registry.setAssetBatchLimits(address(alphaVault), type(uint256).max, type(uint256).max);
@@ -401,7 +400,7 @@ contract DeploymentBaseTest is BaseTest {
         mockWBTC.mint(users.institution, 1000 * _1_WBTC);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         TEST HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -422,7 +421,7 @@ contract DeploymentBaseTest is BaseTest {
         vm.expectEmit(true, true, true, true, emitter);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         ASSERTION HELPERS
     //////////////////////////////////////////////////////////////*/
 
@@ -438,7 +437,7 @@ contract DeploymentBaseTest is BaseTest {
         assertEq(getKTokenBalance(token, user), expected, "kToken balance mismatch");
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         PROTOCOL STATE HELPERS
     //////////////////////////////////////////////////////////////*/
 

@@ -22,7 +22,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
@@ -57,7 +57,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
@@ -102,12 +102,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     }
 
     /// @inheritdoc IAdapterGuardian
-    function setAdapterParametersChecker(
-        address adapter,
-        address target,
-        bytes4 selector,
-        address parametersChecker
-    )
+    function setAdapterParametersChecker(address adapter, address target, bytes4 selector, address parametersChecker)
         external
     {
         _checkAdmin(msg.sender);
@@ -123,7 +118,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         emit ParametersCheckerSet(adapter, target, selector, parametersChecker);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -150,11 +145,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     }
 
     /// @inheritdoc IAdapterGuardian
-    function getAdapterParametersChecker(
-        address adapter,
-        address target,
-        bytes4 selector
-    )
+    function getAdapterParametersChecker(address adapter, address target, bytes4 selector)
         external
         view
         returns (address)
@@ -177,7 +168,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         return $.targetType[target];
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         MODULE SELECTORS
     //////////////////////////////////////////////////////////////*/
 

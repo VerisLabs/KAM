@@ -43,9 +43,9 @@ contract kStakingVaultHandler is BaseHandler {
     Bytes32Set kStakingVault_pendingUnsettledBatches;
     Bytes32Set kStakingVault_pendingSettlementProposals;
 
-    ////////////////////////////////////////////////////////////////
-    ///                      GHOST VARS                          ///
-    ////////////////////////////////////////////////////////////////
+    // //////////////////////////////////////////////////////////////
+    // / GHOST VARS ///
+    // //////////////////////////////////////////////////////////////
 
     uint256 kStakingVault_expectedTotalAssets;
     uint256 kStakingVault_actualTotalAssets;
@@ -89,9 +89,9 @@ contract kStakingVaultHandler is BaseHandler {
         kStakingVault_lastFeesChargedPerformance = 1;
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                      HELPERS                             ///
-    ////////////////////////////////////////////////////////////////
+    // //////////////////////////////////////////////////////////////
+    // / HELPERS ///
+    // //////////////////////////////////////////////////////////////
 
     function getEntryPoints() public pure override returns (bytes4[] memory) {
         bytes4[] memory _entryPoints = new bytes4[](9);
@@ -102,7 +102,7 @@ contract kStakingVaultHandler is BaseHandler {
         _entryPoints[4] = this.kStakingVault_proposeSettlement.selector;
         _entryPoints[5] = this.kStakingVault_executeSettlement.selector;
         _entryPoints[6] = this.kStakingVault_gain.selector;
-        //_entryPoints[7] = this.kStakingVault_lose.selector;
+        // _entryPoints[7] = this.kStakingVault_lose.selector;
         _entryPoints[7] = this.kStakingVault_advanceTime.selector;
         _entryPoints[8] = this.kStakingVault_chargeFees.selector;
         return _entryPoints;
@@ -176,7 +176,8 @@ contract kStakingVaultHandler is BaseHandler {
     }
 
     function kStakingVault_lose(uint256 amount) public {
-        int256 maxLoss = int256(kStakingVault_expectedAdapterTotalAssets)
+        int256 maxLoss =
+            int256(kStakingVault_expectedAdapterTotalAssets)
             + kStakingVault_totalYieldInBatch[kStakingVault_vault.getBatchId()]
             - int256(kStakingVault_chargedPerformanceInBatch[kStakingVault_vault.getBatchId()])
             - int256(kStakingVault_chargedManagementInBatch[kStakingVault_vault.getBatchId()]);
@@ -235,13 +236,7 @@ contract kStakingVaultHandler is BaseHandler {
         vm.stopPrank();
     }
 
-    function kStakingVault_claimUnstakedAssets(
-        uint256 actorSeed,
-        uint256 requestSeedIndex
-    )
-        public
-        useActor(actorSeed)
-    {
+    function kStakingVault_claimUnstakedAssets(uint256 actorSeed, uint256 requestSeedIndex) public useActor(actorSeed) {
         vm.startPrank(currentActor);
         if (kStakingVault_actorUnstakeRequests[currentActor].count() == 0) {
             vm.stopPrank();
@@ -485,9 +480,10 @@ contract kStakingVaultHandler is BaseHandler {
             kStakingVault_minterHandler.set_kMinter_actualAdapterTotalAssets(newActualAdapterTotalAssets);
         }
     }
-    ////////////////////////////////////////////////////////////////
-    ///                      SETTER FUNCTIONS                    ///
-    ////////////////////////////////////////////////////////////////
+
+    // //////////////////////////////////////////////////////////////
+    // / SETTER FUNCTIONS ///
+    // //////////////////////////////////////////////////////////////
 
     // Contract reference setters
     function set_kStakingVault_vault(address _vault) public {
@@ -639,9 +635,9 @@ contract kStakingVaultHandler is BaseHandler {
         kStakingVault_actorUnstakeRequests[_actor].add(_requestId);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                      INVARIANTS                          ///
-    ////////////////////////////////////////////////////////////////
+    // //////////////////////////////////////////////////////////////
+    // / INVARIANTS ///
+    // //////////////////////////////////////////////////////////////
     function INVARIANT_A_TOTAL_ASSETS() public {
         assertEq(
             kStakingVault_vault.totalAssets(),

@@ -25,7 +25,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
     uint256 constant TEST_AMOUNT = _100_USDC;
     address constant TEST_RECEIVER = address(0x1234);
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               SETUP
     //////////////////////////////////////////////////////////////*/
 
@@ -40,7 +40,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         mockUSDC.mint(address(batchReceiver), TEST_AMOUNT * 10);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         DEPLOYMENT TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -58,7 +58,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         assertTrue(address(batchReceiver) != address(0), "Contract deployed successfully");
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         PULL ASSETS TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -132,7 +132,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         batchReceiver.pullAssets(TEST_RECEIVER, receiverBalance + 1, TEST_BATCH_ID);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         EDGE CASE TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -166,7 +166,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         assertEq(address(batchReceiver).balance, 0, "No ETH should be received");
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         ENHANCED INITIALIZATION TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -254,7 +254,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         assertEq(newReceiver.asset(), tokens.usdc, "Asset should be set");
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         ADVANCED PULLASSETS TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -379,7 +379,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         );
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                     ASSET MANAGEMENT AND SECURITY TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -423,8 +423,9 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         // kMinter access control works - the actual rescue may not work due to asset restrictions
         vm.prank(address(minter));
         try batchReceiver.rescueAssets(tokens.usdc) {
-            // Rescue succeeded
-        } catch {
+        // Rescue succeeded
+        }
+            catch {
             // Rescue failed due to implementation restrictions - that's ok for this test
         }
 
@@ -441,8 +442,9 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         // kMinter should have access (even if rescue fails due to implementation)
         vm.prank(address(minter));
         try batchReceiver.rescueAssets(tokens.usdc) {
-            // Rescue succeeded
-        } catch {
+        // Rescue succeeded
+        }
+            catch {
             // Rescue failed - acceptable for unit test
         }
 
@@ -465,7 +467,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         assertEq(IERC20(tokens.usdc).balanceOf(TEST_RECEIVER), TEST_AMOUNT, "Valid transfer should succeed");
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         ACCESS CONTROL TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -544,7 +546,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         receiver2.pullAssets(TEST_RECEIVER, TEST_AMOUNT / 2, bytes32(uint256(888)));
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                     EDGE CASES AND INTEGRATION TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -602,7 +604,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         );
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         ENHANCED FUZZ TESTS
     //////////////////////////////////////////////////////////////*/
 

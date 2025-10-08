@@ -20,10 +20,9 @@ contract BaseVaultTest is DeploymentBaseTest {
     uint256 constant LARGE_DEPOSIT = 5_000_000 * _1_USDC; // 5M USDC
 
     // Test fee rates
-    uint16 constant TEST_MANAGEMENT_FEE = 100; // 1%
+    uint16 constant TEST_MANAGEMENT_FEE = 100; //1%
     uint16 constant TEST_PERFORMANCE_FEE = 2000; // 20%
-    uint16 constant TEST_HURDLE_RATE = 500; // 5%
-
+    uint16 constant TEST_HURDLE_RATE = 500; //5%
 
     IkStakingVault vault;
 
@@ -32,7 +31,7 @@ contract BaseVaultTest is DeploymentBaseTest {
         _mintKTokensToUsers();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 

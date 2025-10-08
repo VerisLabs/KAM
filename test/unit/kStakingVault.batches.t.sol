@@ -35,7 +35,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         BaseVaultTest.setUp();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         CREATE NEW BATCH TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -77,7 +77,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         CLOSE BATCH TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -138,7 +138,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vault.closeBatch(batchId, false);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         SETTLE BATCH TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -163,8 +163,9 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         uint256 lastTotalAssets = vault.totalAssets();
 
         vm.prank(users.relayer);
-        bytes32 proposalId =
-            assetRouter.proposeSettleBatch(tokens.usdc, address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 0, 0);
+        bytes32 proposalId = assetRouter.proposeSettleBatch(
+            tokens.usdc, address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 0, 0
+        );
 
         // Execute settlement which internally calls settleBatch
         vm.expectEmit(true, false, false, true);
@@ -213,15 +214,16 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         // Try to settle again through assetRouter
         vm.prank(users.relayer);
         vm.expectRevert(bytes(KASSETROUTER_BATCH_ID_PROPOSED));
-        bytes32 proposalId =
-            assetRouter.proposeSettleBatch(tokens.usdc, address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 0, 0);
+        bytes32 proposalId = assetRouter.proposeSettleBatch(
+            tokens.usdc, address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 0, 0
+        );
 
         // Should revert with Settled error
         vm.expectRevert(bytes(KASSETROUTER_PROPOSAL_NOT_FOUND));
         assetRouter.executeSettleBatch(proposalId);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         INTEGRATION TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -285,7 +287,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         bytes32 anotherBatch = vault.getBatchId();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         EDGE CASE TESTS
     //////////////////////////////////////////////////////////////*/
 
