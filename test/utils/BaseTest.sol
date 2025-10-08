@@ -29,9 +29,12 @@ contract BaseTest is Test {
 
     Users internal users;
 
-    address internal asset; // Main test asset
-    address internal usdc;
-    address internal wbtc;
+    struct Tokens {
+        address usdc;
+        address wbtc;
+    }
+
+    Tokens internal tokens;
 
     // Mock tokens
     MockERC20 internal mockUSDC;
@@ -40,24 +43,14 @@ contract BaseTest is Test {
     function setUp() public virtual {
         utils = new Utilities();
 
-        // Create test users
-        _createUsers();
-
         // Set up test assets
         _setupAssets();
 
+        // Create test users
+        _createUsers();
+
         // Label addresses for better trace output
         _labelAddresses();
-    }
-
-    /// @dev Get USDC token address (for use in child contracts)
-    function getUSDC() internal view returns (address) {
-        return usdc;
-    }
-
-    /// @dev Get WBTC token address (for use in child contracts)
-    function getWBTC() internal view returns (address) {
-        return wbtc;
     }
 
     /// @dev Get mock USDC token instance (for minting in child contracts)
@@ -72,19 +65,22 @@ contract BaseTest is Test {
 
     /// @dev Creates test users with appropriate funding
     function _createUsers() internal {
-        users.alice = utils.createUser("Alice");
-        users.bob = utils.createUser("Bob");
-        users.charlie = utils.createUser("Charlie");
-        users.admin = utils.createUser("Admin");
-        users.guardian = utils.createUser("Guardian");
-        users.emergencyAdmin = utils.createUser("EmergencyAdmin");
-        users.institution = utils.createUser("Institution");
-        users.institution2 = utils.createUser("Institution2");
-        users.institution3 = utils.createUser("Institution3");
-        users.institution4 = utils.createUser("Institution4");
-        users.relayer = utils.createUser("relayer");
-        users.treasury = utils.createUser("Treasury");
-        users.owner = utils.createUser("Owner");
+        address[] memory _tokens = new address[](2);
+        _tokens[0] = tokens.usdc;
+        _tokens[1] = tokens.wbtc;
+        users.alice = utils.createUser("Alice", _tokens);
+        users.bob = utils.createUser("Bob", _tokens);
+        users.charlie = utils.createUser("Charlie", _tokens);
+        users.admin = utils.createUser("Admin", _tokens);
+        users.guardian = utils.createUser("Guardian", _tokens);
+        users.emergencyAdmin = utils.createUser("EmergencyAdmin", _tokens);
+        users.institution = utils.createUser("Institution", _tokens);
+        users.institution2 = utils.createUser("Institution2", _tokens);
+        users.institution3 = utils.createUser("Institution3", _tokens);
+        users.institution4 = utils.createUser("Institution4", _tokens);
+        users.relayer = utils.createUser("relayer", _tokens);
+        users.treasury = utils.createUser("Treasury", _tokens);
+        users.owner = utils.createUser("Owner", _tokens);
     }
 
     /// @dev Setup test assets (deploy mock tokens)
@@ -94,14 +90,12 @@ contract BaseTest is Test {
         mockWBTC = new MockERC20("Mock WBTC", "WBTC", 8);
 
         // Set asset addresses to mock tokens
-        asset = address(mockUSDC);
-        usdc = address(mockUSDC);
-        wbtc = address(mockWBTC);
+        tokens.usdc = address(mockUSDC);
+        tokens.wbtc = address(mockWBTC);
 
         // Label
-        vm.label(asset, "USDC");
-        vm.label(usdc, "USDC");
-        vm.label(wbtc, "WBTC");
+        vm.label(tokens.usdc, "USDC");
+        vm.label(tokens.wbtc, "WBTC");
     }
 
     /// @dev Label addresses for better debugging
@@ -112,7 +106,12 @@ contract BaseTest is Test {
         vm.label(users.admin, "Admin");
         vm.label(users.emergencyAdmin, "EmergencyAdmin");
         vm.label(users.institution, "Institution");
-        vm.label(users.relayer, "relayer");
+        vm.label(users.relayer, "Relayer");
         vm.label(users.treasury, "Treasury");
+        vm.label(users.owner, "Owner");
+        vm.label(users.guardian, "Guardian");
+        vm.label(users.institution2, "Institution2");
+        vm.label(users.institution3, "Institution3");
+        vm.label(users.institution4, "Institution4");
     }
 }

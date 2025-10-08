@@ -19,8 +19,6 @@ import {
 } from "kam/src/errors/Errors.sol";
 import { kStakingVault } from "kam/src/kStakingVault/kStakingVault.sol";
 
-/// @title kStakingVaultBatchesTest
-/// @notice Tests for batch management functionality in kStakingVault
 contract kStakingVaultBatchesTest is BaseVaultTest {
     using SafeTransferLib for address;
 
@@ -166,7 +164,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         vm.prank(users.relayer);
         bytes32 proposalId =
-            assetRouter.proposeSettleBatch(getUSDC(), address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 0, 0);
+            assetRouter.proposeSettleBatch(tokens.usdc, address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 0, 0);
 
         // Execute settlement which internally calls settleBatch
         vm.expectEmit(true, false, false, true);
@@ -216,7 +214,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vm.prank(users.relayer);
         vm.expectRevert(bytes(KASSETROUTER_BATCH_ID_PROPOSED));
         bytes32 proposalId =
-            assetRouter.proposeSettleBatch(getUSDC(), address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 0, 0);
+            assetRouter.proposeSettleBatch(tokens.usdc, address(vault), batchId, lastTotalAssets + 1000 * _1_USDC, 0, 0);
 
         // Should revert with Settled error
         vm.expectRevert(bytes(KASSETROUTER_PROPOSAL_NOT_FOUND));

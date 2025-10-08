@@ -24,8 +24,6 @@ import {
 import { IkMinter } from "kam/src/interfaces/IkMinter.sol";
 import { kMinter } from "kam/src/kMinter.sol";
 
-/// @title kMinterTest
-/// @notice Comprehensive unit tests for kMinter contract
 contract kMinterTest is DeploymentBaseTest {
     // Test constants
     uint256 internal constant TEST_AMOUNT = 1000 * _1_USDC;
@@ -103,23 +101,23 @@ contract kMinterTest is DeploymentBaseTest {
 
         // Approve minter to spend USDC
         vm.prank(users.institution);
-        IERC20(getUSDC()).approve(address(minter), amount);
+        IERC20(tokens.usdc).approve(address(minter), amount);
 
         // Get initial balances
         uint256 initialKTokenBalance = kUSD.balanceOf(recipient);
-        uint256 initialUSDCBalance = IERC20(getUSDC()).balanceOf(users.institution);
+        uint256 initialUSDCBalance = IERC20(tokens.usdc).balanceOf(users.institution);
 
         // Mint kTokens
         vm.prank(users.institution);
         vm.expectEmit(true, false, false, false);
         emit Minted(recipient, amount, 0); // batchId will be 0 or 1
 
-        minter.mint(getUSDC(), recipient, amount);
+        minter.mint(tokens.usdc, recipient, amount);
 
         // Verify balances
         assertEq(kUSD.balanceOf(recipient) - initialKTokenBalance, amount, "kToken balance should increase by amount");
         assertEq(
-            initialUSDCBalance - IERC20(getUSDC()).balanceOf(users.institution),
+            initialUSDCBalance - IERC20(tokens.usdc).balanceOf(users.institution),
             amount,
             "USDC balance should decrease by amount"
         );
@@ -129,15 +127,15 @@ contract kMinterTest is DeploymentBaseTest {
     function test_Mint_LimitExceeded() public {
         uint256 amount = TEST_AMOUNT;
         vm.prank(users.admin);
-        registry.setAssetBatchLimits(getUSDC(), 0, 0);
+        registry.setAssetBatchLimits(tokens.usdc, 0, 0);
 
         // Approve minter to spend kTokens
         vm.prank(users.institution);
-        IERC20(getUSDC()).approve(address(minter), amount);
+        IERC20(tokens.usdc).approve(address(minter), amount);
 
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_BATCH_MINT_REACHED));
-        minter.mint(getUSDC(), users.alice, amount);
+        minter.mint(tokens.usdc, users.alice, amount);
     }
 
     /// @dev Test mint requires institution role
@@ -146,21 +144,21 @@ contract kMinterTest is DeploymentBaseTest {
 
         vm.prank(users.alice);
         vm.expectRevert(bytes(KMINTER_WRONG_ROLE));
-        minter.mint(getUSDC(), users.alice, amount);
+        minter.mint(tokens.usdc, users.alice, amount);
     }
 
     /// @dev Test mint reverts with zero amount
     function test_Mint_RevertZeroAmount() public {
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_ZERO_AMOUNT));
-        minter.mint(getUSDC(), users.alice, 0);
+        minter.mint(tokens.usdc, users.alice, 0);
     }
 
     /// @dev Test mint reverts with zero recipient
     function test_Mint_RevertZeroRecipient() public {
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_ZERO_ADDRESS));
-        minter.mint(getUSDC(), ZERO_ADDRESS, TEST_AMOUNT);
+        minter.mint(tokens.usdc, ZERO_ADDRESS, TEST_AMOUNT);
     }
 
     /// @dev Test mint reverts with invalid asset
@@ -180,7 +178,7 @@ contract kMinterTest is DeploymentBaseTest {
 
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_IS_PAUSED));
-        minter.mint(getUSDC(), users.alice, TEST_AMOUNT);
+        minter.mint(tokens.usdc, users.alice, TEST_AMOUNT);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -195,9 +193,9 @@ contract kMinterTest is DeploymentBaseTest {
         // First mint some kTokens to the institution
         mockUSDC.mint(users.institution, amount);
         vm.prank(users.institution);
-        IERC20(getUSDC()).approve(address(minter), amount);
+        IERC20(tokens.usdc).approve(address(minter), amount);
         vm.prank(users.institution);
-        minter.mint(getUSDC(), recipient, amount);
+        minter.mint(tokens.usdc, recipient, amount);
 
         // Get initial state
         uint256 initialKTokenBalance = kUSD.balanceOf(recipient);
@@ -210,28 +208,28 @@ contract kMinterTest is DeploymentBaseTest {
         // Request burn - will fail due to insufficient virtual balance in vault
         vm.prank(users.institution);
         vm.expectRevert();
-        minter.requestBurn(getUSDC(), recipient, amount);
+        minter.requestBurn(tokens.usdc, recipient, amount);
     }
 
     /// @dev Test burn request requires institution role
     function test_RequestBurn_WrongRole() public {
         vm.prank(users.alice);
         vm.expectRevert(bytes(KMINTER_WRONG_ROLE));
-        minter.requestBurn(getUSDC(), users.alice, TEST_AMOUNT);
+        minter.requestBurn(tokens.usdc, users.alice, TEST_AMOUNT);
     }
 
     /// @dev Test burn request reverts with zero amount
     function test_RequestBurn_RevertZeroAmount() public {
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_ZERO_AMOUNT));
-        minter.requestBurn(getUSDC(), users.institution, 0);
+        minter.requestBurn(tokens.usdc, users.institution, 0);
     }
 
     /// @dev Test burn request reverts with zero recipient
     function test_RequestBurn_RevertZeroRecipient() public {
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_ZERO_ADDRESS));
-        minter.requestBurn(getUSDC(), ZERO_ADDRESS, TEST_AMOUNT);
+        minter.requestBurn(tokens.usdc, ZERO_ADDRESS, TEST_AMOUNT);
     }
 
     /// @dev Test burn request reverts with batch limit reached
@@ -242,19 +240,19 @@ contract kMinterTest is DeploymentBaseTest {
         // First mint some kTokens to the institution
         mockUSDC.mint(users.institution, amount);
         vm.prank(users.institution);
-        IERC20(getUSDC()).approve(address(minter), amount);
+        IERC20(tokens.usdc).approve(address(minter), amount);
         vm.prank(users.institution);
-        minter.mint(getUSDC(), recipient, amount);
+        minter.mint(tokens.usdc, recipient, amount);
 
         vm.prank(users.admin);
-        registry.setAssetBatchLimits(getUSDC(), 0, 0);
+        registry.setAssetBatchLimits(tokens.usdc, 0, 0);
 
         vm.prank(users.institution);
         kUSD.approve(address(minter), amount);
 
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_BATCH_REDEEM_REACHED));
-        minter.requestBurn(getUSDC(), recipient, amount);
+        minter.requestBurn(tokens.usdc, recipient, amount);
     }
 
     /// @dev Test burn request reverts with invalid asset
@@ -271,7 +269,7 @@ contract kMinterTest is DeploymentBaseTest {
         // Institution has no kTokens
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_BATCH_NOT_SET));
-        minter.requestBurn(getUSDC(), users.institution, TEST_AMOUNT);
+        minter.requestBurn(tokens.usdc, users.institution, TEST_AMOUNT);
     }
 
     /// @dev Test burn request reverts when paused
@@ -282,7 +280,7 @@ contract kMinterTest is DeploymentBaseTest {
 
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_IS_PAUSED));
-        minter.requestBurn(getUSDC(), users.institution, TEST_AMOUNT);
+        minter.requestBurn(tokens.usdc, users.institution, TEST_AMOUNT);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -455,18 +453,18 @@ contract kMinterTest is DeploymentBaseTest {
     /// @dev Test getTotalLockedAssets for a single asset
     function test_GetTotalLockedAssets_SingleAsset() public {
         // Initially should be zero
-        assertEq(minter.getTotalLockedAssets(getUSDC()), 0, "Should start with zero locked assets");
+        assertEq(minter.getTotalLockedAssets(tokens.usdc), 0, "Should start with zero locked assets");
 
         // Mint some tokens
         uint256 amount = TEST_AMOUNT;
         mockUSDC.mint(users.institution, amount);
         vm.prank(users.institution);
-        IERC20(getUSDC()).approve(address(minter), amount);
+        IERC20(tokens.usdc).approve(address(minter), amount);
         vm.prank(users.institution);
-        minter.mint(getUSDC(), users.institution, amount);
+        minter.mint(tokens.usdc, users.institution, amount);
 
         // Check locked assets increased
-        assertEq(minter.getTotalLockedAssets(getUSDC()), amount, "Locked assets should equal minted amount");
+        assertEq(minter.getTotalLockedAssets(tokens.usdc), amount, "Locked assets should equal minted amount");
     }
 
     /// @dev Test getTotalLockedAssets with multiple mints
@@ -478,20 +476,20 @@ contract kMinterTest is DeploymentBaseTest {
         // First mint
         mockUSDC.mint(users.institution, amount1);
         vm.prank(users.institution);
-        IERC20(getUSDC()).approve(address(minter), amount1);
+        IERC20(tokens.usdc).approve(address(minter), amount1);
         vm.prank(users.institution);
-        minter.mint(getUSDC(), users.institution, amount1);
+        minter.mint(tokens.usdc, users.institution, amount1);
 
-        assertEq(minter.getTotalLockedAssets(getUSDC()), amount1, "Should track first mint");
+        assertEq(minter.getTotalLockedAssets(tokens.usdc), amount1, "Should track first mint");
 
         // Second mint
         mockUSDC.mint(users.institution, amount2);
         vm.prank(users.institution);
-        IERC20(getUSDC()).approve(address(minter), amount2);
+        IERC20(tokens.usdc).approve(address(minter), amount2);
         vm.prank(users.institution);
-        minter.mint(getUSDC(), users.alice, amount2);
+        minter.mint(tokens.usdc, users.alice, amount2);
 
-        assertEq(minter.getTotalLockedAssets(getUSDC()), totalAmount, "Should track cumulative mints");
+        assertEq(minter.getTotalLockedAssets(tokens.usdc), totalAmount, "Should track cumulative mints");
     }
 
     /// @dev Test getTotalLockedAssets for unsupported asset
@@ -514,11 +512,11 @@ contract kMinterTest is DeploymentBaseTest {
         // Mint tokens
         mockUSDC.mint(users.institution, amount);
         vm.prank(users.institution);
-        IERC20(getUSDC()).approve(address(minter), amount);
+        IERC20(tokens.usdc).approve(address(minter), amount);
 
         // The mint should interact with the current DN vault batch
         vm.prank(users.institution);
-        minter.mint(getUSDC(), users.institution, amount);
+        minter.mint(tokens.usdc, users.institution, amount);
 
         // Verify DN vault received the assets (through kAssetRouter)
         // In a full integration test, we would verify the batch balances
@@ -536,14 +534,14 @@ contract kMinterTest is DeploymentBaseTest {
         // Fund institution with max amount
         mockUSDC.mint(users.institution, maxAmount);
         vm.prank(users.institution);
-        IERC20(getUSDC()).approve(address(minter), maxAmount);
+        IERC20(tokens.usdc).approve(address(minter), maxAmount);
 
         // Should succeed with max amount
         vm.prank(users.institution);
-        minter.mint(getUSDC(), users.institution, maxAmount);
+        minter.mint(tokens.usdc, users.institution, maxAmount);
 
         assertEq(kUSD.balanceOf(users.institution), maxAmount, "Should mint max amount");
-        assertEq(minter.getTotalLockedAssets(getUSDC()), maxAmount, "Should track max amount");
+        assertEq(minter.getTotalLockedAssets(tokens.usdc), maxAmount, "Should track max amount");
     }
 
     /// @dev Test concurrent requests from same user
@@ -552,9 +550,9 @@ contract kMinterTest is DeploymentBaseTest {
         uint256 totalAmount = 3000 * _1_USDC;
         mockUSDC.mint(users.institution, totalAmount);
         vm.prank(users.institution);
-        IERC20(getUSDC()).approve(address(minter), totalAmount);
+        IERC20(tokens.usdc).approve(address(minter), totalAmount);
         vm.prank(users.institution);
-        minter.mint(getUSDC(), users.institution, totalAmount);
+        minter.mint(tokens.usdc, users.institution, totalAmount);
 
         // Approve all tokens for burn
         vm.prank(users.institution);
@@ -566,7 +564,7 @@ contract kMinterTest is DeploymentBaseTest {
         for (uint256 i = 0; i < 3; i++) {
             vm.prank(users.institution);
             vm.expectRevert();
-            minter.requestBurn(getUSDC(), users.institution, requestAmount);
+            minter.requestBurn(tokens.usdc, users.institution, requestAmount);
         }
     }
 
@@ -582,9 +580,9 @@ contract kMinterTest is DeploymentBaseTest {
         // Step 1: Mint kTokens
         mockUSDC.mint(users.institution, amount);
         vm.prank(users.institution);
-        IERC20(getUSDC()).approve(address(minter), amount);
+        IERC20(tokens.usdc).approve(address(minter), amount);
         vm.prank(users.institution);
-        minter.mint(getUSDC(), recipient, amount);
+        minter.mint(tokens.usdc, recipient, amount);
 
         assertEq(kUSD.balanceOf(recipient), amount, "Should have minted kTokens");
 

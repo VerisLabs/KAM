@@ -8,8 +8,6 @@ import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { KTOKEN_IS_PAUSED, KTOKEN_ZERO_ADDRESS, KTOKEN_ZERO_AMOUNT } from "kam/src/errors/Errors.sol";
 
-/// @title kTokenTest
-/// @notice Comprehensive unit tests for kToken contract
 contract kTokenTest is DeploymentBaseTest {
     // Test constants
     uint256 internal constant TEST_AMOUNT = 1000 * _1_USDC;
@@ -366,20 +364,20 @@ contract kTokenTest is DeploymentBaseTest {
         kUSD.setPaused(true);
 
         // Emergency withdraw tokens
-        uint256 recipientBalanceBefore = IERC20(getUSDC()).balanceOf(users.treasury);
+        uint256 recipientBalanceBefore = IERC20(tokens.usdc).balanceOf(users.treasury);
 
         vm.prank(users.emergencyAdmin);
         vm.expectEmit(true, true, true, true);
-        emit EmergencyWithdrawal(getUSDC(), users.treasury, amount, users.emergencyAdmin);
+        emit EmergencyWithdrawal(tokens.usdc, users.treasury, amount, users.emergencyAdmin);
 
-        kUSD.emergencyWithdraw(getUSDC(), users.treasury, amount);
+        kUSD.emergencyWithdraw(tokens.usdc, users.treasury, amount);
 
         assertEq(
-            IERC20(getUSDC()).balanceOf(users.treasury) - recipientBalanceBefore,
+            IERC20(tokens.usdc).balanceOf(users.treasury) - recipientBalanceBefore,
             amount,
             "Tokens not withdrawn correctly"
         );
-        assertEq(IERC20(getUSDC()).balanceOf(address(kUSD)), 0, "Contract should have no tokens");
+        assertEq(IERC20(tokens.usdc).balanceOf(address(kUSD)), 0, "Contract should have no tokens");
     }
 
     /// @dev Test emergency withdrawal requires emergency admin role

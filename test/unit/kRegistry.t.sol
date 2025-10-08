@@ -16,8 +16,6 @@ import {
 import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
 import { kRegistry } from "kam/src/kRegistry/kRegistry.sol";
 
-/// @title kRegistryTest
-/// @notice Comprehensive unit tests for kRegistry contract
 contract kRegistryTest is DeploymentBaseTest {
     // Test addresses for non-deployed contracts
     address internal constant TEST_CONTRACT = 0x1111111111111111111111111111111111111111;
@@ -363,8 +361,8 @@ contract kRegistryTest is DeploymentBaseTest {
         bool hasUSDC = false;
         bool hasWBTC = false;
         for (uint256 i = 0; i < assets.length; i++) {
-            if (assets[i] == getUSDC()) hasUSDC = true;
-            if (assets[i] == getWBTC()) hasWBTC = true;
+            if (assets[i] == tokens.usdc) hasUSDC = true;
+            if (assets[i] == tokens.wbtc) hasWBTC = true;
         }
 
         assertTrue(hasUSDC, "USDC should be in assets array");
@@ -373,7 +371,7 @@ contract kRegistryTest is DeploymentBaseTest {
 
     /// @dev Test getVaultsByAsset with deployed vaults
     function test_GetVaultsByAsset_DeployedVaults() public {
-        address[] memory usdcVaults = registry.getVaultsByAsset(getUSDC());
+        address[] memory usdcVaults = registry.getVaultsByAsset(tokens.usdc);
 
         // Should contain all three deployed vaults
         assertEq(usdcVaults.length, 4, "Should have 4 USDC vaults from deployment");
@@ -624,12 +622,12 @@ contract kRegistryTest is DeploymentBaseTest {
         assertTrue(allAssets.length >= 2, "Should have existing assets");
 
         // Verify USDC is registered correctly
-        assertTrue(registry.isAsset(getUSDC()), "getUSDC() should be registered");
+        assertTrue(registry.isAsset(tokens.usdc), "tokens.usdc should be registered");
 
         // Verify USDC appears in getAllAssets
         bool foundUSDC = false;
         for (uint256 i = 0; i < allAssets.length; i++) {
-            if (allAssets[i] == getUSDC()) {
+            if (allAssets[i] == tokens.usdc) {
                 foundUSDC = true;
                 break;
             }
@@ -680,7 +678,7 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.startPrank(users.admin);
 
         address vault1 = address(0x3001);
-        registry.registerVault(vault1, IRegistry.VaultType.ALPHA, getUSDC());
+        registry.registerVault(vault1, IRegistry.VaultType.ALPHA, tokens.usdc);
 
         vm.stopPrank();
 
@@ -689,7 +687,7 @@ contract kRegistryTest is DeploymentBaseTest {
         assertEq(registry.getVaultType(vault1), uint8(IRegistry.VaultType.ALPHA), "Vault type should be ALPHA");
 
         // Verify vault appears in asset's vault list
-        address[] memory usdcVaults = registry.getVaultsByAsset(getUSDC());
+        address[] memory usdcVaults = registry.getVaultsByAsset(tokens.usdc);
 
         bool foundVault = false;
         for (uint256 i = 0; i < usdcVaults.length; i++) {
@@ -808,7 +806,7 @@ contract kRegistryTest is DeploymentBaseTest {
         assertTrue(allAssets.length >= 2, "Should have at least USDC and WBTC");
 
         // Test getVaultsByAsset with existing assets
-        address[] memory usdcVaults = registry.getVaultsByAsset(getUSDC());
+        address[] memory usdcVaults = registry.getVaultsByAsset(tokens.usdc);
         assertTrue(usdcVaults.length > 0, "USDC should have vaults");
 
         // Verify each returned vault is actually registered
@@ -837,11 +835,11 @@ contract kRegistryTest is DeploymentBaseTest {
         // Test that only admin can call rescue functions
         vm.prank(users.alice);
         vm.expectRevert();
-        registry.rescueAssets(getUSDC(), users.admin, 1000);
+        registry.rescueAssets(tokens.usdc, users.admin, 1000);
 
         // Admin should be able to call rescue (even if no assets to rescue)
         vm.prank(users.admin);
-        try registry.rescueAssets(getUSDC(), users.admin, 0) {
+        try registry.rescueAssets(tokens.usdc, users.admin, 0) {
             // Success is acceptable
         } catch {
             // Revert is also acceptable if no assets
@@ -892,26 +890,26 @@ contract kRegistryTest is DeploymentBaseTest {
 
         // Expect event emission
         vm.expectEmit(true, false, false, true);
-        emit IRegistry.HurdleRateSet(getUSDC(), TEST_HURDLE_RATE);
+        emit IRegistry.HurdleRateSet(tokens.usdc, TEST_HURDLE_RATE);
 
-        registry.setHurdleRate(getUSDC(), TEST_HURDLE_RATE);
+        registry.setHurdleRate(tokens.usdc, TEST_HURDLE_RATE);
 
         // Verify hurdle rate is set
-        assertEq(registry.getHurdleRate(getUSDC()), TEST_HURDLE_RATE, "Hurdle rate not set correctly");
+        assertEq(registry.getHurdleRate(tokens.usdc), TEST_HURDLE_RATE, "Hurdle rate not set correctly");
     }
 
     /// @dev Test setting hurdle rate requires relayer role
     function test_SetHurdleRate_OnlyRelayer() public {
         vm.prank(users.alice);
         vm.expectRevert();
-        registry.setHurdleRate(getUSDC(), TEST_HURDLE_RATE);
+        registry.setHurdleRate(tokens.usdc, TEST_HURDLE_RATE);
     }
 
     /// @dev Test hurdle rate exceeds maximum
     function test_SetHurdleRate_ExceedsMaximum() public {
         vm.expectRevert(bytes(KREGISTRY_FEE_EXCEEDS_MAXIMUM));
         vm.prank(users.relayer);
-        registry.setHurdleRate(getUSDC(), uint16(MAX_BPS + 1));
+        registry.setHurdleRate(tokens.usdc, uint16(MAX_BPS + 1));
     }
 
     /// @dev Test setting hurdle rate for unsupported asset
@@ -926,12 +924,12 @@ contract kRegistryTest is DeploymentBaseTest {
         vm.startPrank(users.relayer);
 
         // Set different rates for different assets
-        registry.setHurdleRate(getUSDC(), TEST_HURDLE_RATE);
-        registry.setHurdleRate(getWBTC(), 750); // 7.5%
+        registry.setHurdleRate(tokens.usdc, TEST_HURDLE_RATE);
+        registry.setHurdleRate(tokens.wbtc, 750); // 7.5%
 
         // Verify each asset has its own rate
-        assertEq(registry.getHurdleRate(getUSDC()), TEST_HURDLE_RATE, "USDC hurdle rate incorrect");
-        assertEq(registry.getHurdleRate(getWBTC()), 750, "WBTC hurdle rate incorrect");
+        assertEq(registry.getHurdleRate(tokens.usdc), TEST_HURDLE_RATE, "USDC hurdle rate incorrect");
+        assertEq(registry.getHurdleRate(tokens.wbtc), 750, "WBTC hurdle rate incorrect");
 
         vm.stopPrank();
     }

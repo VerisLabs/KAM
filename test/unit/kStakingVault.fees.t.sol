@@ -15,9 +15,6 @@ import {
     VAULTFEES_INVALID_TIMESTAMP
 } from "kam/src/errors/Errors.sol";
 
-/// @title kStakingVaultFeesTest
-/// @notice Tests for fee mechanics in kStakingVault
-/// @dev Focuses on fee calculations, watermarks, hurdle rates, and fee notifications
 contract kStakingVaultFeesTest is BaseVaultTest {
     using OptimizedFixedPointMathLib for uint256;
     using SafeTransferLib for address;
@@ -297,7 +294,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vault.closeBatch(batchId, true);
 
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            getUSDC(),
+            tokens.usdc,
             address(vault),
             batchId,
             vault.totalAssets() + yieldAmount,
@@ -325,7 +322,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vm.startPrank(users.relayer);
         vault.closeBatch(batchId, true);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            getUSDC(),
+            tokens.usdc,
             address(vault),
             batchId,
             vault.totalAssets() - lossAmount,
@@ -512,7 +509,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vault.setPerformanceFee(TEST_PERFORMANCE_FEE);
 
         vm.prank(users.relayer);
-        registry.setHurdleRate(getUSDC(), 0); // No hurdle
+        registry.setHurdleRate(tokens.usdc, 0); // No hurdle
 
         _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
@@ -537,7 +534,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vm.stopPrank();
 
         vm.prank(users.relayer);
-        registry.setHurdleRate(getUSDC(), TEST_HURDLE_RATE);
+        registry.setHurdleRate(tokens.usdc, TEST_HURDLE_RATE);
 
         _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 

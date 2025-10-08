@@ -17,8 +17,6 @@ import {
 import { IkBatchReceiver } from "kam/src/interfaces/IkBatchReceiver.sol";
 import { kBatchReceiver } from "kam/src/kBatchReceiver.sol";
 
-/// @title kBatchReceiverTest
-/// @notice Unit tests for kBatchReceiver contract
 contract kBatchReceiverTest is DeploymentBaseTest {
     using OptimizedLibClone for address;
 
@@ -36,7 +34,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
         // Deploy a test batch receiver directly
         batchReceiver = new kBatchReceiver(address(minter));
-        batchReceiver.initialize(TEST_BATCH_ID, getUSDC());
+        batchReceiver.initialize(TEST_BATCH_ID, tokens.usdc);
 
         // Fund the batch receiver with test USDC
         mockUSDC.mint(address(batchReceiver), TEST_AMOUNT * 10);
@@ -49,7 +47,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
     /// @dev Test batch receiver deployment with correct immutables
     function test_Deployment() public view {
         assertEq(batchReceiver.kMinter(), address(minter), "kMinter mismatch");
-        assertEq(batchReceiver.asset(), getUSDC(), "Asset mismatch");
+        assertEq(batchReceiver.asset(), tokens.usdc, "Asset mismatch");
         assertEq(batchReceiver.batchId(), TEST_BATCH_ID, "Batch ID mismatch");
     }
 
@@ -66,20 +64,20 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
     /// @dev Test successful asset pull
     function test_PullAssets_Success() public {
-        uint256 initialBalance = IERC20(getUSDC()).balanceOf(TEST_RECEIVER);
-        uint256 receiverInitialBalance = IERC20(getUSDC()).balanceOf(address(batchReceiver));
+        uint256 initialBalance = IERC20(tokens.usdc).balanceOf(TEST_RECEIVER);
+        uint256 receiverInitialBalance = IERC20(tokens.usdc).balanceOf(address(batchReceiver));
 
         vm.prank(address(minter));
         vm.expectEmit(true, true, false, true);
-        emit IkBatchReceiver.PulledAssets(TEST_RECEIVER, getUSDC(), TEST_AMOUNT);
+        emit IkBatchReceiver.PulledAssets(TEST_RECEIVER, tokens.usdc, TEST_AMOUNT);
 
         batchReceiver.pullAssets(TEST_RECEIVER, TEST_AMOUNT, TEST_BATCH_ID);
 
         assertEq(
-            IERC20(getUSDC()).balanceOf(TEST_RECEIVER), initialBalance + TEST_AMOUNT, "Receiver balance not updated"
+            IERC20(tokens.usdc).balanceOf(TEST_RECEIVER), initialBalance + TEST_AMOUNT, "Receiver balance not updated"
         );
         assertEq(
-            IERC20(getUSDC()).balanceOf(address(batchReceiver)),
+            IERC20(tokens.usdc).balanceOf(address(batchReceiver)),
             receiverInitialBalance - TEST_AMOUNT,
             "Batch receiver balance not reduced"
         );
@@ -94,7 +92,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
             batchReceiver.pullAssets(TEST_RECEIVER, pullAmount, TEST_BATCH_ID);
         }
 
-        assertEq(IERC20(getUSDC()).balanceOf(TEST_RECEIVER), TEST_AMOUNT, "Total pulled amount incorrect");
+        assertEq(IERC20(tokens.usdc).balanceOf(TEST_RECEIVER), TEST_AMOUNT, "Total pulled amount incorrect");
     }
 
     /// @dev Test pull assets reverts when not called by kMinter
@@ -127,7 +125,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
     /// @dev Test pull assets with insufficient balance
     function test_PullAssets_InsufficientBalance() public {
-        uint256 receiverBalance = IERC20(getUSDC()).balanceOf(address(batchReceiver));
+        uint256 receiverBalance = IERC20(tokens.usdc).balanceOf(address(batchReceiver));
 
         vm.prank(address(minter));
         vm.expectRevert(); // Will revert with transfer error
@@ -145,17 +143,17 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         vm.prank(address(minter));
         batchReceiver.pullAssets(TEST_RECEIVER, dustAmount, TEST_BATCH_ID);
 
-        assertEq(IERC20(getUSDC()).balanceOf(TEST_RECEIVER), dustAmount, "Dust amount not transferred");
+        assertEq(IERC20(tokens.usdc).balanceOf(TEST_RECEIVER), dustAmount, "Dust amount not transferred");
     }
 
     /// @dev Test pull entire balance
     function test_PullAssets_EntireBalance() public {
-        uint256 entireBalance = IERC20(getUSDC()).balanceOf(address(batchReceiver));
+        uint256 entireBalance = IERC20(tokens.usdc).balanceOf(address(batchReceiver));
 
         vm.prank(address(minter));
         batchReceiver.pullAssets(TEST_RECEIVER, entireBalance, TEST_BATCH_ID);
 
-        assertEq(IERC20(getUSDC()).balanceOf(address(batchReceiver)), 0, "Batch receiver should be empty");
+        assertEq(IERC20(tokens.usdc).balanceOf(address(batchReceiver)), 0, "Batch receiver should be empty");
     }
 
     /// @dev Test receiving ETH (should revert - no receive function)
@@ -179,12 +177,12 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
         // Test initialization with valid parameters
         bytes32 validBatchId = bytes32(uint256(12_345));
-        newReceiver.initialize(validBatchId, getUSDC());
+        newReceiver.initialize(validBatchId, tokens.usdc);
 
         // Verify initialization state
         assertTrue(newReceiver.isInitialised(), "Should be initialized");
         assertEq(newReceiver.batchId(), validBatchId, "Batch ID should match");
-        assertEq(newReceiver.asset(), getUSDC(), "Asset should match");
+        assertEq(newReceiver.asset(), tokens.usdc, "Asset should match");
         assertEq(newReceiver.kMinter(), address(minter), "kMinter should match");
     }
 
@@ -194,16 +192,16 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
         // First initialization should succeed
         bytes32 firstBatchId = bytes32(uint256(111));
-        newReceiver.initialize(firstBatchId, getUSDC());
+        newReceiver.initialize(firstBatchId, tokens.usdc);
 
         // Second initialization should fail
         bytes32 secondBatchId = bytes32(uint256(222));
         vm.expectRevert(bytes(KBATCHRECEIVER_ALREADY_INITIALIZED));
-        newReceiver.initialize(secondBatchId, getUSDC());
+        newReceiver.initialize(secondBatchId, tokens.usdc);
 
         // Verify first initialization values persist
         assertEq(newReceiver.batchId(), firstBatchId, "Batch ID should remain from first init");
-        assertEq(newReceiver.asset(), getUSDC(), "Asset should remain from first init");
+        assertEq(newReceiver.asset(), tokens.usdc, "Asset should remain from first init");
     }
 
     /// @dev Test initialization event emission
@@ -214,9 +212,9 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
         // Expect initialization event
         vm.expectEmit(true, true, true, false);
-        emit IkBatchReceiver.BatchReceiverInitialized(address(minter), eventBatchId, getUSDC());
+        emit IkBatchReceiver.BatchReceiverInitialized(address(minter), eventBatchId, tokens.usdc);
 
-        newReceiver.initialize(eventBatchId, getUSDC());
+        newReceiver.initialize(eventBatchId, tokens.usdc);
     }
 
     /// @dev Test initialization with zero asset address
@@ -249,11 +247,11 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
         // After initialization
         bytes32 batchId = bytes32(uint256(555));
-        newReceiver.initialize(batchId, getUSDC());
+        newReceiver.initialize(batchId, tokens.usdc);
 
         assertTrue(newReceiver.isInitialised(), "Should be initialized after init");
         assertEq(newReceiver.batchId(), batchId, "Batch ID should be set");
-        assertEq(newReceiver.asset(), getUSDC(), "Asset should be set");
+        assertEq(newReceiver.asset(), tokens.usdc, "Asset should be set");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -278,19 +276,19 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
         // Verify all transfers succeeded
         for (uint256 i = 0; i < 5; i++) {
-            assertEq(IERC20(getUSDC()).balanceOf(receivers[i]), pullAmount, "Concurrent transfer failed");
+            assertEq(IERC20(tokens.usdc).balanceOf(receivers[i]), pullAmount, "Concurrent transfer failed");
         }
 
         // Verify batch receiver balance was properly reduced
         uint256 expectedRemaining = (TEST_AMOUNT * 10) - (pullAmount * 5);
         assertEq(
-            IERC20(getUSDC()).balanceOf(address(batchReceiver)), expectedRemaining, "Batch receiver balance incorrect"
+            IERC20(tokens.usdc).balanceOf(address(batchReceiver)), expectedRemaining, "Batch receiver balance incorrect"
         );
     }
 
     /// @dev Test pullAssets state consistency over multiple operations
     function test_PullAssets_StateConsistency() public {
-        uint256 initialBalance = IERC20(getUSDC()).balanceOf(address(batchReceiver));
+        uint256 initialBalance = IERC20(tokens.usdc).balanceOf(address(batchReceiver));
         uint256 pullAmount1 = TEST_AMOUNT;
         uint256 pullAmount2 = TEST_AMOUNT * 2;
         uint256 pullAmount3 = TEST_AMOUNT / 2;
@@ -309,32 +307,32 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         vm.stopPrank();
 
         // Verify individual balances
-        assertEq(IERC20(getUSDC()).balanceOf(receiver1), pullAmount1, "Receiver1 balance incorrect");
-        assertEq(IERC20(getUSDC()).balanceOf(receiver2), pullAmount2, "Receiver2 balance incorrect");
-        assertEq(IERC20(getUSDC()).balanceOf(receiver3), pullAmount3, "Receiver3 balance incorrect");
+        assertEq(IERC20(tokens.usdc).balanceOf(receiver1), pullAmount1, "Receiver1 balance incorrect");
+        assertEq(IERC20(tokens.usdc).balanceOf(receiver2), pullAmount2, "Receiver2 balance incorrect");
+        assertEq(IERC20(tokens.usdc).balanceOf(receiver3), pullAmount3, "Receiver3 balance incorrect");
 
         // Verify batch receiver balance consistency
         uint256 totalPulled = pullAmount1 + pullAmount2 + pullAmount3;
         uint256 expectedRemaining = initialBalance - totalPulled;
-        assertEq(IERC20(getUSDC()).balanceOf(address(batchReceiver)), expectedRemaining, "Total balance inconsistent");
+        assertEq(IERC20(tokens.usdc).balanceOf(address(batchReceiver)), expectedRemaining, "Total balance inconsistent");
     }
 
     /// @dev Test pullAssets with maximum amounts
     function test_PullAssets_MaximumAmounts() public {
         // Get all available balance
-        uint256 maxBalance = IERC20(getUSDC()).balanceOf(address(batchReceiver));
+        uint256 maxBalance = IERC20(tokens.usdc).balanceOf(address(batchReceiver));
 
         vm.prank(address(minter));
         batchReceiver.pullAssets(TEST_RECEIVER, maxBalance, TEST_BATCH_ID);
 
         // Verify complete transfer
-        assertEq(IERC20(getUSDC()).balanceOf(TEST_RECEIVER), maxBalance, "Max amount not transferred");
-        assertEq(IERC20(getUSDC()).balanceOf(address(batchReceiver)), 0, "Batch receiver should be empty");
+        assertEq(IERC20(tokens.usdc).balanceOf(TEST_RECEIVER), maxBalance, "Max amount not transferred");
+        assertEq(IERC20(tokens.usdc).balanceOf(address(batchReceiver)), 0, "Batch receiver should be empty");
     }
 
     /// @dev Test pullAssets partial execution scenarios
     function test_PullAssets_PartialExecutions() public {
-        uint256 totalBalance = IERC20(getUSDC()).balanceOf(address(batchReceiver));
+        uint256 totalBalance = IERC20(tokens.usdc).balanceOf(address(batchReceiver));
         uint256 partialAmount = totalBalance / 3;
 
         address receiver = address(0x4001);
@@ -343,26 +341,26 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         vm.startPrank(address(minter));
 
         batchReceiver.pullAssets(receiver, partialAmount, TEST_BATCH_ID);
-        assertEq(IERC20(getUSDC()).balanceOf(receiver), partialAmount, "First partial pull failed");
+        assertEq(IERC20(tokens.usdc).balanceOf(receiver), partialAmount, "First partial pull failed");
 
         batchReceiver.pullAssets(receiver, partialAmount, TEST_BATCH_ID);
-        assertEq(IERC20(getUSDC()).balanceOf(receiver), partialAmount * 2, "Second partial pull failed");
+        assertEq(IERC20(tokens.usdc).balanceOf(receiver), partialAmount * 2, "Second partial pull failed");
 
         // Final pull of remaining amount
         uint256 remaining = totalBalance - (partialAmount * 2);
         batchReceiver.pullAssets(receiver, remaining, TEST_BATCH_ID);
-        assertEq(IERC20(getUSDC()).balanceOf(receiver), totalBalance, "Final pull failed");
+        assertEq(IERC20(tokens.usdc).balanceOf(receiver), totalBalance, "Final pull failed");
 
         vm.stopPrank();
 
         // Verify batch receiver is empty
-        assertEq(IERC20(getUSDC()).balanceOf(address(batchReceiver)), 0, "Batch receiver should be empty");
+        assertEq(IERC20(tokens.usdc).balanceOf(address(batchReceiver)), 0, "Batch receiver should be empty");
     }
 
     /// @dev Test pullAssets error recovery scenarios
     function test_PullAssets_ErrorRecovery() public {
         uint256 validAmount = TEST_AMOUNT;
-        uint256 excessiveAmount = IERC20(getUSDC()).balanceOf(address(batchReceiver)) + 1;
+        uint256 excessiveAmount = IERC20(tokens.usdc).balanceOf(address(batchReceiver)) + 1;
 
         // First try excessive amount (should fail)
         vm.prank(address(minter));
@@ -370,14 +368,14 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         batchReceiver.pullAssets(TEST_RECEIVER, excessiveAmount, TEST_BATCH_ID);
 
         // Verify receiver balance unchanged after failed attempt
-        assertEq(IERC20(getUSDC()).balanceOf(TEST_RECEIVER), 0, "Balance should be unchanged after failed pull");
+        assertEq(IERC20(tokens.usdc).balanceOf(TEST_RECEIVER), 0, "Balance should be unchanged after failed pull");
 
         // Then try valid amount (should succeed)
         vm.prank(address(minter));
         batchReceiver.pullAssets(TEST_RECEIVER, validAmount, TEST_BATCH_ID);
 
         assertEq(
-            IERC20(getUSDC()).balanceOf(TEST_RECEIVER), validAmount, "Valid pull should succeed after failed attempt"
+            IERC20(tokens.usdc).balanceOf(TEST_RECEIVER), validAmount, "Valid pull should succeed after failed attempt"
         );
     }
 
@@ -387,7 +385,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
     /// @dev Test asset balance tracking accuracy
     function test_AssetManagement_BalanceTracking() public {
-        uint256 initialBalance = IERC20(getUSDC()).balanceOf(address(batchReceiver));
+        uint256 initialBalance = IERC20(tokens.usdc).balanceOf(address(batchReceiver));
 
         // Track balance changes through multiple operations
         uint256[] memory pullAmounts = new uint256[](4);
@@ -408,7 +406,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
             // Verify balance is tracked correctly
             assertEq(
-                IERC20(getUSDC()).balanceOf(address(batchReceiver)),
+                IERC20(tokens.usdc).balanceOf(address(batchReceiver)),
                 runningBalance,
                 string(abi.encodePacked("Balance tracking failed at step ", vm.toString(i)))
             );
@@ -420,11 +418,11 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         // Only kMinter should be able to rescue assets
         vm.prank(users.alice);
         vm.expectRevert(bytes(KBATCHRECEIVER_ONLY_KMINTER));
-        batchReceiver.rescueAssets(getUSDC());
+        batchReceiver.rescueAssets(tokens.usdc);
 
         // kMinter access control works - the actual rescue may not work due to asset restrictions
         vm.prank(address(minter));
-        try batchReceiver.rescueAssets(getUSDC()) {
+        try batchReceiver.rescueAssets(tokens.usdc) {
             // Rescue succeeded
         } catch {
             // Rescue failed due to implementation restrictions - that's ok for this test
@@ -438,11 +436,11 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         // Test access control for emergency scenarios
         vm.prank(users.alice);
         vm.expectRevert(bytes(KBATCHRECEIVER_ONLY_KMINTER));
-        batchReceiver.rescueAssets(getUSDC());
+        batchReceiver.rescueAssets(tokens.usdc);
 
         // kMinter should have access (even if rescue fails due to implementation)
         vm.prank(address(minter));
-        try batchReceiver.rescueAssets(getUSDC()) {
+        try batchReceiver.rescueAssets(tokens.usdc) {
             // Rescue succeeded
         } catch {
             // Rescue failed - acceptable for unit test
@@ -464,7 +462,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         vm.prank(address(minter));
         batchReceiver.pullAssets(TEST_RECEIVER, TEST_AMOUNT, TEST_BATCH_ID);
 
-        assertEq(IERC20(getUSDC()).balanceOf(TEST_RECEIVER), TEST_AMOUNT, "Valid transfer should succeed");
+        assertEq(IERC20(tokens.usdc).balanceOf(TEST_RECEIVER), TEST_AMOUNT, "Valid transfer should succeed");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -487,14 +485,14 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
             vm.prank(unauthorizedUsers[i]);
             vm.expectRevert(bytes(KBATCHRECEIVER_ONLY_KMINTER));
-            batchReceiver.rescueAssets(getUSDC());
+            batchReceiver.rescueAssets(tokens.usdc);
         }
 
         // Verify kMinter CAN perform operations
         vm.prank(address(minter));
         batchReceiver.pullAssets(TEST_RECEIVER, TEST_AMOUNT, TEST_BATCH_ID);
 
-        assertEq(IERC20(getUSDC()).balanceOf(TEST_RECEIVER), TEST_AMOUNT, "kMinter should be able to pull assets");
+        assertEq(IERC20(tokens.usdc).balanceOf(TEST_RECEIVER), TEST_AMOUNT, "kMinter should be able to pull assets");
     }
 
     /// @dev Test unauthorized access with malicious contracts
@@ -507,7 +505,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         malicious.attemptPullAssets(TEST_RECEIVER, TEST_AMOUNT, TEST_BATCH_ID);
 
         vm.expectRevert();
-        malicious.attemptRescueAssets(getUSDC());
+        malicious.attemptRescueAssets(tokens.usdc);
     }
 
     /// @dev Test access control state consistency
@@ -523,8 +521,8 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         assertEq(receiver2.kMinter(), users.admin, "Receiver2 kMinter incorrect");
 
         // Verify access control works correctly for each
-        receiver1.initialize(bytes32(uint256(777)), getUSDC());
-        receiver2.initialize(bytes32(uint256(888)), getUSDC());
+        receiver1.initialize(bytes32(uint256(777)), tokens.usdc);
+        receiver2.initialize(bytes32(uint256(888)), tokens.usdc);
 
         mockUSDC.mint(address(receiver1), TEST_AMOUNT);
         mockUSDC.mint(address(receiver2), TEST_AMOUNT);
@@ -559,7 +557,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
         // Step 1: Create and initialize new batch receiver
         kBatchReceiver workflowBatchReceiver = new kBatchReceiver(address(minter));
-        workflowBatchReceiver.initialize(workflowBatchId, getUSDC());
+        workflowBatchReceiver.initialize(workflowBatchId, tokens.usdc);
 
         // Step 2: Fund batch receiver (simulating settlement)
         mockUSDC.mint(address(workflowBatchReceiver), settlementAmount);
@@ -569,9 +567,9 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         workflowBatchReceiver.pullAssets(workflowReceiver, settlementAmount, workflowBatchId);
 
         // Step 4: Verify complete workflow
-        assertEq(IERC20(getUSDC()).balanceOf(workflowReceiver), settlementAmount, "Workflow settlement failed");
+        assertEq(IERC20(tokens.usdc).balanceOf(workflowReceiver), settlementAmount, "Workflow settlement failed");
         assertEq(
-            IERC20(getUSDC()).balanceOf(address(workflowBatchReceiver)), 0, "Workflow batch receiver should be empty"
+            IERC20(tokens.usdc).balanceOf(address(workflowBatchReceiver)), 0, "Workflow batch receiver should be empty"
         );
     }
 
@@ -585,7 +583,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
         // Initialization
         bytes32 lifecycleBatchId = bytes32(uint256(999));
-        lifecycleReceiver.initialize(lifecycleBatchId, getUSDC());
+        lifecycleReceiver.initialize(lifecycleBatchId, tokens.usdc);
         assertTrue(lifecycleReceiver.isInitialised(), "Should be initialized");
 
         // Operations
@@ -594,12 +592,14 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         lifecycleReceiver.pullAssets(TEST_RECEIVER, TEST_AMOUNT, lifecycleBatchId);
 
         // Cleanup (rescue any remaining assets)
-        if (IERC20(getUSDC()).balanceOf(address(lifecycleReceiver)) > 0) {
+        if (IERC20(tokens.usdc).balanceOf(address(lifecycleReceiver)) > 0) {
             vm.prank(address(minter));
-            lifecycleReceiver.rescueAssets(getUSDC());
+            lifecycleReceiver.rescueAssets(tokens.usdc);
         }
 
-        assertEq(IERC20(getUSDC()).balanceOf(address(lifecycleReceiver)), 0, "Lifecycle should end with empty receiver");
+        assertEq(
+            IERC20(tokens.usdc).balanceOf(address(lifecycleReceiver)), 0, "Lifecycle should end with empty receiver"
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -608,31 +608,31 @@ contract kBatchReceiverTest is DeploymentBaseTest {
 
     /// @dev Fuzz test pull assets with various amounts
     function testFuzz_PullAssets(uint256 amount) public {
-        uint256 maxBalance = IERC20(getUSDC()).balanceOf(address(batchReceiver));
+        uint256 maxBalance = IERC20(tokens.usdc).balanceOf(address(batchReceiver));
         amount = bound(amount, 1, maxBalance);
 
         vm.prank(address(minter));
         batchReceiver.pullAssets(TEST_RECEIVER, amount, TEST_BATCH_ID);
 
-        assertEq(IERC20(getUSDC()).balanceOf(TEST_RECEIVER), amount, "Incorrect amount transferred");
+        assertEq(IERC20(tokens.usdc).balanceOf(TEST_RECEIVER), amount, "Incorrect amount transferred");
     }
 
     /// @dev Fuzz test pull assets with various receivers
     function testFuzz_PullAssets_DifferentReceivers(address receiver, uint256 amount) public {
         vm.assume(receiver != address(0));
         vm.assume(receiver != address(batchReceiver));
-        vm.assume(receiver != getUSDC());
+        vm.assume(receiver != tokens.usdc);
 
-        uint256 maxBalance = IERC20(getUSDC()).balanceOf(address(batchReceiver));
+        uint256 maxBalance = IERC20(tokens.usdc).balanceOf(address(batchReceiver));
         amount = bound(amount, 1, maxBalance);
 
-        uint256 initialBalance = IERC20(getUSDC()).balanceOf(receiver);
+        uint256 initialBalance = IERC20(tokens.usdc).balanceOf(receiver);
 
         vm.prank(address(minter));
         batchReceiver.pullAssets(receiver, amount, TEST_BATCH_ID);
 
         assertEq(
-            IERC20(getUSDC()).balanceOf(receiver), initialBalance + amount, "Incorrect amount transferred to receiver"
+            IERC20(tokens.usdc).balanceOf(receiver), initialBalance + amount, "Incorrect amount transferred to receiver"
         );
     }
 
@@ -655,7 +655,7 @@ contract kBatchReceiverTest is DeploymentBaseTest {
         vm.assume(validBatchId != invalidBatchId);
 
         kBatchReceiver fuzzReceiver = new kBatchReceiver(address(minter));
-        fuzzReceiver.initialize(validBatchId, getUSDC());
+        fuzzReceiver.initialize(validBatchId, tokens.usdc);
 
         mockUSDC.mint(address(fuzzReceiver), TEST_AMOUNT);
 

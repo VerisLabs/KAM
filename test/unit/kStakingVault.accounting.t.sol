@@ -11,9 +11,6 @@ import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 
 import { KSTAKINGVAULT_INSUFFICIENT_BALANCE, KSTAKINGVAULT_ZERO_AMOUNT } from "kam/src/errors/Errors.sol";
 
-/// @title kStakingVaultAccountingTest
-/// @notice Tests for core accounting mechanics in kStakingVault
-/// @dev Focuses on share price calculations, asset conversions, and balance tracking
 contract kStakingVaultAccountingTest is BaseVaultTest {
     using OptimizedFixedPointMathLib for uint256;
     using SafeTransferLib for address;
@@ -146,7 +143,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
         vm.prank(users.relayer);
         bytes32 proposalId =
-            assetRouter.proposeSettleBatch(getUSDC(), address(vault), batchId, INITIAL_DEPOSIT + bobDeposit, 0, 0);
+            assetRouter.proposeSettleBatch(tokens.usdc, address(vault), batchId, INITIAL_DEPOSIT + bobDeposit, 0, 0);
         vm.prank(users.relayer);
         assetRouter.executeSettleBatch(proposalId);
 

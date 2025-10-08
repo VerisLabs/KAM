@@ -16,8 +16,6 @@ import {
 } from "kam/src/errors/Errors.sol";
 import { kStakingVault } from "kam/src/kStakingVault/kStakingVault.sol";
 
-/// @title kStakingVaultClaimsTest
-/// @notice Tests for claim functionality in kStakingVault
 contract kStakingVaultClaimsTest is BaseVaultTest {
     using SafeTransferLib for address;
 

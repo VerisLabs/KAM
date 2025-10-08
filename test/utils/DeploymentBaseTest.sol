@@ -26,25 +26,7 @@ import { VaultAdapter } from "kam/src/adapters/VaultAdapter.sol";
 // Interfaces
 import { IRegistry, IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 
-/// @title DeploymentBaseTest
-/// @notice Comprehensive base test contract that deploys the complete KAM protocol
-///
-/// @dev VAULT ARCHITECTURE:
-/// - kMinter (MINTER type = 0): Institutional gateway for 1:1 minting/redemption
-/// - DN Vault (DN type = 1): Works directly with kMinter for institutional flows, different math model
-/// - Alpha Vault (ALPHA type = 2): Retail staking vault with standard yield distribution
-/// - Beta Vault (BETA type = 3): Advanced staking strategies with different mathematical models
-/// All vaults are properly registered in kRegistry with correct types
-///
-/// @dev TOKEN MINTING FLOW:
-/// - kTokens: ONLY minted by kMinter (1:1 with underlying assets for institutions)
-/// - stkTokens: Minted by individual kStakingVaults (vault-specific ERC20 receipts)
-/// - kStakingVaults accept existing kTokens from users, they do NOT mint kTokens
 contract DeploymentBaseTest is BaseTest {
-    /*//////////////////////////////////////////////////////////////
-                        PROTOCOL CONTRACTS
-    //////////////////////////////////////////////////////////////*/
-
     // Core protocol contracts (proxied)
     ERC1967Factory public factory;
     kRegistry public registry;
@@ -118,7 +100,6 @@ contract DeploymentBaseTest is BaseTest {
         _initializeBatches(); // Disabled due to setup issues
     }
 
-    /// @dev Deploys all protocol contracts in correct dependency order
     function _deployProtocol() internal {
         // 1. Deploy kRegistry (central coordinator)
         _deployRegistry();
@@ -152,7 +133,6 @@ contract DeploymentBaseTest is BaseTest {
                         DEPLOYMENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Deploy kRegistry with proxy
     function _deployRegistry() internal {
         // Deploy implementation
         registryImpl = new kRegistry();
@@ -183,7 +163,6 @@ contract DeploymentBaseTest is BaseTest {
         vm.label(address(registryImpl), "kRegistryImpl");
     }
 
-    /// @dev Deploy kAssetRouter with proxy
     function _deployAssetRouter() internal {
         // Deploy implementation
         assetRouterImpl = new kAssetRouter();
@@ -201,17 +180,17 @@ contract DeploymentBaseTest is BaseTest {
         vm.label(address(assetRouterImpl), "kAssetRouterImpl");
     }
 
-    /// @dev Deploy kToken contracts (kUSD and kBTC)
     function _deployTokens() internal {
         // Deploy kUSD through registry using mock USDC address
         vm.startPrank(users.admin);
-        address kUSDAddress =
-            registry.registerAsset(KUSD_NAME, KUSD_SYMBOL, usdc, registry.USDC(), type(uint256).max, type(uint256).max);
+        address kUSDAddress = registry.registerAsset(
+            KUSD_NAME, KUSD_SYMBOL, tokens.usdc, registry.USDC(), type(uint256).max, type(uint256).max
+        );
         kUSD = kToken(payable(kUSDAddress));
         kUSD.grantEmergencyRole(users.emergencyAdmin);
 
         address kBTCAddress =
-            registry.registerAsset(KBTC_NAME, KBTC_SYMBOL, wbtc, registry.WBTC(), type(uint256).max, type(uint256).max);
+            registry.registerAsset(KBTC_NAME, KBTC_SYMBOL, tokens.wbtc, registry.WBTC(), type(uint256).max, type(uint256).max);
         kBTC = kToken(payable(kBTCAddress));
         kBTC.grantEmergencyRole(users.emergencyAdmin);
         vm.stopPrank();
@@ -221,7 +200,6 @@ contract DeploymentBaseTest is BaseTest {
         vm.label(address(kBTC), "kBTC");
     }
 
-    /// @dev Deploy kMinter with proxy
     function _deployMinter() internal {
         // Deploy implementation
         minterImpl = new kMinter();
@@ -237,7 +215,6 @@ contract DeploymentBaseTest is BaseTest {
         vm.label(address(minterImpl), "kMinterImpl");
     }
 
-    /// @dev Deploy all three types of kStakingVaults with modules
     function _deployStakingVaults() internal {
         vm.startPrank(users.admin);
 
@@ -258,7 +235,6 @@ contract DeploymentBaseTest is BaseTest {
         vm.label(address(readerModule), "ReaderModule");
     }
 
-    /// @dev Helper function to deploy a specific vault type
     function _deployVault(
         string memory name,
         string memory symbol,
@@ -276,7 +252,7 @@ contract DeploymentBaseTest is BaseTest {
             name,
             symbol,
             6, // decimals
-            asset // underlying asset (USDC for now)
+            tokens.usdc // underlying asset (USDC for now)
         );
 
         address vaultProxy = factory.deployAndCall(address(stakingVaultImpl), users.admin, initData);
@@ -288,7 +264,6 @@ contract DeploymentBaseTest is BaseTest {
         return vault;
     }
 
-    /// @dev Deploy adapters for external strategy integrations
     function _deployAdapters() internal {
         // Deploy VaultAdapter implementation
         vaultAdapterImpl = new VaultAdapter();
@@ -321,28 +296,27 @@ contract DeploymentBaseTest is BaseTest {
                         CONFIGURATION FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Configure protocol contracts with registry integration
     function _configureProtocol() internal {
         // Register Vaults
         vm.startPrank(users.admin);
-        registry.registerVault(address(minter), IRegistry.VaultType.MINTER, usdc);
-        registry.registerVault(address(dnVault), IRegistry.VaultType.DN, usdc);
-        registry.registerVault(address(alphaVault), IRegistry.VaultType.ALPHA, usdc);
-        registry.registerVault(address(betaVault), IRegistry.VaultType.BETA, usdc);
+        registry.registerVault(address(minter), IRegistry.VaultType.MINTER, tokens.usdc);
+        registry.registerVault(address(dnVault), IRegistry.VaultType.DN, tokens.usdc);
+        registry.registerVault(address(alphaVault), IRegistry.VaultType.ALPHA, tokens.usdc);
+        registry.registerVault(address(betaVault), IRegistry.VaultType.BETA, tokens.usdc);
 
         // Register adapters for vaults (if adapters were deployed)
-        registry.registerAdapter(address(minter), usdc, address(minterAdapterUSDC));
-        registry.registerAdapter(address(minter), wbtc, address(minterAdapterWBTC));
-        registry.registerAdapter(address(dnVault), usdc, address(DNVaultAdapterUSDC));
-        registry.registerAdapter(address(alphaVault), usdc, address(ALPHAVaultAdapterUSDC));
-        registry.registerAdapter(address(betaVault), usdc, address(BETHAVaultAdapterUSDC));
+        registry.registerAdapter(address(minter), tokens.usdc, address(minterAdapterUSDC));
+        registry.registerAdapter(address(minter), tokens.wbtc, address(minterAdapterWBTC));
+        registry.registerAdapter(address(dnVault), tokens.usdc, address(DNVaultAdapterUSDC));
+        registry.registerAdapter(address(alphaVault), tokens.usdc, address(ALPHAVaultAdapterUSDC));
+        registry.registerAdapter(address(betaVault), tokens.usdc, address(BETHAVaultAdapterUSDC));
 
         IkRegistry(address(registry)).setAdapterAllowedSelector(
-            address(minterAdapterUSDC), usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
+            address(minterAdapterUSDC), tokens.usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
         );
 
         IkRegistry(address(registry)).setAdapterAllowedSelector(
-            address(ALPHAVaultAdapterUSDC), usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
+            address(ALPHAVaultAdapterUSDC), tokens.usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
         );
 
         registry.setAssetBatchLimits(address(dnVault), type(uint256).max, type(uint256).max);
@@ -360,27 +334,19 @@ contract DeploymentBaseTest is BaseTest {
         registry.grantRoles(address(assetRouter), ADMIN_ROLE);
     }
 
-    /// @dev Initialize initial batches for all vaults
     function _initializeBatches() internal {
-        // Register the VaultBatches and VaultClaims functions with the vaults
         _registerModules();
 
-        // Create initial batches for all vaults using relayer role
-        // Note: relayer has RELAYER_ROLE as set up in _setupRoles()
         vm.startPrank(users.relayer);
 
-        // Use low-level call to create initial batches since modules are dynamically registered
         bytes4 createBatchSelector = bytes4(keccak256("createNewBatch()"));
 
-        // Create initial batch for DN vault
         (bool success1,) = address(dnVault).call(abi.encodeWithSelector(createBatchSelector));
         require(success1, "DN vault batch creation failed");
 
-        // Create initial batch for Alpha vault
         (bool success2,) = address(alphaVault).call(abi.encodeWithSelector(createBatchSelector));
         require(success2, "Alpha vault batch creation failed");
 
-        // Create initial batch for Beta vault
         (bool success3,) = address(betaVault).call(abi.encodeWithSelector(createBatchSelector));
         require(success3, "Beta vault batch creation failed");
 
@@ -391,7 +357,6 @@ contract DeploymentBaseTest is BaseTest {
         vm.stopPrank();
     }
 
-    /// @dev Register modules with vaults
     function _registerModules() internal {
         readerModule = new ReaderModule();
         bytes4[] memory readerSelectors = readerModule.selectors();
@@ -399,7 +364,6 @@ contract DeploymentBaseTest is BaseTest {
         // Register modules as vault admin
         vm.startPrank(users.owner);
 
-        // Add reader module functions to all vaults
         kStakingVault(payable(address(dnVault))).addFunctions(readerSelectors, address(readerModule), true);
         kStakingVault(payable(address(alphaVault))).addFunctions(readerSelectors, address(readerModule), true);
         kStakingVault(payable(address(betaVault))).addFunctions(readerSelectors, address(readerModule), true);
@@ -409,17 +373,11 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Set up complete role hierarchy
     function _setupRoles() internal {
-        // Grant MINTER_ROLE to contracts using kToken's specific functions (requires admin)
         vm.startPrank(users.admin);
-        // Grant MINTER_ROLE to kMinter for institutional minting (1:1 backing)
         kUSD.grantMinterRole(address(minter));
         kBTC.grantMinterRole(address(minter));
-        // Grant MINTER_ROLE to kAssetRouter for yield distribution and settlement
         kUSD.grantMinterRole(address(assetRouter));
         kBTC.grantMinterRole(address(assetRouter));
-
-        // Note: Staking vaults do NOT mint kTokens - they accept existing kTokens from users
-        // and mint their own stkTokens. kMinter handles institutional flows, kAssetRouter handles yield.
 
         registry.grantInstitutionRole(users.institution);
         registry.grantInstitutionRole(users.institution2);
@@ -430,7 +388,6 @@ contract DeploymentBaseTest is BaseTest {
 
     /// @dev Fund test users with test assets
     function _fundUsers() internal {
-        // Fund users with USDC using mint function on mock tokens
         mockUSDC.mint(users.alice, 1_000_000 * _1_USDC);
         mockUSDC.mint(users.bob, 500_000 * _1_USDC);
         mockUSDC.mint(users.charlie, 250_000 * _1_USDC);
@@ -439,7 +396,6 @@ contract DeploymentBaseTest is BaseTest {
         mockUSDC.mint(users.institution3, 10_000_000 * _1_USDC);
         mockUSDC.mint(users.institution4, 10_000_000 * _1_USDC);
 
-        // Fund users with WBTC
         mockWBTC.mint(users.alice, 100 * _1_WBTC);
         mockWBTC.mint(users.bob, 50 * _1_WBTC);
         mockWBTC.mint(users.institution, 1000 * _1_WBTC);
@@ -449,32 +405,19 @@ contract DeploymentBaseTest is BaseTest {
                         TEST HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Helper to mint kTokens for testing
-    /// @param token kToken to mint
-    /// @param to Recipient address
-    /// @param amount Amount to mint
     function mintKTokens(address token, address to, uint256 amount) internal {
         vm.prank(address(minter)); // Use minter as it has MINTER_ROLE
         kToken(token).mint(to, amount);
     }
 
-    /// @dev Helper to get asset balance
-    /// @param token Asset token
-    /// @param user User address
-    /// @return Balance of user
     function getAssetBalance(address token, address user) internal view returns (uint256) {
         return kToken(token).balanceOf(user);
     }
 
-    /// @dev Helper to get kToken balance
-    /// @param token kToken
-    /// @param user User address
-    /// @return Balance of user
     function getKTokenBalance(address token, address user) internal view returns (uint256) {
         return kToken(token).balanceOf(user);
     }
 
-    /// @dev Expect specific event emission
     function expectEvent(address emitter, bytes32 eventSig) internal {
         vm.expectEmit(true, true, true, true, emitter);
     }
@@ -483,17 +426,14 @@ contract DeploymentBaseTest is BaseTest {
                         ASSERTION HELPERS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Assert that contract has correct role
     function assertHasRole(address roleContract, address account, uint256 role) internal {
         assertTrue(OptimizedOwnableRoles(roleContract).hasAnyRole(account, role), "Account should have role");
     }
 
-    /// @dev Assert asset balance equals expected
     function assertAssetBalance(address token, address user, uint256 expected) internal {
         assertEq(getAssetBalance(token, user), expected, "Asset balance mismatch");
     }
 
-    /// @dev Assert kToken balance equals expected
     function assertKTokenBalance(address token, address user, uint256 expected) internal {
         assertEq(getKTokenBalance(token, user), expected, "kToken balance mismatch");
     }
@@ -502,19 +442,18 @@ contract DeploymentBaseTest is BaseTest {
                         PROTOCOL STATE HELPERS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Check if protocol is properly initialized
     function assertProtocolInitialized() internal view {
         // Check registry has core contracts
         assertEq(registry.getContractById(registry.K_ASSET_ROUTER()), address(assetRouter));
         assertEq(registry.getContractById(registry.K_MINTER()), address(minter));
 
         // Check assets are registered
-        assertTrue(registry.isAsset(usdc));
-        assertTrue(registry.isAsset(wbtc));
+        assertTrue(registry.isAsset(tokens.usdc));
+        assertTrue(registry.isAsset(tokens.wbtc));
 
         // Check kTokens are registered
-        assertEq(registry.assetToKToken(usdc), address(kUSD));
-        assertEq(registry.assetToKToken(wbtc), address(kBTC));
+        assertEq(registry.assetToKToken(tokens.usdc), address(kUSD));
+        assertEq(registry.assetToKToken(tokens.wbtc), address(kBTC));
 
         // Check all vaults are registered
         assertTrue(registry.isVault(address(dnVault)));
@@ -529,7 +468,6 @@ contract DeploymentBaseTest is BaseTest {
         assertTrue(address(BETHAVaultAdapterUSDC) != address(0));
     }
 
-    /// @dev Get current protocol state for debugging
     function getProtocolState()
         internal
         view
@@ -556,7 +494,6 @@ contract DeploymentBaseTest is BaseTest {
         );
     }
 
-    /// @dev Helper to get vault by type for testing
     function getVaultByType(IRegistry.VaultType vaultType) internal view returns (IkStakingVault) {
         if (vaultType == IRegistry.VaultType.DN) return dnVault;
         if (vaultType == IRegistry.VaultType.ALPHA) return alphaVault;

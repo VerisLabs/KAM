@@ -8,9 +8,6 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 
-/// @title kStakingVaultFlowsTest
-/// @notice Tests for fee mechanics in kStakingVault
-/// @dev Focuses on fee calculations and asset conversions
 contract kStakingVaultFlowsTest is BaseVaultTest {
     using OptimizedFixedPointMathLib for uint256;
     using SafeTransferLib for address;

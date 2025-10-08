@@ -163,20 +163,6 @@ contract kMinterHandler is BaseHandler {
         vm.startPrank(kMinter_relayer);
         kMinter_minter.closeBatch(batchId, true);
 
-        // if (kMinter_nettedInBatch < 0) {
-        //     address[] memory targets = new address[](1);
-        //     bytes[] memory data = new bytes[](1);
-        //     uint256[] memory values = new uint256[](1);
-        //     targets[0] = address(kMinter_token);
-        //     data[0] = abi.encodeWithSignature(
-        //         "transfer(address,uint256)", address(kMinter_assetRouter), uint256(-kMinter_nettedInBatch)
-        //     );
-        //     values[0] = 0;
-        //     kMinter_adapter.execute(targets, data, values);
-
-        //     kMinter_expectedAdapterBalance = uint256(int256(kMinter_expectedAdapterBalance) + kMinter_nettedInBatch);
-        // }
-
         vm.expectEmit(false, true, true, true);
         emit IkAssetRouter.SettlementProposed(
             bytes32(0),
