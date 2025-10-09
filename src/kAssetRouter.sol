@@ -195,7 +195,13 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IkAssetRouter
-    function kAssetTransfer(address sourceVault, address targetVault, address _asset, uint256 amount, bytes32 batchId)
+    function kAssetTransfer(
+        address sourceVault,
+        address targetVault,
+        address _asset,
+        uint256 amount,
+        bytes32 batchId
+    )
         external
         payable
     {
@@ -547,7 +553,11 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     }
 
     /// @inheritdoc IkAssetRouter
-    function getSettlementProposal(bytes32 proposalId) external view returns (VaultSettlementProposal memory proposal) {
+    function getSettlementProposal(bytes32 proposalId)
+        external
+        view
+        returns (VaultSettlementProposal memory proposal)
+    {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         proposal = $.settlementProposals[proposalId];
     }
@@ -662,7 +672,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     }
 
     /// @inheritdoc IkAssetRouter
-    function getBatchIdBalances(address vault, bytes32 batchId)
+    function getBatchIdBalances(
+        address vault,
+        bytes32 batchId
+    )
         external
         view
         returns (uint256 deposited, uint256 requested)

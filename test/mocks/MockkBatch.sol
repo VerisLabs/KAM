@@ -15,7 +15,8 @@ contract MockkBatch {
         address, // WBTC
         address // admin
     )
-        external {
+        external
+    {
         // Mock initialization - no-op
     }
 

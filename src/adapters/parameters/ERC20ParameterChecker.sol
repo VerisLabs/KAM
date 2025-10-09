@@ -99,7 +99,12 @@ contract ERC20ParameterChecker is IParametersChecker {
     /// @param selector The function selector
     /// @param params The encoded function parameters
     /// @return Whether the call is authorized
-    function authorizeAdapterCall(address adapter, address token, bytes4 selector, bytes calldata params)
+    function authorizeAdapterCall(
+        address adapter,
+        address token,
+        bytes4 selector,
+        bytes calldata params
+    )
         external
         view
         returns (bool)

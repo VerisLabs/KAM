@@ -11,7 +11,12 @@ import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 
 contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
     // Helper function to configure kMinter adapter permissions (full ERC7540 access)
-    function configureKMinterAdapterPermissions(IkRegistry registry, address adapter, address vault, address asset)
+    function configureKMinterAdapterPermissions(
+        IkRegistry registry,
+        address adapter,
+        address vault,
+        address asset
+    )
         internal
     {
         bytes4 requestDepositSelector = IERC7540.requestDeposit.selector;
@@ -44,7 +49,11 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
     }
 
     // Helper function to configure custodial adapter permissions (targetType = 1)
-    function configureCustodialAdapterPermissions(IkRegistry registry, address adapter, address custodialAddress)
+    function configureCustodialAdapterPermissions(
+        IkRegistry registry,
+        address adapter,
+        address custodialAddress
+    )
         internal
     {
         bytes4 approveSelector = IERC7540.approve.selector;
@@ -55,7 +64,12 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
     }
 
     // Helper function to configure parameter checkers
-    function configureParameterChecker(IkRegistry registry, address adapter, address target, address paramChecker)
+    function configureParameterChecker(
+        IkRegistry registry,
+        address adapter,
+        address target,
+        address paramChecker
+    )
         internal
     {
         bytes4 transferSelector = IERC7540.transfer.selector;

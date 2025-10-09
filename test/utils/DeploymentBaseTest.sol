@@ -236,7 +236,11 @@ contract DeploymentBaseTest is BaseTest {
         vm.label(address(readerModule), "ReaderModule");
     }
 
-    function _deployVault(string memory name, string memory symbol, string memory label)
+    function _deployVault(
+        string memory name,
+        string memory symbol,
+        string memory label
+    )
         internal
         returns (IkStakingVault vault)
     {
@@ -308,15 +312,13 @@ contract DeploymentBaseTest is BaseTest {
         registry.registerAdapter(address(alphaVault), tokens.usdc, address(ALPHAVaultAdapterUSDC));
         registry.registerAdapter(address(betaVault), tokens.usdc, address(BETHAVaultAdapterUSDC));
 
-        IkRegistry(address(registry))
-            .setAdapterAllowedSelector(
-                address(minterAdapterUSDC), tokens.usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
-            );
+        IkRegistry(address(registry)).setAdapterAllowedSelector(
+            address(minterAdapterUSDC), tokens.usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
+        );
 
-        IkRegistry(address(registry))
-            .setAdapterAllowedSelector(
-                address(ALPHAVaultAdapterUSDC), tokens.usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
-            );
+        IkRegistry(address(registry)).setAdapterAllowedSelector(
+            address(ALPHAVaultAdapterUSDC), tokens.usdc, 1, bytes4(keccak256("transfer(address,uint256)")), true
+        );
 
         registry.setAssetBatchLimits(address(dnVault), type(uint256).max, type(uint256).max);
         registry.setAssetBatchLimits(address(alphaVault), type(uint256).max, type(uint256).max);

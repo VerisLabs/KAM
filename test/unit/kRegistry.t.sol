@@ -501,9 +501,8 @@ contract kRegistryTest is DeploymentBaseTest {
         string memory longName = "VERY_LONG_ASSET_NAME_THAT_EXCEEDS_NORMAL_LIMITS_FOR_TESTING_PURPOSES_ONLY";
         string memory longSymbol = "VERYLONGSYMBOL";
 
-        address longKToken = registry.registerAsset(
-            longName, longSymbol, testAsset, testAsset_ID, type(uint256).max, type(uint256).max
-        );
+        address longKToken =
+            registry.registerAsset(longName, longSymbol, testAsset, testAsset_ID, type(uint256).max, type(uint256).max);
         assertTrue(longKToken != address(0), "Should handle long names/symbols");
 
         vm.stopPrank();

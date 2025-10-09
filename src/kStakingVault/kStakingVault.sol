@@ -240,8 +240,9 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         // Notify the router to move underlying assets from DN strategy
         // To the strategy of this vault
         // That movement will happen from the wallet managing the portfolio
-        IkAssetRouter(_getKAssetRouter())
-            .kAssetTransfer(_getKMinter(), address(this), $.underlyingAsset, amount, batchId);
+        IkAssetRouter(_getKAssetRouter()).kAssetTransfer(
+            _getKMinter(), address(this), $.underlyingAsset, amount, batchId
+        );
 
         emit StakeRequestCreated(bytes32(requestId), msg.sender, $.kToken, amount, to, batchId);
 
@@ -319,8 +320,9 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         require(!$.batches[request.batchId].isClosed, KSTAKINGVAULT_VAULT_CLOSED);
         require(!$.batches[request.batchId].isSettled, KSTAKINGVAULT_VAULT_SETTLED);
 
-        IkAssetRouter(_getKAssetRouter())
-            .kAssetTransfer(address(this), _getKMinter(), $.underlyingAsset, request.kTokenAmount, request.batchId);
+        IkAssetRouter(_getKAssetRouter()).kAssetTransfer(
+            address(this), _getKMinter(), $.underlyingAsset, request.kTokenAmount, request.batchId
+        );
 
         $.kToken.safeTransfer(request.user, request.kTokenAmount);
 
