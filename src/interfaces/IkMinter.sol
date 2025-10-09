@@ -9,7 +9,7 @@ import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
 /// by depositing underlying assets and burn them through a batch settlement system. The interface
 /// supports a two-phase redemption process to accommodate batch processing and yield distribution.
 interface IkMinter is IVersioned {
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               TYPES
     //////////////////////////////////////////////////////////////*/
 
@@ -61,7 +61,7 @@ interface IkMinter is IVersioned {
         bytes32 batchId;
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
@@ -100,10 +100,10 @@ interface IkMinter is IVersioned {
     event Cancelled(bytes32 indexed requestId);
 
     // VaultBatches Events
-    /// @notice Emitted when a new batch is created
-    /// @param asset The asset in which the batch will be created
-    /// @param batchId The batch ID of the new batch
-    /// @param batchNumber the batch number used
+    // / @notice Emitted when a new batch is created
+    // / @param asset The asset in which the batch will be created
+    // / @param batchId The batch ID of the new batch
+    // / @param batchNumber the batch number used
     event BatchCreated(address indexed asset, bytes32 indexed batchId, uint256 batchNumber);
 
     /// @notice Emitted when a batch is settled
@@ -119,7 +119,7 @@ interface IkMinter is IVersioned {
     /// @param batchId The batch ID of the BatchReceiver
     event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 

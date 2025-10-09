@@ -41,7 +41,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
     using SafeTransferLib for address;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
@@ -60,7 +60,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
     /// @notice Maximum basis points (100%)
     uint256 constant MAX_BPS = 10_000;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
@@ -126,7 +126,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -165,7 +165,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
         _getkRegistryStorage().treasury = treasury_;
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           SINGLETON MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
@@ -179,7 +179,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
         emit SingletonContractSet(id, contractAddress);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           ROLES MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
@@ -255,7 +255,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           ASSET MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
@@ -330,7 +330,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
         return kToken_;
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           VAULT MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
@@ -372,7 +372,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
         emit VaultRemoved(vault);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           ADAPTER MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
@@ -406,7 +406,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
         emit AdapterRemoved(vault, asset, adapter);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -609,18 +609,17 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
             // Store the function selector of `decimals()`.
             mstore(0x00, 0x313ce567)
             // Arguments are evaluated last to first.
-            success :=
-                and(
-                    // Returned value is less than 256, at left-padded to 32 bytes.
-                    and(lt(mload(0x00), 0x100), gt(returndatasize(), 0x1f)),
-                    // The staticcall succeeds.
-                    staticcall(gas(), underlying, 0x1c, 0x04, 0x00, 0x20)
-                )
+            success := and(
+                // Returned value is less than 256, at left-padded to 32 bytes.
+                and(lt(mload(0x00), 0x100), gt(returndatasize(), 0x1f)),
+                // The staticcall succeeds.
+                staticcall(gas(), underlying, 0x1c, 0x04, 0x00, 0x20)
+            )
             result := mul(mload(0x00), success)
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         UPGRADE AUTHORIZATION
     //////////////////////////////////////////////////////////////*/
 
@@ -632,7 +631,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
         require(newImplementation != address(0), KREGISTRY_ZERO_ADDRESS);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         FUNCTIONS UPGRADE
     //////////////////////////////////////////////////////////////*/
 
@@ -642,7 +641,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
         _checkOwner();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             RECEIVE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -651,7 +650,7 @@ contract kRegistry is IRegistry, kBaseRoles, Initializable, UUPSUpgradeable, Mul
     /// Received ETH can be rescued using the rescueAssets function with address(0).
     receive() external payable { }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 

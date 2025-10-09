@@ -59,7 +59,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     using OptimizedSafeCastLib for uint128;
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
@@ -78,7 +78,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// that could indicate errors in yield calculation or potential manipulation attempts
     uint256 private constant DEFAULT_MAX_DELTA = 1000; // 10% in basis points
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             STORAGE LAYOUT
     //////////////////////////////////////////////////////////////*/
 
@@ -122,7 +122,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -147,7 +147,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         emit ContractInitialized(registry_);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             kMINTER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -190,18 +190,12 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _unlockReentrant();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             kSTAKING VAULT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IkAssetRouter
-    function kAssetTransfer(
-        address sourceVault,
-        address targetVault,
-        address _asset,
-        uint256 amount,
-        bytes32 batchId
-    )
+    function kAssetTransfer(address sourceVault, address targetVault, address _asset, uint256 amount, bytes32 batchId)
         external
         payable
     {
@@ -253,7 +247,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _unlockReentrant();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             SETTLEMENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -508,7 +502,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         emit BatchSettled(vault, batchId, totalAssets_);
     }
 
-    /*////////////////////////////////////////////////////////////
+    /* ////////////////////////////////////////////////////////////
                           ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -541,7 +535,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         emit MaxAllowedDeltaUpdated(oldTolerance, maxDelta_);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -553,11 +547,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     }
 
     /// @inheritdoc IkAssetRouter
-    function getSettlementProposal(bytes32 proposalId)
-        external
-        view
-        returns (VaultSettlementProposal memory proposal)
-    {
+    function getSettlementProposal(bytes32 proposalId) external view returns (VaultSettlementProposal memory proposal) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         proposal = $.settlementProposals[proposalId];
     }
@@ -672,10 +662,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     }
 
     /// @inheritdoc IkAssetRouter
-    function getBatchIdBalances(
-        address vault,
-        bytes32 batchId
-    )
+    function getBatchIdBalances(address vault, bytes32 batchId)
         external
         view
         returns (uint256 deposited, uint256 requested)
@@ -691,7 +678,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         return $.vaultRequestedShares[vault][batchId];
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           UPGRADE FUNCTION
     //////////////////////////////////////////////////////////////*/
 
@@ -702,14 +689,14 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _checkAddressNotZero(newImplementation);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             RECEIVE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Receive ETH (for gas refunds, etc.)
     receive() external payable { }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 

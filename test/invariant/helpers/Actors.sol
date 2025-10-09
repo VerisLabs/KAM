@@ -6,9 +6,9 @@ import { AddressSet, LibAddressSet } from "./AddressSet.sol";
 abstract contract Actors {
     using LibAddressSet for AddressSet;
 
-    ////////////////////////////////////////////////////////////////
-    ///                      ACTORS CONFIG                       ///
-    ////////////////////////////////////////////////////////////////
+    // //////////////////////////////////////////////////////////////
+    // / ACTORS CONFIG ///
+    // //////////////////////////////////////////////////////////////
     AddressSet internal _actors;
     address internal currentActor;
 
@@ -23,9 +23,9 @@ abstract contract Actors {
         _;
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                      HELPERS                             ///
-    ////////////////////////////////////////////////////////////////
+    // //////////////////////////////////////////////////////////////
+    // / HELPERS ///
+    // //////////////////////////////////////////////////////////////
     function forEachActor(function(address) external func) public {
         return _actors.forEach(func);
     }
@@ -36,10 +36,7 @@ abstract contract Actors {
         }
     }
 
-    function reduceActors(
-        uint256 acc,
-        function(uint256,address) external returns (uint256) func
-    )
+    function reduceActors(uint256 acc, function(uint256, address) external returns (uint256) func)
         public
         returns (uint256)
     {

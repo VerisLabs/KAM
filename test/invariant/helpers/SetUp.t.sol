@@ -21,7 +21,7 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
     kStakingVaultHandler public vaultHandlerAlpha;
     kStakingVaultHandler public vaultHandlerBeta;
     uint16 public constant PERFORMANCE_FEE = 2000; // 20%
-    uint16 public constant MANAGEMENT_FEE = 100; // 1%
+    uint16 public constant MANAGEMENT_FEE = 100; //1%
 
     function _setUp() internal {
         super.setUp();
@@ -42,7 +42,7 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
             address(assetRouter),
             address(DNVaultAdapterUSDC),
             address(minterAdapterUSDC),
-            getUSDC(),
+            tokens.usdc,
             address(kUSD),
             users.relayer,
             _minterActors,
@@ -63,7 +63,7 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
             address(assetRouter),
             address(ALPHAVaultAdapterUSDC),
             address(minterAdapterUSDC),
-            getUSDC(),
+            tokens.usdc,
             address(kUSD),
             users.relayer,
             _minterActors,
@@ -84,7 +84,7 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
             address(assetRouter),
             address(BETHAVaultAdapterUSDC),
             address(minterAdapterUSDC),
-            getUSDC(),
+            tokens.usdc,
             address(kUSD),
             users.relayer,
             _minterActors,
@@ -103,7 +103,7 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
             address(minter),
             address(assetRouter),
             address(minterAdapterUSDC),
-            getUSDC(),
+            tokens.usdc,
             address(kUSD),
             users.relayer,
             _minterActors
@@ -135,7 +135,7 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
         address[] memory minters = _getMinterActors();
         uint256 amount = 10_000_000 * 10 ** 6;
         uint256 totalAmount = amount * minters.length;
-        address token = getUSDC();
+        address token = tokens.usdc;
         for (uint256 i = 0; i < minters.length; i++) {
             vm.startPrank(minters[i]);
             console2.log("Minting", minters[i]);

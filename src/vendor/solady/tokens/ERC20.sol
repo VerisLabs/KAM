@@ -20,9 +20,9 @@ pragma solidity 0.8.30;
 /// - Check that the overridden function is actually used in the function you want to
 ///   change the behavior of. Much of the code has been manually inlined for performance.
 abstract contract ERC20 {
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                       CUSTOM ERRORS                        */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* CUSTOM ERRORS */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev The total supply has overflowed.
     error TotalSupplyOverflow();
@@ -48,9 +48,9 @@ abstract contract ERC20 {
     /// @dev The allowance of Permit2 is fixed at infinity.
     error Permit2AllowanceIsFixedAtInfinity();
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                           EVENTS                           */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* EVENTS */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev Emitted when `amount` tokens is transferred from `from` to `to`.
     event Transfer(address indexed from, address indexed to, uint256 amount);
@@ -66,9 +66,9 @@ abstract contract ERC20 {
     uint256 private constant _APPROVAL_EVENT_SIGNATURE =
         0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925;
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                          STORAGE                           */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* STORAGE */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev The storage slot for the total supply.
     uint256 private constant _TOTAL_SUPPLY_SLOT = 0x05345cdf77eb68f44c;
@@ -98,9 +98,9 @@ abstract contract ERC20 {
     /// ```
     uint256 private constant _NONCES_SLOT_SEED = 0x38377508;
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                         CONSTANTS                          */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* CONSTANTS */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev `(_NONCES_SLOT_SEED << 16) | 0x1901`.
     uint256 private constant _NONCES_SLOT_SEED_WITH_SIGNATURE_PREFIX = 0x383775081901;
@@ -122,9 +122,9 @@ abstract contract ERC20 {
     /// [Etherscan](https://etherscan.io/address/0x000000000022D473030F116dDEE9F6B43aC78BA3)
     address internal constant _PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                       ERC20 METADATA                       */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* ERC20 METADATA */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev Returns the name of the token.
     function name() public view virtual returns (string memory);
@@ -137,9 +137,9 @@ abstract contract ERC20 {
         return 18;
     }
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                           ERC20                            */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* ERC20 */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev Returns the amount of tokens in existence.
     function totalSupply() public view virtual returns (uint256 result) {
@@ -339,9 +339,9 @@ abstract contract ERC20 {
         return true;
     }
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                          EIP-2612                          */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* EIP-2612 */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev For more performance, override to return the constant value
     /// of `keccak256(bytes(name()))` if `name()` will never change.
@@ -379,15 +379,7 @@ abstract contract ERC20 {
     /// authorized by a signed approval by `owner`.
     ///
     /// Emits a {Approval} event.
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    )
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         public
         virtual
     {
@@ -402,7 +394,7 @@ abstract contract ERC20 {
             }
         }
         bytes32 nameHash = _constantNameHash();
-        //  We simply calculate it on-the-fly to allow for cases where the `name` may change.
+        // We simply calculate it on-the-fly to allow for cases where the `name` may change.
         if (nameHash == bytes32(0)) nameHash = keccak256(bytes(name()));
         bytes32 versionHash = _versionHash();
         /// @solidity memory-safe-assembly
@@ -413,7 +405,7 @@ abstract contract ERC20 {
                 revert(0x1c, 0x04)
             }
             let m := mload(0x40) // Grab the free memory pointer.
-            // Clean the upper 96 bits.
+                // Clean the upper 96 bits.
             owner := shr(96, shl(96, owner))
             spender := shr(96, shl(96, spender))
             // Compute the nonce slot and load its value.
@@ -453,8 +445,8 @@ abstract contract ERC20 {
             }
             // Increment and store the updated nonce.
             sstore(nonceSlot, add(nonceValue, t)) // `t` is 1 if ecrecover succeeds.
-            // Compute the allowance slot and store the value.
-            // The `owner` is already at slot 0x20.
+                // Compute the allowance slot and store the value.
+                // The `owner` is already at slot 0x20.
             mstore(0x40, or(shl(160, _ALLOWANCE_SLOT_SEED), spender))
             sstore(keccak256(0x2c, 0x34), value)
             // Emit the {Approval} event.
@@ -467,7 +459,7 @@ abstract contract ERC20 {
     /// @dev Returns the EIP-712 domain separator for the EIP-2612 permit.
     function DOMAIN_SEPARATOR() public view virtual returns (bytes32 result) {
         bytes32 nameHash = _constantNameHash();
-        //  We simply calculate it on-the-fly to allow for cases where the `name` may change.
+        // We simply calculate it on-the-fly to allow for cases where the `name` may change.
         if (nameHash == bytes32(0)) nameHash = keccak256(bytes(name()));
         bytes32 versionHash = _versionHash();
         /// @solidity memory-safe-assembly
@@ -482,9 +474,9 @@ abstract contract ERC20 {
         }
     }
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                  INTERNAL MINT FUNCTIONS                   */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* INTERNAL MINT FUNCTIONS */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev Mints `amount` tokens to `to`, increasing the total supply.
     ///
@@ -515,9 +507,9 @@ abstract contract ERC20 {
         _afterTokenTransfer(address(0), to, amount);
     }
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                  INTERNAL BURN FUNCTIONS                   */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* INTERNAL BURN FUNCTIONS */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev Burns `amount` tokens from `from`, reducing the total supply.
     ///
@@ -547,9 +539,9 @@ abstract contract ERC20 {
         _afterTokenTransfer(from, address(0), amount);
     }
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                INTERNAL TRANSFER FUNCTIONS                 */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* INTERNAL TRANSFER FUNCTIONS */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev Moves `amount` of tokens from `from` to `to`.
     function _transfer(address from, address to, uint256 amount) internal virtual {
@@ -582,9 +574,9 @@ abstract contract ERC20 {
         _afterTokenTransfer(from, to, amount);
     }
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                INTERNAL ALLOWANCE FUNCTIONS                */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* INTERNAL ALLOWANCE FUNCTIONS */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev Updates the allowance of `owner` for `spender` based on spent `amount`.
     function _spendAllowance(address owner, address spender, uint256 amount) internal virtual {
@@ -639,9 +631,9 @@ abstract contract ERC20 {
         }
     }
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                     HOOKS TO OVERRIDE                      */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* HOOKS TO OVERRIDE */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev Hook that is called before any transfer of tokens.
     /// This includes minting and burning.
@@ -651,9 +643,9 @@ abstract contract ERC20 {
     /// This includes minting and burning.
     function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual { }
 
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*                          PERMIT2                           */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* PERMIT2 */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev Returns whether to fix the Permit2 contract's allowance at infinity.
     ///

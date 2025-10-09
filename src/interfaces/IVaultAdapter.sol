@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
 
 interface IVaultAdapter is IVersioned {
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
@@ -56,7 +56,7 @@ interface IVaultAdapter is IVersioned {
     /// @param amount The quantity of assets transferred
     event TransferExecuted(address indexed asset, address indexed to, uint256 amount);
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             CORE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -95,11 +95,7 @@ interface IVaultAdapter is IVersioned {
     /// @param data Array of calldata to send to each target contract
     /// @param values Array of asset amounts to send with each call
     /// @return result The combined return data from all calls
-    function execute(
-        address[] calldata targets,
-        bytes[] calldata data,
-        uint256[] calldata values
-    )
+    function execute(address[] calldata targets, bytes[] calldata data, uint256[] calldata values)
         external
         payable
         returns (bytes[] memory result);
