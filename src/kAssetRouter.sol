@@ -299,15 +299,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         require(!$.executedProposalIds.contains(proposalId), KASSETROUTER_PROPOSAL_EXECUTED);
         require($.vaultPendingProposalIds[vault].add(proposalId), KASSETROUTER_PROPOSAL_EXISTS);
 
-        // To calculate the strategy yield we need to discount the deposits and requests
-        // First to match last total assets
-
-        // Example : total assets were 1000 before and there was 200 deposits and 100 withdrawal requests
-        // New total assets is 1200, but this new total assets include settled deposits and withdrawals
-        // So it will be 1000 + (200 - 100) +/- profit = 1100 +/- profit
-        // So first we need to adjust the substract the netted as follows:
-        // 1200 - (200 - 100) = 1100
-        // And now we can calculate the profit as 1100 - 1000 = 100
 
         if (_isKMinter(vault)) {
             netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited))
@@ -320,7 +311,9 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited)) - int256(uint256(requestedAssets));
         }
 
-        uint256 totalAssetsAdjusted = uint256(int256(totalAssets_) - netted);
+        // To calculate the strategy yield we need to include the deposits and requests into the new total assets
+        // First to match last total assets
+        uint256 totalAssetsAdjusted = uint256(int256(totalAssets_) + netted);
 
         yield = int256(totalAssetsAdjusted) - int256(lastTotalAssets);
 
@@ -343,7 +336,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             asset: asset,
             vault: vault,
             batchId: batchId,
-            totalAssets: totalAssets_,
+            totalAssets: totalAssetsAdjusted,
             netted: netted,
             yield: yield,
             executeAfter: executeAfter.toUint64(),
