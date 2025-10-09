@@ -34,7 +34,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
     uint256 internal constant TEST_TOTAL_ASSETS = 10_000 * _1_USDC;
     int256 internal constant TEST_NETTED = int256(500 * _1_USDC);
 
-    address internal mockBatchReceiver = address(0x7777777777777777777777777777777777777777);
+    address internal mockBatchReceiver = makeAddr("mockBatchReceiver");
 
     bytes32 internal testProposalId;
 
@@ -261,7 +261,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
                     TIMELOCK SETTLEMENT TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test successful settlement proposal creation
     function test_ProposeSettleBatch_Success() public {
         bytes32 batchId = TEST_BATCH_ID;
 
@@ -293,14 +292,12 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(proposal.executeAfter, block.timestamp + 1, "ExecuteAfter incorrect");
     }
 
-    /// @dev Test settlement proposal reverts when called by non-relayer
     function test_ProposeSettleBatch_OnlyRelayer() public {
         vm.prank(users.alice);
         vm.expectRevert(bytes(KASSETROUTER_WRONG_ROLE));
         assetRouter.proposeSettleBatch(tokens.usdc, address(dnVault), TEST_BATCH_ID, TEST_TOTAL_ASSETS, 0, 0);
     }
 
-    /// @dev Test settlement proposal reverts when paused
     function test_ProposeSettleBatch_RevertWhenPaused() public {
         // Pause contract
         vm.prank(users.emergencyAdmin);
@@ -311,7 +308,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assetRouter.proposeSettleBatch(tokens.usdc, address(dnVault), TEST_BATCH_ID, TEST_TOTAL_ASSETS, 0, 0);
     }
 
-    /// @dev Test execute settlement after cooldown
     function test_ExecuteSettleBatch_AfterCooldown() public {
         // Create a proposal
         vm.prank(users.relayer);
@@ -328,7 +324,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assetRouter.executeSettleBatch(testProposalId);
     }
 
-    /// @dev Test execute reverts before cooldown
     function test_ExecuteSettleBatch_RevertBeforeCooldown() public {
         // Create a proposal
         vm.prank(users.relayer);
@@ -341,7 +336,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assetRouter.executeSettleBatch(testProposalId);
     }
 
-    /// @dev Test execute reverts for non-existent proposal
     function test_ExecuteSettleBatch_RevertProposalNotFound() public {
         bytes32 fakeProposalId = keccak256("fake");
 
@@ -351,7 +345,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assetRouter.executeSettleBatch(fakeProposalId);
     }
 
-    /// @dev Test execute reverts when paused
     function test_ExecuteSettleBatch_RevertWhenPaused() public {
         // Create a proposal
         vm.prank(users.relayer);
@@ -371,7 +364,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assetRouter.executeSettleBatch(testProposalId);
     }
 
-    /// @dev Test canExecuteProposal view function
     function test_CanExecuteProposal() public {
         // Test non-existent proposal
         bytes32 fakeProposalId = keccak256("fake");
@@ -402,7 +394,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
                     COOLDOWN MANAGEMENT TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test setting settlement cooldown
     function test_SetSettlementCooldown_Success() public {
         uint256 newCooldown = 2 hours;
 
@@ -415,7 +406,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(assetRouter.getSettlementCooldown(), newCooldown, "Cooldown not updated");
     }
 
-    /// @dev Test setting cooldown reverts when called by non-admin
     function test_SetSettlementCooldown_OnlyAdmin() public {
         vm.prank(users.alice);
         vm.expectRevert(bytes(KASSETROUTER_WRONG_ROLE));
@@ -426,7 +416,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
                         ADMIN FUNCTION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test successful pause by emergency admin
     function test_SetPaused_Success() public {
         assertFalse(assetRouter.isPaused(), "Should be unpaused initially");
 
@@ -445,7 +434,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertFalse(assetRouter.isPaused(), "Should be unpaused");
     }
 
-    /// @dev Test pause reverts when called by non-emergency admin
     function test_SetPaused_OnlyEmergencyAdmin() public {
         vm.prank(users.alice);
         vm.expectRevert(bytes(KBASE_WRONG_ROLE));
@@ -456,8 +444,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
                         VIEW FUNCTION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test getBatchIdBalances returns correct amounts
-    function test_GetBatchIdBalances() public {
+    function test_GetBatchIdBalances() public view {
         bytes32 batchId = TEST_BATCH_ID;
 
         // Initially zero for any vault/batch combination
@@ -471,7 +458,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(req, 0, "DN vault requested should be zero initially");
     }
 
-    /// @dev Test getBatchIdBalances with actual deposits only (requests require complex setup)
     function test_GetBatchIdBalances_WithData() public {
         bytes32 batchId = TEST_BATCH_ID;
         uint256 depositAmount = TEST_AMOUNT;
@@ -489,7 +475,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(req, 0, "Requested should be zero without request");
     }
 
-    /// @dev Test getRequestedShares returns correct amount
     function test_GetRequestedShares() public {
         uint256 amount = TEST_AMOUNT;
         bytes32 batchId = TEST_BATCH_ID;
@@ -514,7 +499,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(assetRouter.getRequestedShares(address(alphaVault), batchId), 0, "Should be zero after pull");
     }
 
-    /// @dev Test getRequestedShares with multiple batches
     function test_GetRequestedShares_MultipleBatches() public {
         uint256 amount1 = TEST_AMOUNT;
         uint256 amount2 = TEST_AMOUNT * 2;
@@ -533,7 +517,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(assetRouter.getRequestedShares(address(alphaVault), batchId2), amount2, "Batch 2 shares incorrect");
     }
 
-    /// @dev Test getSettlementProposal returns correct data
     function test_GetSettlementProposal() public {
         // Test non-existent proposal
         bytes32 fakeProposalId = keccak256("fake");
@@ -556,7 +539,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertGt(proposal.executeAfter, 0, "executeAfter should be set");
     }
 
-    /// @dev Test getSettlementCooldown view function
     function test_GetSettlementCooldown() public {
         // Initially set to 1 second in setUp
         assertEq(assetRouter.getSettlementCooldown(), 1, "Initial cooldown incorrect");
@@ -569,12 +551,10 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(assetRouter.getSettlementCooldown(), newCooldown, "Updated cooldown incorrect");
     }
 
-    /// @dev Test registry view function
     function test_GetRegistry() public view {
         assertEq(address(assetRouter.registry()), address(registry), "Registry address incorrect");
     }
 
-    /// @dev Test isPaused view function
     function test_IsPaused() public {
         assertFalse(assetRouter.isPaused(), "Should be unpaused initially");
 
@@ -588,13 +568,11 @@ contract kAssetRouterTest is DeploymentBaseTest {
                         CONTRACT INFO TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test contract name and version
     function test_ContractInfo() public view {
         assertEq(assetRouter.contractName(), "kAssetRouter", "Contract name incorrect");
         assertEq(assetRouter.contractVersion(), "1.0.0", "Contract version incorrect");
     }
 
-    /// @dev Test receive function accepts ETH
     function test_ReceiveETH() public {
         uint256 amount = 1 ether;
 
@@ -611,7 +589,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
                         UPGRADE FUNCTION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test upgrade authorization by admin
     function test_AuthorizeUpgrade_OnlyAdmin() public {
         address newImpl = address(new kAssetRouter());
 
@@ -624,7 +601,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertTrue(true, "Authorization test completed");
     }
 
-    /// @dev Test upgrade authorization reverts with zero address
     function test_AuthorizeUpgrade_RevertZeroAddress() public {
         // Should revert when trying to upgrade to zero address
         vm.prank(users.admin);
@@ -636,7 +612,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
                         EDGE CASES AND SECURITY TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test maximum amounts handling
     function test_MaximumAmounts() public {
         uint256 maxAmount = type(uint128).max; // Large amount within limits
         bytes32 batchId = TEST_BATCH_ID;
@@ -652,7 +627,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(deposited, maxAmount, "Max amount deposit failed");
     }
 
-    /// @dev Test different assets handling
     function test_MultiAssetSupport() public {
         bytes32 batchId1 = TEST_BATCH_ID;
         bytes32 batchId2 = bytes32(uint256(TEST_BATCH_ID) + 1);
@@ -680,7 +654,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(wbtcDep, amount, "WBTC deposit failed");
     }
 
-    /// @dev Test batch ID collision resistance
     function test_BatchIdCollisionResistance() public {
         bytes32 batchId1 = keccak256(abi.encode("batch1"));
         bytes32 batchId2 = keccak256(abi.encode("batch2"));
@@ -697,7 +670,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(assetRouter.getRequestedShares(address(alphaVault), batchId2), amount * 2, "Batch 2 collision");
     }
 
-    /// @dev Test double execution protection
     function test_ReentrancyProtection() public {
         // Create a proposal first
         vm.prank(users.relayer);
@@ -713,7 +685,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assetRouter.executeSettleBatch(proposalId);
     }
 
-    /// @dev Test extreme cooldown values
     function test_ExtremeCooldownValues() public {
         // Test setting maximum allowed cooldown (1 day)
         uint256 maxCooldown = 1 days;
@@ -732,7 +703,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assetRouter.setSettlementCooldown(2 days);
     }
 
-    /// @dev Test paused state comprehensive coverage
     function test_PausedStateCoverage() public {
         // Pause contract
         vm.prank(users.emergencyAdmin);
@@ -759,7 +729,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(assetRouter.getSettlementCooldown(), 1, "View functions should work when paused");
     }
 
-    /// @dev Test event emission completeness
     function test_EventEmissions() public {
         uint256 amount = TEST_AMOUNT;
         bytes32 batchId = TEST_BATCH_ID;
@@ -797,7 +766,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assetRouter.proposeSettleBatch(tokens.usdc, address(dnVault), batchId, TEST_TOTAL_ASSETS, 0, 0);
     }
 
-    /// @dev Test gas optimization scenarios
     function test_GasOptimization() public {
         // Test multiple operations in single batch
         bytes32 batchId = TEST_BATCH_ID;
@@ -822,7 +790,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
                     INTEGRATION SCENARIO TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test complete settlement flow: propose -> wait -> execute
     function test_SettlementFlow_Complete() public {
         bytes32 batchId = TEST_BATCH_ID;
 
@@ -830,9 +797,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         vm.prank(users.relayer);
         bytes32 proposalId =
             assetRouter.proposeSettleBatch(tokens.usdc, address(dnVault), batchId, TEST_TOTAL_ASSETS, 0, 0);
-
-        // Verify proposal state
-        IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(proposalId);
 
         // Step 2: Check cannot execute before cooldown
         (bool canExecute, string memory reason) = assetRouter.canExecuteProposal(proposalId);
@@ -848,7 +812,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assertEq(reason, "", "No reason should be given when executable");
     }
 
-    /// @dev Test proposal cancellation
     function test_CancelProposal_Success() public {
         bytes32 batchId = TEST_BATCH_ID;
 
@@ -863,9 +826,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         emit IkAssetRouter.SettlementCancelled(proposalId, address(dnVault), batchId);
         assetRouter.cancelProposal(proposalId);
 
-        // Verify proposal is cancelled
-        IkAssetRouter.VaultSettlementProposal memory proposal = assetRouter.getSettlementProposal(proposalId);
-
         // Cannot execute cancelled proposal
         vm.prank(users.relayer);
         vm.warp(block.timestamp + 2);
@@ -873,7 +833,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assetRouter.executeSettleBatch(proposalId);
     }
 
-    /// @dev Test cannot cancel already cancelled proposal
     function test_CancelProposal_RevertAlreadyCancelled() public {
         bytes32 batchId = TEST_BATCH_ID;
 
@@ -891,7 +850,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         assetRouter.cancelProposal(proposalId);
     }
 
-    /// @dev Test multiple proposals for same batch
     function test_MultipleProposals_SameBatch_Revert() public {
         bytes32 batchId = TEST_BATCH_ID;
 
@@ -908,7 +866,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
             assetRouter.proposeSettleBatch(tokens.usdc, address(dnVault), batchId, TEST_TOTAL_ASSETS + 1000, 0, 0);
     }
 
-    /// @dev Test cooldown edge cases
     function test_CooldownEdgeCases() public {
         vm.prank(users.admin);
         assetRouter.setSettlementCooldown(2);

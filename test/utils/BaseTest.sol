@@ -5,8 +5,6 @@ import { MockERC20 } from "../mocks/MockERC20.sol";
 import { Utilities } from "./Utilities.sol";
 import { Test } from "forge-std/Test.sol";
 
-/// @title BaseTest
-/// @notice Base contract for all tests with common setup and utilities
 contract BaseTest is Test {
     Utilities internal utils;
 
@@ -53,37 +51,30 @@ contract BaseTest is Test {
         _labelAddresses();
     }
 
-    /// @dev Get mock USDC token instance (for minting in child contracts)
     function getMockUSDC() internal view returns (MockERC20) {
         return mockUSDC;
     }
 
-    /// @dev Get mock WBTC token instance (for minting in child contracts)
     function getMockWBTC() internal view returns (MockERC20) {
         return mockWBTC;
     }
 
-    /// @dev Creates test users with appropriate funding
     function _createUsers() internal {
-        address[] memory _tokens = new address[](2);
-        _tokens[0] = tokens.usdc;
-        _tokens[1] = tokens.wbtc;
-        users.alice = utils.createUser("Alice", _tokens);
-        users.bob = utils.createUser("Bob", _tokens);
-        users.charlie = utils.createUser("Charlie", _tokens);
-        users.admin = utils.createUser("Admin", _tokens);
-        users.guardian = utils.createUser("Guardian", _tokens);
-        users.emergencyAdmin = utils.createUser("EmergencyAdmin", _tokens);
-        users.institution = utils.createUser("Institution", _tokens);
-        users.institution2 = utils.createUser("Institution2", _tokens);
-        users.institution3 = utils.createUser("Institution3", _tokens);
-        users.institution4 = utils.createUser("Institution4", _tokens);
-        users.relayer = utils.createUser("relayer", _tokens);
-        users.treasury = utils.createUser("Treasury", _tokens);
-        users.owner = utils.createUser("Owner", _tokens);
+        users.alice = utils.createUser("Alice");
+        users.bob = utils.createUser("Bob");
+        users.charlie = utils.createUser("Charlie");
+        users.admin = utils.createUser("Admin");
+        users.guardian = utils.createUser("Guardian");
+        users.emergencyAdmin = utils.createUser("EmergencyAdmin");
+        users.institution = utils.createUser("Institution");
+        users.institution2 = utils.createUser("Institution2");
+        users.institution3 = utils.createUser("Institution3");
+        users.institution4 = utils.createUser("Institution4");
+        users.relayer = utils.createUser("relayer");
+        users.treasury = utils.createUser("Treasury");
+        users.owner = utils.createUser("Owner");
     }
 
-    /// @dev Setup test assets (deploy mock tokens)
     function _setupAssets() internal {
         // Deploy mock tokens
         mockUSDC = new MockERC20("Mock USDC", "USDC", 6);
@@ -98,7 +89,6 @@ contract BaseTest is Test {
         vm.label(tokens.wbtc, "WBTC");
     }
 
-    /// @dev Label addresses for better debugging
     function _labelAddresses() internal {
         vm.label(users.alice, "Alice");
         vm.label(users.bob, "Bob");

@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
 import { _1_USDC } from "../utils/Constants.sol";
@@ -25,29 +24,13 @@ import { IkMinter } from "kam/src/interfaces/IkMinter.sol";
 import { kMinter } from "kam/src/kMinter.sol";
 
 contract kMinterTest is DeploymentBaseTest {
-    // Test constants
     uint256 internal constant TEST_AMOUNT = 1000 * _1_USDC;
     address internal constant ZERO_ADDRESS = address(0);
-
-    // Events to test
-    event Initialized(address indexed registry, address indexed owner, address admin, address emergencyAdmin);
-    event Minted(address indexed to, uint256 amount, bytes32 batchId);
-    event BurnRequestCreated(
-        bytes32 indexed requestId,
-        address indexed user,
-        address indexed kToken,
-        uint256 amount,
-        address recipient,
-        uint24 batchId
-    );
-    event Burned(bytes32 indexed requestId);
-    event Cancelled(bytes32 indexed requestId);
 
     /* //////////////////////////////////////////////////////////////
                         INITIALIZATION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test contract initialization state
     function test_InitialState() public view {
         assertEq(minter.contractName(), "kMinter", "Contract name incorrect");
         assertEq(minter.contractVersion(), "1.0.0", "Contract version incorrect");
@@ -56,9 +39,7 @@ contract kMinterTest is DeploymentBaseTest {
         assertEq(minter.getRequestCounter(), 0, "Request counter should be zero initially");
     }
 
-    /// @dev Test successful initialization with valid parameters
     function test_Initialize_Success() public {
-        // Deploy fresh implementation for testing
         kMinter newMinterImpl = new kMinter();
 
         bytes memory initData = abi.encodeWithSelector(kMinter.initialize.selector, address(registry));
@@ -70,7 +51,6 @@ contract kMinterTest is DeploymentBaseTest {
         assertFalse(newMinter.isPaused(), "Should be unpaused");
     }
 
-    /// @dev Test initialization reverts with zero address registry
     function test_Initialize_RevertZeroRegistry() public {
         kMinter newMinterImpl = new kMinter();
 
@@ -81,7 +61,6 @@ contract kMinterTest is DeploymentBaseTest {
         factory.deployAndCall(address(newMinterImpl), users.admin, initData);
     }
 
-    /// @dev Test double initialization reverts
     function test_Initialize_RevertDoubleInit() public {
         vm.expectRevert();
         minter.initialize(address(registry));
@@ -91,30 +70,24 @@ contract kMinterTest is DeploymentBaseTest {
                         MINTING TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test successful minting
     function test_Mint_Success() public {
         uint256 amount = TEST_AMOUNT;
         address recipient = users.alice;
 
-        // Fund institution with USDC
         mockUSDC.mint(users.institution, amount);
 
-        // Approve minter to spend USDC
         vm.prank(users.institution);
         IERC20(tokens.usdc).approve(address(minter), amount);
 
-        // Get initial balances
         uint256 initialKTokenBalance = kUSD.balanceOf(recipient);
         uint256 initialUSDCBalance = IERC20(tokens.usdc).balanceOf(users.institution);
 
-        // Mint kTokens
         vm.prank(users.institution);
         vm.expectEmit(true, false, false, false);
-        emit Minted(recipient, amount, 0); // batchId will be 0 or 1
+        emit IkMinter.Minted(recipient, amount, 0);
 
         minter.mint(tokens.usdc, recipient, amount);
 
-        // Verify balances
         assertEq(kUSD.balanceOf(recipient) - initialKTokenBalance, amount, "kToken balance should increase by amount");
         assertEq(
             initialUSDCBalance - IERC20(tokens.usdc).balanceOf(users.institution),
@@ -123,13 +96,11 @@ contract kMinterTest is DeploymentBaseTest {
         );
     }
 
-    /// @dev Test mint reverts when batch limit reached
     function test_Mint_LimitExceeded() public {
         uint256 amount = TEST_AMOUNT;
         vm.prank(users.admin);
         registry.setAssetBatchLimits(tokens.usdc, 0, 0);
 
-        // Approve minter to spend kTokens
         vm.prank(users.institution);
         IERC20(tokens.usdc).approve(address(minter), amount);
 
@@ -138,7 +109,6 @@ contract kMinterTest is DeploymentBaseTest {
         minter.mint(tokens.usdc, users.alice, amount);
     }
 
-    /// @dev Test mint requires institution role
     function test_Mint_WrongRole() public {
         uint256 amount = TEST_AMOUNT;
 
@@ -147,21 +117,18 @@ contract kMinterTest is DeploymentBaseTest {
         minter.mint(tokens.usdc, users.alice, amount);
     }
 
-    /// @dev Test mint reverts with zero amount
     function test_Mint_RevertZeroAmount() public {
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_ZERO_AMOUNT));
         minter.mint(tokens.usdc, users.alice, 0);
     }
 
-    /// @dev Test mint reverts with zero recipient
     function test_Mint_RevertZeroRecipient() public {
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_ZERO_ADDRESS));
         minter.mint(tokens.usdc, ZERO_ADDRESS, TEST_AMOUNT);
     }
 
-    /// @dev Test mint reverts with invalid asset
     function test_Mint_RevertInvalidAsset() public {
         address invalidAsset = address(0x1234567890123456789012345678901234567890);
 
@@ -170,9 +137,7 @@ contract kMinterTest is DeploymentBaseTest {
         minter.mint(invalidAsset, users.alice, TEST_AMOUNT);
     }
 
-    /// @dev Test mint reverts when paused
     function test_Mint_RevertWhenPaused() public {
-        // Pause minter
         vm.prank(users.emergencyAdmin);
         minter.setPaused(true);
 
@@ -185,59 +150,46 @@ contract kMinterTest is DeploymentBaseTest {
                     REDEMPTION REQUEST TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test successful burn request (partial validation)
     function test_RequestBurn_Success() public {
         uint256 amount = TEST_AMOUNT;
         address recipient = users.institution;
 
-        // First mint some kTokens to the institution
         mockUSDC.mint(users.institution, amount);
         vm.prank(users.institution);
         IERC20(tokens.usdc).approve(address(minter), amount);
         vm.prank(users.institution);
         minter.mint(tokens.usdc, recipient, amount);
 
-        // Get initial state
-        uint256 initialKTokenBalance = kUSD.balanceOf(recipient);
-        uint256 initialRequestCounter = minter.getRequestCounter();
-
-        // Approve minter to spend kTokens
         vm.prank(users.institution);
         kUSD.approve(address(minter), amount);
 
-        // Request burn - will fail due to insufficient virtual balance in vault
         vm.prank(users.institution);
         vm.expectRevert();
         minter.requestBurn(tokens.usdc, recipient, amount);
     }
 
-    /// @dev Test burn request requires institution role
     function test_RequestBurn_WrongRole() public {
         vm.prank(users.alice);
         vm.expectRevert(bytes(KMINTER_WRONG_ROLE));
         minter.requestBurn(tokens.usdc, users.alice, TEST_AMOUNT);
     }
 
-    /// @dev Test burn request reverts with zero amount
     function test_RequestBurn_RevertZeroAmount() public {
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_ZERO_AMOUNT));
         minter.requestBurn(tokens.usdc, users.institution, 0);
     }
 
-    /// @dev Test burn request reverts with zero recipient
     function test_RequestBurn_RevertZeroRecipient() public {
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_ZERO_ADDRESS));
         minter.requestBurn(tokens.usdc, ZERO_ADDRESS, TEST_AMOUNT);
     }
 
-    /// @dev Test burn request reverts with batch limit reached
     function test_RequestBurn_RevertBatchLimitReached() public {
         uint256 amount = TEST_AMOUNT;
         address recipient = users.institution;
 
-        // First mint some kTokens to the institution
         mockUSDC.mint(users.institution, amount);
         vm.prank(users.institution);
         IERC20(tokens.usdc).approve(address(minter), amount);
@@ -255,7 +207,6 @@ contract kMinterTest is DeploymentBaseTest {
         minter.requestBurn(tokens.usdc, recipient, amount);
     }
 
-    /// @dev Test burn request reverts with invalid asset
     function test_RequestBurn_RevertInvalidAsset() public {
         address invalidAsset = address(0x1234567890123456789012345678901234567890);
 
@@ -264,17 +215,13 @@ contract kMinterTest is DeploymentBaseTest {
         minter.requestBurn(invalidAsset, users.institution, TEST_AMOUNT);
     }
 
-    /// @dev Test burn request reverts with batch not set
     function test_RequestBurn_RevertBatchNotSet() public {
-        // Institution has no kTokens
         vm.prank(users.institution);
         vm.expectRevert(bytes(KMINTER_BATCH_NOT_SET));
         minter.requestBurn(tokens.usdc, users.institution, TEST_AMOUNT);
     }
 
-    /// @dev Test burn request reverts when paused
     function test_RequestBurn_RevertWhenPaused() public {
-        // Pause minter
         vm.prank(users.emergencyAdmin);
         minter.setPaused(true);
 
@@ -287,7 +234,6 @@ contract kMinterTest is DeploymentBaseTest {
                         REDEMPTION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test burn requires valid request
     function test_Burn_RevertRequestNotFound() public {
         bytes32 invalidRequestId = keccak256("invalid");
 
@@ -296,7 +242,6 @@ contract kMinterTest is DeploymentBaseTest {
         minter.burn(invalidRequestId);
     }
 
-    /// @dev Test burn requires institution role
     function test_Burn_WrongRole() public {
         bytes32 requestId = keccak256("test");
 
@@ -305,9 +250,7 @@ contract kMinterTest is DeploymentBaseTest {
         minter.burn(requestId);
     }
 
-    /// @dev Test burn reverts when paused
     function test_Burn_RevertWhenPaused() public {
-        // Pause minter
         vm.prank(users.emergencyAdmin);
         minter.setPaused(true);
 
@@ -322,7 +265,6 @@ contract kMinterTest is DeploymentBaseTest {
                         CANCELLATION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test cancel request requires valid request
     function test_CancelRequest_RevertRequestNotFound() public {
         bytes32 invalidRequestId = keccak256("invalid");
 
@@ -331,7 +273,6 @@ contract kMinterTest is DeploymentBaseTest {
         minter.cancelRequest(invalidRequestId);
     }
 
-    /// @dev Test cancel request requires institution role
     function test_CancelRequest_WrongRole() public {
         bytes32 requestId = keccak256("test");
 
@@ -340,9 +281,7 @@ contract kMinterTest is DeploymentBaseTest {
         minter.cancelRequest(requestId);
     }
 
-    /// @dev Test cancel request reverts when paused
     function test_CancelRequest_RevertWhenPaused() public {
-        // Pause minter
         vm.prank(users.emergencyAdmin);
         minter.setPaused(true);
 
@@ -357,39 +296,31 @@ contract kMinterTest is DeploymentBaseTest {
                         PAUSE FUNCTIONALITY TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test pause/unpause functionality
     function test_SetPaused_Success() public {
         assertFalse(minter.isPaused(), "Should be unpaused initially");
 
-        // Pause
         vm.prank(users.emergencyAdmin);
         minter.setPaused(true);
         assertTrue(minter.isPaused(), "Should be paused");
 
-        // Unpause
         vm.prank(users.emergencyAdmin);
         minter.setPaused(false);
         assertFalse(minter.isPaused(), "Should be unpaused");
     }
 
-    /// @dev Test pause requires emergency admin role
     function test_SetPaused_OnlyEmergencyAdmin() public {
         vm.prank(users.alice);
         vm.expectRevert(bytes(KBASE_WRONG_ROLE));
         minter.setPaused(true);
     }
 
-    /// @dev Test isPaused view function
     function test_IsPaused() public {
-        // Initially unpaused
         assertFalse(minter.isPaused(), "Should be unpaused initially");
 
-        // Pause
         vm.prank(users.emergencyAdmin);
         minter.setPaused(true);
         assertTrue(minter.isPaused(), "Should return true when paused");
 
-        // Unpause
         vm.prank(users.emergencyAdmin);
         minter.setPaused(false);
         assertFalse(minter.isPaused(), "Should return false when unpaused");
@@ -399,14 +330,12 @@ contract kMinterTest is DeploymentBaseTest {
                         VIEW FUNCTION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test contract info functions
     function test_ContractInfo() public view {
         assertEq(minter.contractName(), "kMinter", "Contract name incorrect");
         assertEq(minter.contractVersion(), "1.0.0", "Contract version incorrect");
     }
 
-    /// @dev Test getBurnRequest returns empty for non-existent request
-    function test_GetBurnRequest_NonExistent() public {
+    function test_GetBurnRequest_NonExistent() public view {
         bytes32 invalidRequestId = keccak256("invalid");
 
         IkMinter.BurnRequest memory request = minter.getBurnRequest(invalidRequestId);
@@ -414,13 +343,11 @@ contract kMinterTest is DeploymentBaseTest {
         assertEq(request.amount, 0, "Amount should be zero");
     }
 
-    /// @dev Test getUserRequests returns empty array for user with no requests
-    function test_GetUserRequests_Empty() public {
+    function test_GetUserRequests_Empty() public view {
         bytes32[] memory requests = minter.getUserRequests(users.alice);
         assertEq(requests.length, 0, "Should return empty array");
     }
 
-    /// @dev Test getRequestCounter starts at zero
     function test_GetRequestCounter_Initial() public view {
         assertEq(minter.getRequestCounter(), 0, "Request counter should start at zero");
     }
@@ -429,17 +356,14 @@ contract kMinterTest is DeploymentBaseTest {
                         UPGRADE TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test upgrade authorization
     function test_AuthorizeUpgrade_OnlyAdmin() public {
         address newImpl = address(new kMinter());
 
-        // Non-admin should fail
         vm.prank(users.alice);
         vm.expectRevert(bytes(KMINTER_WRONG_ROLE));
         minter.upgradeToAndCall(newImpl, "");
     }
 
-    /// @dev Test upgrade authorization reverts with zero address
     function test_AuthorizeUpgrade_RevertZeroAddress() public {
         vm.prank(users.admin);
         vm.expectRevert(bytes(KMINTER_ZERO_ADDRESS));
@@ -450,12 +374,9 @@ contract kMinterTest is DeploymentBaseTest {
                     TOTAL LOCKED ASSETS TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test getTotalLockedAssets for a single asset
     function test_GetTotalLockedAssets_SingleAsset() public {
-        // Initially should be zero
         assertEq(minter.getTotalLockedAssets(tokens.usdc), 0, "Should start with zero locked assets");
 
-        // Mint some tokens
         uint256 amount = TEST_AMOUNT;
         mockUSDC.mint(users.institution, amount);
         vm.prank(users.institution);
@@ -463,17 +384,14 @@ contract kMinterTest is DeploymentBaseTest {
         vm.prank(users.institution);
         minter.mint(tokens.usdc, users.institution, amount);
 
-        // Check locked assets increased
         assertEq(minter.getTotalLockedAssets(tokens.usdc), amount, "Locked assets should equal minted amount");
     }
 
-    /// @dev Test getTotalLockedAssets with multiple mints
     function test_GetTotalLockedAssets_MultipleMints() public {
         uint256 amount1 = TEST_AMOUNT;
         uint256 amount2 = 500 * _1_USDC;
         uint256 totalAmount = amount1 + amount2;
 
-        // First mint
         mockUSDC.mint(users.institution, amount1);
         vm.prank(users.institution);
         IERC20(tokens.usdc).approve(address(minter), amount1);
@@ -482,7 +400,6 @@ contract kMinterTest is DeploymentBaseTest {
 
         assertEq(minter.getTotalLockedAssets(tokens.usdc), amount1, "Should track first mint");
 
-        // Second mint
         mockUSDC.mint(users.institution, amount2);
         vm.prank(users.institution);
         IERC20(tokens.usdc).approve(address(minter), amount2);
@@ -492,8 +409,7 @@ contract kMinterTest is DeploymentBaseTest {
         assertEq(minter.getTotalLockedAssets(tokens.usdc), totalAmount, "Should track cumulative mints");
     }
 
-    /// @dev Test getTotalLockedAssets for unsupported asset
-    function test_GetTotalLockedAssets_UnsupportedAsset() public {
+    function test_GetTotalLockedAssets_UnsupportedAsset() public view {
         address unsupportedAsset = address(0x1234567890123456789012345678901234567890);
         assertEq(minter.getTotalLockedAssets(unsupportedAsset), 0, "Unsupported asset should return zero");
     }
@@ -502,24 +418,16 @@ contract kMinterTest is DeploymentBaseTest {
                     BATCH INTEGRATION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test that minting interacts with DN vault batches
     function test_Mint_InteractsWithDNVault() public {
         uint256 amount = TEST_AMOUNT;
 
-        // Get initial batch ID from DN vault
-        bytes32 initialBatchId = dnVault.getBatchId();
-
-        // Mint tokens
         mockUSDC.mint(users.institution, amount);
         vm.prank(users.institution);
         IERC20(tokens.usdc).approve(address(minter), amount);
 
-        // The mint should interact with the current DN vault batch
         vm.prank(users.institution);
         minter.mint(tokens.usdc, users.institution, amount);
 
-        // Verify DN vault received the assets (through kAssetRouter)
-        // In a full integration test, we would verify the batch balances
         assertEq(kUSD.balanceOf(users.institution), amount, "kTokens should be minted");
     }
 
@@ -527,16 +435,13 @@ contract kMinterTest is DeploymentBaseTest {
                         EDGE CASE TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test minting maximum amounts
     function test_Mint_MaxAmount() public {
-        uint256 maxAmount = type(uint128).max; // Use uint128 max as that's what's used internally
+        uint256 maxAmount = type(uint128).max;
 
-        // Fund institution with max amount
         mockUSDC.mint(users.institution, maxAmount);
         vm.prank(users.institution);
         IERC20(tokens.usdc).approve(address(minter), maxAmount);
 
-        // Should succeed with max amount
         vm.prank(users.institution);
         minter.mint(tokens.usdc, users.institution, maxAmount);
 
@@ -544,9 +449,7 @@ contract kMinterTest is DeploymentBaseTest {
         assertEq(minter.getTotalLockedAssets(tokens.usdc), maxAmount, "Should track max amount");
     }
 
-    /// @dev Test concurrent requests from same user
     function test_RequestBurn_Concurrent() public {
-        // Setup: Mint tokens first
         uint256 totalAmount = 3000 * _1_USDC;
         mockUSDC.mint(users.institution, totalAmount);
         vm.prank(users.institution);
@@ -554,11 +457,9 @@ contract kMinterTest is DeploymentBaseTest {
         vm.prank(users.institution);
         minter.mint(tokens.usdc, users.institution, totalAmount);
 
-        // Approve all tokens for burn
         vm.prank(users.institution);
         kUSD.approve(address(minter), totalAmount);
 
-        // Create multiple concurrent burn requests
         uint256 requestAmount = 1000 * _1_USDC;
 
         for (uint256 i = 0; i < 3; i++) {
@@ -572,12 +473,10 @@ contract kMinterTest is DeploymentBaseTest {
                         INTEGRATION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test minting workflow (unit test level)
     function test_MintWorkflow() public {
         uint256 amount = TEST_AMOUNT;
         address recipient = users.institution;
 
-        // Step 1: Mint kTokens
         mockUSDC.mint(users.institution, amount);
         vm.prank(users.institution);
         IERC20(tokens.usdc).approve(address(minter), amount);
@@ -586,10 +485,8 @@ contract kMinterTest is DeploymentBaseTest {
 
         assertEq(kUSD.balanceOf(recipient), amount, "Should have minted kTokens");
 
-        // Step 2: Verify request counter unchanged (minting doesn't create requests)
         assertEq(minter.getRequestCounter(), 0, "Request counter should remain zero");
 
-        // Step 3: Verify no user requests (minting doesn't create requests)
         bytes32[] memory userRequests = minter.getUserRequests(recipient);
         assertEq(userRequests.length, 0, "Should have no user requests");
     }

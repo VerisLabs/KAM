@@ -3,7 +3,6 @@ pragma solidity 0.8.30;
 
 import { Bytes32Set, LibBytes32Set } from "../helpers/Bytes32Set.sol";
 import { BaseHandler } from "./BaseHandler.t.sol";
-import { console2 } from "forge-std/console2.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IVaultAdapter } from "kam/src/interfaces/IVaultAdapter.sol";
@@ -109,7 +108,6 @@ contract kMinterHandler is BaseHandler {
         kMinter_actorRequests[currentActor].add(requestId);
         kMinter_actualTotalLockedAssets = kMinter_minter.getTotalLockedAssets(kMinter_token);
 
-        uint256 oldActualAdapterBalance = kMinter_actualAdapterBalance;
         kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
 
         kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();
@@ -138,7 +136,6 @@ contract kMinterHandler is BaseHandler {
         kMinter_expectedTotalLockedAssets -= amount;
         kMinter_actualTotalLockedAssets = kMinter_minter.getTotalLockedAssets(kMinter_token);
 
-        uint256 oldActualAdapterBalance = kMinter_actualAdapterBalance;
         kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
 
         kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();
@@ -191,7 +188,6 @@ contract kMinterHandler is BaseHandler {
         assertEq(proposal.executeAfter, block.timestamp + kMinter_assetRouter.getSettlementCooldown());
         kMinter_nettedInBatch = 0;
 
-        uint256 oldActualAdapterBalance = kMinter_actualAdapterBalance;
         kMinter_actualAdapterBalance = kMinter_token.balanceOf(address(kMinter_adapter));
 
         kMinter_actualAdapterTotalAssets = kMinter_adapter.totalAssets();

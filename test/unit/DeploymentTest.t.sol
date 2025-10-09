@@ -10,7 +10,6 @@ import { OptimizedOwnableRoles } from "solady/auth/OptimizedOwnableRoles.sol";
 
 contract DeploymentTest is DeploymentBaseTest {
     function test_ProtocolDeployment() public view {
-        // Check that all contracts are deployed
         assertTrue(address(registry) != address(0), "Registry not deployed");
         assertTrue(address(assetRouter) != address(0), "AssetRouter not deployed");
         assertTrue(address(kUSD) != address(0), "kUSD not deployed");
@@ -20,7 +19,6 @@ contract DeploymentTest is DeploymentBaseTest {
         assertTrue(address(alphaVault) != address(0), "Alpha Vault not deployed");
         assertTrue(address(betaVault) != address(0), "Beta Vault not deployed");
 
-        // Check implementation contracts
         assertTrue(address(registryImpl) != address(0), "Registry impl not deployed");
         assertTrue(address(assetRouterImpl) != address(0), "AssetRouter impl not deployed");
         assertTrue(address(minterImpl) != address(0), "Minter impl not deployed");
@@ -32,17 +30,14 @@ contract DeploymentTest is DeploymentBaseTest {
     }
 
     function test_TokenProperties() public view {
-        // Check kUSD properties
         assertEq(kUSD.name(), KUSD_NAME, "kUSD name incorrect");
         assertEq(kUSD.symbol(), KUSD_SYMBOL, "kUSD symbol incorrect");
         assertEq(kUSD.decimals(), 6, "kUSD decimals incorrect");
 
-        // Check kBTC properties
         assertEq(kBTC.name(), KBTC_NAME, "kBTC name incorrect");
         assertEq(kBTC.symbol(), KBTC_SYMBOL, "kBTC symbol incorrect");
         assertEq(kBTC.decimals(), 8, "kBTC decimals incorrect");
 
-        // Check vault properties
         assertEq(dnVault.name(), DN_VAULT_NAME, "DN Vault name incorrect");
         assertEq(dnVault.symbol(), DN_VAULT_SYMBOL, "DN Vault symbol incorrect");
         assertEq(dnVault.decimals(), 6, "DN Vault decimals incorrect");
@@ -57,21 +52,17 @@ contract DeploymentTest is DeploymentBaseTest {
     }
 
     function test_RoleAssignments() public {
-        // Check roles
         assertHasRole(address(registry), users.admin, ADMIN_ROLE);
         assertHasRole(address(kUSD), users.admin, ADMIN_ROLE);
         assertHasRole(address(kBTC), users.admin, ADMIN_ROLE);
         assertHasRole(address(registry), users.institution, INSTITUTION_ROLE);
 
-        // Check only kMinter has MINTER_ROLE on kTokens (institutional 1:1 minting)
         assertHasRole(address(kUSD), address(minter), MINTER_ROLE);
         assertHasRole(address(kBTC), address(minter), MINTER_ROLE);
 
         assertHasRole(address(kUSD), address(assetRouter), MINTER_ROLE);
         assertHasRole(address(kBTC), address(assetRouter), MINTER_ROLE);
 
-        // Staking vaults should NOT have MINTER_ROLE on kTokens
-        // They accept existing kTokens from users and mint their own stkTokens
         assertFalse(
             OptimizedOwnableRoles(address(kUSD)).hasAnyRole(address(dnVault), MINTER_ROLE),
             "DN vault should not have kToken MINTER_ROLE"
@@ -87,28 +78,23 @@ contract DeploymentTest is DeploymentBaseTest {
     }
 
     function test_AssetRegistration() public view {
-        // Check USDC registration
         assertTrue(registry.isAsset(tokens.usdc), "tokens.usdc not registered");
         assertEq(registry.assetToKToken(tokens.usdc), address(kUSD), "USDC->kUSD mapping incorrect");
 
-        // Check WBTC registration
         assertTrue(registry.isAsset(tokens.wbtc), "WBTC not registered");
         assertEq(registry.assetToKToken(tokens.wbtc), address(kBTC), "WBTC->kBTC mapping incorrect");
     }
 
     function test_VaultRegistration() public view {
-        // Check all vaults are registered
         assertTrue(registry.isVault(address(minter)), "Minter Vault not registered");
         assertTrue(registry.isVault(address(dnVault)), "DN Vault not registered");
         assertTrue(registry.isVault(address(alphaVault)), "Alpha Vault not registered");
         assertTrue(registry.isVault(address(betaVault)), "Beta Vault not registered");
 
-        // Check vault asset mappings
         assertEq(registry.getVaultAssets(address(dnVault))[0], tokens.usdc, "DN Vault asset mapping incorrect");
         assertEq(registry.getVaultAssets(address(alphaVault))[0], tokens.usdc, "Alpha Vault asset mapping incorrect");
         assertEq(registry.getVaultAssets(address(betaVault))[0], tokens.usdc, "Beta Vault asset mapping incorrect");
 
-        // Check vault types
         assertEq(registry.getVaultType(address(minter)), uint8(0), "Minter Vault type incorrect"); // Minter = 0
         assertEq(registry.getVaultType(address(dnVault)), uint8(1), "DN Vault type incorrect"); // DN = 1
         assertEq(registry.getVaultType(address(alphaVault)), uint8(2), "Alpha Vault type incorrect"); // ALPHA = 2
@@ -140,7 +126,6 @@ contract DeploymentTest is DeploymentBaseTest {
     }
 
     function test_ContractOwnership() public view {
-        // Check owners
         assertEq(registry.owner(), users.owner, "Registry owner incorrect");
         assertEq(kUSD.owner(), users.owner, "kUSD owner incorrect");
         assertEq(kBTC.owner(), users.owner, "kBTC owner incorrect");
@@ -186,7 +171,6 @@ contract DeploymentTest is DeploymentBaseTest {
     }
 
     function test_VaultTypeHelper() public view {
-        // Test getVaultByType helper
         assertEq(address(getVaultByType(IRegistry.VaultType.DN)), address(dnVault), "DN vault helper incorrect");
         assertEq(
             address(getVaultByType(IRegistry.VaultType.ALPHA)), address(alphaVault), "Alpha vault helper incorrect"

@@ -19,18 +19,10 @@ contract kStakingVaultFeesTest is BaseVaultTest {
     using OptimizedFixedPointMathLib for uint256;
     using SafeTransferLib for address;
 
-    /* //////////////////////////////////////////////////////////////
-                              CONSTANTS
-    //////////////////////////////////////////////////////////////*/
-
     uint256 constant SECS_PER_YEAR = 31_556_952;
     uint256 constant MAX_BPS = 10_000;
     uint256 constant MANAGEMENT_FEE_INTERVAL = 657_436; // 1 month
     uint256 constant PERFORMANCE_FEE_INTERVAL = 7_889_238; // 3 months
-
-    /* //////////////////////////////////////////////////////////////
-                              SETUP
-    //////////////////////////////////////////////////////////////*/
 
     function setUp() public override {
         DeploymentBaseTest.setUp();
@@ -46,15 +38,12 @@ contract kStakingVaultFeesTest is BaseVaultTest {
     //////////////////////////////////////////////////////////////*/
 
     function test_InitialFeeState() public view {
-        // Fees should start at zero
         assertEq(vault.managementFee(), 0);
         assertEq(vault.performanceFee(), 0);
         assertEq(vault.hurdleRate(), 0);
 
-        // Watermark should be initial share price (1e6)
         assertEq(vault.sharePriceWatermark(), 1e6);
 
-        // Fee timestamps should be set to deployment time
         assertTrue(vault.lastFeesChargedManagement() > 0);
         assertTrue(vault.lastFeesChargedPerformance() > 0);
     }
@@ -428,14 +417,12 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         // Performance fee calculation (after management fees)
         uint256 assetsAfterManagementFee = totalAssets - managementFees;
         int256 assetsDelta = int256(assetsAfterManagementFee) - int256(INITIAL_DEPOSIT);
-        uint256 hurdleReturn = (totalAssets * TEST_HURDLE_RATE) / MAX_BPS;
-        uint256 excessReturn = uint256(assetsDelta) - hurdleReturn;
         // If the hurdle rate is soft apply fees to all return
         uint256 expectedPerformanceFee = (uint256(assetsDelta) * TEST_PERFORMANCE_FEE) / MAX_BPS;
         assertApproxEqRel(performanceFees, expectedPerformanceFee, 0.05e18); // 5% tolerance
     }
 
-    function test_NextFeeTimestamps() public {
+    function test_NextFeeTimestamps() public view {
         uint256 currentTime = block.timestamp;
 
         uint256 nextManagement = vault.nextManagementFeeTimestamp();
@@ -486,7 +473,6 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
         uint256 totalSupply = vault.totalSupply();
         uint256 totalAssets = vault.totalAssets();
-        uint256 netAssets = vault.totalNetAssets();
 
         uint256 netSharePrice = vault.netSharePrice();
         uint256 sharePrice = (totalAssets * 1e6) / totalSupply;

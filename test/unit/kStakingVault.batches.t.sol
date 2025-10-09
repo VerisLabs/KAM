@@ -22,11 +22,6 @@ import { kStakingVault } from "kam/src/kStakingVault/kStakingVault.sol";
 contract kStakingVaultBatchesTest is BaseVaultTest {
     using SafeTransferLib for address;
 
-    event BatchCreated(bytes32 indexed batchId);
-    event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
-    event BatchSettled(bytes32 indexed batchId);
-    event BatchClosed(bytes32 indexed batchId);
-
     function setUp() public override {
         DeploymentBaseTest.setUp();
 
@@ -44,7 +39,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         vm.prank(users.relayer);
         vm.expectEmit(false, false, false, false);
-        emit BatchCreated(bytes32(0));
+        emit kStakingVault.BatchCreated(bytes32(0));
         vault.createNewBatch();
 
         bytes32 newBatch = vault.getBatchId();
@@ -81,7 +76,6 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
                         CLOSE BATCH TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test closeBatch function
     function test_CloseBatch_Success() public {
         // Get current batch
         bytes32 batchId = vault.getBatchId();
@@ -89,7 +83,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         // Close batch without creating new one
         vm.prank(users.relayer);
         vm.expectEmit(true, false, false, true);
-        emit BatchClosed(batchId);
+        emit kStakingVault.BatchClosed(batchId);
         vault.closeBatch(batchId, false);
 
         // Try to close again should revert
@@ -98,7 +92,6 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vault.closeBatch(batchId, false);
     }
 
-    /// @dev Test closeBatch with create flag
     function test_CloseBatch_WithCreateNew() public {
         bytes32 batchId = vault.getBatchId();
 
@@ -110,7 +103,6 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         assertTrue(newBatch != bytes32(0));
     }
 
-    /// @dev Test closeBatch requires relayer role
     function test_CloseBatch_RequiresRelayerRole() public {
         bytes32 batchId = vault.getBatchId();
 
@@ -124,7 +116,6 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vault.closeBatch(batchId, false);
     }
 
-    /// @dev Test closeBatch on already closed batch
     function test_CloseBatch_AlreadyClosed() public {
         bytes32 batchId = vault.getBatchId();
 
@@ -142,7 +133,6 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
                         SETTLE BATCH TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test settleBatch function
     function test_SettleBatch_Success() public {
         // Create a stake request to have a batch to settle
         _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
@@ -169,11 +159,10 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         // Execute settlement which internally calls settleBatch
         vm.expectEmit(true, false, false, true);
-        emit BatchSettled(batchId);
+        emit kStakingVault.BatchSettled(batchId);
         assetRouter.executeSettleBatch(proposalId);
     }
 
-    /// @dev Test settleBatch requires kAssetRouter
     function test_SettleBatch_RequiresKAssetRouter() public {
         bytes32 batchId = vault.getBatchId();
 
@@ -191,7 +180,6 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vault.settleBatch(batchId);
     }
 
-    /// @dev Test settleBatch on already settled batch
     function test_SettleBatch_AlreadySettled_Revert() public {
         // Create and settle a batch
         _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
@@ -227,7 +215,6 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
                         INTEGRATION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test full batch lifecycle
     function test_BatchLifecycle_Complete() public {
         // 1. Get initial batch
         bytes32 batch1 = vault.getBatchId();
@@ -263,7 +250,6 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         assertGt(vault.balanceOf(users.alice), 0);
     }
 
-    /// @dev Test batch operations when paused
     function test_BatchOperations_WhenPaused() public {
         // Pause the vault
         vm.prank(users.emergencyAdmin);
@@ -291,7 +277,6 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
                         EDGE CASE TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test batch operations with zero batch ID
     function test_BatchOperations_ZeroBatchId() public {
         // Close batch with zero ID should still check role
         vm.prank(users.alice);
@@ -304,7 +289,6 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
         vault.settleBatch(bytes32(0));
     }
 
-    /// @dev Test batch operations with max batch ID
     function test_BatchOperations_MaxBatchId() public {
         bytes32 maxBatchId = bytes32(type(uint256).max);
 

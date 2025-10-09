@@ -638,7 +638,7 @@ contract kStakingVaultHandler is BaseHandler {
     // //////////////////////////////////////////////////////////////
     // / INVARIANTS ///
     // //////////////////////////////////////////////////////////////
-    function INVARIANT_A_TOTAL_ASSETS() public {
+    function INVARIANT_A_TOTAL_ASSETS() public view {
         assertEq(
             kStakingVault_vault.totalAssets(),
             kStakingVault_expectedTotalAssets,
@@ -646,7 +646,7 @@ contract kStakingVaultHandler is BaseHandler {
         );
     }
 
-    function INVARIANT_B_ADAPTER_BALANCE() public {
+    function INVARIANT_B_ADAPTER_BALANCE() public view {
         assertEq(
             kStakingVault_expectedAdapterBalance,
             kStakingVault_actualAdapterBalance,
@@ -654,7 +654,7 @@ contract kStakingVaultHandler is BaseHandler {
         );
     }
 
-    function INVARIANT_C_ADAPTER_TOTAL_ASSETS() public {
+    function INVARIANT_C_ADAPTER_TOTAL_ASSETS() public view {
         assertEq(
             kStakingVault_expectedAdapterTotalAssets,
             kStakingVault_actualAdapterTotalAssets,
@@ -662,13 +662,13 @@ contract kStakingVaultHandler is BaseHandler {
         );
     }
 
-    function INVARIANT_D_SHARE_PRICE() public {
+    function INVARIANT_D_SHARE_PRICE() public view {
         assertEq(
             kStakingVault_expectedSharePrice, kStakingVault_actualSharePrice, "KSTAKING_VAULT: INVARIANT_C_SHARE_PRICE"
         );
     }
 
-    function INVARIANT_E_TOTAL_NET_ASSETS() public {
+    function INVARIANT_E_TOTAL_NET_ASSETS() public view {
         assertApproxEqRel(
             kStakingVault_expectedNetTotalAssets,
             kStakingVault_actualNetTotalAssets,
@@ -677,7 +677,7 @@ contract kStakingVaultHandler is BaseHandler {
         );
     }
 
-    function INVARIANT_F_SUPPLY() public {
+    function INVARIANT_F_SUPPLY() public view {
         assertEq(kStakingVault_expectedSupply, kStakingVault_actualSupply, "KSTAKING_VAULT: INVARIANT_F_SUPPLY");
     }
 }

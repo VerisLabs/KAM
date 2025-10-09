@@ -19,22 +19,6 @@ import { kStakingVault } from "kam/src/kStakingVault/kStakingVault.sol";
 contract kStakingVaultClaimsTest is BaseVaultTest {
     using SafeTransferLib for address;
 
-    event StakingSharesClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 shares);
-    event UnstakingAssetsClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 assets);
-    event StkTokensIssued(address indexed user, uint256 stkTokenAmount);
-    event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
-    event StakeRequestCreated(
-        bytes32 indexed requestId,
-        address indexed user,
-        address indexed kToken,
-        uint256 amount,
-        address recipient,
-        bytes32 batchId
-    );
-    event UnstakeRequestCreated(
-        bytes32 indexed requestId, address indexed user, uint256 amount, address recipient, bytes32 batchId
-    );
-
     function setUp() public override {
         DeploymentBaseTest.setUp();
 
@@ -47,7 +31,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
                         CLAIM STAKED SHARES TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test successful claim of staked shares
     function test_ClaimStakedShares_Success() public {
         // Setup: Create and settle a staking request
         _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
@@ -73,7 +56,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         // Claim staked shares
         vm.prank(users.alice);
         vm.expectEmit(true, false, true, true);
-        emit StakingSharesClaimed(batchId, requestId, users.alice, 1000 * _1_USDC);
+        emit kStakingVault.StakingSharesClaimed(batchId, requestId, users.alice, 1000 * _1_USDC);
         vault.claimStakedShares(requestId);
 
         // Verify user received stkTokens
@@ -82,15 +65,12 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         assertEq(balanceAfter - balanceBefore, 1000 * _1_USDC);
     }
 
-    /// @dev Test claiming from non-settled batch reverts
     function test_ClaimStakedShares_BatchNotSettled() public {
         // Setup: Create staking request but don't settle
         _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
 
         vm.prank(users.alice);
         kUSD.approve(address(vault), 1000 * _1_USDC);
-
-        bytes32 batchId = vault.getBatchId();
 
         vm.prank(users.alice);
         bytes32 requestId = vault.requestStake(users.alice, 1000 * _1_USDC);
@@ -101,7 +81,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         vault.claimStakedShares(requestId);
     }
 
-    /// @dev Test claiming already claimed request reverts
     function test_ClaimStakedShares_RequestNotPending() public {
         // Setup: Create and settle a staking request
         _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
@@ -131,7 +110,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         vault.claimStakedShares(requestId);
     }
 
-    /// @dev Test non-beneficiary cannot claim
     function test_ClaimStakedShares_NotBeneficiary() public {
         // Setup: Create and settle a staking request for Alice
         _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
@@ -157,7 +135,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         vault.claimStakedShares(requestId);
     }
 
-    /// @dev Test claiming when paused reverts
     function test_ClaimStakedShares_WhenPaused() public {
         // Setup: Create and settle a staking request
         _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
@@ -187,7 +164,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         vault.claimStakedShares(requestId);
     }
 
-    /// @dev Test multiple users claiming from same batch
     function test_ClaimStakedShares_MultipleUsers() public {
         // Setup: Create staking requests for multiple users
         _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
@@ -237,7 +213,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
                     CLAIM UNSTAKED ASSETS TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test successful claim of unstaked assets
     function test_ClaimUnstakedAssets_Success() public {
         uint256 aliceDeposit = 1000 * _1_USDC;
 
@@ -285,7 +260,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         // Claim unstaked assets
         vm.prank(users.alice);
         vm.expectEmit(true, false, true, true);
-        emit UnstakingAssetsClaimed(unstakeBatchId, unstakeRequestId, users.alice, aliceDeposit);
+        emit kStakingVault.UnstakingAssetsClaimed(unstakeBatchId, unstakeRequestId, users.alice, aliceDeposit);
         vault.claimUnstakedAssets(unstakeRequestId);
 
         // Verify user received kTokens back
@@ -296,7 +271,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         assertEq(vault.balanceOf(address(vault)), 0);
     }
 
-    /// @dev Test successful claim of unstaked assets
     function test_ClaimUnstakedAssets_WithFees_Success() public {
         _setupTestFees();
 
@@ -361,7 +335,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         // Claim unstaked assets
         vm.prank(users.alice);
         vm.expectEmit(true, false, true, true);
-        emit UnstakingAssetsClaimed(unstakeBatchId, unstakeRequestId, users.alice, 999_178_000);
+        emit kStakingVault.UnstakingAssetsClaimed(unstakeBatchId, unstakeRequestId, users.alice, 999_178_000);
         vault.claimUnstakedAssets(unstakeRequestId);
 
         assertApproxEqRel(vault.sharePrice(), sharePrice, 0.001 ether);
@@ -375,13 +349,9 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         assertEq(vault.balanceOf(address(vault)), 0);
     }
 
-    /// @dev Test claiming unstaked assets from non-settled batch
     function test_ClaimUnstakedAssets_BatchNotSettled() public {
         // Setup: Get stkTokens first
         _setupUserWithStkTokens(users.alice, 1000 * _1_USDC);
-
-        // Request unstaking but don't settle
-        bytes32 batchId = vault.getBatchId();
 
         vm.prank(users.alice);
         bytes32 requestId = vault.requestUnstake(users.alice, 1000 * _1_USDC);
@@ -392,7 +362,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         vault.claimUnstakedAssets(requestId);
     }
 
-    /// @dev Test claiming already claimed unstaking request
     function test_ClaimUnstakedAssets_RequestNotPending() public {
         // Setup: Get stkTokens and create unstaking request
         _setupUserWithStkTokens(users.alice, 1000 * _1_USDC);
@@ -419,7 +388,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         vault.claimUnstakedAssets(requestId);
     }
 
-    /// @dev Test non-beneficiary cannot claim unstaking
     function test_ClaimUnstakedAssets_NotBeneficiary() public {
         // Setup: Get stkTokens for Alice and create unstaking request
         _setupUserWithStkTokens(users.alice, 1000 * _1_USDC);
@@ -442,7 +410,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         vault.claimUnstakedAssets(requestId);
     }
 
-    /// @dev Test claiming unstaked assets when paused
     function test_ClaimUnstakedAssets_WhenPaused() public {
         // Setup: Get stkTokens and create unstaking request
         _setupUserWithStkTokens(users.alice, 1000 * _1_USDC);
@@ -473,7 +440,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
                         INTEGRATION TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test complete staking lifecycle: request → settle → claim
     function test_ClaimFlow_CompleteStakingLifecycle() public {
         uint256 balanceBefore = kUSD.balanceOf(users.alice);
 
@@ -508,7 +474,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         assertEq(vault.balanceOf(users.alice), 1000 * _1_USDC);
     }
 
-    /// @dev Test complete unstaking lifecycle: stake → unstake → settle → claim
     function test_ClaimFlow_CompleteUnstakingLifecycle() public {
         // First complete a staking cycle to get stkTokens
         _setupUserWithStkTokens(users.alice, 1000 * _1_USDC);
@@ -563,7 +528,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         assertEq(vault.balanceOf(address(vault)), 0);
     }
 
-    /// @dev Test claims across multiple batches
     function test_ClaimFlow_MultipleBatches() public {
         // Batch 1: Alice stakes 1000
         _mintKTokenToUser(users.alice, 1000 * _1_USDC, true);
@@ -621,7 +585,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
                         EDGE CASE TESTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Test claiming with very small amounts
     function test_ClaimStakedShares_SmallAmount() public {
         // Setup: Create and settle a small staking request (1 USDC)
         _mintKTokenToUser(users.alice, 1 * _1_USDC, true);
@@ -653,7 +616,6 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
                         HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev Helper to setup a user with stkTokens
     function _setupUserWithStkTokens(address user, uint256 amount) internal {
         // Mint kTokens
         _mintKTokenToUser(user, amount, true);

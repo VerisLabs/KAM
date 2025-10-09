@@ -425,15 +425,15 @@ contract DeploymentBaseTest is BaseTest {
                         ASSERTION HELPERS
     //////////////////////////////////////////////////////////////*/
 
-    function assertHasRole(address roleContract, address account, uint256 role) internal {
+    function assertHasRole(address roleContract, address account, uint256 role) internal view {
         assertTrue(OptimizedOwnableRoles(roleContract).hasAnyRole(account, role), "Account should have role");
     }
 
-    function assertAssetBalance(address token, address user, uint256 expected) internal {
+    function assertAssetBalance(address token, address user, uint256 expected) internal view {
         assertEq(getAssetBalance(token, user), expected, "Asset balance mismatch");
     }
 
-    function assertKTokenBalance(address token, address user, uint256 expected) internal {
+    function assertKTokenBalance(address token, address user, uint256 expected) internal view {
         assertEq(getKTokenBalance(token, user), expected, "kToken balance mismatch");
     }
 

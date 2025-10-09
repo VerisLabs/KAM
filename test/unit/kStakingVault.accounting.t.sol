@@ -254,7 +254,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assertEq(vault.balanceOf(users.alice), assets);
     }
 
-    function test_ConvertToAssets_ZeroTotalSupply() public {
+    function test_ConvertToAssets_ZeroTotalSupply() public view {
         // With zero total supply, assets per share should be 1:1
         // This is implicitly tested in initial share price
         assertEq(vault.netSharePrice(), 1e6);
