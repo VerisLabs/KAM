@@ -7,6 +7,8 @@ import { _1_USDC } from "../utils/Constants.sol";
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { OptimizedDateTimeLib } from "solady/utils/OptimizedDateTimeLib.sol";
+
 import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 
 import {
@@ -15,14 +17,15 @@ import {
     VAULTFEES_INVALID_TIMESTAMP
 } from "kam/src/errors/Errors.sol";
 
+import { console2 as console } from "forge-std/console2.sol";
+
 contract kStakingVaultFeesTest is BaseVaultTest {
     using OptimizedFixedPointMathLib for uint256;
     using SafeTransferLib for address;
 
     uint256 constant SECS_PER_YEAR = 31_556_952;
+    uint256 constant TEST_TIMESTAMP = 1_760_022_175; // Oct 9, 2025
     uint256 constant MAX_BPS = 10_000;
-    uint256 constant MANAGEMENT_FEE_INTERVAL = 657_436; // 1 month
-    uint256 constant PERFORMANCE_FEE_INTERVAL = 7_889_238; // 3 months
 
     function setUp() public override {
         DeploymentBaseTest.setUp();
@@ -422,15 +425,76 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         assertApproxEqRel(performanceFees, expectedPerformanceFee, 0.05e18); // 5% tolerance
     }
 
-    function test_NextFeeTimestamps() public view {
-        uint256 currentTime = block.timestamp;
+    function test_NextFeeTimestamps() public {
+        vm.warp(TEST_TIMESTAMP);
+        vm.prank(users.admin);
+        vault.notifyManagementFeesCharged(uint64(TEST_TIMESTAMP));
+        vm.prank(users.admin);
+        vault.notifyPerformanceFeesCharged(uint64(TEST_TIMESTAMP));
 
         uint256 nextManagement = vault.nextManagementFeeTimestamp();
         uint256 nextPerformance = vault.nextPerformanceFeeTimestamp();
 
-        // Should be current + interval
-        assertApproxEqAbs(nextManagement, currentTime + MANAGEMENT_FEE_INTERVAL, 10);
-        assertApproxEqAbs(nextPerformance, currentTime + PERFORMANCE_FEE_INTERVAL, 10);
+        (
+            uint256 yearManagement,
+            uint256 monthManagement,
+            uint256 dayManagement,
+            uint256 hourManagement,
+            uint256 minuteManagement,
+            uint256 secondManagement
+        ) = OptimizedDateTimeLib.timestampToDateTime(nextManagement);
+        (
+            uint256 yearPerformance,
+            uint256 monthPerformance,
+            uint256 dayPerformance,
+            uint256 hourPerformance,
+            uint256 minutePerformance,
+            uint256 secondPerformance
+        ) = OptimizedDateTimeLib.timestampToDateTime(nextPerformance);
+
+        assertEq(yearManagement, 2025);
+        assertEq(monthManagement, 10);
+        assertEq(dayManagement, 31);
+        assertEq(hourManagement, 23);
+        assertEq(minuteManagement, 59);
+        assertEq(secondManagement, 59);
+
+        assertEq(yearPerformance, 2025);
+        assertEq(monthPerformance, 12);
+        assertEq(dayPerformance, 31);
+        assertEq(hourPerformance, 23);
+        assertEq(minutePerformance, 59);
+        assertEq(secondPerformance, 59);
+
+        uint256 newTimestamp = TEST_TIMESTAMP + 22 days;
+
+        vm.warp(newTimestamp); // Go to end of month
+        vm.prank(users.admin);
+        vault.notifyManagementFeesCharged(uint64(newTimestamp));
+        vm.prank(users.admin);
+        vault.notifyPerformanceFeesCharged(uint64(newTimestamp));
+
+        nextManagement = vault.nextManagementFeeTimestamp();
+        nextPerformance = vault.nextPerformanceFeeTimestamp();
+
+        (yearManagement, monthManagement, dayManagement, hourManagement, minuteManagement, secondManagement) =
+            OptimizedDateTimeLib.timestampToDateTime(nextManagement);
+        (yearPerformance, monthPerformance, dayPerformance, hourPerformance, minutePerformance, secondPerformance) =
+            OptimizedDateTimeLib.timestampToDateTime(nextPerformance);
+
+        assertEq(yearManagement, 2025);
+        assertEq(monthManagement, 11);
+        assertEq(dayManagement, 30);
+        assertEq(hourManagement, 23);
+        assertEq(minuteManagement, 59);
+        assertEq(secondManagement, 59);
+
+        assertEq(yearPerformance, 2026);
+        assertEq(monthPerformance, 1);
+        assertEq(dayPerformance, 31);
+        assertEq(hourPerformance, 23);
+        assertEq(minutePerformance, 59);
+        assertEq(secondPerformance, 59);
     }
 
     /* //////////////////////////////////////////////////////////////

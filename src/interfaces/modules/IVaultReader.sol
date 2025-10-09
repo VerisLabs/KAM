@@ -180,7 +180,10 @@ interface IVaultReader is IVersioned {
     /// @notice Gets the details of a specific stake request
     /// @param requestId The unique identifier of the stake request
     /// @return stakeRequest The stake request struct containing all request details
-    function getStakeRequest(bytes32 requestId) external view returns (BaseVaultTypes.StakeRequest memory stakeRequest);
+    function getStakeRequest(bytes32 requestId)
+        external
+        view
+        returns (BaseVaultTypes.StakeRequest memory stakeRequest);
 
     /// @notice Gets the details of a specific unstake request
     /// @param requestId The unique identifier of the unstake request
