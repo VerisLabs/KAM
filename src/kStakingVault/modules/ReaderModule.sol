@@ -143,7 +143,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
 
     /// @inheritdoc IVaultReader
     function nextPerformanceFeeTimestamp() external view returns (uint256) {
-        uint256 lastCharged = _getLastFeesChargedPerformance();
+        uint256 lastCharged = _getLastFeesChargedPerformance(_getBaseVaultStorage());
 
         // Get the date components from the last charged timestamp
         (uint256 year, uint256 month, uint256 day) = OptimizedDateTimeLib.timestampToDate(lastCharged);
@@ -170,7 +170,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
 
     /// @inheritdoc IVaultReader
     function nextManagementFeeTimestamp() external view returns (uint256) {
-        uint256 lastCharged = _getLastFeesChargedManagement();
+        uint256 lastCharged = _getLastFeesChargedManagement(_getBaseVaultStorage());
 
         // Get the date components from the last charged timestamp
         (uint256 year, uint256 month, uint256 day) = OptimizedDateTimeLib.timestampToDate(lastCharged);
