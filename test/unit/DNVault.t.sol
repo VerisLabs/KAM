@@ -45,7 +45,7 @@ contract DNVaultTest is BaseVaultTest {
         vault.closeBatch(batchId, true);
 
         uint256 lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + 1000 * _1_USDC);
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets);
 
         uint256 balanceBefore = vault.balanceOf(users.alice);
 
@@ -88,7 +88,7 @@ contract DNVaultTest is BaseVaultTest {
         vault.closeBatch(batchId, true);
 
         uint256 lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + 1000 * _1_USDC);
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets);
 
         vm.prank(users.alice);
         vault.claimStakedShares(requestId);
@@ -113,7 +113,7 @@ contract DNVaultTest is BaseVaultTest {
         vault.closeBatch(batchId, true);
 
         uint256 lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + 1000 * _1_USDC);
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets);
 
         vm.prank(users.bob);
         vm.expectRevert(bytes(VAULTCLAIMS_NOT_BENEFICIARY));
@@ -135,7 +135,7 @@ contract DNVaultTest is BaseVaultTest {
         vault.closeBatch(batchId, true);
 
         uint256 lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + 1000 * _1_USDC);
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets);
 
         vm.prank(users.emergencyAdmin);
         kStakingVault(payable(address(vault))).setPaused(true);
@@ -172,7 +172,7 @@ contract DNVaultTest is BaseVaultTest {
 
         uint256 lastTotalAssets = assetRouter.virtualBalance(address(vault), tokens.usdc);
         uint256 totalAmount = 1000 * _1_USDC + 500 * _1_USDC + 750 * _1_USDC;
-        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + totalAmount);
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets);
 
         vm.prank(users.alice);
         vault.claimStakedShares(requestIdAlice);
@@ -206,7 +206,7 @@ contract DNVaultTest is BaseVaultTest {
         vault.closeBatch(unstakeBatchId, true);
 
         uint256 lastTotalAssets = assetRouter.virtualBalance(address(vault), tokens.usdc);
-        _executeBatchSettlement(address(vault), unstakeBatchId, lastTotalAssets - stkBalance);
+        _executeBatchSettlement(address(vault), unstakeBatchId, lastTotalAssets);
 
         uint256 kTokenBalanceBefore = kUSD.balanceOf(users.alice);
 
@@ -320,7 +320,7 @@ contract DNVaultTest is BaseVaultTest {
         vault.closeBatch(batchId, true);
 
         uint256 lastTotalAssets = assetRouter.virtualBalance(address(vault), tokens.usdc);
-        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + 1000 * _1_USDC);
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets);
 
         vm.prank(users.alice);
         vault.claimStakedShares(requestId);
@@ -346,7 +346,7 @@ contract DNVaultTest is BaseVaultTest {
         vault.closeBatch(unstakeBatchId, true);
 
         uint256 lastTotalAssets = assetRouter.virtualBalance(address(vault), tokens.usdc);
-        _executeBatchSettlement(address(vault), unstakeBatchId, lastTotalAssets - stkBalance);
+        _executeBatchSettlement(address(vault), unstakeBatchId, lastTotalAssets);
 
         uint256 kTokenBalanceBefore = kUSD.balanceOf(users.alice);
 
@@ -390,7 +390,7 @@ contract DNVaultTest is BaseVaultTest {
         vault.closeBatch(batch2Id, true);
 
         uint256 lastTotalAssets = assetRouter.virtualBalance(address(vault), tokens.usdc);
-        _executeBatchSettlement(address(vault), batch1Id, lastTotalAssets + 1000 * _1_USDC);
+        _executeBatchSettlement(address(vault), batch1Id, lastTotalAssets);
 
         vm.prank(users.alice);
         vault.claimStakedShares(request1Id);
@@ -401,7 +401,7 @@ contract DNVaultTest is BaseVaultTest {
         vault.claimUnstakedAssets(request2Id);
 
         lastTotalAssets = assetRouter.virtualBalance(address(vault), tokens.usdc);
-        _executeBatchSettlement(address(vault), batch2Id, lastTotalAssets + 500 * _1_USDC);
+        _executeBatchSettlement(address(vault), batch2Id, lastTotalAssets);
 
         vm.prank(users.bob);
         vault.claimStakedShares(request2Id);
@@ -427,7 +427,7 @@ contract DNVaultTest is BaseVaultTest {
         vault.closeBatch(batchId, true);
 
         uint256 lastTotalAssets = assetRouter.virtualBalance(address(vault), tokens.usdc);
-        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + 1 * _1_USDC);
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets);
 
         vm.prank(users.alice);
         vault.claimStakedShares(requestId);
@@ -454,7 +454,7 @@ contract DNVaultTest is BaseVaultTest {
         vault.closeBatch(batchId, true);
 
         uint256 lastTotalAssets = assetRouter.virtualBalance(address(vault), tokens.usdc);
-        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + amount);
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets);
 
         vm.prank(user);
         vault.claimStakedShares(requestId);

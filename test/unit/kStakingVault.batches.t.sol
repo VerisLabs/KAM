@@ -196,7 +196,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         // Settle batch
         uint256 lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(address(vault), batchId, lastTotalAssets + 1000 * _1_USDC);
+        _executeBatchSettlement(address(vault), batchId, lastTotalAssets);
 
         // Try to settle again through assetRouter
         vm.prank(users.relayer);
@@ -238,7 +238,7 @@ contract kStakingVaultBatchesTest is BaseVaultTest {
 
         // 4. Settle the closed batch
         uint256 lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(address(vault), batch1, lastTotalAssets + 1000 * _1_USDC);
+        _executeBatchSettlement(address(vault), batch1, lastTotalAssets);
 
         // 5. User can claim from settled batch
         vm.prank(users.alice);

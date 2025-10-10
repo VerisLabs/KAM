@@ -54,7 +54,7 @@ contract BaseVaultTest is DeploymentBaseTest {
             tokens.usdc,
             address(vault),
             batchId,
-            profit > 0 ? lastTotalAssets + amount + uint256(profit) : lastTotalAssets + amount - uint256(profit),
+            profit > 0 ? lastTotalAssets + uint256(profit) : lastTotalAssets - uint256(profit),
             0,
             0
         );
@@ -90,7 +90,7 @@ contract BaseVaultTest is DeploymentBaseTest {
         IkStakingVault(address(minter)).closeBatch(batchId, true);
 
         // Settle batch
-        uint256 totalAssets = INITIAL_DEPOSIT * 3 + LARGE_DEPOSIT + INITIAL_DEPOSIT;
+        uint256 totalAssets = assetRouter.virtualBalance(address(minter), tokens.usdc);
         _executeBatchSettlement(address(minter), batchId, totalAssets);
     }
 
@@ -106,7 +106,7 @@ contract BaseVaultTest is DeploymentBaseTest {
             vm.prank(users.relayer);
             IkStakingVault(address(minter)).closeBatch(batchId, true);
             uint256 lastTotalAssets = assetRouter.virtualBalance(address(minter), tokens.usdc);
-            _executeBatchSettlement(address(minter), batchId, lastTotalAssets + amount);
+            _executeBatchSettlement(address(minter), batchId, lastTotalAssets);
         }
     }
 
