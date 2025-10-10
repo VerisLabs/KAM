@@ -67,13 +67,13 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     using OptimizedSafeCastLib for uint64;
     using OptimizedFixedPointMathLib for uint256;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
     // VaultBatches Events
-    /// @notice Emitted when a new batch is created
-    /// @param batchId The batch ID of the new batch
+    // / @notice Emitted when a new batch is created
+    // / @param batchId The batch ID of the new batch
     event BatchCreated(bytes32 indexed batchId);
 
     /// @notice Emitted when a batch is settled
@@ -90,7 +90,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
 
     // VaultClaims Events
-    /// @notice Emitted when a user claims staking shares
+    // / @notice Emitted when a user claims staking shares
     event StakingSharesClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 shares);
 
     /// @notice Emitted when a user claims unstaking assets
@@ -100,9 +100,9 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
 
     // VaultFees Events
-    /// @notice Emitted when the management fee is updated
-    /// @param oldFee Previous management fee in basis points
-    /// @param newFee New management fee in basis points
+    // / @notice Emitted when the management fee is updated
+    // / @param oldFee Previous management fee in basis points
+    // / @param newFee New management fee in basis points
     event ManagementFeeUpdated(uint16 oldFee, uint16 newFee);
 
     /// @notice Emitted when the performance fee is updated
@@ -131,7 +131,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     /// @param timestamp Timestamp of the fee charge
     event PerformanceFeesCharged(uint256 timestamp);
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -187,7 +187,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit Initialized(registry_, name_, symbol_, decimals_, asset_);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           CORE OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -360,7 +360,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _unlockReentrant();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             VAULT BATCHES FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -506,7 +506,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         require(timestamp >= lastTimestamp && timestamp <= block.timestamp, VAULTFEES_INVALID_TIMESTAMP);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           VAULT CLAIMS FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -569,7 +569,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _checkAmountNotZero(sharePrice);
 
         // Calculate total kTokens to return based on settlement-time share price
-        // Multply redeemed shares for net and gross share price to obtain gross and net amount of assets
+        // Multiply redeemed shares for net and gross share price to obtain gross and net amount of assets
         uint8 decimals = _getDecimals($);
         uint256 totalKTokensNet = (uint256(request.stkTokenAmount)) * netSharePrice / (10 ** decimals);
         uint256 netSharesToBurn = (uint256(request.stkTokenAmount)) * netSharePrice / sharePrice;
@@ -586,7 +586,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _unlockReentrant();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           VAULT FEES FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -647,7 +647,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -666,7 +666,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         );
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 

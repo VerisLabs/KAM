@@ -9,15 +9,15 @@ contract kMinterInvariants is SetUp {
         _setUpkMinterHandler();
     }
 
-    function invariant_kMinterLockedAssets() public {
+    function invariant_kMinterLockedAssets() public view {
         minterHandler.INVARIANT_A_TOTAL_LOCKED_ASSETS();
     }
 
-    function invariant_kMinterAdapterBalance() public {
+    function invariant_kMinterAdapterBalance() public view {
         minterHandler.INVARIANT_B_ADAPTER_BALANCE();
     }
 
-    function invariant_kMinterAdapterTotalAssets() public {
+    function invariant_kMinterAdapterTotalAssets() public view {
         minterHandler.INVARIANT_C_ADAPTER_TOTAL_ASSETS();
     }
 }

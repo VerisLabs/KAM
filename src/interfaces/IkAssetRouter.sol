@@ -18,7 +18,7 @@ interface ISettleBatch {
 /// the central hub that enables efficient capital allocation while maintaining the 1:1 backing guarantee of kTokens
 /// through precise yield distribution and loss management across the protocol's vault network.
 interface IkAssetRouter is IVersioned {
-    /*/////////////////////////////////////////////////////////////// 
+    /* ///////////////////////////////////////////////////////////////
                                 STRUCTS
     ///////////////////////////////////////////////////////////////*/
 
@@ -58,7 +58,7 @@ interface IkAssetRouter is IVersioned {
         uint64 lastFeesChargedPerformance;
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
@@ -229,7 +229,7 @@ interface IkAssetRouter is IVersioned {
         address vault, address asset, bytes32 batchId, int256 yield, uint256 maxAllowedYield
     );
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             KMINTER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -256,7 +256,7 @@ interface IkAssetRouter is IVersioned {
     /// @param batchId The batch identifier for coordinating this redemption with other requests
     function kAssetRequestPull(address _asset, uint256 amount, bytes32 batchId) external payable;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         KSTAKING VAULT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -305,7 +305,7 @@ interface IkAssetRouter is IVersioned {
     /// @param batchId The batch identifier for coordinating share redemptions with settlement
     function kSharesRequestPull(address sourceVault, uint256 amount, bytes32 batchId) external payable;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         SETTLEMENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -353,7 +353,7 @@ interface IkAssetRouter is IVersioned {
     /// @param proposalId The unique identifier of the settlement proposal to cancel
     function cancelProposal(bytes32 proposalId) external;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -376,7 +376,7 @@ interface IkAssetRouter is IVersioned {
     /// @param tolerance_ The new yield tolerance in basis points (e.g., 1000 = 10%)
     function setMaxAllowedDelta(uint256 tolerance_) external;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
