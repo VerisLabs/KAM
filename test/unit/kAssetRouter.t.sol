@@ -324,7 +324,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         vm.warp(block.timestamp + 2);
 
         // Anyone should be able to execute after cooldown
-        // Solthodoxcl
         vm.prank(users.alice);
         assetRouter.executeSettleBatch(testProposalId);
     }
@@ -698,7 +697,6 @@ contract kAssetRouterTest is DeploymentBaseTest {
         // Wait for cooldown
         vm.warp(block.timestamp + 2);
 
-        // Solthodox
         vm.prank(users.alice);
         assetRouter.executeSettleBatch(proposalId);
     }
