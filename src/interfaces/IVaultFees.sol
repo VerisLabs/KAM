@@ -70,4 +70,9 @@ interface IVaultFees {
     /// @param _timestamp The timestamp when performance fees were processed (must be >= last timestamp, <= current
     /// time)
     function notifyPerformanceFeesCharged(uint64 _timestamp) external;
+
+    /// @notice Burns shares from the vault for fees adjusting
+    /// @param shares The amount of shares to burn
+    /// @dev This function is only callable by the admin
+    function burnFees(uint256 shares) external;
 }

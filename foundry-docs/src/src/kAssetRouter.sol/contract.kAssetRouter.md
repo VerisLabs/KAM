@@ -1,5 +1,5 @@
 # kAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/kAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7810ef786f844ebd78831ee424b7ee896113d92b/src/kAssetRouter.sol)
 
 **Inherits:**
 [IkAssetRouter](/src/interfaces/IkAssetRouter.sol/interface.IkAssetRouter.md), [Initializable](/src/vendor/solady/utils/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/solady/utils/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [kBase](/src/base/kBase.sol/contract.kBase.md), [Multicallable](/src/vendor/solady/utils/Multicallable.sol/abstract.Multicallable.md)
@@ -480,7 +480,7 @@ function getSettlementCooldown() external view returns (uint256);
 |`<none>`|`uint256`|cooldown The current cooldown period in seconds|
 
 
-### getYieldTolerance
+### getMaxAllowedDelta
 
 Gets the current yield tolerance threshold for settlement proposals
 
@@ -491,7 +491,7 @@ is expressed in basis points where 10000 equals 100%.*
 
 
 ```solidity
-function getYieldTolerance() external view returns (uint256);
+function getMaxAllowedDelta() external view returns (uint256);
 ```
 **Returns**
 
@@ -644,26 +644,6 @@ Verifies contract is not paused
 ```solidity
 function _checkPaused() private view;
 ```
-
-### _isPendingProposal
-
-
-```solidity
-function _isPendingProposal(address vault, bytes32 proposalId) private view returns (bool);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`vault`|`address`||
-|`proposalId`|`bytes32`|the proposalId to verify|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`bool`|bool proposal exists or not|
-
 
 ### isPaused
 

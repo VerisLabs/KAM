@@ -47,9 +47,4 @@ interface IVaultBatch {
     /// finalization based on vault performance during the batch period.
     /// @param _batchId The batch identifier to mark as settled (must be closed, not previously settled)
     function settleBatch(bytes32 _batchId) external;
-
-    /// @notice Burns fees shares from the vault
-    /// @dev This function burns fees from the vault
-    /// @param shares The quantity of shares to burn
-    function burnFees(uint256 shares) external;
 }

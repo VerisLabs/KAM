@@ -5,8 +5,6 @@ import { MockERC20 } from "../mocks/MockERC20.sol";
 import { Utilities } from "./Utilities.sol";
 import { Test } from "forge-std/Test.sol";
 
-/// @title BaseTest
-/// @notice Base contract for all tests with common setup and utilities
 contract BaseTest is Test {
     Utilities internal utils;
 
@@ -29,9 +27,12 @@ contract BaseTest is Test {
 
     Users internal users;
 
-    address internal asset; // Main test asset
-    address internal usdc;
-    address internal wbtc;
+    struct Tokens {
+        address usdc;
+        address wbtc;
+    }
+
+    Tokens internal tokens;
 
     // Mock tokens
     MockERC20 internal mockUSDC;
@@ -40,37 +41,24 @@ contract BaseTest is Test {
     function setUp() public virtual {
         utils = new Utilities();
 
-        // Create test users
-        _createUsers();
-
         // Set up test assets
         _setupAssets();
+
+        // Create test users
+        _createUsers();
 
         // Label addresses for better trace output
         _labelAddresses();
     }
 
-    /// @dev Get USDC token address (for use in child contracts)
-    function getUSDC() internal view returns (address) {
-        return usdc;
-    }
-
-    /// @dev Get WBTC token address (for use in child contracts)
-    function getWBTC() internal view returns (address) {
-        return wbtc;
-    }
-
-    /// @dev Get mock USDC token instance (for minting in child contracts)
     function getMockUSDC() internal view returns (MockERC20) {
         return mockUSDC;
     }
 
-    /// @dev Get mock WBTC token instance (for minting in child contracts)
     function getMockWBTC() internal view returns (MockERC20) {
         return mockWBTC;
     }
 
-    /// @dev Creates test users with appropriate funding
     function _createUsers() internal {
         users.alice = utils.createUser("Alice");
         users.bob = utils.createUser("Bob");
@@ -87,24 +75,20 @@ contract BaseTest is Test {
         users.owner = utils.createUser("Owner");
     }
 
-    /// @dev Setup test assets (deploy mock tokens)
     function _setupAssets() internal {
         // Deploy mock tokens
         mockUSDC = new MockERC20("Mock USDC", "USDC", 6);
         mockWBTC = new MockERC20("Mock WBTC", "WBTC", 8);
 
         // Set asset addresses to mock tokens
-        asset = address(mockUSDC);
-        usdc = address(mockUSDC);
-        wbtc = address(mockWBTC);
+        tokens.usdc = address(mockUSDC);
+        tokens.wbtc = address(mockWBTC);
 
         // Label
-        vm.label(asset, "USDC");
-        vm.label(usdc, "USDC");
-        vm.label(wbtc, "WBTC");
+        vm.label(tokens.usdc, "USDC");
+        vm.label(tokens.wbtc, "WBTC");
     }
 
-    /// @dev Label addresses for better debugging
     function _labelAddresses() internal {
         vm.label(users.alice, "Alice");
         vm.label(users.bob, "Bob");
@@ -112,7 +96,12 @@ contract BaseTest is Test {
         vm.label(users.admin, "Admin");
         vm.label(users.emergencyAdmin, "EmergencyAdmin");
         vm.label(users.institution, "Institution");
-        vm.label(users.relayer, "relayer");
+        vm.label(users.relayer, "Relayer");
         vm.label(users.treasury, "Treasury");
+        vm.label(users.owner, "Owner");
+        vm.label(users.guardian, "Guardian");
+        vm.label(users.institution2, "Institution2");
+        vm.label(users.institution3, "Institution3");
+        vm.label(users.institution4, "Institution4");
     }
 }

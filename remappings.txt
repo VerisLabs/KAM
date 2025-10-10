@@ -1,8 +1,8 @@
 forge-std/=dependencies/forge-std-1.9.7/src/
+kam/src/=src/
+kam/test/=test/
 openzeppelin/=src/vendor/openzeppelin/
 solady/=src/vendor/solady/
 src/=src/
 test/=test/
 uniswap/=src/vendor/uniswap/
-kam/src/=src/
-kam/test/=test/

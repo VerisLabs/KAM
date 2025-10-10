@@ -7,6 +7,8 @@ import { _1_USDC } from "../utils/Constants.sol";
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { OptimizedDateTimeLib } from "solady/utils/OptimizedDateTimeLib.sol";
+
 import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 
 import {
@@ -15,25 +17,15 @@ import {
     VAULTFEES_INVALID_TIMESTAMP
 } from "kam/src/errors/Errors.sol";
 
-/// @title kStakingVaultFeesTest
-/// @notice Tests for fee mechanics in kStakingVault
-/// @dev Focuses on fee calculations, watermarks, hurdle rates, and fee notifications
+import { console2 as console } from "forge-std/console2.sol";
+
 contract kStakingVaultFeesTest is BaseVaultTest {
     using OptimizedFixedPointMathLib for uint256;
     using SafeTransferLib for address;
 
-    /*//////////////////////////////////////////////////////////////
-                              CONSTANTS
-    //////////////////////////////////////////////////////////////*/
-
     uint256 constant SECS_PER_YEAR = 31_556_952;
+    uint256 constant TEST_TIMESTAMP = 1_760_022_175; // Oct 9, 2025
     uint256 constant MAX_BPS = 10_000;
-    uint256 constant MANAGEMENT_FEE_INTERVAL = 657_436; // 1 month
-    uint256 constant PERFORMANCE_FEE_INTERVAL = 7_889_238; // 3 months
-
-    /*//////////////////////////////////////////////////////////////
-                              SETUP
-    //////////////////////////////////////////////////////////////*/
 
     function setUp() public override {
         DeploymentBaseTest.setUp();
@@ -44,20 +36,17 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         BaseVaultTest.setUp();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         FEE CONFIGURATION TESTS
     //////////////////////////////////////////////////////////////*/
 
     function test_InitialFeeState() public view {
-        // Fees should start at zero
         assertEq(vault.managementFee(), 0);
         assertEq(vault.performanceFee(), 0);
         assertEq(vault.hurdleRate(), 0);
 
-        // Watermark should be initial share price (1e6)
         assertEq(vault.sharePriceWatermark(), 1e6);
 
-        // Fee timestamps should be set to deployment time
         assertTrue(vault.lastFeesChargedManagement() > 0);
         assertTrue(vault.lastFeesChargedPerformance() > 0);
     }
@@ -101,7 +90,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         // No direct getter, but we can test behavior in fee calculation
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         MANAGEMENT FEE TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -163,7 +152,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         assertApproxEqRel(managementFees, expectedFee, 0.01e18);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         PERFORMANCE FEE TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -272,7 +261,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         assertEq(performanceFees, 0);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         SHARE PRICE WATERMARK TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -297,7 +286,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vault.closeBatch(batchId, true);
 
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            getUSDC(),
+            tokens.usdc,
             address(vault),
             batchId,
             vault.totalAssets() + yieldAmount,
@@ -325,7 +314,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vm.startPrank(users.relayer);
         vault.closeBatch(batchId, true);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            getUSDC(),
+            tokens.usdc,
             address(vault),
             batchId,
             vault.totalAssets() - lossAmount,
@@ -342,7 +331,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         assertGt(vault.sharePriceWatermark(), vault.netSharePrice());
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         FEE NOTIFICATION TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -400,7 +389,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vault.notifyPerformanceFeesCharged(uint64(block.timestamp));
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         COMBINED FEE TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -431,25 +420,84 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         // Performance fee calculation (after management fees)
         uint256 assetsAfterManagementFee = totalAssets - managementFees;
         int256 assetsDelta = int256(assetsAfterManagementFee) - int256(INITIAL_DEPOSIT);
-        uint256 hurdleReturn = (totalAssets * TEST_HURDLE_RATE) / MAX_BPS;
-        uint256 excessReturn = uint256(assetsDelta) - hurdleReturn;
         // If the hurdle rate is soft apply fees to all return
         uint256 expectedPerformanceFee = (uint256(assetsDelta) * TEST_PERFORMANCE_FEE) / MAX_BPS;
         assertApproxEqRel(performanceFees, expectedPerformanceFee, 0.05e18); // 5% tolerance
     }
 
     function test_NextFeeTimestamps() public {
-        uint256 currentTime = block.timestamp;
+        vm.warp(TEST_TIMESTAMP);
+        vm.prank(users.admin);
+        vault.notifyManagementFeesCharged(uint64(TEST_TIMESTAMP));
+        vm.prank(users.admin);
+        vault.notifyPerformanceFeesCharged(uint64(TEST_TIMESTAMP));
 
         uint256 nextManagement = vault.nextManagementFeeTimestamp();
         uint256 nextPerformance = vault.nextPerformanceFeeTimestamp();
 
-        // Should be current + interval
-        assertApproxEqAbs(nextManagement, currentTime + MANAGEMENT_FEE_INTERVAL, 10);
-        assertApproxEqAbs(nextPerformance, currentTime + PERFORMANCE_FEE_INTERVAL, 10);
+        (
+            uint256 yearManagement,
+            uint256 monthManagement,
+            uint256 dayManagement,
+            uint256 hourManagement,
+            uint256 minuteManagement,
+            uint256 secondManagement
+        ) = OptimizedDateTimeLib.timestampToDateTime(nextManagement);
+        (
+            uint256 yearPerformance,
+            uint256 monthPerformance,
+            uint256 dayPerformance,
+            uint256 hourPerformance,
+            uint256 minutePerformance,
+            uint256 secondPerformance
+        ) = OptimizedDateTimeLib.timestampToDateTime(nextPerformance);
+
+        assertEq(yearManagement, 2025);
+        assertEq(monthManagement, 10);
+        assertEq(dayManagement, 31);
+        assertEq(hourManagement, 23);
+        assertEq(minuteManagement, 59);
+        assertEq(secondManagement, 59);
+
+        assertEq(yearPerformance, 2025);
+        assertEq(monthPerformance, 12);
+        assertEq(dayPerformance, 31);
+        assertEq(hourPerformance, 23);
+        assertEq(minutePerformance, 59);
+        assertEq(secondPerformance, 59);
+
+        uint256 newTimestamp = TEST_TIMESTAMP + 22 days;
+
+        vm.warp(newTimestamp); // Go to end of month
+        vm.prank(users.admin);
+        vault.notifyManagementFeesCharged(uint64(newTimestamp));
+        vm.prank(users.admin);
+        vault.notifyPerformanceFeesCharged(uint64(newTimestamp));
+
+        nextManagement = vault.nextManagementFeeTimestamp();
+        nextPerformance = vault.nextPerformanceFeeTimestamp();
+
+        (yearManagement, monthManagement, dayManagement, hourManagement, minuteManagement, secondManagement) =
+            OptimizedDateTimeLib.timestampToDateTime(nextManagement);
+        (yearPerformance, monthPerformance, dayPerformance, hourPerformance, minutePerformance, secondPerformance) =
+            OptimizedDateTimeLib.timestampToDateTime(nextPerformance);
+
+        assertEq(yearManagement, 2025);
+        assertEq(monthManagement, 11);
+        assertEq(dayManagement, 30);
+        assertEq(hourManagement, 23);
+        assertEq(minuteManagement, 59);
+        assertEq(secondManagement, 59);
+
+        assertEq(yearPerformance, 2026);
+        assertEq(monthPerformance, 1);
+        assertEq(dayPerformance, 31);
+        assertEq(hourPerformance, 23);
+        assertEq(minutePerformance, 59);
+        assertEq(secondPerformance, 59);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         NET ASSETS CALCULATION TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -489,7 +537,6 @@ contract kStakingVaultFeesTest is BaseVaultTest {
 
         uint256 totalSupply = vault.totalSupply();
         uint256 totalAssets = vault.totalAssets();
-        uint256 netAssets = vault.totalNetAssets();
 
         uint256 netSharePrice = vault.netSharePrice();
         uint256 sharePrice = (totalAssets * 1e6) / totalSupply;
@@ -503,7 +550,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         assertApproxEqAbs(sharePrice - netSharePrice, feesPerShare, 10);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         EDGE CASES AND ERROR HANDLING
     //////////////////////////////////////////////////////////////*/
 
@@ -512,12 +559,12 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vault.setPerformanceFee(TEST_PERFORMANCE_FEE);
 
         vm.prank(users.relayer);
-        registry.setHurdleRate(getUSDC(), 0); // No hurdle
+        registry.setHurdleRate(tokens.usdc, 0); // No hurdle
 
         _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
         // Add small yield
-        uint256 smallYield = 10_000 * _1_USDC; // 1%
+        uint256 smallYield = 10_000 * _1_USDC; //1%
         vm.prank(address(minter));
         kUSD.mint(address(vault), smallYield);
 
@@ -537,7 +584,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         vm.stopPrank();
 
         vm.prank(users.relayer);
-        registry.setHurdleRate(getUSDC(), TEST_HURDLE_RATE);
+        registry.setHurdleRate(tokens.usdc, TEST_HURDLE_RATE);
 
         _performStakeAndSettle(users.alice, INITIAL_DEPOSIT, 0);
 
@@ -566,7 +613,7 @@ contract kStakingVaultFeesTest is BaseVaultTest {
         assertEq(totalFees, 0);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         EVENT EMISSION TESTS
     //////////////////////////////////////////////////////////////*/
 

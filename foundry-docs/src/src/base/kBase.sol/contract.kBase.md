@@ -1,5 +1,5 @@
 # kBase
-[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/base/kBase.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7810ef786f844ebd78831ee424b7ee896113d92b/src/base/kBase.sol)
 
 **Inherits:**
 [OptimizedReentrancyGuardTransient](/src/vendor/solady/utils/OptimizedReentrancyGuardTransient.sol/abstract.OptimizedReentrancyGuardTransient.md)
@@ -174,13 +174,13 @@ Returns the registry contract interface
 
 
 ```solidity
-function _registry() internal view returns (IkRegistry);
+function _registry() internal view returns (IRegistry);
 ```
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`IkRegistry`|IkRegistry interface for registry interaction|
+|`<none>`|`IRegistry`|IRegistry interface for registry interaction|
 
 
 ### _getBatchId

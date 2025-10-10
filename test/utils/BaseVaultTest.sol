@@ -15,35 +15,23 @@ contract BaseVaultTest is DeploymentBaseTest {
     using OptimizedFixedPointMathLib for uint256;
     using SafeTransferLib for address;
 
-    /*//////////////////////////////////////////////////////////////
-                              CONSTANTS
-    //////////////////////////////////////////////////////////////*/
-
     uint256 constant INITIAL_DEPOSIT = 1_000_000 * _1_USDC; // 1M USDC
     uint256 constant SMALL_DEPOSIT = 10_000 * _1_USDC; // 10K USDC
     uint256 constant LARGE_DEPOSIT = 5_000_000 * _1_USDC; // 5M USDC
 
     // Test fee rates
-    uint16 constant TEST_MANAGEMENT_FEE = 100; // 1%
+    uint16 constant TEST_MANAGEMENT_FEE = 100; //1%
     uint16 constant TEST_PERFORMANCE_FEE = 2000; // 20%
-    uint16 constant TEST_HURDLE_RATE = 500; // 5%
-
-    /*//////////////////////////////////////////////////////////////
-                              VARIABLES
-    //////////////////////////////////////////////////////////////*/
+    uint16 constant TEST_HURDLE_RATE = 500; //5%
 
     IkStakingVault vault;
-
-    /*//////////////////////////////////////////////////////////////
-                              SETUP
-    //////////////////////////////////////////////////////////////*/
 
     function setUp() public virtual override {
         // Mint kTokens to test users
         _mintKTokensToUsers();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -63,10 +51,10 @@ contract BaseVaultTest is DeploymentBaseTest {
 
         vm.prank(users.relayer);
         bytes32 proposalId = assetRouter.proposeSettleBatch(
-            getUSDC(),
+            tokens.usdc,
             address(vault),
             batchId,
-            profit > 0 ? lastTotalAssets + amount + uint256(profit) : lastTotalAssets + amount - uint256(profit),
+            profit > 0 ? lastTotalAssets + uint256(profit) : lastTotalAssets - uint256(profit),
             0,
             0
         );
@@ -78,7 +66,6 @@ contract BaseVaultTest is DeploymentBaseTest {
         vault.claimStakedShares(requestId);
     }
 
-    /// @dev Setup test fees for comprehensive testing
     function _setupTestFees() internal {
         vm.startPrank(users.admin);
         vault.setManagementFee(TEST_MANAGEMENT_FEE);
@@ -87,45 +74,45 @@ contract BaseVaultTest is DeploymentBaseTest {
         vm.stopPrank();
 
         vm.prank(users.relayer);
-        registry.setHurdleRate(getUSDC(), TEST_HURDLE_RATE);
+        registry.setHurdleRate(tokens.usdc, TEST_HURDLE_RATE);
     }
 
     function _mintKTokensToUsers() internal {
         vm.startPrank(users.institution);
-        getUSDC().safeApprove(address(minter), type(uint256).max);
+        tokens.usdc.safeApprove(address(minter), type(uint256).max);
         _mintKTokenToUser(users.alice, INITIAL_DEPOSIT * 3, false);
         _mintKTokenToUser(users.bob, LARGE_DEPOSIT, false);
         _mintKTokenToUser(users.charlie, INITIAL_DEPOSIT, false);
         vm.stopPrank();
 
-        bytes32 batchId = minter.getBatchId(getUSDC());
+        bytes32 batchId = minter.getBatchId(tokens.usdc);
         vm.prank(users.relayer);
         IkStakingVault(address(minter)).closeBatch(batchId, true);
 
         // Settle batch
-        uint256 totalAssets = INITIAL_DEPOSIT * 3 + LARGE_DEPOSIT + INITIAL_DEPOSIT;
+        uint256 totalAssets = assetRouter.virtualBalance(address(minter), tokens.usdc);
         _executeBatchSettlement(address(minter), batchId, totalAssets);
     }
 
     function _mintKTokenToUser(address user, uint256 amount, bool settle) internal {
         mockUSDC.mint(users.institution, amount);
         vm.startPrank(users.institution);
-        getUSDC().safeApprove(address(minter), type(uint256).max);
-        minter.mint(getUSDC(), user, amount);
+        tokens.usdc.safeApprove(address(minter), type(uint256).max);
+        minter.mint(tokens.usdc, user, amount);
         vm.stopPrank();
 
         if (settle) {
-            bytes32 batchId = minter.getBatchId(getUSDC());
+            bytes32 batchId = minter.getBatchId(tokens.usdc);
             vm.prank(users.relayer);
             IkStakingVault(address(minter)).closeBatch(batchId, true);
-            uint256 lastTotalAssets = assetRouter.virtualBalance(address(minter), getUSDC());
-            _executeBatchSettlement(address(minter), batchId, lastTotalAssets + amount);
+            uint256 lastTotalAssets = assetRouter.virtualBalance(address(minter), tokens.usdc);
+            _executeBatchSettlement(address(minter), batchId, lastTotalAssets);
         }
     }
 
     function _executeBatchSettlement(address vault, bytes32 batchId, uint256 totalAssets) internal {
         vm.prank(users.relayer);
-        bytes32 proposalId = assetRouter.proposeSettleBatch(getUSDC(), address(vault), batchId, totalAssets, 0, 0);
+        bytes32 proposalId = assetRouter.proposeSettleBatch(tokens.usdc, address(vault), batchId, totalAssets, 0, 0);
 
         // Wait for cooldown period(0 for testing)
         assetRouter.executeSettleBatch(proposalId);

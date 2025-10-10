@@ -58,7 +58,7 @@ library LibAddressSet {
     function reduce(
         AddressSet storage s,
         uint256 acc,
-        function(uint256,address) external returns (uint256) func
+        function(uint256, address) external returns (uint256) func
     )
         internal
         returns (uint256)

@@ -62,7 +62,7 @@ library LibBytes32Set {
     function reduce(
         Bytes32Set storage s,
         uint256 acc,
-        function(uint256,bytes32) external returns (uint256) func
+        function(uint256, bytes32) external returns (uint256) func
     )
         internal
         returns (uint256)

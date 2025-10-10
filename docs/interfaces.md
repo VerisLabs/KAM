@@ -74,7 +74,7 @@ Central coordinator for all asset movements and settlements in the KAM protocol.
 - `getSettlementProposal(bytes32 proposalId)` - Retrieves complete VaultSettlementProposal struct with all details
 - `canExecuteProposal(bytes32 proposalId)` - Checks execution readiness and returns boolean result with descriptive reason
 - `getSettlementCooldown()` - Gets current cooldown period in seconds before proposals can be executed
-- `getYieldTolerance()` - Gets current yield tolerance threshold in basis points for proposal validation
+- `getMaxAllowedDelta()` - Gets current yield tolerance threshold in basis points for proposal validation
 - `virtualBalance(address vault, address asset)` - Aggregates virtual asset balance across all vault adapters
 
 ### IkRegistry

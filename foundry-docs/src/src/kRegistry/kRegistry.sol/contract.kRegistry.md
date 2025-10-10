@@ -1,8 +1,8 @@
 # kRegistry
-[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/kRegistry/kRegistry.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7810ef786f844ebd78831ee424b7ee896113d92b/src/kRegistry/kRegistry.sol)
 
 **Inherits:**
-[IkRegistry](/src/interfaces/IkRegistry.sol/interface.IkRegistry.md), [kBaseRoles](/src/base/kBaseRoles.sol/contract.kBaseRoles.md), [Initializable](/src/vendor/solady/utils/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/solady/utils/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.md)
+[IRegistry](/src/interfaces/IRegistry.sol/interface.IRegistry.md), [kBaseRoles](/src/base/kBaseRoles.sol/contract.kBaseRoles.md), [Initializable](/src/vendor/solady/utils/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/solady/utils/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.md)
 
 Central configuration hub and contract registry for the KAM protocol ecosystem
 

@@ -7,9 +7,9 @@ pragma solidity 0.8.30;
 /// We have extracted only the necessary hashing functionality to optimize contract size.
 /// Original code by Solady, modified for size optimization.
 library OptimizedEfficientHashLib {
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-    /*               MALLOC-LESS HASHING OPERATIONS               */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /* ´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /* MALLOC-LESS HASHING OPERATIONS */
+    /* .•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev Returns `keccak256(abi.encode(v0, v1, v2, v3))`.
     function hash(uint256 v0, uint256 v1, uint256 v2, uint256 v3) internal pure returns (bytes32 result) {

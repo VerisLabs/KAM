@@ -90,8 +90,8 @@ This will open the documentation at http://localhost:4000
 Institutions can mint kTokens 1:1 with underlying assets and request redemptions through batch settlement:
 
 - `kMinter.mint()` - Creates new kTokens by accepting underlying asset deposits
-- `kMinter.requestRedeem()` - Initiates redemption process through batch settlement
-- `kMinter.redeem()` - Executes redemption for settled batch requests
+- `kMinter.requestBurn()` - Requests the burn of X shares for Y kTokens
+- `kMinter.burn()` - Burns the requested shares amount and transfer the kTokens
 - `kMinter.cancelRequest()` - Cancels redemption requests before settlement
 
 ### Retail Operations
@@ -120,15 +120,16 @@ Requests are grouped into time-based batches for gas-efficient settlement:
 
 ## Role Hierarchy
 
-| Role                 | Permissions                | Contracts                 |
-| -------------------- | -------------------------- | ------------------------- |
-| OWNER                | Ultimate control, upgrades | All                       |
-| ADMIN_ROLE           | Operational management     | All                       |
-| EMERGENCY_ADMIN_ROLE | Emergency pause            | All                       |
-| MINTER_ROLE          | Mint/burn tokens           | kToken                    |
-| INSTITUTION_ROLE     | Mint/redeem kTokens        | kMinter                   |
+| Role                 | Permissions                | Contracts                  |
+| -------------------- | -------------------------- | -------------------------  |
+| OWNER                | Ultimate control, upgrades | All                        |
+| ADMIN_ROLE           | Operational management     | All                        |
+| EMERGENCY_ADMIN_ROLE | Emergency pause            | All                        |
+| MINTER_ROLE          | Mint/burn tokens           | kToken                     |
+| INSTITUTION_ROLE     | Mint/redeem kTokens        | kMinter                    |
 | RELAYER_ROLE         | Settle batches             | kAssetRouter, VaultBatches |
-| VENDOR_ROLE          | Adds Institutions          | kRegistry                 |
+| VENDOR_ROLE          | Adds Institutions          | kRegistry                  |
+| MANAGER_ROLE         | Manages the Adapter        | kVaultAdapter              |
 
 ## Safety
 

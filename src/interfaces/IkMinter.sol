@@ -9,7 +9,7 @@ import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
 /// by depositing underlying assets and burn them through a batch settlement system. The interface
 /// supports a two-phase redemption process to accommodate batch processing and yield distribution.
 interface IkMinter is IVersioned {
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               TYPES
     //////////////////////////////////////////////////////////////*/
 
@@ -61,7 +61,7 @@ interface IkMinter is IVersioned {
         bytes32 batchId;
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
@@ -100,10 +100,10 @@ interface IkMinter is IVersioned {
     event Cancelled(bytes32 indexed requestId);
 
     // VaultBatches Events
-    /// @notice Emitted when a new batch is created
-    /// @param asset The asset in which the batch will be created
-    /// @param batchId The batch ID of the new batch
-    /// @param batchNumber the batch number used
+    // / @notice Emitted when a new batch is created
+    // / @param asset The asset in which the batch will be created
+    // / @param batchId The batch ID of the new batch
+    // / @param batchNumber the batch number used
     event BatchCreated(address indexed asset, bytes32 indexed batchId, uint256 batchNumber);
 
     /// @notice Emitted when a batch is settled
@@ -119,7 +119,7 @@ interface IkMinter is IVersioned {
     /// @param batchId The batch ID of the BatchReceiver
     event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -202,7 +202,15 @@ interface IkMinter is IVersioned {
     /// @param _batchId The batch ID to create a receiver for
     /// @return The address of the created batch receiver
     function createBatchReceiver(bytes32 _batchId) external returns (address);
+
+    /// @notice Get the current active batch ID for a specific asset
+    /// @param asset_ The asset to query
+    /// @return The current batch ID for the asset, or bytes32(0) if no batch exists
     function getBatchId(address asset_) external view returns (bytes32);
+
+    /// @notice Get the current batch number for a specific asset
+    /// @param asset_ The asset to query
+    /// @return The current batch number for the asset
     function getCurrentBatchNumber(address asset_) external view returns (uint256);
 
     /// @notice Checks if an asset has an active (open) batch
@@ -260,4 +268,9 @@ interface IkMinter is IVersioned {
     /// @param asset The asset address to query
     /// @return The total amount of assets locked in the protocol
     function getTotalLockedAssets(address asset) external view returns (uint256);
+
+    /// @notice Returns the close state of a given batchId
+    /// @param batchId_ the batchId to verify
+    /// @return isClosed_ the state of the given batchId
+    function isClosed(bytes32 batchId_) external view returns (bool isClosed_);
 }

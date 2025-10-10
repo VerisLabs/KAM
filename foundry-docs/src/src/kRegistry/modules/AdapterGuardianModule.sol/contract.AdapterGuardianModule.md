@@ -1,8 +1,8 @@
 # AdapterGuardianModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/kRegistry/modules/AdapterGuardianModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7810ef786f844ebd78831ee424b7ee896113d92b/src/kRegistry/modules/AdapterGuardianModule.sol)
 
 **Inherits:**
-[IAdapterGuardian](/src/interfaces/modules/IAdapterGuardian.sol/interface.IAdapterGuardian.md), [kBaseRoles](/src/base/kBaseRoles.sol/contract.kBaseRoles.md)
+[IAdapterGuardian](/src/interfaces/modules/IAdapterGuardian.sol/interface.IAdapterGuardian.md), [IModule](/src/interfaces/modules/IModule.sol/interface.IModule.md), [kBaseRoles](/src/base/kBaseRoles.sol/contract.kBaseRoles.md)
 
 Module for managing adapter permissions and parameter checking in kRegistry
 
@@ -46,7 +46,14 @@ Set whether a selector is allowed for an adapter on a target contract
 
 
 ```solidity
-function setAdapterAllowedSelector(address adapter, address target, bytes4 selector, bool isAllowed) external;
+function setAdapterAllowedSelector(
+    address adapter,
+    address target,
+    uint8 targetType_,
+    bytes4 selector,
+    bool isAllowed
+)
+    external;
 ```
 **Parameters**
 
@@ -54,6 +61,7 @@ function setAdapterAllowedSelector(address adapter, address target, bytes4 selec
 |----|----|-----------|
 |`adapter`|`address`|The adapter address|
 |`target`|`address`|The target contract address|
+|`targetType_`|`uint8`||
 |`selector`|`bytes4`|The function selector|
 |`isAllowed`|`bool`|Whether the selector is allowed|
 
@@ -154,13 +162,55 @@ function getAdapterParametersChecker(
 |`<none>`|`address`|The parameter checker address (address(0) if none)|
 
 
+### getAdapterTargets
+
+Gets all allowed targets for a specific adapter
+
+
+```solidity
+function getAdapterTargets(address adapter) external view returns (address[] memory targets);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`adapter`|`address`|The adapter address to query targets for|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`targets`|`address[]`|An array of allowed target addresses for the adapter|
+
+
+### getTargetType
+
+Gets the type of an target
+
+
+```solidity
+function getTargetType(address target) external view returns (uint8);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`target`|`address`|The target address to check the type of|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint8`|type An array of allowed target addresses for the adapter|
+
+
 ### selectors
 
 Returns the selectors for functions in this module
 
 
 ```solidity
-function selectors() public pure returns (bytes4[] memory moduleSelectors);
+function selectors() external pure returns (bytes4[] memory moduleSelectors);
 ```
 **Returns**
 
@@ -183,6 +233,8 @@ storage-location: erc7201:kam.storage.AdapterGuardianModule
 struct AdapterGuardianModuleStorage {
     mapping(address => mapping(address => mapping(bytes4 => bool))) adapterAllowedSelectors;
     mapping(address => mapping(address => mapping(bytes4 => address))) adapterParametersChecker;
+    mapping(address => OptimizedAddressEnumerableSetLib.AddressSet) adapterTargets;
+    mapping(address => uint8 targetType) targetType;
 }
 ```
 

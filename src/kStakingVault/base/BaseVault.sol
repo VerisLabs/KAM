@@ -37,7 +37,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
     using SafeTransferLib for address;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
@@ -91,7 +91,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     /// @param asset The asset of the vault
     event Initialized(address registry, string name, string symbol, uint8 decimals, address asset);
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
@@ -118,33 +118,35 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_MASK = 0xFFFFFFFFFFFFFFFF;
     uint256 internal constant LAST_FEES_CHARGED_PERFORMANCE_SHIFT = 107;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
     /// @custom:storage-location erc7201.kam.storage.BaseVault
     struct BaseVaultStorage {
-        // 1
+        //1
         uint256 config; // decimals, performance fee, management fee, initialized, paused,
-        // isHardHurdleRate, lastFeesChargedManagement, lastFeesChargedPerformance
-        // 2
+            // isHardHurdleRate, lastFeesChargedManagement, lastFeesChargedPerformance
+            //2
         uint128 sharePriceWatermark;
         uint128 totalPendingStake;
-        // 3
+        //3
         uint256 currentBatch;
-        // 4
+        //4
         bytes32 currentBatchId;
-        // 5
+        //5
         address registry;
-        // 6
+        //6
         address receiverImplementation;
-        // 7
+        //7
         address underlyingAsset;
-        // 8
+        //8
         address kToken;
-        // 9
+        //9
+        uint128 maxTotalAssets;
+        //10
         string name;
-        // 10
+        //11
         string symbol;
         mapping(bytes32 => BaseVaultTypes.BatchInfo) batches;
         mapping(bytes32 => BaseVaultTypes.StakeRequest) stakeRequests;
@@ -164,7 +166,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           CONFIG GETTERS/SETTERS
     //////////////////////////////////////////////////////////////*/
 
@@ -241,7 +243,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
             | (uint256(value) << LAST_FEES_CHARGED_PERFORMANCE_SHIFT);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -268,7 +270,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
         _setLastFeesChargedPerformance($, uint64(block.timestamp));
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           REGISTRY GETTER
     //////////////////////////////////////////////////////////////*/
 
@@ -281,7 +283,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
         return IkRegistry($.registry);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           GETTERS
     //////////////////////////////////////////////////////////////*/
 
@@ -319,8 +321,8 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
         return _getDecimals($);
     }
 
-    /*//////////////////////////////////////////////////////////////
-                            PAUSE 
+    /* //////////////////////////////////////////////////////////////
+                            PAUSE
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Updates the vault's operational pause state for emergency risk management
@@ -338,7 +340,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
         emit Paused(paused_);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                                 MATH HELPERS
     //////////////////////////////////////////////////////////////*/
     /// @notice Converts stkToken shares to underlying asset value based on current vault performance
@@ -439,7 +441,7 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
         return totalFees;
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             VALIDATORS
     //////////////////////////////////////////////////////////////*/
 

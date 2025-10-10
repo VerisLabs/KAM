@@ -1,5 +1,5 @@
 # kStakingVault
-[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/kStakingVault/kStakingVault.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7810ef786f844ebd78831ee424b7ee896113d92b/src/kStakingVault/kStakingVault.sol)
 
 **Inherits:**
 [IVault](/src/interfaces/IVault.sol/interface.IVault.md), [BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md), [Initializable](/src/vendor/solady/utils/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/solady/utils/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [Ownable](/src/vendor/solady/auth/Ownable.sol/abstract.Ownable.md), [MultiFacetProxy](/src/base/MultiFacetProxy.sol/abstract.MultiFacetProxy.md)
@@ -434,13 +434,12 @@ through share price appreciation until unstaking.*
 
 
 ```solidity
-function claimStakedShares(bytes32 batchId, bytes32 requestId) external payable;
+function claimStakedShares(bytes32 requestId) external payable;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`batchId`|`bytes32`|The settled batch identifier containing this staking request|
 |`requestId`|`bytes32`|The specific staking request identifier to claim rewards for|
 
 
@@ -460,13 +459,12 @@ proportional share of vault yields earned during their staking period.*
 
 
 ```solidity
-function claimUnstakedAssets(bytes32 batchId, bytes32 requestId) external payable;
+function claimUnstakedAssets(bytes32 requestId) external payable;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`batchId`|`bytes32`|The settled batch identifier containing this unstaking request|
 |`requestId`|`bytes32`|The specific unstaking request identifier to claim assets for|
 
 

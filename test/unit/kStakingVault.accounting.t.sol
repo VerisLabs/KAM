@@ -11,14 +11,11 @@ import { IkStakingVault } from "kam/src/interfaces/IkStakingVault.sol";
 
 import { KSTAKINGVAULT_INSUFFICIENT_BALANCE, KSTAKINGVAULT_ZERO_AMOUNT } from "kam/src/errors/Errors.sol";
 
-/// @title kStakingVaultAccountingTest
-/// @notice Tests for core accounting mechanics in kStakingVault
-/// @dev Focuses on share price calculations, asset conversions, and balance tracking
 contract kStakingVaultAccountingTest is BaseVaultTest {
     using OptimizedFixedPointMathLib for uint256;
     using SafeTransferLib for address;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               SETUP
     //////////////////////////////////////////////////////////////*/
 
@@ -31,7 +28,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         BaseVaultTest.setUp();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         INITIAL STATE TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -53,7 +50,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assertEq(vault.netSharePrice(), 1e6);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                       SINGLE DEPOSIT ACCOUNTING TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -121,7 +118,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assertEq(vault.netSharePrice(), expectedSharePrice);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                       MULTIPLE DEPOSIT ACCOUNTING TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -145,8 +142,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         vault.closeBatch(batchId, true);
 
         vm.prank(users.relayer);
-        bytes32 proposalId =
-            assetRouter.proposeSettleBatch(getUSDC(), address(vault), batchId, INITIAL_DEPOSIT + bobDeposit, 0, 0);
+        bytes32 proposalId = assetRouter.proposeSettleBatch(tokens.usdc, address(vault), batchId, INITIAL_DEPOSIT, 0, 0);
         vm.prank(users.relayer);
         assetRouter.executeSettleBatch(proposalId);
 
@@ -241,7 +237,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assertApproxEqAbs(vault.totalSupply(), totalExpectedShares, 30); // 30 wei tolerance
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         ASSET CONVERSION TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -257,7 +253,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assertEq(vault.balanceOf(users.alice), assets);
     }
 
-    function test_ConvertToAssets_ZeroTotalSupply() public {
+    function test_ConvertToAssets_ZeroTotalSupply() public view {
         // With zero total supply, assets per share should be 1:1
         // This is implicitly tested in initial share price
         assertEq(vault.netSharePrice(), 1e6);
@@ -297,7 +293,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assertEq(expectedAssetValue, 1.2e6 * _1_USDC);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         PRECISION AND ROUNDING TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -328,7 +324,7 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
         assertEq(vault.netSharePrice(), 1e6);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         NET ASSETS WITH FEES TESTS
     //////////////////////////////////////////////////////////////*/
 
@@ -358,11 +354,11 @@ contract kStakingVaultAccountingTest is BaseVaultTest {
 
         // Difference should be approximately 1% (management fee)
         uint256 feeAmount = totalAssets - netAssets;
-        uint256 expectedFeeAmount = totalAssets / 100; // 1%
+        uint256 expectedFeeAmount = totalAssets / 100; //1%
         assertApproxEqRel(feeAmount, expectedFeeAmount, 0.1e18); // 10% tolerance
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         EDGE CASE TESTS
     //////////////////////////////////////////////////////////////*/
 

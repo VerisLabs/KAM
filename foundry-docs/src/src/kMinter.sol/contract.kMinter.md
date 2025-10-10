@@ -1,5 +1,5 @@
 # kMinter
-[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/kMinter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7810ef786f844ebd78831ee424b7ee896113d92b/src/kMinter.sol)
 
 **Inherits:**
 [IkMinter](/src/interfaces/IkMinter.sol/interface.IkMinter.md), [Initializable](/src/vendor/solady/utils/Initializable.sol/abstract.Initializable.md), [UUPSUpgradeable](/src/vendor/solady/utils/UUPSUpgradeable.sol/abstract.UUPSUpgradeable.md), [kBase](/src/base/kBase.sol/contract.kBase.md), [Extsload](/src/vendor/uniswap/Extsload.sol/abstract.Extsload.md)
@@ -765,8 +765,6 @@ storage-location: erc7201:kam.storage.kMinter
 struct kMinterStorage {
     uint64 requestCounter;
     address receiverImplementation;
-    mapping(bytes32 => uint256) mintedInBatch;
-    mapping(bytes32 => uint256) burnedInBatch;
     mapping(address => uint256) totalLockedAssets;
     mapping(bytes32 => BurnRequest) burnRequests;
     mapping(address => OptimizedBytes32EnumerableSetLib.Bytes32Set) userRequests;

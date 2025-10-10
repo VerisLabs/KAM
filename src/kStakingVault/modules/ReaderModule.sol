@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 
 import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedDateTimeLib } from "solady/utils/OptimizedDateTimeLib.sol";
 import { OptimizedFixedPointMathLib } from "solady/utils/OptimizedFixedPointMathLib.sol";
 import { Extsload } from "uniswap/Extsload.sol";
 
@@ -22,11 +23,6 @@ import { BaseVault } from "kam/src/kStakingVault/base/BaseVault.sol";
 contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     using OptimizedFixedPointMathLib for uint256;
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
-
-    /// @notice Interval for management fee (1 month)
-    uint256 constant MANAGEMENT_FEE_INTERVAL = 657_436;
-    /// @notice Interval for performance fee (3 months)
-    uint256 constant PERFORMANCE_FEE_INTERVAL = 7_889_238;
 
     /// @notice Maximum basis points
     uint256 constant MAX_BPS = 10_000;
@@ -147,12 +143,59 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
 
     /// @inheritdoc IVaultReader
     function nextPerformanceFeeTimestamp() external view returns (uint256) {
-        return lastFeesChargedPerformance() + PERFORMANCE_FEE_INTERVAL;
+        uint256 lastCharged = _getLastFeesChargedPerformance(_getBaseVaultStorage());
+
+        // Get the date components from the last charged timestamp
+        (uint256 year, uint256 month, uint256 day) = OptimizedDateTimeLib.timestampToDate(lastCharged);
+
+        // Get the last day of the month
+        uint256 lastDay = OptimizedDateTimeLib.daysInMonth(year, month);
+
+        // Add 3 months
+        uint256 targetMonth = day != lastDay ? month + 2 : month + 3;
+        uint256 targetYear = year;
+
+        // Handle year overflow
+        if (targetMonth > 12) {
+            targetYear += (targetMonth - 1) / 12;
+            targetMonth = ((targetMonth - 1) % 12) + 1;
+        }
+
+        // Get the last day of the target month
+        lastDay = OptimizedDateTimeLib.daysInMonth(targetYear, targetMonth);
+
+        // Return timestamp for end of day (23:59:59) on the last day of the month
+        return OptimizedDateTimeLib.dateTimeToTimestamp(targetYear, targetMonth, lastDay, 23, 59, 59);
     }
 
     /// @inheritdoc IVaultReader
     function nextManagementFeeTimestamp() external view returns (uint256) {
-        return lastFeesChargedManagement() + MANAGEMENT_FEE_INTERVAL;
+        uint256 lastCharged = _getLastFeesChargedManagement(_getBaseVaultStorage());
+
+        // Get the date components from the last charged timestamp
+        (uint256 year, uint256 month, uint256 day) = OptimizedDateTimeLib.timestampToDate(lastCharged);
+
+        // Get the last day of the month
+        uint256 lastDay = OptimizedDateTimeLib.daysInMonth(year, month);
+
+        // If its the same month return the last day of the current month
+        if (day != lastDay) return OptimizedDateTimeLib.dateTimeToTimestamp(year, month, lastDay, 23, 59, 59);
+
+        // Add 1 month
+        uint256 targetMonth = month + 1;
+        uint256 targetYear = year;
+
+        // Handle year overflow
+        if (targetMonth > 12) {
+            targetYear += 1;
+            targetMonth = 1;
+        }
+
+        // Get the last day of the target month
+        lastDay = OptimizedDateTimeLib.daysInMonth(targetYear, targetMonth);
+
+        // Return timestamp for end of day (23:59:59) on the last day of the month
+        return OptimizedDateTimeLib.dateTimeToTimestamp(targetYear, targetMonth, lastDay, 23, 59, 59);
     }
 
     /// @inheritdoc IVaultReader
@@ -194,7 +237,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     function getBatchIdInfo(bytes32 batchId)
         external
         view
-        returns (address batchReceiver, bool isClosed, bool isSettled, uint256 sharePrice, uint256 netSharePrice)
+        returns (address batchReceiver, bool isClosed_, bool isSettled, uint256 sharePrice_, uint256 netSharePrice_)
     {
         return (
             _getBaseVaultStorage().batches[batchId].batchReceiver,
@@ -203,6 +246,12 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
             _getBaseVaultStorage().batches[batchId].sharePrice,
             _getBaseVaultStorage().batches[batchId].netSharePrice
         );
+    }
+
+    /// @inheritdoc IVaultReader
+    function isClosed(bytes32 batchId_) external view returns (bool isClosed_) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        isClosed_ = $.batches[batchId_].isClosed;
     }
 
     /// @inheritdoc IVaultReader
@@ -276,23 +325,19 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         return _getBaseVaultStorage().totalPendingStake;
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 
     /// REQUEST GETTERS
 
-    /// @notice Gets all request IDs associated with a user
-    /// @param user The address to query requests for
-    /// @return requestIds An array of all request IDs (both stake and unstake) for the user
+    /// @inheritdoc IVaultReader
     function getUserRequests(address user) external view returns (bytes32[] memory requestIds) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return $.userRequests[user].values();
     }
 
-    /// @notice Gets the details of a specific stake request
-    /// @param requestId The unique identifier of the stake request
-    /// @return stakeRequest The stake request struct containing all request details
+    /// @inheritdoc IVaultReader
     function getStakeRequest(bytes32 requestId)
         external
         view
@@ -302,9 +347,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         return $.stakeRequests[requestId];
     }
 
-    /// @notice Gets the details of a specific unstake request
-    /// @param requestId The unique identifier of the unstake request
-    /// @return unstakeRequest The unstake request struct containing all request details
+    /// @inheritdoc IVaultReader
     function getUnstakeRequest(bytes32 requestId)
         external
         view
@@ -326,7 +369,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
 
     /// @inheritdoc IModule
     function selectors() external pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](35);
+        bytes4[] memory moduleSelectors = new bytes4[](36);
         moduleSelectors[0] = this.registry.selector;
         moduleSelectors[1] = this.asset.selector;
         moduleSelectors[2] = this.underlyingAsset.selector;
@@ -362,6 +405,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         moduleSelectors[32] = this.convertToSharesWithTotals.selector;
         moduleSelectors[33] = this.convertToAssetsWithTotals.selector;
         moduleSelectors[34] = this.isHardHurdleRate.selector;
+        moduleSelectors[35] = this.isClosed.selector;
         return moduleSelectors;
     }
 }

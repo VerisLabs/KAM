@@ -13,7 +13,7 @@ import {
 /// @title kBaseRoles
 /// @notice Foundation contract providing essential shared functionality and registry integration for all KAM protocol
 contract kBaseRoles is OptimizedOwnableRoles {
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               ROLES
     //////////////////////////////////////////////////////////////*/
 
@@ -38,7 +38,7 @@ contract kBaseRoles is OptimizedOwnableRoles {
     /// @notice Vendor role for Manager vaults
     uint256 internal constant MANAGER_ROLE = _ROLE_6;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
@@ -49,7 +49,7 @@ contract kBaseRoles is OptimizedOwnableRoles {
     /// @param paused_ The new pause state (true = operations halted, false = normal operation)
     event Paused(bool paused_);
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         STORAGE LAYOUT
     //////////////////////////////////////////////////////////////*/
 
@@ -66,13 +66,13 @@ contract kBaseRoles is OptimizedOwnableRoles {
     }
 
     // keccak256(abi.encode(uint256(keccak256("kam.storage.kBaseRoles")) - 1)) & ~bytes32(uint256(0xff))
-    /// This specific slot is chosen to avoid any possible collision with standard storage layouts while maintaining
-    /// deterministic addressing. The calculation ensures the storage location is unique to this namespace and won't
-    /// conflict with other inherited contracts or future upgrades. The 0xff mask ensures proper alignment.
+    // / This specific slot is chosen to avoid any possible collision with standard storage layouts while maintaining
+    // / deterministic addressing. The calculation ensures the storage location is unique to this namespace and won't
+    // / conflict with other inherited contracts or future upgrades. The 0xff mask ensures proper alignment.
     bytes32 private constant KROLESBASE_STORAGE_LOCATION =
         0x841668355433cc9fb8fc1984bd90b939822ef590acd27927baab4c6b4fb12900;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               STORAGE GETTER
     //////////////////////////////////////////////////////////////*/
 
@@ -87,7 +87,7 @@ contract kBaseRoles is OptimizedOwnableRoles {
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -116,7 +116,7 @@ contract kBaseRoles is OptimizedOwnableRoles {
         _grantRoles(relayer_, MANAGER_ROLE);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                                 MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
@@ -137,7 +137,7 @@ contract kBaseRoles is OptimizedOwnableRoles {
         emit Paused(paused_);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                                 ROLES
     //////////////////////////////////////////////////////////////*/
 

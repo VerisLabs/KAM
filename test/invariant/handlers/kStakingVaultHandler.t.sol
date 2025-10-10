@@ -34,7 +34,8 @@ contract kStakingVaultHandler is BaseHandler {
     uint256 kStakingVault_lastFeesChargedPerformance;
     mapping(address actor => Bytes32Set pendingRequestIds) kStakingVault_actorStakeRequests;
     mapping(address actor => Bytes32Set pendingRequestIds) kStakingVault_actorUnstakeRequests;
-    mapping(bytes32 batchId => int256 netted) kStakingVault_nettedInBatch;
+    mapping(bytes32 batchId => uint256) kStakingVault_depositedInBatch;
+    mapping(bytes32 batchId => uint256) kStakingVault_requestedInBatch;
     mapping(bytes32 batchId => int256 yieldInBatch) kStakingVault_totalYieldInBatch;
     mapping(bytes32 batchId => uint256 chargedManagement) kStakingVault_chargedManagementInBatch;
     mapping(bytes32 batchId => uint256 chargedPerformance) kStakingVault_chargedPerformanceInBatch;
@@ -43,9 +44,9 @@ contract kStakingVaultHandler is BaseHandler {
     Bytes32Set kStakingVault_pendingUnsettledBatches;
     Bytes32Set kStakingVault_pendingSettlementProposals;
 
-    ////////////////////////////////////////////////////////////////
-    ///                      GHOST VARS                          ///
-    ////////////////////////////////////////////////////////////////
+    // //////////////////////////////////////////////////////////////
+    // / GHOST VARS ///
+    // //////////////////////////////////////////////////////////////
 
     uint256 kStakingVault_expectedTotalAssets;
     uint256 kStakingVault_actualTotalAssets;
@@ -89,9 +90,9 @@ contract kStakingVaultHandler is BaseHandler {
         kStakingVault_lastFeesChargedPerformance = 1;
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                      HELPERS                             ///
-    ////////////////////////////////////////////////////////////////
+    // //////////////////////////////////////////////////////////////
+    // / HELPERS ///
+    // //////////////////////////////////////////////////////////////
 
     function getEntryPoints() public pure override returns (bytes4[] memory) {
         bytes4[] memory _entryPoints = new bytes4[](9);
@@ -102,7 +103,7 @@ contract kStakingVaultHandler is BaseHandler {
         _entryPoints[4] = this.kStakingVault_proposeSettlement.selector;
         _entryPoints[5] = this.kStakingVault_executeSettlement.selector;
         _entryPoints[6] = this.kStakingVault_gain.selector;
-        //_entryPoints[7] = this.kStakingVault_lose.selector;
+        // _entryPoints[7] = this.kStakingVault_lose.selector;
         _entryPoints[7] = this.kStakingVault_advanceTime.selector;
         _entryPoints[8] = this.kStakingVault_chargeFees.selector;
         return _entryPoints;
@@ -119,7 +120,7 @@ contract kStakingVaultHandler is BaseHandler {
         if (kStakingVault_minterAdapter.totalAssets() < amount) vm.expectRevert();
         bytes32 requestId = kStakingVault_vault.requestStake(currentActor, amount);
         kStakingVault_actorStakeRequests[currentActor].add(requestId);
-        kStakingVault_nettedInBatch[kStakingVault_vault.getBatchId()] += int256(amount);
+        kStakingVault_depositedInBatch[kStakingVault_vault.getBatchId()] += amount;
         kStakingVault_pendingStakeInBatch[kStakingVault_vault.getBatchId()] += amount;
 
         vm.stopPrank();
@@ -228,7 +229,7 @@ contract kStakingVaultHandler is BaseHandler {
             vm.stopPrank();
             return;
         }
-        kStakingVault_nettedInBatch[kStakingVault_vault.getBatchId()] += int256(amount);
+        kStakingVault_requestedInBatch[kStakingVault_vault.getBatchId()] -= amount;
         bytes32 requestId = kStakingVault_vault.requestUnstake(currentActor, amount);
         kStakingVault_actorUnstakeRequests[currentActor].add(requestId);
 
@@ -277,18 +278,32 @@ contract kStakingVaultHandler is BaseHandler {
 
     function kStakingVault_proposeSettlement() public {
         bytes32 batchId = kStakingVault_vault.getBatchId();
-        int256 netted = kStakingVault_nettedInBatch[batchId];
+        uint256 deposited = kStakingVault_depositedInBatch[batchId];
+        uint256 requested = kStakingVault_requestedInBatch[batchId];
         uint256 chargedManagement = kStakingVault_chargedManagementInBatch[batchId];
         uint256 chargedPerformance = kStakingVault_chargedPerformanceInBatch[batchId];
+        int256 yieldAmount =
+            kStakingVault_totalYieldInBatch[batchId] - int256(chargedPerformance) - int256(chargedManagement);
+        uint256 newTotalAssets = uint256(int256(kStakingVault_expectedAdapterTotalAssets) + yieldAmount);
+
+        // Convert requested shares to assets
+        requested = VaultMathLib.convertToAssetsWithAssetsAndSupply(
+            requested, newTotalAssets, kStakingVault_vault.totalSupply()
+        );
+        int256 netted = int256(deposited) - int256(requested);
+
         if (netted < 0 && netted.abs() > kStakingVault_expectedAdapterTotalAssets) {
             revert("ACCOUNTING BROKEN : netted abs > expectedAdapterBalance");
         }
-        // total yield in batch cannot underflow total assets
-        if (kStakingVault_totalYieldInBatch[batchId] < -(int256(kStakingVault_expectedAdapterTotalAssets) + netted)) {
-            kStakingVault_totalYieldInBatch[batchId] = -(int256(kStakingVault_expectedAdapterTotalAssets) + netted);
-        }
-        int256 yieldAmount =
-            kStakingVault_totalYieldInBatch[batchId] - int256(chargedPerformance) - int256(chargedManagement);
+
+        uint256 newTotalAssetsAdjusted = uint256(int256(newTotalAssets) + netted);
+
+        // // total yield in batch cannot underflow total assets
+        // if (kStakingVault_totalYieldInBatch[batchId] < -(int256(kStakingVault_expectedAdapterTotalAssets) + netted))
+        // {
+        //     kStakingVault_totalYieldInBatch[batchId] = -(int256(kStakingVault_expectedAdapterTotalAssets) + netted);
+        // }
+
         uint256 lastFeesChargedPerformance_ = kStakingVault_vault.lastFeesChargedPerformance();
         uint256 lastFeesChargedManagement_ = kStakingVault_vault.lastFeesChargedManagement();
 
@@ -310,7 +325,6 @@ contract kStakingVaultHandler is BaseHandler {
             return;
         }
 
-        uint256 newTotalAssets = uint256(int256(kStakingVault_expectedAdapterTotalAssets) + netted + yieldAmount);
         if (batchId == bytes32(0)) {
             vm.stopPrank();
             return;
@@ -401,7 +415,7 @@ contract kStakingVaultHandler is BaseHandler {
         assertEq(proposal.batchId, batchId, "Proposal batchId mismatch");
         assertEq(proposal.asset, kStakingVault_token, "Proposal asset mismatch");
         assertEq(proposal.vault, address(kStakingVault_vault), "Proposal vault mismatch");
-        assertEq(proposal.totalAssets, newTotalAssets, "Proposal totalAssets mismatch");
+        assertEq(proposal.totalAssets, newTotalAssetsAdjusted, "Proposal totalAssets mismatch");
         assertEq(proposal.netted, netted, "Proposal netted mismatch");
         assertEq(proposal.yield, yieldAmount, "Proposal yield mismatch");
         assertEq(
@@ -485,9 +499,10 @@ contract kStakingVaultHandler is BaseHandler {
             kStakingVault_minterHandler.set_kMinter_actualAdapterTotalAssets(newActualAdapterTotalAssets);
         }
     }
-    ////////////////////////////////////////////////////////////////
-    ///                      SETTER FUNCTIONS                    ///
-    ////////////////////////////////////////////////////////////////
+
+    // //////////////////////////////////////////////////////////////
+    // / SETTER FUNCTIONS ///
+    // //////////////////////////////////////////////////////////////
 
     // Contract reference setters
     function set_kStakingVault_vault(address _vault) public {
@@ -529,8 +544,12 @@ contract kStakingVaultHandler is BaseHandler {
     }
 
     // Mapping setters
-    function set_kStakingVault_nettedInBatch(bytes32 _batchId, int256 _value) public {
-        kStakingVault_nettedInBatch[_batchId] = _value;
+    function set_kStakingVault_depositedInBatch(bytes32 _batchId, uint256 _value) public {
+        kStakingVault_depositedInBatch[_batchId] = _value;
+    }
+
+    function set_kStakingVault_requestedInBatch(bytes32 _batchId, uint256 _value) public {
+        kStakingVault_requestedInBatch[_batchId] = _value;
     }
 
     function set_kStakingVault_totalYieldInBatch(bytes32 _batchId, int256 _value) public {
@@ -639,10 +658,10 @@ contract kStakingVaultHandler is BaseHandler {
         kStakingVault_actorUnstakeRequests[_actor].add(_requestId);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                      INVARIANTS                          ///
-    ////////////////////////////////////////////////////////////////
-    function INVARIANT_A_TOTAL_ASSETS() public {
+    // //////////////////////////////////////////////////////////////
+    // / INVARIANTS ///
+    // //////////////////////////////////////////////////////////////
+    function INVARIANT_A_TOTAL_ASSETS() public view {
         assertEq(
             kStakingVault_vault.totalAssets(),
             kStakingVault_expectedTotalAssets,
@@ -650,7 +669,7 @@ contract kStakingVaultHandler is BaseHandler {
         );
     }
 
-    function INVARIANT_B_ADAPTER_BALANCE() public {
+    function INVARIANT_B_ADAPTER_BALANCE() public view {
         assertEq(
             kStakingVault_expectedAdapterBalance,
             kStakingVault_actualAdapterBalance,
@@ -658,7 +677,7 @@ contract kStakingVaultHandler is BaseHandler {
         );
     }
 
-    function INVARIANT_C_ADAPTER_TOTAL_ASSETS() public {
+    function INVARIANT_C_ADAPTER_TOTAL_ASSETS() public view {
         assertEq(
             kStakingVault_expectedAdapterTotalAssets,
             kStakingVault_actualAdapterTotalAssets,
@@ -666,13 +685,13 @@ contract kStakingVaultHandler is BaseHandler {
         );
     }
 
-    function INVARIANT_D_SHARE_PRICE() public {
+    function INVARIANT_D_SHARE_PRICE() public view {
         assertEq(
             kStakingVault_expectedSharePrice, kStakingVault_actualSharePrice, "KSTAKING_VAULT: INVARIANT_C_SHARE_PRICE"
         );
     }
 
-    function INVARIANT_E_TOTAL_NET_ASSETS() public {
+    function INVARIANT_E_TOTAL_NET_ASSETS() public view {
         assertApproxEqRel(
             kStakingVault_expectedNetTotalAssets,
             kStakingVault_actualNetTotalAssets,
@@ -681,7 +700,7 @@ contract kStakingVaultHandler is BaseHandler {
         );
     }
 
-    function INVARIANT_F_SUPPLY() public {
+    function INVARIANT_F_SUPPLY() public view {
         assertEq(kStakingVault_expectedSupply, kStakingVault_actualSupply, "KSTAKING_VAULT: INVARIANT_F_SUPPLY");
     }
 }
