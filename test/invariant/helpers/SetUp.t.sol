@@ -135,6 +135,7 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
         address[] memory minters = _getMinterActors();
         uint256 amount = 10_000_000 * 10 ** 6;
         uint256 totalAmount = amount * minters.length;
+        uint256 lastTotalAssets = assetRouter.virtualBalance(address(minter), tokens.usdc);
         address token = tokens.usdc;
         for (uint256 i = 0; i < minters.length; i++) {
             vm.startPrank(minters[i]);
@@ -150,7 +151,7 @@ abstract contract SetUp is StdInvariant, DeploymentBaseTest {
 
         minter.closeBatch(batchId, true);
 
-        bytes32 proposalId = assetRouter.proposeSettleBatch(token, address(minter), batchId, totalAmount, 0, 0);
+        bytes32 proposalId = assetRouter.proposeSettleBatch(token, address(minter), batchId, lastTotalAssets, 0, 0);
         assetRouter.executeSettleBatch(proposalId);
         vm.stopPrank();
         if (useMinter) {
