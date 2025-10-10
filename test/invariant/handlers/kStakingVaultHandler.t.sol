@@ -287,7 +287,9 @@ contract kStakingVaultHandler is BaseHandler {
         uint256 newTotalAssets = uint256(int256(kStakingVault_expectedAdapterTotalAssets) + yieldAmount);
 
         // Convert requested shares to assets
-        requested = VaultMathLib.convertToAssetsWithAssetsAndSupply(requested,newTotalAssets, kStakingVault_vault.totalSupply());
+        requested = VaultMathLib.convertToAssetsWithAssetsAndSupply(
+            requested, newTotalAssets, kStakingVault_vault.totalSupply()
+        );
         int256 netted = int256(deposited) - int256(requested);
 
         if (netted < 0 && netted.abs() > kStakingVault_expectedAdapterTotalAssets) {
