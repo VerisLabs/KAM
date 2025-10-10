@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { PARAMETERCHECKER_NOT_ALLOWED } from "kam/src/errors/Errors.sol";
-import { IRegistry } from "kam/src/interfaces/IRegistry.sol";
+import {
+    PARAMETERCHECKER_AMOUNT_EXCEEDS_MAX_SINGLE_TRANSFER,
+    PARAMETERCHECKER_NOT_ALLOWED,
+    PARAMETERCHECKER_RECEIVER_NOT_ALLOWED,
+    PARAMETERCHECKER_SELECTOR_NOT_ALLOWED,
+    PARAMETERCHECKER_SOURCE_NOT_ALLOWED,
+    PARAMETERCHECKER_SPENDER_NOT_ALLOWED
+} from "kam/src/errors/Errors.sol";
+import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 import { IParametersChecker } from "kam/src/interfaces/modules/IAdapterGuardian.sol";
 import { ERC20 } from "solady/tokens/ERC20.sol";
 
@@ -11,7 +18,7 @@ import { ERC20 } from "solady/tokens/ERC20.sol";
 /// @dev Implements IParametersChecker to authorize adapter calls for ERC20 tokens
 contract ERC20ParameterChecker is IParametersChecker {
     /// @notice The registry contract reference
-    IRegistry public immutable registry;
+    IkRegistry public immutable registry;
 
     /// @notice Mapping of allowed receivers for each token
     mapping(address token => mapping(address receiver => bool)) private _allowedReceivers;
@@ -24,6 +31,8 @@ contract ERC20ParameterChecker is IParametersChecker {
 
     /// @notice Maximum amount allowed for a single transfer per token
     mapping(address token => uint256 maxSingleTransfer) private _maxSingleTransfer;
+
+    mapping(address token => mapping(uint256 => uint256)) private _amountTransferedPerBlock;
 
     /// @notice Emitted when a receiver's allowance status is updated
     /// @param token The token address
@@ -51,7 +60,7 @@ contract ERC20ParameterChecker is IParametersChecker {
     /// @notice Constructs the ERC20ParameterChecker
     /// @param _registry The address of the registry contract
     constructor(address _registry) {
-        registry = IRegistry(_registry);
+        registry = IkRegistry(_registry);
     }
 
     /// @notice Sets whether a receiver is allowed for a specific token
@@ -98,36 +107,23 @@ contract ERC20ParameterChecker is IParametersChecker {
     /// @param token The token address
     /// @param selector The function selector
     /// @param params The encoded function parameters
-    /// @return Whether the call is authorized
-    function authorizeAdapterCall(
-        address adapter,
-        address token,
-        bytes4 selector,
-        bytes calldata params
-    )
-        external
-        view
-        returns (bool)
-    {
-        if (!registry.isAsset(token)) return false;
-
+    function authorizeAdapterCall(address adapter, address token, bytes4 selector, bytes calldata params) external {
         if (selector == ERC20.transfer.selector) {
             (address to, uint256 amount) = abi.decode(params, (address, uint256));
-            if (amount > maxSingleTransfer(token)) return false;
-            if (!isAllowedReceiver(token, to)) return false;
-            return true;
+            uint256 blockAmount = _amountTransferedPerBlock[token][block.number] += amount;
+            require(blockAmount <= maxSingleTransfer(token), PARAMETERCHECKER_AMOUNT_EXCEEDS_MAX_SINGLE_TRANSFER);
+            require(isAllowedReceiver(token, to), PARAMETERCHECKER_RECEIVER_NOT_ALLOWED);
         } else if (selector == ERC20.transferFrom.selector) {
             (address from, address to, uint256 amount) = abi.decode(params, (address, address, uint256));
-            if (amount > maxSingleTransfer(token)) return false;
-            if (!isAllowedReceiver(token, to)) return false;
-            if (!isAllowedSource(token, from)) return false;
-            return true;
+            uint256 blockAmount = _amountTransferedPerBlock[token][block.number] += amount;
+            require(blockAmount <= maxSingleTransfer(token), PARAMETERCHECKER_AMOUNT_EXCEEDS_MAX_SINGLE_TRANSFER);
+            require(isAllowedReceiver(token, to), PARAMETERCHECKER_RECEIVER_NOT_ALLOWED);
+            require(isAllowedSource(token, from), PARAMETERCHECKER_SOURCE_NOT_ALLOWED);
         } else if (selector == ERC20.approve.selector) {
             (address spender,) = abi.decode(params, (address, uint256));
-            if (!isAllowedSpender(token, spender)) return false;
-            return true;
+            require(isAllowedSpender(token, spender), PARAMETERCHECKER_SPENDER_NOT_ALLOWED);
         } else {
-            return false;
+            revert(PARAMETERCHECKER_SELECTOR_NOT_ALLOWED);
         }
     }
 
