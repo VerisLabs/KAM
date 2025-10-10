@@ -237,7 +237,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
     function getBatchIdInfo(bytes32 batchId)
         external
         view
-        returns (address batchReceiver, bool isClosed, bool isSettled, uint256 sharePrice, uint256 netSharePrice)
+        returns (address batchReceiver, bool isClosed_, bool isSettled, uint256 sharePrice_, uint256 netSharePrice_)
     {
         return (
             _getBaseVaultStorage().batches[batchId].batchReceiver,
@@ -246,6 +246,12 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
             _getBaseVaultStorage().batches[batchId].sharePrice,
             _getBaseVaultStorage().batches[batchId].netSharePrice
         );
+    }
+
+    /// @inheritdoc IVaultReader
+    function isClosed(bytes32 batchId_) external view returns (bool isClosed_) {
+        BaseVaultStorage storage $ = _getBaseVaultStorage();
+        isClosed_ = $.batches[batchId_].isClosed;
     }
 
     /// @inheritdoc IVaultReader
@@ -369,7 +375,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
 
     /// @inheritdoc IModule
     function selectors() external pure returns (bytes4[] memory) {
-        bytes4[] memory moduleSelectors = new bytes4[](35);
+        bytes4[] memory moduleSelectors = new bytes4[](36);
         moduleSelectors[0] = this.registry.selector;
         moduleSelectors[1] = this.asset.selector;
         moduleSelectors[2] = this.underlyingAsset.selector;
@@ -405,6 +411,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         moduleSelectors[32] = this.convertToSharesWithTotals.selector;
         moduleSelectors[33] = this.convertToAssetsWithTotals.selector;
         moduleSelectors[34] = this.isHardHurdleRate.selector;
+        moduleSelectors[35] = this.isClosed.selector;
         return moduleSelectors;
     }
 }

@@ -37,6 +37,7 @@ string constant KASSETROUTER_ZERO_ADDRESS = "A17";
 string constant KASSETROUTER_ZERO_AMOUNT = "A18";
 string constant KASSETROUTER_INVALID_MAX_DELTA = "A19";
 string constant KASSETROUTER_ONLY_ONE_PROPOSAL_AT_THE_TIME = "A20";
+string constant KASSETROUTER_NOT_BATCH_CLOSED = "A21";
 
 // Base Adapter Errors
 string constant ADAPTER_ALREADY_INITIALIZED = "BA1";

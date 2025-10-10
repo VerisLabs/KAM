@@ -26,7 +26,8 @@ import {
     KASSETROUTER_PROPOSAL_NOT_FOUND,
     KASSETROUTER_WRONG_ROLE,
     KASSETROUTER_ZERO_ADDRESS,
-    KASSETROUTER_ZERO_AMOUNT
+    KASSETROUTER_ZERO_AMOUNT,
+    KASSETROUTER_NOT_BATCH_CLOSED
 } from "kam/src/errors/Errors.sol";
 import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 
@@ -278,6 +279,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
         require($.batchIds.add(batchId), KASSETROUTER_BATCH_ID_PROPOSED);
+        require(IkMinter(vault).isClosed(batchId), KASSETROUTER_NOT_BATCH_CLOSED);
 
         int256 netted;
         int256 yield;

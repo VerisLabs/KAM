@@ -213,7 +213,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
                     CLAIM UNSTAKED ASSETS TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function test_ClaimUnstakedAssets_Success_tests() public {
+    function test_ClaimUnstakedAssets_Success() public {
         uint256 aliceDeposit = 1000 * _1_USDC;
 
         // Setup: First stake to get stkTokens
