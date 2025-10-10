@@ -577,17 +577,13 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         return $.vaultSettlementCooldown;
     }
 
-    /// @notice Gets the current yield tolerance threshold for settlement proposals
-    /// @dev The yield tolerance determines the maximum acceptable yield deviation before settlement proposals
-    /// are automatically rejected. This acts as a safety mechanism to prevent processing of settlement proposals
-    /// with excessive yield values that could indicate calculation errors or potential manipulation. The tolerance
-    /// is expressed in basis points where 10000 equals 100%.
-    /// @return tolerance The current yield tolerance in basis points
-    function getYieldTolerance() external view returns (uint256) {
+    /// @inheritdoc IkAssetRouter
+    function getMaxAllowedDelta() external view returns (uint256) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         return $.maxAllowedDelta;
     }
 
+    /// @inheritdoc IkAssetRouter
     function virtualBalance(address vault, address asset) external view returns (uint256) {
         return _virtualBalance(vault, asset);
     }

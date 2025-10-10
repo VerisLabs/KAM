@@ -331,17 +331,13 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
 
     /// REQUEST GETTERS
 
-    /// @notice Gets all request IDs associated with a user
-    /// @param user The address to query requests for
-    /// @return requestIds An array of all request IDs (both stake and unstake) for the user
+    /// @inheritdoc IVaultReader
     function getUserRequests(address user) external view returns (bytes32[] memory requestIds) {
         BaseVaultStorage storage $ = _getBaseVaultStorage();
         return $.userRequests[user].values();
     }
 
-    /// @notice Gets the details of a specific stake request
-    /// @param requestId The unique identifier of the stake request
-    /// @return stakeRequest The stake request struct containing all request details
+    /// @inheritdoc IVaultReader
     function getStakeRequest(bytes32 requestId)
         external
         view
@@ -351,9 +347,7 @@ contract ReaderModule is BaseVault, Extsload, IVaultReader, IModule {
         return $.stakeRequests[requestId];
     }
 
-    /// @notice Gets the details of a specific unstake request
-    /// @param requestId The unique identifier of the unstake request
-    /// @return unstakeRequest The unstake request struct containing all request details
+    /// @inheritdoc IVaultReader
     function getUnstakeRequest(bytes32 requestId)
         external
         view

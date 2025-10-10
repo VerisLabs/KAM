@@ -32,6 +32,7 @@ contract ERC20ParameterChecker is IParametersChecker {
     /// @notice Maximum amount allowed for a single transfer per token
     mapping(address token => uint256 maxSingleTransfer) private _maxSingleTransfer;
 
+    /// @notice Mapping of amount transferred per block for each token
     mapping(address token => mapping(uint256 => uint256)) private _amountTransferedPerBlock;
 
     /// @notice Emitted when a receiver's allowance status is updated

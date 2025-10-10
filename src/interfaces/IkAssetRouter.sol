@@ -464,7 +464,7 @@ interface IkAssetRouter is IVersioned {
     /// with excessive yield values that could indicate calculation errors or potential manipulation. The tolerance
     /// is expressed in basis points where 10000 equals 100%.
     /// @return tolerance The current yield tolerance in basis points
-    function getYieldTolerance() external view returns (uint256 tolerance);
+    function getMaxAllowedDelta() external view returns (uint256 tolerance);
 
     /// @notice Retrieves the virtual balance of assets for a vault across all its adapters
     /// @dev This function aggregates asset balances across all adapters connected to a vault to determine

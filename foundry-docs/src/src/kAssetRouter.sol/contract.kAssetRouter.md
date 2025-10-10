@@ -480,7 +480,7 @@ function getSettlementCooldown() external view returns (uint256);
 |`<none>`|`uint256`|cooldown The current cooldown period in seconds|
 
 
-### getYieldTolerance
+### getMaxAllowedDelta
 
 Gets the current yield tolerance threshold for settlement proposals
 
@@ -491,7 +491,7 @@ is expressed in basis points where 10000 equals 100%.*
 
 
 ```solidity
-function getYieldTolerance() external view returns (uint256);
+function getMaxAllowedDelta() external view returns (uint256);
 ```
 **Returns**
 
