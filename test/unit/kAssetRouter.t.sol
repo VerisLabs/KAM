@@ -697,7 +697,7 @@ contract kAssetRouterTest is DeploymentBaseTest {
 
         // Wait for cooldown
         vm.warp(block.timestamp + 2);
-        
+
         // Solthodox
         vm.prank(users.alice);
         assetRouter.executeSettleBatch(proposalId);
