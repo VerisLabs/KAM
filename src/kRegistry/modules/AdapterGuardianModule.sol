@@ -128,7 +128,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IAdapterGuardian
-    function authorizeAdapterCall(address target, bytes4 selector, bytes calldata params) external view {
+    function authorizeAdapterCall(address target, bytes4 selector, bytes calldata params) external {
         AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
 
         address adapter = msg.sender;
@@ -137,10 +137,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         address checker = $.adapterParametersChecker[adapter][target][selector];
         if (checker == address(0)) return;
 
-        require(
-            IParametersChecker(checker).authorizeAdapterCall(adapter, target, selector, params),
-            GUARDIANMODULE_UNAUTHORIZED
-        );
+        IParametersChecker(checker).authorizeAdapterCall(adapter, target, selector, params);
     }
 
     /// @inheritdoc IAdapterGuardian

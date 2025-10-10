@@ -8,9 +8,7 @@ interface IParametersChecker {
         bytes4 selector,
         bytes calldata params
     )
-        external
-        view
-        returns (bool);
+        external;
 }
 
 /// @title IAdapterGuardian
@@ -71,7 +69,7 @@ interface IAdapterGuardian {
     /// @param target The target contract address
     /// @param selector The function selector
     /// @param params The function parameters
-    function authorizeAdapterCall(address target, bytes4 selector, bytes calldata params) external view;
+    function authorizeAdapterCall(address target, bytes4 selector, bytes calldata params) external;
 
     /// @notice Check if a selector is allowed for an adapter
     /// @param adapter The adapter address
