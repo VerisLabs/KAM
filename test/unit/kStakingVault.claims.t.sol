@@ -292,7 +292,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         vault.closeBatch(stakeBatchId, true);
 
         uint256 lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(address(vault), stakeBatchId, lastTotalAssets + aliceDeposit);
+        _executeBatchSettlement(address(vault), stakeBatchId, lastTotalAssets);
 
         uint256 sharePrice = vault.sharePrice();
         uint256 netSharePrice = vault.netSharePrice();
@@ -504,7 +504,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // 3. Settle unstaking batch
         uint256 lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(address(vault), unstakeBatchId, lastTotalAssets - stkBalance);
+        _executeBatchSettlement(address(vault), unstakeBatchId, lastTotalAssets);
 
         // Share prices should stay the same
         assertEq(vault.sharePrice(), sharePrice);
@@ -559,7 +559,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Settle batch 1
         uint256 lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(address(vault), batch1Id, lastTotalAssets + 1000 * _1_USDC);
+        _executeBatchSettlement(address(vault), batch1Id, lastTotalAssets);
 
         // Alice can claim from batch 1
         vm.prank(users.alice);
@@ -573,7 +573,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
 
         // Settle batch 2
         lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(address(vault), batch2Id, lastTotalAssets + 500 * _1_USDC);
+        _executeBatchSettlement(address(vault), batch2Id, lastTotalAssets);
 
         // Now Bob can claim
         vm.prank(users.bob);

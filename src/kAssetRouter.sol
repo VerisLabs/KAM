@@ -299,7 +299,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         require(!$.executedProposalIds.contains(proposalId), KASSETROUTER_PROPOSAL_EXECUTED);
         require($.vaultPendingProposalIds[vault].add(proposalId), KASSETROUTER_PROPOSAL_EXISTS);
 
-
         if (_isKMinter(vault)) {
             netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited))
                 - int256(uint256($.vaultBatchBalances[vault][batchId].requested));
@@ -311,11 +310,11 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited)) - int256(uint256(requestedAssets));
         }
 
+        yield = int256(totalAssets_) - int256(lastTotalAssets);
+
         // To calculate the strategy yield we need to include the deposits and requests into the new total assets
         // First to match last total assets
         uint256 totalAssetsAdjusted = uint256(int256(totalAssets_) + netted);
-
-        yield = int256(totalAssetsAdjusted) - int256(lastTotalAssets);
 
         // Check if yield exceeds tolerance threshold to prevent excessive yield deviations
         if (lastTotalAssets > 0) {

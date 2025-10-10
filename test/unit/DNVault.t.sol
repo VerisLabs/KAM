@@ -390,7 +390,7 @@ contract DNVaultTest is BaseVaultTest {
         vault.closeBatch(batch2Id, true);
 
         uint256 lastTotalAssets = assetRouter.virtualBalance(address(vault), tokens.usdc);
-        _executeBatchSettlement(address(vault), batch1Id, lastTotalAssets + 1000 * _1_USDC);
+        _executeBatchSettlement(address(vault), batch1Id, lastTotalAssets);
 
         vm.prank(users.alice);
         vault.claimStakedShares(request1Id);
@@ -401,7 +401,7 @@ contract DNVaultTest is BaseVaultTest {
         vault.claimUnstakedAssets(request2Id);
 
         lastTotalAssets = assetRouter.virtualBalance(address(vault), tokens.usdc);
-        _executeBatchSettlement(address(vault), batch2Id, lastTotalAssets + 500 * _1_USDC);
+        _executeBatchSettlement(address(vault), batch2Id, lastTotalAssets);
 
         vm.prank(users.bob);
         vault.claimStakedShares(request2Id);
