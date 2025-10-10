@@ -213,7 +213,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
                     CLAIM UNSTAKED ASSETS TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function test_ClaimUnstakedAssets_Success() public {
+    function test_ClaimUnstakedAssets_Success_tests() public {
         uint256 aliceDeposit = 1000 * _1_USDC;
 
         // Setup: First stake to get stkTokens
@@ -232,7 +232,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         vault.closeBatch(stakeBatchId, true);
 
         uint256 lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(address(vault), stakeBatchId, lastTotalAssets + aliceDeposit);
+        _executeBatchSettlement(address(vault), stakeBatchId, lastTotalAssets);
 
         // Claim staked shares to get stkTokens
         vm.prank(users.alice);
@@ -252,7 +252,7 @@ contract kStakingVaultClaimsTest is BaseVaultTest {
         vault.closeBatch(unstakeBatchId, true);
 
         lastTotalAssets = vault.totalAssets();
-        _executeBatchSettlement(address(vault), unstakeBatchId, lastTotalAssets - aliceDeposit);
+        _executeBatchSettlement(address(vault), unstakeBatchId, lastTotalAssets);
 
         // Get kToken balance before claim
         uint256 kTokenBalanceBefore = kUSD.balanceOf(users.alice);

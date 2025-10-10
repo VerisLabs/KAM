@@ -106,7 +106,7 @@ contract BaseVaultTest is DeploymentBaseTest {
             vm.prank(users.relayer);
             IkStakingVault(address(minter)).closeBatch(batchId, true);
             uint256 lastTotalAssets = assetRouter.virtualBalance(address(minter), tokens.usdc);
-            _executeBatchSettlement(address(minter), batchId, lastTotalAssets + amount);
+            _executeBatchSettlement(address(minter), batchId, lastTotalAssets);
         }
     }
 
