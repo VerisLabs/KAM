@@ -2,13 +2,7 @@
 pragma solidity ^0.8.4;
 
 interface IParametersChecker {
-    function authorizeAdapterCall(
-        address adapter,
-        address target,
-        bytes4 selector,
-        bytes calldata params
-    )
-        external;
+    function authorizeAdapterCall(address adapter, address target, bytes4 selector, bytes calldata params) external;
 }
 
 /// @title IAdapterGuardian
