@@ -17,6 +17,7 @@ import {
     KASSETROUTER_INSUFFICIENT_VIRTUAL_BALANCE,
     KASSETROUTER_INVALID_COOLDOWN,
     KASSETROUTER_IS_PAUSED,
+    KASSETROUTER_NOT_BATCH_CLOSED,
     KASSETROUTER_NO_PROPOSAL,
     KASSETROUTER_ONLY_KMINTER,
     KASSETROUTER_ONLY_KSTAKING_VAULT,
@@ -278,6 +279,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
         require($.batchIds.add(batchId), KASSETROUTER_BATCH_ID_PROPOSED);
+        require(IkMinter(vault).isClosed(batchId), KASSETROUTER_NOT_BATCH_CLOSED);
 
         int256 netted;
         int256 yield;

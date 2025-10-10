@@ -260,4 +260,9 @@ interface IkMinter is IVersioned {
     /// @param asset The asset address to query
     /// @return The total amount of assets locked in the protocol
     function getTotalLockedAssets(address asset) external view returns (uint256);
+
+    /// @notice Returns the close state of a given batchId
+    /// @param batchId_ the batchId to verify
+    /// @return isClosed_ the state of the given batchId
+    function isClosed(bytes32 batchId_) external view returns (bool isClosed_);
 }
