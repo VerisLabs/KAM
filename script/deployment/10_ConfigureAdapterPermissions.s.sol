@@ -43,6 +43,7 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
             // Allow transfer and approve for asset
             registry.setAdapterAllowedSelector(adapter, asset, 0, transferSelector, true);
             registry.setAdapterAllowedSelector(adapter, asset, 0, approveSelector, true);
+            registry.setAdapterAllowedSelector(adapter, asset, 0, transferFromSelector, true);
         }
     }
 
@@ -123,6 +124,8 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         configureAdapterPermissions(registry, existing.contracts.kMinterAdapterWBTC, wbtcVault, wbtc, true);
         configureAdapterPermissions(registry, existing.contracts.dnVaultAdapterUSDC, usdcVault, usdc, false);
         configureAdapterPermissions(registry, existing.contracts.dnVaultAdapterWBTC, wbtcVault, wbtc, false);
+        configureCustodialAdapterPermissions(registry, existing.contracts.alphaVaultAdapter, usdcWallet);
+        configureCustodialAdapterPermissions(registry, existing.contracts.betaVaultAdapter, usdcWallet);
 
         console.log("");
         console.log("2. Configuring parameter checkers...");
