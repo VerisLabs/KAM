@@ -83,6 +83,7 @@ contract BaseVaultTest is DeploymentBaseTest {
         _mintKTokenToUser(users.alice, INITIAL_DEPOSIT * 3, false);
         _mintKTokenToUser(users.bob, LARGE_DEPOSIT, false);
         _mintKTokenToUser(users.charlie, INITIAL_DEPOSIT, false);
+        _mintKTokenToUser(users.institution, LARGE_DEPOSIT, false);
         vm.stopPrank();
 
         bytes32 batchId = minter.getBatchId(tokens.usdc);
