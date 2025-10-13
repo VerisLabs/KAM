@@ -11,27 +11,27 @@ contract kStakingVaultInvariants is SetUp {
         _setUpVaultFees(alphaVault);
     }
 
-    function invariant_kStakingVaultTotalAssets() public {
+    function invariant_kStakingVaultTotalAssets() public view {
         vaultHandlerAlpha.INVARIANT_A_TOTAL_ASSETS();
     }
 
-    function invariant_kStakingVaultAdapterBalance() public {
+    function invariant_kStakingVaultAdapterBalance() public view {
         vaultHandlerAlpha.INVARIANT_B_ADAPTER_BALANCE();
     }
 
-    function invariant_kStakingVaultAdapterTotalAssets() public {
+    function invariant_kStakingVaultAdapterTotalAssets() public view {
         vaultHandlerAlpha.INVARIANT_C_ADAPTER_TOTAL_ASSETS();
     }
 
-    function invariant_kStakingVaultSharePrice() public {
+    function invariant_kStakingVaultSharePrice() public view {
         vaultHandlerAlpha.INVARIANT_D_SHARE_PRICE();
     }
 
-    function invariant_kStakingVaultTotalNetAssets() public {
+    function invariant_kStakingVaultTotalNetAssets() public view {
         vaultHandlerAlpha.INVARIANT_E_TOTAL_NET_ASSETS();
     }
 
-    function invariant_kStakingVaultSupply() public {
+    function invariant_kStakingVaultSupply() public view {
         vaultHandlerAlpha.INVARIANT_F_SUPPLY();
     }
 }

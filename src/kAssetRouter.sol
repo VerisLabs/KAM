@@ -17,6 +17,7 @@ import {
     KASSETROUTER_INSUFFICIENT_VIRTUAL_BALANCE,
     KASSETROUTER_INVALID_COOLDOWN,
     KASSETROUTER_IS_PAUSED,
+    KASSETROUTER_NOT_BATCH_CLOSED,
     KASSETROUTER_NO_PROPOSAL,
     KASSETROUTER_ONLY_KMINTER,
     KASSETROUTER_ONLY_KSTAKING_VAULT,
@@ -28,8 +29,7 @@ import {
     KASSETROUTER_ZERO_ADDRESS,
     KASSETROUTER_ZERO_AMOUNT
 } from "kam/src/errors/Errors.sol";
-import { OptimizedBytes32EnumerableSetLib } from
-    "src/vendor/solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 
 import { IVaultAdapter } from "kam/src/interfaces/IVaultAdapter.sol";
 import { ISettleBatch, IkAssetRouter } from "kam/src/interfaces/IkAssetRouter.sol";
@@ -60,7 +60,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     using OptimizedSafeCastLib for uint128;
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                                CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
@@ -79,7 +79,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     /// that could indicate errors in yield calculation or potential manipulation attempts
     uint256 private constant DEFAULT_MAX_DELTA = 1000; // 10% in basis points
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             STORAGE LAYOUT
     //////////////////////////////////////////////////////////////*/
 
@@ -123,7 +123,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -148,7 +148,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         emit ContractInitialized(registry_);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             kMINTER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -161,6 +161,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _checkKMinter(kMinter);
 
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
+
+        // Send deposits to kMinter adapter
+        IVaultAdapter adapter = IVaultAdapter(_registry().getAdapter(kMinter, _asset));
+        _asset.safeTransfer(address(adapter), amount);
 
         // Increase deposits in the batch for kMinter
         $.vaultBatchBalances[kMinter][batchId].deposited += amount.toUint128();
@@ -187,7 +191,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _unlockReentrant();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             kSTAKING VAULT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -250,7 +254,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _unlockReentrant();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             SETTLEMENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -275,6 +279,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
 
         require($.batchIds.add(batchId), KASSETROUTER_BATCH_ID_PROPOSED);
+        require(IkMinter(vault).isClosed(batchId), KASSETROUTER_NOT_BATCH_CLOSED);
 
         int256 netted;
         int256 yield;
@@ -296,16 +301,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         require(!$.executedProposalIds.contains(proposalId), KASSETROUTER_PROPOSAL_EXECUTED);
         require($.vaultPendingProposalIds[vault].add(proposalId), KASSETROUTER_PROPOSAL_EXISTS);
 
-        // To calculate the strategy yield we need to discount the deposits and requests
-        // First to match last total assets
-
-        // Example : total assets were 1000 before and there was 200 deposits and 100 withdrawal requests
-        // New total assets is 1200, but this new total assets include settled deposits and withdrawals
-        // So it will be 1000 + (200 - 100) +/- profit = 1100 +/- profit
-        // So first we need to adjust the substract the netted as follows:
-        // 1200 - (200 - 100) = 1100
-        // And now we can calculate the profit as 1100 - 1000 = 100
-
         if (_isKMinter(vault)) {
             netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited))
                 - int256(uint256($.vaultBatchBalances[vault][batchId].requested));
@@ -317,9 +312,11 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited)) - int256(uint256(requestedAssets));
         }
 
-        uint256 totalAssetsAdjusted = uint256(int256(totalAssets_) - netted);
+        yield = int256(totalAssets_) - int256(lastTotalAssets);
 
-        yield = int256(totalAssetsAdjusted) - int256(lastTotalAssets);
+        // To calculate the strategy yield we need to include the deposits and requests into the new total assets
+        // First to match last total assets
+        uint256 totalAssetsAdjusted = uint256(int256(totalAssets_) + netted);
 
         // Check if yield exceeds tolerance threshold to prevent excessive yield deviations
         if (lastTotalAssets > 0) {
@@ -340,7 +337,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             asset: asset,
             vault: vault,
             batchId: batchId,
-            totalAssets: totalAssets_,
+            totalAssets: totalAssetsAdjusted,
             netted: netted,
             yield: yield,
             executeAfter: executeAfter.toUint64(),
@@ -436,18 +433,16 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         // kMinter settlement
         if (vault == kMinter) {
-            delete $.vaultBatchBalances[vault][batchId];
-
             if (requested > 0) {
                 // Transfer assets to batch receiver for redemptions
                 address receiver = IkMinter(vault).getBatchReceiver(batchId);
                 _checkAddressNotZero(receiver);
+                adapter.pull(asset, requested);
                 asset.safeTransfer(receiver, requested);
             }
 
             // If netted assets are positive(it means more deposits than withdrawals)
             if (netted > 0) {
-                asset.safeTransfer(address(adapter), uint256(netted));
                 emit Deposited(vault, asset, uint256(netted));
             }
 
@@ -456,8 +451,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
             adapter.setTotalAssets(totalAssets_);
         } else {
             uint256 totalRequestedShares = $.vaultRequestedShares[vault][batchId];
-            delete $.vaultRequestedShares[vault][batchId];
-
             // kMinter yield is sent to insuranceFund, cannot be minted.
             if (yield != 0) {
                 if (profit) {
@@ -509,7 +502,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         emit BatchSettled(vault, batchId, totalAssets_);
     }
 
-    /*////////////////////////////////////////////////////////////
+    /* ////////////////////////////////////////////////////////////
                           ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -542,7 +535,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         emit MaxAllowedDeltaUpdated(oldTolerance, maxDelta_);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -584,17 +577,13 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         return $.vaultSettlementCooldown;
     }
 
-    /// @notice Gets the current yield tolerance threshold for settlement proposals
-    /// @dev The yield tolerance determines the maximum acceptable yield deviation before settlement proposals
-    /// are automatically rejected. This acts as a safety mechanism to prevent processing of settlement proposals
-    /// with excessive yield values that could indicate calculation errors or potential manipulation. The tolerance
-    /// is expressed in basis points where 10000 equals 100%.
-    /// @return tolerance The current yield tolerance in basis points
-    function getYieldTolerance() external view returns (uint256) {
+    /// @inheritdoc IkAssetRouter
+    function getMaxAllowedDelta() external view returns (uint256) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         return $.maxAllowedDelta;
     }
 
+    /// @inheritdoc IkAssetRouter
     function virtualBalance(address vault, address asset) external view returns (uint256) {
         return _virtualBalance(vault, asset);
     }
@@ -692,7 +681,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         return $.vaultRequestedShares[vault][batchId];
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           UPGRADE FUNCTION
     //////////////////////////////////////////////////////////////*/
 
@@ -703,14 +692,14 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         _checkAddressNotZero(newImplementation);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             RECEIVE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Receive ETH (for gas refunds, etc.)
     receive() external payable { }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 

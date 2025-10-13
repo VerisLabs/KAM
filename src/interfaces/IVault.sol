@@ -18,7 +18,7 @@ import { IVaultFees } from "./IVaultFees.sol";
 /// than token rebasing. This approach maintains compatibility with existing DeFi infrastructure while providing
 /// transparent yield accrual for retail participants.
 interface IVault is IVaultBatch, IVaultClaim, IVaultFees {
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         USER STAKING OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -91,4 +91,8 @@ interface IVault is IVaultBatch, IVaultClaim, IVaultFees {
     /// situations without compromising decentralization principles.
     /// @param paused_ The desired operational state (true = pause operations, false = resume operations)
     function setPaused(bool paused_) external;
+
+    /// @notice Sets the maximum total assets
+    /// @param maxTotalAssets_ Maximum total assets
+    function setMaxTotalAssets(uint256 maxTotalAssets_) external;
 }

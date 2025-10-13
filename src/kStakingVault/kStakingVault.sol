@@ -20,8 +20,10 @@ import { IVault, IVaultBatch, IVaultClaim, IVaultFees } from "kam/src/interfaces
 import { IkToken } from "kam/src/interfaces/IkToken.sol";
 
 import {
+    KSTAKINGVAULT_BATCH_LIMIT_REACHED,
     KSTAKINGVAULT_INSUFFICIENT_BALANCE,
     KSTAKINGVAULT_IS_PAUSED,
+    KSTAKINGVAULT_MAX_TOTAL_ASSETS_REACHED,
     KSTAKINGVAULT_REQUEST_NOT_ELIGIBLE,
     KSTAKINGVAULT_REQUEST_NOT_FOUND,
     KSTAKINGVAULT_UNAUTHORIZED,
@@ -34,7 +36,6 @@ import {
     VAULTBATCHES_VAULT_CLOSED,
     VAULTBATCHES_VAULT_SETTLED,
     VAULTCLAIMS_BATCH_NOT_SETTLED,
-    VAULTCLAIMS_INVALID_BATCH_ID,
     VAULTCLAIMS_NOT_BENEFICIARY,
     VAULTCLAIMS_REQUEST_NOT_PENDING,
     VAULTFEES_FEE_EXCEEDS_MAXIMUM,
@@ -66,13 +67,13 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     using OptimizedSafeCastLib for uint64;
     using OptimizedFixedPointMathLib for uint256;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
     // VaultBatches Events
-    /// @notice Emitted when a new batch is created
-    /// @param batchId The batch ID of the new batch
+    // / @notice Emitted when a new batch is created
+    // / @param batchId The batch ID of the new batch
     event BatchCreated(bytes32 indexed batchId);
 
     /// @notice Emitted when a batch is settled
@@ -89,7 +90,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     event BatchReceiverCreated(address indexed receiver, bytes32 indexed batchId);
 
     // VaultClaims Events
-    /// @notice Emitted when a user claims staking shares
+    // / @notice Emitted when a user claims staking shares
     event StakingSharesClaimed(bytes32 indexed batchId, bytes32 requestId, address indexed user, uint256 shares);
 
     /// @notice Emitted when a user claims unstaking assets
@@ -99,9 +100,9 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     event KTokenUnstaked(address indexed user, uint256 shares, uint256 kTokenAmount);
 
     // VaultFees Events
-    /// @notice Emitted when the management fee is updated
-    /// @param oldFee Previous management fee in basis points
-    /// @param newFee New management fee in basis points
+    // / @notice Emitted when the management fee is updated
+    // / @param oldFee Previous management fee in basis points
+    // / @param newFee New management fee in basis points
     event ManagementFeeUpdated(uint16 oldFee, uint16 newFee);
 
     /// @notice Emitted when the performance fee is updated
@@ -130,7 +131,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     /// @param timestamp Timestamp of the fee charge
     event PerformanceFeesCharged(uint256 timestamp);
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -186,7 +187,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit Initialized(registry_, name_, symbol_, decimals_, asset_);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           CORE OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -204,6 +205,15 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
 
         bytes32 batchId = $.currentBatchId;
         uint128 amount128 = amount.toUint128();
+
+        // Make sure we dont exceed the max deposit per batch
+        require(
+            ($.batches[batchId].depositedInBatch += amount128) <= _registry().getMaxMintPerBatch(address(this)),
+            KSTAKINGVAULT_BATCH_LIMIT_REACHED
+        );
+
+        // Make sure we dont exceed the max total assets
+        require(_totalAssets() + amount128 <= $.maxTotalAssets, KSTAKINGVAULT_MAX_TOTAL_ASSETS_REACHED);
 
         // Generate request ID
         requestId = _createStakeRequestId(msg.sender, amount, block.timestamp);
@@ -253,6 +263,13 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         require(balanceOf(msg.sender) >= stkTokenAmount, KSTAKINGVAULT_INSUFFICIENT_BALANCE);
 
         bytes32 batchId = $.currentBatchId;
+        uint128 withdrawn = _convertToAssetsWithTotals(stkTokenAmount, _totalNetAssets()).toUint128();
+
+        // Make sure we dont exceed the max withdraw per batch
+        require(
+            ($.batches[batchId].withdrawnInBatch += withdrawn) <= _registry().getMaxBurnPerBatch(address(this)),
+            KSTAKINGVAULT_BATCH_LIMIT_REACHED
+        );
 
         // Generate request ID
         requestId = _createStakeRequestId(msg.sender, stkTokenAmount, block.timestamp);
@@ -262,7 +279,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
             user: msg.sender,
             stkTokenAmount: stkTokenAmount.toUint128(),
             recipient: to,
-            requestTimestamp: (block.timestamp).toUint64(),
+            requestTimestamp: uint64(block.timestamp),
             status: BaseVaultTypes.RequestStatus.PENDING,
             batchId: batchId
         });
@@ -343,7 +360,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _unlockReentrant();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                             VAULT BATCHES FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -381,6 +398,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         emit BatchSettled(_batchId);
     }
 
+    /// @inheritdoc IVaultFees
     function burnFees(uint256 shares) external {
         _checkAdmin(msg.sender);
         _burn(address(this), shares);
@@ -488,7 +506,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         require(timestamp >= lastTimestamp && timestamp <= block.timestamp, VAULTFEES_INVALID_TIMESTAMP);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           VAULT CLAIMS FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -551,7 +569,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _checkAmountNotZero(sharePrice);
 
         // Calculate total kTokens to return based on settlement-time share price
-        // Multply redeemed shares for net and gross share price to obtain gross and net amount of assets
+        // Multiply redeemed shares for net and gross share price to obtain gross and net amount of assets
         uint8 decimals = _getDecimals($);
         uint256 totalKTokensNet = (uint256(request.stkTokenAmount)) * netSharePrice / (10 ** decimals);
         uint256 netSharesToBurn = (uint256(request.stkTokenAmount)) * netSharePrice / sharePrice;
@@ -568,7 +586,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _unlockReentrant();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           VAULT FEES FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -629,7 +647,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -648,9 +666,15 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         );
     }
 
-    /*//////////////////////////////////////////////////////////////
-                            PAUSE FUNCTIONS
+    /* //////////////////////////////////////////////////////////////
+                            ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IVault
+    function setMaxTotalAssets(uint256 maxTotalAssets_) external {
+        _checkAdmin(msg.sender);
+        _getBaseVaultStorage().maxTotalAssets = maxTotalAssets_.toUint128();
+    }
 
     /// @inheritdoc IVault
     function setPaused(bool paused_) external {
@@ -658,20 +682,12 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         _setPaused(paused_);
     }
 
-    /*//////////////////////////////////////////////////////////////
-                        UUPS UPGRADE
-    //////////////////////////////////////////////////////////////*/
-
     /// @notice Authorize upgrade (only owner can upgrade)
     /// @dev This allows upgrading the main contract while keeping modules separate
     function _authorizeUpgrade(address newImplementation) internal view override {
         _checkAdmin(msg.sender);
         require(newImplementation != address(0), KSTAKINGVAULT_ZERO_ADDRESS);
     }
-
-    /*//////////////////////////////////////////////////////////////
-                        FUNCTIONS UPGRADE
-    //////////////////////////////////////////////////////////////*/
 
     /// @notice Authorize function modification
     /// @dev This allows modifying functions while keeping modules separate

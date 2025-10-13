@@ -54,6 +54,10 @@ library BaseVaultTypes {
         bool isSettled;
         /// @notice Batch ID
         bytes32 batchId;
+        /// @notice Amount of assets deposited in a batch
+        uint128 depositedInBatch;
+        /// @notice Amount of assets withdrawn in a batch
+        uint128 withdrawnInBatch;
         /// @notice Share price of settlement
         uint128 sharePrice;
         /// @notice Net share price of settlement(share price - fees)

@@ -55,7 +55,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     using OptimizedSafeCastLib for uint64;
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
@@ -98,7 +98,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -119,7 +119,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         emit ContractInitialized(registry_);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           CORE OPERATIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -186,7 +186,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         // Make sure we dont exceed the max burn per batch
         require(
-            ($.batches[batchId].burnedInBatch += amount_.toUint128()) <= _registry().getMaxRedeemPerBatch(asset_),
+            ($.batches[batchId].burnedInBatch += amount_.toUint128()) <= _registry().getMaxBurnPerBatch(asset_),
             KMINTER_BATCH_REDEEM_REACHED
         );
 
@@ -291,7 +291,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         _unlockReentrant();
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                       BATCH FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -319,7 +319,6 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
     }
 
     /// @inheritdoc IkMinter
-    /// @notice Settles a closed batch (unchanged functionality)
     function settleBatch(bytes32 _batchId) external {
         _checkRouter(msg.sender);
         kMinterStorage storage $ = _getkMinterStorage();
@@ -399,9 +398,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         return newBatchId;
     }
 
-    /// @notice Get the current active batch ID for a specific asset
-    /// @param asset_ The asset to query
-    /// @return The current batch ID for the asset, or bytes32(0) if no batch exists
+    /// @inheritdoc IkMinter
     function getBatchId(address asset_) external view returns (bytes32) {
         return _currentBatchId(asset_);
     }
@@ -420,16 +417,13 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         require(_currentBatchId(asset_) != bytes32(0), KMINTER_BATCH_NOT_SET);
     }
 
-    /// @notice Get the current batch number for a specific asset
-    /// @param asset_ The asset to query
-    /// @return The current batch number for the asset
+    /// @inheritdoc IkMinter
     function getCurrentBatchNumber(address asset_) external view returns (uint256) {
         kMinterStorage storage $ = _getkMinterStorage();
         return $.assetBatchCounters[asset_];
     }
 
-    /// @notice Check if an asset has an active (open) batch
-    /// @param asset_ The asset to check
+    /// @inheritdoc IkMinter
     function hasActiveBatch(address asset_) external view returns (bool) {
         kMinterStorage storage $ = _getkMinterStorage();
         bytes32 currentBatchId = $.currentBatchIds[asset_];
@@ -442,9 +436,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         return !batch.isClosed;
     }
 
-    /// @notice Get batch info for a specific batch ID
-    /// @param batchId_ The batch ID to query
-    /// @return The batch information
+    /// @inheritdoc IkMinter
     function getBatchInfo(bytes32 batchId_) external view returns (IkMinter.BatchInfo memory) {
         kMinterStorage storage $ = _getkMinterStorage();
         return $.batches[batchId_];
@@ -457,7 +449,13 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         return receiver;
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /// @inheritdoc IkMinter
+    function isClosed(bytes32 batchId_) external view returns (bool isClosed_) {
+        kMinterStorage storage $ = _getkMinterStorage();
+        isClosed_ = $.batches[batchId_].isClosed;
+    }
+
+    /* //////////////////////////////////////////////////////////////
                       INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -522,7 +520,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         );
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -533,7 +531,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         this.rescueAssets(asset_, to_, amount_);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -566,7 +564,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         return $.totalLockedAssets[asset];
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         UPGRADE AUTHORIZATION
     //////////////////////////////////////////////////////////////*/
 
@@ -578,7 +576,7 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         require(newImplementation != address(0), KMINTER_ZERO_ADDRESS);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         CONTRACT INFO
     //////////////////////////////////////////////////////////////*/
 

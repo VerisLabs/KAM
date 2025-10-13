@@ -2,20 +2,12 @@
 pragma solidity ^0.8.4;
 
 interface IParametersChecker {
-    function authorizeAdapterCall(
-        address adapter,
-        address target,
-        bytes4 selector,
-        bytes calldata params
-    )
-        external
-        view
-        returns (bool);
+    function authorizeAdapterCall(address adapter, address target, bytes4 selector, bytes calldata params) external;
 }
 
 /// @title IAdapterGuardian
 interface IAdapterGuardian {
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
@@ -30,7 +22,7 @@ interface IAdapterGuardian {
         address indexed adapter, address indexed target, bytes4 indexed selector, address parametersChecker
     );
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
@@ -63,7 +55,7 @@ interface IAdapterGuardian {
     )
         external;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -71,7 +63,7 @@ interface IAdapterGuardian {
     /// @param target The target contract address
     /// @param selector The function selector
     /// @param params The function parameters
-    function authorizeAdapterCall(address target, bytes4 selector, bytes calldata params) external view;
+    function authorizeAdapterCall(address target, bytes4 selector, bytes calldata params) external;
 
     /// @notice Check if a selector is allowed for an adapter
     /// @param adapter The adapter address

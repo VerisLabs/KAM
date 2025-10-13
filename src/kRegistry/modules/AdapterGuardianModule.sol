@@ -12,10 +12,8 @@ import {
 
 import { IAdapterGuardian, IParametersChecker } from "kam/src/interfaces/modules/IAdapterGuardian.sol";
 import { IModule } from "kam/src/interfaces/modules/IModule.sol";
-import { OptimizedAddressEnumerableSetLib } from
-    "src/vendor/solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
-import { OptimizedBytes32EnumerableSetLib } from
-    "src/vendor/solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
+import { OptimizedAddressEnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedAddressEnumerableSetLib.sol";
+import { OptimizedBytes32EnumerableSetLib } from "solady/utils/EnumerableSetLib/OptimizedBytes32EnumerableSetLib.sol";
 
 /// @title AdapterGuardianModule
 /// @notice Module for managing adapter permissions and parameter checking in kRegistry
@@ -24,7 +22,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     using OptimizedAddressEnumerableSetLib for OptimizedAddressEnumerableSetLib.AddressSet;
     using OptimizedBytes32EnumerableSetLib for OptimizedBytes32EnumerableSetLib.Bytes32Set;
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               STORAGE
     //////////////////////////////////////////////////////////////*/
 
@@ -59,7 +57,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               MANAGEMENT
     //////////////////////////////////////////////////////////////*/
 
@@ -125,12 +123,12 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         emit ParametersCheckerSet(adapter, target, selector, parametersChecker);
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                           VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IAdapterGuardian
-    function authorizeAdapterCall(address target, bytes4 selector, bytes calldata params) external view {
+    function authorizeAdapterCall(address target, bytes4 selector, bytes calldata params) external {
         AdapterGuardianModuleStorage storage $ = _getAdapterGuardianModuleStorage();
 
         address adapter = msg.sender;
@@ -139,10 +137,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         address checker = $.adapterParametersChecker[adapter][target][selector];
         if (checker == address(0)) return;
 
-        require(
-            IParametersChecker(checker).authorizeAdapterCall(adapter, target, selector, params),
-            GUARDIANMODULE_UNAUTHORIZED
-        );
+        IParametersChecker(checker).authorizeAdapterCall(adapter, target, selector, params);
     }
 
     /// @inheritdoc IAdapterGuardian
@@ -179,7 +174,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         return $.targetType[target];
     }
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                         MODULE SELECTORS
     //////////////////////////////////////////////////////////////*/
 

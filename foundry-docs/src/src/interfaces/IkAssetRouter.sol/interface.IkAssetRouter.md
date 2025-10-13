@@ -1,5 +1,5 @@
 # IkAssetRouter
-[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/interfaces/IkAssetRouter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7810ef786f844ebd78831ee424b7ee896113d92b/src/interfaces/IkAssetRouter.sol)
 
 **Inherits:**
 [IVersioned](/src/interfaces/IVersioned.sol/interface.IVersioned.md)
@@ -470,7 +470,7 @@ function getSettlementCooldown() external view returns (uint256 cooldown);
 |`cooldown`|`uint256`|The current cooldown period in seconds|
 
 
-### getYieldTolerance
+### getMaxAllowedDelta
 
 Gets the current yield tolerance threshold for settlement proposals
 
@@ -481,7 +481,7 @@ is expressed in basis points where 10000 equals 100%.*
 
 
 ```solidity
-function getYieldTolerance() external view returns (uint256 tolerance);
+function getMaxAllowedDelta() external view returns (uint256 tolerance);
 ```
 **Returns**
 

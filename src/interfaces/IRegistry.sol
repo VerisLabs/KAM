@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import { IVersioned } from "kam/src/interfaces/IVersioned.sol";
 
 interface IRegistry is IVersioned {
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               EVENTS
     //////////////////////////////////////////////////////////////*/
 
@@ -87,7 +87,7 @@ interface IRegistry is IVersioned {
     /// @param selector The function selector being removed
     event VaultTargetSelectorRemoved(address indexed vault, address indexed target, bytes4 indexed selector);
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                               FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -118,6 +118,8 @@ interface IRegistry is IVersioned {
     /// @param symbol The symbol for the kToken (e.g., "kUSDC")
     /// @param asset The underlying asset contract address to register
     /// @param id The unique identifier for singleton asset storage (e.g., USDC, WBTC)
+    /// @param maxMintPerBatch Maximum amount of the asset that can be minted in a single batch
+    /// @param maxBurnPerBatch Maximum amount of the asset that can be redeemed in a single batch
     /// @return The deployed kToken contract address
     function registerAsset(
         string memory name,
@@ -125,7 +127,7 @@ interface IRegistry is IVersioned {
         address asset,
         bytes32 id,
         uint256 maxMintPerBatch,
-        uint256 maxRedeemPerBatch
+        uint256 maxBurnPerBatch
     )
         external
         payable
@@ -174,7 +176,7 @@ interface IRegistry is IVersioned {
     function grantRelayerRole(address relayer_) external payable;
 
     /// @notice Grants manager role for vault adapter operations
-    /// @dev Only callable by ADMIN_ROLE. Relayers manage external vaults and set hurdle rates.
+    /// @dev Only callable by ADMIN_ROLE. Managers can execute calls in the vault adapter.
     /// @param manager_ The address to grant manager privileges
     function grantManagerRole(address manager_) external payable;
 
@@ -251,9 +253,9 @@ interface IRegistry is IVersioned {
     function isVendor(address user) external view returns (bool);
 
     /// @notice Checks if an address has manager privileges
-    /// @dev Managers can Execute calls in the vault adapter
+    /// @dev Managers can execute calls in the vault adapter.
     /// @param user The address to check
-    /// @return True if address has VENDOR_ROLE
+    /// @return True if address has MANAGER_ROLE
     function isManager(address user) external view returns (bool);
 
     /// @notice Checks if an asset is supported by the protocol
@@ -268,11 +270,11 @@ interface IRegistry is IVersioned {
     /// @return True if vault is registered
     function isVault(address vault) external view returns (bool);
 
-    /// @notice Gets all adapters registered for a specific vault
-    /// @dev Returns external protocol integrations enabling yield strategies.
+    /// @notice Gets the adapter registered for a specific vault and asset
+    /// @dev Returns external protocol integration enabling yield strategies. Reverts if no adapter is set.
     /// @param vault The vault address to query
     /// @param asset The underlying asset of the vault
-    /// @return Array of adapter addresses for the vault
+    /// @return The adapter address for the vault-asset pair
     function getAdapter(address vault, address asset) external view returns (address);
 
     /// @notice Checks if a specific adapter is registered for a vault
@@ -296,7 +298,7 @@ interface IRegistry is IVersioned {
     function assetToKToken(address asset) external view returns (address);
 
     /// @notice Gets all registered vaults in the protocol
-    /// @dev Returns array of all vault addresses that have been registered through addVault().
+    /// @dev Returns array of all vault addresses that have been registered through registerVault().
     /// Includes both active and inactive vaults. Used for protocol monitoring and management operations.
     /// @return Array of all registered vault addresses
     function getAllVaults() external view returns (address[] memory);
@@ -333,31 +335,25 @@ interface IRegistry is IVersioned {
     function setTreasury(address treasury_) external payable;
 
     /// @notice Sets maximum mint and redeem amounts per batch for an asset
-    /// @dev Only callable by ADMIN_ROLE. Helps manage liquidity and risk for high-volume assets
+    /// @dev Only callable by ADMIN_ROLE. Helps manage liquidity and risk for high-volume assets.
     /// @param asset The asset address to set limits for
     /// @param maxMintPerBatch_ Maximum amount of the asset that can be minted in a single batch
-    /// @param maxRedeemPerBatch_ Maximum amount of the asset that can be redeemed in a single batch
-    function setAssetBatchLimits(
-        address asset,
-        uint256 maxMintPerBatch_,
-        uint256 maxRedeemPerBatch_
-    )
-        external
-        payable;
+    /// @param maxBurnPerBatch_ Maximum amount of the asset that can be redeemed in a single batch
+    function setAssetBatchLimits(address asset, uint256 maxMintPerBatch_, uint256 maxBurnPerBatch_) external payable;
 
     /// @notice Gets the maximum mint amount per batch for an asset
-    /// @dev Used to enforce minting limits for liquidity and risk management
+    /// @dev Used to enforce minting limits for liquidity and risk management. Reverts if asset not registered.
     /// @param asset The asset address to query
     /// @return The maximum mint amount per batch
     function getMaxMintPerBatch(address asset) external view returns (uint256);
 
     /// @notice Gets the maximum redeem amount per batch for an asset
-    /// @dev Used to enforce redemption limits for liquidity and risk management
+    /// @dev Used to enforce redemption limits for liquidity and risk management. Reverts if asset not registered.
     /// @param asset The asset address to query
     /// @return The maximum redeem amount per batch
-    function getMaxRedeemPerBatch(address asset) external view returns (uint256);
+    function getMaxBurnPerBatch(address asset) external view returns (uint256);
 
-    /*//////////////////////////////////////////////////////////////
+    /* //////////////////////////////////////////////////////////////
                                 ENUMS
     //////////////////////////////////////////////////////////////*/
 

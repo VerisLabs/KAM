@@ -1,5 +1,5 @@
 # IVaultAdapter
-[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/interfaces/IVaultAdapter.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7810ef786f844ebd78831ee424b7ee896113d92b/src/interfaces/IVaultAdapter.sol)
 
 **Inherits:**
 [IVersioned](/src/interfaces/IVersioned.sol/interface.IVersioned.md)
@@ -62,20 +62,33 @@ Allows the relayer to execute arbitrary calls on behalf of the protocol
 *This function enables the relayer role to perform flexible interactions with external contracts
 as part of protocol operations. Key aspects of this function include: (1) Authorization restricted to relayer
 role to prevent misuse, (2) Pause state check to ensure operations are halted during emergencies, (3) Validates
-target address is non-zero to prevent calls to the zero address, (4) Uses low-level call to enable arbitrary
+target addresses are non-zero to prevent calls to the zero address, (4) Uses low-level calls to enable arbitrary
 function execution*
 
 
 ```solidity
-function execute(address target, bytes calldata data, uint256 value) external returns (bytes memory result);
+function execute(
+    address[] calldata targets,
+    bytes[] calldata data,
+    uint256[] calldata values
+)
+    external
+    payable
+    returns (bytes[] memory result);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`target`|`address`|The target contract to make a call to.|
-|`data`|`bytes`|The data to send to the target contract.|
-|`value`|`uint256`|The amount of assets to send with the call.|
+|`targets`|`address[]`|Array of target contracts to make calls to|
+|`data`|`bytes[]`|Array of calldata to send to each target contract|
+|`values`|`uint256[]`|Array of asset amounts to send with each call|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`result`|`bytes[]`|The combined return data from all calls|
 
 
 ### setTotalAssets

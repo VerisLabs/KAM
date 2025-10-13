@@ -1,8 +1,8 @@
 # ReaderModule
-[Git Source](https://github.com/VerisLabs/KAM/blob/e73c6a1672196804f5e06d5429d895045a4c6974/src/kStakingVault/modules/ReaderModule.sol)
+[Git Source](https://github.com/VerisLabs/KAM/blob/7810ef786f844ebd78831ee424b7ee896113d92b/src/kStakingVault/modules/ReaderModule.sol)
 
 **Inherits:**
-[BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md), [Extsload](/src/vendor/uniswap/Extsload.sol/abstract.Extsload.md), [IVaultReader](/src/interfaces/modules/IVaultReader.sol/interface.IVaultReader.md)
+[BaseVault](/src/kStakingVault/base/BaseVault.sol/abstract.BaseVault.md), [Extsload](/src/vendor/uniswap/Extsload.sol/abstract.Extsload.md), [IVaultReader](/src/interfaces/modules/IVaultReader.sol/interface.IVaultReader.md), [IModule](/src/interfaces/modules/IModule.sol/interface.IModule.md)
 
 Contains all the public getters for the Staking Vault
 
@@ -160,6 +160,21 @@ function hurdleRate() external view returns (uint16);
 |`<none>`|`uint16`|Hurdle rate in basis points that vault performance must exceed|
 
 
+### isHardHurdleRate
+
+Returns whether the current hurdle rate is a hard hurdle rate
+
+
+```solidity
+function isHardHurdleRate() external view returns (bool);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|True if the current hurdle rate is a hard hurdle rate, false otherwise|
+
+
 ### performanceFee
 
 Returns the current performance fee rate charged on excess returns
@@ -288,6 +303,34 @@ function getCurrentBatchInfo()
 |`batchReceiver`|`address`|Address of batch receiver contract (may be zero if not created)|
 |`isClosed`|`bool`|Whether the batch is closed to new requests|
 |`isSettled`|`bool`|Whether the batch has been settled|
+
+
+### getBatchIdInfo
+
+Returns comprehensive information about a specific batch
+
+
+```solidity
+function getBatchIdInfo(bytes32 batchId)
+    external
+    view
+    returns (address batchReceiver, bool isClosed, bool isSettled, uint256 sharePrice, uint256 netSharePrice);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`batchId`|`bytes32`|The batch identifier to query|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`batchReceiver`|`address`|Address of batch receiver contract (may be zero if not deployed)|
+|`isClosed`|`bool`|Whether the batch is closed to new requests|
+|`isSettled`|`bool`|Whether the batch has been settled|
+|`sharePrice`|`uint256`|Share price of settlement|
+|`netSharePrice`|`uint256`|Net share price of settlement|
 
 
 ### getBatchReceiver
@@ -473,6 +516,133 @@ function convertToAssets(uint256 assets) external view returns (uint256);
 |`<none>`|`uint256`|The equivalent amount of shares|
 
 
+### convertToSharesWithTotals
+
+Converts a given amount of assets to shares with a specified total assets
+
+
+```solidity
+function convertToSharesWithTotals(uint256 shares, uint256 totalAssets_) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`shares`|`uint256`||
+|`totalAssets_`|`uint256`||
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|The equivalent amount of shares|
+
+
+### convertToAssetsWithTotals
+
+Converts a given amount of shares to assets with a specified total assets
+
+
+```solidity
+function convertToAssetsWithTotals(uint256 assets, uint256 totalAssets_) external view returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`assets`|`uint256`||
+|`totalAssets_`|`uint256`||
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|The equivalent amount of assets|
+
+
+### getTotalPendingStake
+
+Returns the total pending stake amount
+
+
+```solidity
+function getTotalPendingStake() external view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|Total pending stake amount|
+
+
+### getUserRequests
+
+REQUEST GETTERS
+
+Gets all request IDs associated with a user
+
+
+```solidity
+function getUserRequests(address user) external view returns (bytes32[] memory requestIds);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`user`|`address`|The address to query requests for|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`requestIds`|`bytes32[]`|An array of all request IDs (both stake and unstake) for the user|
+
+
+### getStakeRequest
+
+Gets the details of a specific stake request
+
+
+```solidity
+function getStakeRequest(bytes32 requestId) external view returns (BaseVaultTypes.StakeRequest memory stakeRequest);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`requestId`|`bytes32`|The unique identifier of the stake request|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`stakeRequest`|`BaseVaultTypes.StakeRequest`|The stake request struct containing all request details|
+
+
+### getUnstakeRequest
+
+Gets the details of a specific unstake request
+
+
+```solidity
+function getUnstakeRequest(bytes32 requestId)
+    external
+    view
+    returns (BaseVaultTypes.UnstakeRequest memory unstakeRequest);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`requestId`|`bytes32`|The unique identifier of the unstake request|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`unstakeRequest`|`BaseVaultTypes.UnstakeRequest`|The unstake request struct containing all request details|
+
+
 ### contractName
 
 Returns the human-readable name identifier for this contract type
@@ -518,12 +688,12 @@ Returns the selectors for functions in this module
 
 
 ```solidity
-function selectors() public pure returns (bytes4[] memory);
+function selectors() external pure returns (bytes4[] memory);
 ```
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`bytes4[]`|selectors Array of function selectors|
+|`<none>`|`bytes4[]`|moduleSelectors Array of function selectors|
 
 
