@@ -180,7 +180,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
 
     /// @inheritdoc IModule
     function selectors() external pure returns (bytes4[] memory moduleSelectors) {
-        moduleSelectors = new bytes4[](7);
+        bytes4[] memory moduleSelectors = new bytes4[](7);
         moduleSelectors[0] = this.setAdapterAllowedSelector.selector;
         moduleSelectors[1] = this.setAdapterParametersChecker.selector;
         moduleSelectors[2] = this.authorizeAdapterCall.selector;
@@ -188,5 +188,6 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
         moduleSelectors[4] = this.getAdapterParametersChecker.selector;
         moduleSelectors[5] = this.getAdapterTargets.selector;
         moduleSelectors[6] = this.getTargetType.selector;
+        return moduleSelectors;
     }
 }

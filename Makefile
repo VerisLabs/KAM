@@ -132,7 +132,9 @@ coverage:
 	forge coverage
 
 build:
-	forge build
+	@$(MAKE) build-selectors
+	forge fmt
+	forge build --sizes
 
 clean:
 	forge clean
@@ -145,6 +147,156 @@ clean-all:
 # Documentation
 docs:
 	forge doc --serve --port 4000
+
+# Verify that IModule contracts have complete selectors() functions
+check-selectors:
+	@echo "🔍 Checking IModule contracts for complete selectors()..."
+	@bash -c '\
+	found_issues=0; \
+	for file in $$(find src -name "*.sol" -type f); do \
+		if grep -q "IModule" "$$file" && grep -q "function selectors()" "$$file"; then \
+			echo "Checking $$file..."; \
+			contract_name=$$(basename "$$file" .sol); \
+			selectors=$$(grep -E "function [a-zA-Z0-9_]+\(" "$$file" | \
+				grep -E "(external|public)" | \
+				grep -v "function selectors()" | \
+				grep -v "constructor" | \
+				grep -v "^[[:space:]]*///" | \
+				grep -v "^[[:space:]]*\*" | \
+				sed "s/.*function \([a-zA-Z0-9_]*\).*/\1/"); \
+			selectors_array=$$(grep -A 100 "function selectors()" "$$file" | \
+				grep "this\." | \
+				sed "s/.*this\.\([a-zA-Z0-9_]*\).*/\1/"); \
+			for selector in $$selectors; do \
+				if ! echo "$$selectors_array" | grep -q "$$selector"; then \
+					echo "  ❌ Missing selector: $$selector in $$contract_name"; \
+					found_issues=$$((found_issues + 1)); \
+				fi; \
+			done; \
+			if [ $$found_issues -eq 0 ]; then \
+				echo "  ✅ All selectors present in $$contract_name"; \
+			fi; \
+		fi; \
+	done; \
+	if [ $$found_issues -gt 0 ]; then \
+		echo ""; \
+		echo "❌ Found $$found_issues missing selector(s)"; \
+		exit 1; \
+	else \
+		echo ""; \
+		echo "✅ All IModule contracts have complete selectors() functions"; \
+	fi'
+
+# Automatically fix IModule contracts by rebuilding selectors() function
+build-selectors:
+	@echo "🔧 Fixing IModule contracts selectors()..."
+	@bash -c '\
+	fixed_count=0; \
+	for file in $$(find src -name "*.sol" -type f); do \
+		filename=$$(basename "$$file"); \
+		if [ "$$filename" = "IModule.sol" ]; then \
+			echo "⏭️  Skipping $$file (interface file)"; \
+			continue; \
+		fi; \
+		\
+		if grep -q "IModule" "$$file" && grep -q "function selectors()" "$$file"; then \
+			echo "Checking $$file..."; \
+			contract_name=$$(basename "$$file" .sol); \
+			\
+			selectors=(); \
+			in_function=0; \
+			is_public_external=0; \
+			func_name=""; \
+			\
+			while IFS= read -r line; do \
+				clean_line=$$(echo "$$line" | sed "s://.*$$::"); \
+				\
+				if echo "$$clean_line" | grep -q "function selectors()"; then \
+					in_function=0; \
+					continue; \
+				fi; \
+				\
+				if echo "$$clean_line" | grep -q "constructor"; then \
+					in_function=0; \
+					continue; \
+				fi; \
+				\
+				if echo "$$clean_line" | grep -qE "function[[:space:]]+[a-zA-Z0-9_]+[[:space:]]*\("; then \
+					func_name=$$(echo "$$clean_line" | sed -n "s/.*function[[:space:]]*\([a-zA-Z0-9_]*\)[[:space:]]*(.*/\1/p"); \
+					in_function=1; \
+					is_public_external=0; \
+					\
+					if echo "$$clean_line" | grep -qE "(public|external)"; then \
+						is_public_external=1; \
+					fi; \
+				fi; \
+				\
+				if [ $$in_function -eq 1 ] && [ $$is_public_external -eq 0 ]; then \
+					if echo "$$clean_line" | grep -qE "(public|external)"; then \
+						is_public_external=1; \
+					fi; \
+				fi; \
+				\
+				if [ $$in_function -eq 1 ] && echo "$$clean_line" | grep -qE "\{|;"; then \
+					if [ $$is_public_external -eq 1 ] && [ -n "$$func_name" ]; then \
+						selectors+=("$$func_name"); \
+					fi; \
+					in_function=0; \
+					func_name=""; \
+				fi; \
+			done < "$$file"; \
+			\
+			num_selectors=$${#selectors[@]}; \
+			echo "  📋 Found $$num_selectors function(s): $${selectors[*]}"; \
+			\
+			temp_file=$$(mktemp); \
+			in_selectors_func=0; \
+			skip_until_closing=0; \
+			indent=""; \
+			\
+			while IFS= read -r line; do \
+				if echo "$$line" | grep -q "function selectors()"; then \
+					in_selectors_func=1; \
+					skip_until_closing=1; \
+					indent=$$(echo "$$line" | sed "s/\(^[[:space:]]*\).*/\1/"); \
+					echo "$$line" >> "$$temp_file"; \
+					echo "$${indent}    bytes4[] memory moduleSelectors = new bytes4[]($$num_selectors);" >> "$$temp_file"; \
+					\
+					idx=0; \
+					for selector in "$${selectors[@]}"; do \
+						echo "$${indent}    moduleSelectors[$$idx] = this.$$selector.selector;" >> "$$temp_file"; \
+						idx=$$((idx + 1)); \
+					done; \
+					\
+					echo "$${indent}    return moduleSelectors;" >> "$$temp_file"; \
+					continue; \
+				fi; \
+				\
+				if [ $$skip_until_closing -eq 1 ]; then \
+					if echo "$$line" | grep -qE "^$${indent}}"; then \
+						skip_until_closing=0; \
+						in_selectors_func=0; \
+						echo "$$line" >> "$$temp_file"; \
+					fi; \
+					continue; \
+				fi; \
+				\
+				echo "$$line" >> "$$temp_file"; \
+			done < "$$file"; \
+			\
+			mv "$$temp_file" "$$file"; \
+			echo "  ✅ Rebuilt selectors() for $$contract_name with $$num_selectors selector(s)"; \
+			fixed_count=$$((fixed_count + 1)); \
+		fi; \
+	done; \
+	if [ $$fixed_count -gt 0 ]; then \
+		echo ""; \
+		echo "✅ Rebuilt selectors() in $$fixed_count contract(s)"; \
+		echo "⚠️  Please review the changes and run tests"; \
+	else \
+		echo ""; \
+		echo "ℹ️  No IModule contracts found to fix"; \
+	fi'
 
 # Color output
 RED    = \033[0;31m
