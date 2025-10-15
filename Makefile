@@ -139,7 +139,7 @@ compile:
 
 build:
 	@$(MAKE) build-selectors
-	@$(MAKE) check-interface-completeness
+	@$(MAKE) build-interfaces
 	forge fmt
 	forge build
 
