@@ -48,7 +48,11 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
     }
 
     // Helper function to configure custodial adapter permissions (targetType = 1)
-    function configureCustodialAdapterPermissions(IkRegistry registry, address adapter, address custodialAddress)
+    function configureCustodialAdapterPermissions(
+        IkRegistry registry,
+        address adapter,
+        address custodialAddress
+    )
         internal
     {
         bytes4 approveSelector = IERC7540.approve.selector;

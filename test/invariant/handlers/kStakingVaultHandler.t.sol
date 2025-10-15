@@ -177,8 +177,7 @@ contract kStakingVaultHandler is BaseHandler {
     }
 
     function kStakingVault_lose(uint256 amount) public {
-        int256 maxLoss =
-            int256(kStakingVault_expectedAdapterTotalAssets)
+        int256 maxLoss = int256(kStakingVault_expectedAdapterTotalAssets)
             + kStakingVault_totalYieldInBatch[kStakingVault_vault.getBatchId()]
             - int256(kStakingVault_chargedPerformanceInBatch[kStakingVault_vault.getBatchId()])
             - int256(kStakingVault_chargedManagementInBatch[kStakingVault_vault.getBatchId()]);
@@ -237,7 +236,13 @@ contract kStakingVaultHandler is BaseHandler {
         vm.stopPrank();
     }
 
-    function kStakingVault_claimUnstakedAssets(uint256 actorSeed, uint256 requestSeedIndex) public useActor(actorSeed) {
+    function kStakingVault_claimUnstakedAssets(
+        uint256 actorSeed,
+        uint256 requestSeedIndex
+    )
+        public
+        useActor(actorSeed)
+    {
         vm.startPrank(currentActor);
         if (kStakingVault_actorUnstakeRequests[currentActor].count() == 0) {
             vm.stopPrank();

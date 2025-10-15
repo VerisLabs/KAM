@@ -12,7 +12,11 @@ library VaultMathLib {
 
     using OptimizedFixedPointMathLib for uint256;
 
-    function computeLastBatchFeesWithAssetsAndSupply(IkStakingVault vault, uint256 _totalAssets, uint256 _totalSupply)
+    function computeLastBatchFeesWithAssetsAndSupply(
+        IkStakingVault vault,
+        uint256 _totalAssets,
+        uint256 _totalSupply
+    )
         internal
         view
         returns (uint256 managementFees, uint256 performanceFees, uint256 totalFees)
@@ -72,7 +76,11 @@ library VaultMathLib {
         return (managementFees, performanceFees, totalFees);
     }
 
-    function convertToAssetsWithAssetsAndSupply(uint256 _shares, uint256 _totalAssets, uint256 _totalSupply)
+    function convertToAssetsWithAssetsAndSupply(
+        uint256 _shares,
+        uint256 _totalAssets,
+        uint256 _totalSupply
+    )
         internal
         view
         returns (uint256)
@@ -81,7 +89,11 @@ library VaultMathLib {
         return _shares.fullMulDiv(_totalAssets, _totalSupply);
     }
 
-    function convertToSharesWithAssetsAndSupply(uint256 _assets, uint256 _totalAssets, uint256 _totalSupply)
+    function convertToSharesWithAssetsAndSupply(
+        uint256 _assets,
+        uint256 _totalAssets,
+        uint256 _totalSupply
+    )
         internal
         view
         returns (uint256)
