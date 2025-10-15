@@ -163,7 +163,7 @@ contract VaultAdapter is IVaultAdapter, Initializable, UUPSUpgradeable {
 
     /// @inheritdoc IVaultAdapter
     function setTotalAssets(uint256 totalAssets_) external {
-        _checkAdmin(msg.sender);
+        _checkRouter(_getVaultAdapterStorage());
         VaultAdapterStorage storage $ = _getVaultAdapterStorage();
         $.lastTotalAssets = totalAssets_;
     }
