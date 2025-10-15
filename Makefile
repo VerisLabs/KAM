@@ -131,10 +131,17 @@ test:
 coverage:
 	forge coverage
 
+compile:
+	@$(MAKE) check-selectors
+	@$(MAKE) check-interface-completeness
+	forge fmt --check
+	forge build --sizes
+
 build:
 	@$(MAKE) build-selectors
+	@$(MAKE) check-interface-completeness
 	forge fmt
-	forge build --sizes
+	forge build
 
 clean:
 	forge clean
@@ -296,6 +303,57 @@ build-selectors:
 	else \
 		echo ""; \
 		echo "ℹ️  No IModule contracts found to fix"; \
+	fi'
+	
+check-interface-completeness:
+	@echo " Checking contracts for interface completeness..."
+	@bash -c '\
+	found_issues=0; \
+	get_interface_funcs() { \
+		local interface_file=$$1; \
+		local funcs=""; \
+		local inherited_interfaces=$$(grep -E "interface[[:space:]]+[A-Za-z0-9_]+[[:space:]]+is[[:space:]]+" "$$interface_file" | sed -E "s/.*is[[:space:]]+(.+)[[:space:]]*\{.*/\1/" | tr "," "\n" | sed "s/^[[:space:]]*//;s/[[:space:]]*$$//"); \
+		funcs=$$(grep -E "function[[:space:]]+[A-Za-z0-9_]+\(" "$$interface_file" | sed -E "s/.*function[[:space:]]+([A-Za-z0-9_]+)\(.*/\1/"); \
+		for inherited in $$inherited_interfaces; do \
+			inherited_file=$$(find src/interfaces -type f -name "$$inherited.sol" | head -n 1); \
+			if [ -f "$$inherited_file" ]; then \
+				inherited_funcs=$$(get_interface_funcs "$$inherited_file"); \
+				funcs=$$(printf "%s\n%s" "$$funcs" "$$inherited_funcs"); \
+			fi; \
+		done; \
+		echo "$$funcs" | grep -v "^$$" | sort -u; \
+	}; \
+	for file in $$(find src -name "*.sol" -type f ! -path "src/vendor/*" ! -path "src/interfaces/*" ! -path "src/adapters/parameters/*"); do \
+		if grep -qE "contract[[:space:]]+[A-Za-z0-9_]+[[:space:]]+is[[:space:]]+I" "$$file"; then \
+			contract_name=$$(basename "$$file" .sol); \
+			interface_name=$$(grep -oE "is[[:space:]]+I[A-Za-z0-9_]+" "$$file" | head -n 1 | sed -E "s/is[[:space:]]+//"); \
+			if [ -z "$$interface_name" ]; then \
+				continue; \
+			fi; \
+			echo "Checking $$contract_name against $$interface_name..."; \
+			interface_file=$$(find src/interfaces -type f -name "$$interface_name.sol" | head -n 1); \
+			if [ ! -f "$$interface_file" ]; then \
+				echo "  ⚠️  Interface file not found: $$interface_name.sol"; \
+				found_issues=$$((found_issues + 1)); \
+				continue; \
+			fi; \
+			contract_funcs=$$(grep -E "function[[:space:]]+[A-Za-z0-9_]+\(" "$$file" | grep -E "(public|external)" | sed -E "s/.*function[[:space:]]+([A-Za-z0-9_]+)\(.*/\1/" | grep -vE "^(initialize|selectors)$$"); \
+			interface_funcs=$$(get_interface_funcs "$$interface_file"); \
+			for func in $$contract_funcs; do \
+				if ! echo "$$interface_funcs" | grep -q "^$$func$$"; then \
+					echo "  ❌ Missing in $$interface_name: $$func"; \
+					found_issues=$$((found_issues + 1)); \
+				fi; \
+			done; \
+		fi; \
+	done; \
+	if [ $$found_issues -gt 0 ]; then \
+		echo ""; \
+		echo "  Found $$found_issues missing interface function(s)"; \
+		exit 1; \
+	else \
+		echo ""; \
+		echo "  ✅ All contracts match their interfaces"; \
 	fi'
 
 # Color output

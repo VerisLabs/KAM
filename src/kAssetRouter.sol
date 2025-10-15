@@ -571,7 +571,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         return (true, "");
     }
 
-    /// @inheritdoc IkAssetRouter
     function getSettlementCooldown() external view returns (uint256) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         return $.vaultSettlementCooldown;
