@@ -135,13 +135,13 @@ compile:
 	@$(MAKE) check-selectors
 	@$(MAKE) check-interface-completeness
 	forge fmt --check
-	forge build --sizes
+	forge build --sizes --skip test
 
 build:
 	@$(MAKE) build-selectors
 	@$(MAKE) build-interfaces
 	forge fmt
-	forge build
+	forge build --use $$(which solx)
 
 clean:
 	forge clean
