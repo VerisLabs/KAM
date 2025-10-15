@@ -18,10 +18,10 @@ library OptimizedDateTimeLib {
         /// @solidity memory-safe-assembly
         assembly {
             year := sub(year, lt(month, 3))
-            let doy := add(shr(11, add(mul(62719, mod(add(month, 9), 12)), 769)), day)
+            let doy := add(shr(11, add(mul(62_719, mod(add(month, 9), 12)), 769)), day)
             let yoe := mod(year, 400)
             let doe := sub(add(add(mul(yoe, 365), shr(2, yoe)), doy), div(yoe, 100))
-            epochDay := sub(add(mul(div(year, 400), 146097), doe), 719469)
+            epochDay := sub(add(mul(div(year, 400), 146_097), doe), 719_469)
         }
     }
 
@@ -31,14 +31,14 @@ library OptimizedDateTimeLib {
     function epochDayToDate(uint256 epochDay) internal pure returns (uint256 year, uint256 month, uint256 day) {
         /// @solidity memory-safe-assembly
         assembly {
-            epochDay := add(epochDay, 719468)
-            let doe := mod(epochDay, 146097)
-            let yoe := div(sub(sub(add(doe, div(doe, 36524)), div(doe, 1460)), eq(doe, 146096)), 365)
+            epochDay := add(epochDay, 719_468)
+            let doe := mod(epochDay, 146_097)
+            let yoe := div(sub(sub(add(doe, div(doe, 36_524)), div(doe, 1460)), eq(doe, 146_096)), 365)
             let doy := sub(doe, sub(add(mul(365, yoe), shr(2, yoe)), div(yoe, 100)))
             let mp := div(add(mul(5, doy), 2), 153)
-            day := add(sub(doy, shr(11, add(mul(mp, 62719), 769))), 1)
+            day := add(sub(doy, shr(11, add(mul(mp, 62_719), 769))), 1)
             month := byte(mp, shl(160, 0x030405060708090a0b0c0102))
-            year := add(add(yoe, mul(div(epochDay, 146097), 400)), lt(month, 3))
+            year := add(add(yoe, mul(div(epochDay, 146_097), 400)), lt(month, 3))
         }
     }
 

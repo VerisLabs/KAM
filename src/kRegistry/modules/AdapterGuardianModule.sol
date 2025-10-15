@@ -102,12 +102,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     }
 
     /// @inheritdoc IAdapterGuardian
-    function setAdapterParametersChecker(
-        address adapter,
-        address target,
-        bytes4 selector,
-        address parametersChecker
-    )
+    function setAdapterParametersChecker(address adapter, address target, bytes4 selector, address parametersChecker)
         external
     {
         _checkAdmin(msg.sender);
@@ -147,11 +142,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     }
 
     /// @inheritdoc IAdapterGuardian
-    function getAdapterParametersChecker(
-        address adapter,
-        address target,
-        bytes4 selector
-    )
+    function getAdapterParametersChecker(address adapter, address target, bytes4 selector)
         external
         view
         returns (address)

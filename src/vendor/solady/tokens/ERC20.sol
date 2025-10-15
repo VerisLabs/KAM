@@ -379,15 +379,7 @@ abstract contract ERC20 {
     /// authorized by a signed approval by `owner`.
     ///
     /// Emits a {Approval} event.
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    )
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         public
         virtual
     {

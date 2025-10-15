@@ -105,7 +105,8 @@ contract kBase is OptimizedReentrancyGuardTransient {
     /// This specific slot is chosen to avoid any possible collision with standard storage layouts while maintaining
     /// deterministic addressing. The calculation ensures the storage location is unique to this namespace and won't
     /// conflict with other inherited contracts or future upgrades. The 0xff mask ensures proper alignment.
-    bytes32 private constant KBASE_STORAGE_LOCATION = 0xe91688684975c4d7d54a65dd96da5d4dcbb54b8971c046d5351d3c111e43a800;
+    bytes32 private constant KBASE_STORAGE_LOCATION =
+        0xe91688684975c4d7d54a65dd96da5d4dcbb54b8971c046d5351d3c111e43a800;
 
     /* //////////////////////////////////////////////////////////////
                               STORAGE GETTER

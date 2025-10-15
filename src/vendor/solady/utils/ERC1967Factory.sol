@@ -151,11 +151,7 @@ contract ERC1967Factory {
     /// and returns its address.
     /// The value passed into this function will be forwarded to the proxy.
     /// Then, calls the proxy with abi encoded `data`.
-    function deployAndCall(
-        address implementation,
-        address admin,
-        bytes calldata data
-    )
+    function deployAndCall(address implementation, address admin, bytes calldata data)
         public
         payable
         returns (address proxy)
@@ -166,11 +162,7 @@ contract ERC1967Factory {
     /// @dev Deploys a proxy for `implementation`, with `admin`, `salt`,
     /// and returns its deterministic address.
     /// The value passed into this function will be forwarded to the proxy.
-    function deployDeterministic(
-        address implementation,
-        address admin,
-        bytes32 salt
-    )
+    function deployDeterministic(address implementation, address admin, bytes32 salt)
         public
         payable
         returns (address proxy)
@@ -182,12 +174,7 @@ contract ERC1967Factory {
     /// and returns its deterministic address.
     /// The value passed into this function will be forwarded to the proxy.
     /// Then, calls the proxy with abi encoded `data`.
-    function deployDeterministicAndCall(
-        address implementation,
-        address admin,
-        bytes32 salt,
-        bytes calldata data
-    )
+    function deployDeterministicAndCall(address implementation, address admin, bytes32 salt, bytes calldata data)
         public
         payable
         returns (address proxy)
@@ -203,13 +190,7 @@ contract ERC1967Factory {
     }
 
     /// @dev Deploys the proxy, with optionality to deploy deterministically with a `salt`.
-    function _deploy(
-        address implementation,
-        address admin,
-        bytes32 salt,
-        bool useSalt,
-        bytes calldata data
-    )
+    function _deploy(address implementation, address admin, bytes32 salt, bool useSalt, bytes calldata data)
         internal
         returns (address proxy)
     {

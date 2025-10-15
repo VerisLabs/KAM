@@ -66,14 +66,13 @@ library OptimizedFixedPointMathLib {
                     inv := mul(inv, sub(2, mul(d, inv))) // inverse mod 2**32
                     inv := mul(inv, sub(2, mul(d, inv))) // inverse mod 2**64
                     inv := mul(inv, sub(2, mul(d, inv))) // inverse mod 2**128
-                    z :=
-                        mul(
-                            // Divide [p1 p0] by the factors of two.
-                            // Shift in bits from `p1` into `p0`. For this we need
-                            // to flip `t` such that it is `2**256 / t`.
-                            or(mul(sub(p1, gt(r, z)), add(div(sub(0, t), t), 1)), div(sub(z, r), t)),
-                            mul(sub(2, mul(d, inv)), inv) // inverse mod 2**256
-                        )
+                    z := mul(
+                        // Divide [p1 p0] by the factors of two.
+                        // Shift in bits from `p1` into `p0`. For this we need
+                        // to flip `t` such that it is `2**256 / t`.
+                        or(mul(sub(p1, gt(r, z)), add(div(sub(0, t), t), 1)), div(sub(z, r), t)),
+                        mul(sub(2, mul(d, inv)), inv) // inverse mod 2**256
+                    )
                     break
                 }
                 z := div(z, d)

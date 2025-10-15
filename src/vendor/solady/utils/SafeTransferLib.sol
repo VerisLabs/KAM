@@ -159,6 +159,7 @@ library SafeTransferLib {
     function forceSafeTransferAllETH(address to) internal {
         /// @solidity memory-safe-assembly
         assembly {
+
             // forgefmt: disable-next-item
             if iszero(call(GAS_STIPEND_NO_GRIEF, to, selfbalance(), codesize(), 0x00, codesize(), 0x00)) {
                 mstore(0x00, to) // Store the address in scratch space.
@@ -217,12 +218,7 @@ library SafeTransferLib {
     /// @dev Sends `amount` of ERC20 `token` from `from` to `to`.
     ///
     /// The `from` account must have at least `amount` approved for the current contract to manage.
-    function trySafeTransferFrom(
-        address token,
-        address from,
-        address to,
-        uint256 amount
-    )
+    function trySafeTransferFrom(address token, address from, address to, uint256 amount)
         internal
         returns (bool success)
     {
@@ -389,14 +385,13 @@ library SafeTransferLib {
         assembly {
             mstore(0x14, account) // Store the `account` argument.
             mstore(0x00, 0x70a08231000000000000000000000000) // `balanceOf(address)`.
-            amount :=
-                mul( // The arguments of `mul` are evaluated from right to left.
-                    mload(0x20),
-                    and( // The arguments of `and` are evaluated from right to left.
-                        gt(returndatasize(), 0x1f), // At least 32 bytes returned.
-                        staticcall(gas(), token, 0x10, 0x24, 0x20, 0x20)
-                    )
+            amount := mul( // The arguments of `mul` are evaluated from right to left.
+                mload(0x20),
+                and( // The arguments of `and` are evaluated from right to left.
+                    gt(returndatasize(), 0x1f), // At least 32 bytes returned.
+                    staticcall(gas(), token, 0x10, 0x24, 0x20, 0x20)
                 )
+            )
         }
     }
 
@@ -408,11 +403,10 @@ library SafeTransferLib {
         assembly {
             mstore(0x14, account) // Store the `account` argument.
             mstore(0x00, 0x70a08231000000000000000000000000) // `balanceOf(address)`.
-            implemented :=
-                and( // The arguments of `and` are evaluated from right to left.
-                    gt(returndatasize(), 0x1f), // At least 32 bytes returned.
-                    staticcall(gas(), token, 0x10, 0x24, 0x20, 0x20)
-                )
+            implemented := and( // The arguments of `and` are evaluated from right to left.
+                gt(returndatasize(), 0x1f), // At least 32 bytes returned.
+                staticcall(gas(), token, 0x10, 0x24, 0x20, 0x20)
+            )
             amount := mul(mload(0x20), implemented)
         }
     }
@@ -575,7 +569,8 @@ library SafeTransferLib {
             mstore(add(m, 0x160), s)
             mstore(add(m, 0x180), shl(248, v))
             if iszero( // Revert if token does not have code, or if the call fails.
-            mul(extcodesize(token), call(gas(), p, 0, add(m, 0x1c), 0x184, codesize(), 0x00))) {
+                mul(extcodesize(token), call(gas(), p, 0, add(m, 0x1c), 0x184, codesize(), 0x00))
+            ) {
                 mstore(0x00, 0x6b836e6b) // `Permit2Failed()`.
                 revert(0x1c, 0x04)
             }
