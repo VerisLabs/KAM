@@ -28,27 +28,41 @@ contract DeployTokensScript is Script, DeploymentManager {
 
         kRegistry registry = kRegistry(payable(existing.contracts.kRegistry));
 
-        // Deploy kUSD via registry.registerAsset()
+        // Deploy kUSD using config values
+        console.log("Deploying kUSD with config:");
+        console.log("  Name:", config.kUSD.name);
+        console.log("  Symbol:", config.kUSD.symbol);
+        console.log("  Decimals:", config.kUSD.decimals);
+        console.log("  Max Mint Per Batch:", config.kUSD.maxMintPerBatch);
+        console.log("  Max Redeem Per Batch:", config.kUSD.maxRedeemPerBatch);
+
         address kUSDAddress = registry.registerAsset(
-            "KAM USD", // name
-            "kUSD", // symbol
-            config.assets.USDC, // underlying asset
-            registry.USDC(), // asset type ID
-            type(uint256).max, // maxMintPerBatch not limited by default
-            type(uint256).max // maxRedeemPerBatch not limited by default
+            config.kUSD.name,
+            config.kUSD.symbol,
+            config.assets.USDC,
+            registry.USDC(),
+            config.kUSD.maxMintPerBatch,
+            config.kUSD.maxRedeemPerBatch
         );
 
         // Grant emergency role to kUSD
         kToken(payable(kUSDAddress)).grantEmergencyRole(config.roles.emergencyAdmin);
 
-        // Deploy kBTC via registry.registerAsset()
+        // Deploy kBTC using config values
+        console.log("Deploying kBTC with config:");
+        console.log("  Name:", config.kBTC.name);
+        console.log("  Symbol:", config.kBTC.symbol);
+        console.log("  Decimals:", config.kBTC.decimals);
+        console.log("  Max Mint Per Batch:", config.kBTC.maxMintPerBatch);
+        console.log("  Max Redeem Per Batch:", config.kBTC.maxRedeemPerBatch);
+
         address kBTCAddress = registry.registerAsset(
-            "KAM BTC", // name
-            "kBTC", // symbol
-            config.assets.WBTC, // underlying asset
-            registry.WBTC(), // asset type ID
-            type(uint256).max, // maxMintPerBatch not limited by default
-            type(uint256).max // maxRedeemPerBatch not limited by default
+            config.kBTC.name,
+            config.kBTC.symbol,
+            config.assets.WBTC,
+            registry.WBTC(),
+            config.kBTC.maxMintPerBatch,
+            config.kBTC.maxRedeemPerBatch
         );
 
         // Grant emergency role to kBTC

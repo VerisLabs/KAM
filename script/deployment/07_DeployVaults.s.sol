@@ -75,7 +75,8 @@ contract DeployVaultsScript is Script, DeploymentManager {
                 "KAM DN Vault USD",
                 "dnkUSD",
                 6,
-                config.assets.USDC // Uses USDC as underlying asset
+                config.assets.USDC ,// Uses USDC as underlying asset
+                config.dnVaultUSDC.maxTotalAssets
             )
         );
     }
@@ -92,7 +93,8 @@ contract DeployVaultsScript is Script, DeploymentManager {
                 "KAM DN Vault BTC",
                 "dnkBTC",
                 8,
-                config.assets.WBTC // Uses WBTC as underlying asset
+                config.assets.WBTC, // Uses WBTC as underlying asset
+                config.dnVaultWBTC.maxTotalAssets
             )
         );
     }
@@ -109,7 +111,8 @@ contract DeployVaultsScript is Script, DeploymentManager {
                 "KAM Alpha Vault USD",
                 "akUSD",
                 6,
-                config.assets.USDC // Uses USDC as underlying asset
+                config.assets.USDC, // Uses USDC as underlying asset
+                config.alphaVault.maxTotalAssets
             )
         );
     }
@@ -126,7 +129,8 @@ contract DeployVaultsScript is Script, DeploymentManager {
                 "KAM Beta Vault USD",
                 "bkUSD",
                 6,
-                config.assets.USDC // Uses USDC as underlying asset
+                config.assets.USDC, // Uses USDC as underlying asset
+                config.betaVault.maxTotalAssets
             )
         );
     }

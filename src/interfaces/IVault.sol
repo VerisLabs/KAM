@@ -94,5 +94,5 @@ interface IVault is IVaultBatch, IVaultClaim, IVaultFees {
 
     /// @notice Sets the maximum total assets
     /// @param maxTotalAssets_ Maximum total assets
-    function setMaxTotalAssets(uint256 maxTotalAssets_) external;
+    function setMaxTotalAssets(uint128 maxTotalAssets_) external;
 }

@@ -33,6 +33,11 @@ contract DeployAssetRouterScript is Script, DeploymentManager {
 
         address assetRouterProxy = factory.deployAndCall(address(assetRouterImpl), msg.sender, initData);
 
+        // Set settlement cooldown from config
+        kAssetRouter assetRouter = kAssetRouter(payable(assetRouterProxy));
+        assetRouter.setSettlementCooldown(config.assetRouter.settlementCooldown);
+        assetRouter.setMaxAllowedDelta(config.assetRouter.maxAllowedDelta);
+
         vm.stopBroadcast();
 
         console.log("=== DEPLOYMENT COMPLETE ===");
@@ -40,13 +45,7 @@ contract DeployAssetRouterScript is Script, DeploymentManager {
         console.log("kAssetRouter proxy deployed at:", assetRouterProxy);
         console.log("Registry:", existing.contracts.kRegistry);
         console.log("Network:", config.network);
-        console.log("");
-        console.log("TODO: Set settlement cooldown via admin call after deployment:");
-        if (keccak256(bytes(config.network)) == keccak256(bytes("localhost"))) {
-            console.log("      assetRouter.setSettlementCooldown(0); // Testing");
-        } else {
-            console.log("      assetRouter.setSettlementCooldown(3600); // 1 hour production");
-        }
+        console.log("Settlement cooldown set to:", config.assetRouter.settlementCooldown);
 
         // Auto-write contract addresses to deployment JSON
         writeContractAddress("kAssetRouterImpl", address(assetRouterImpl));

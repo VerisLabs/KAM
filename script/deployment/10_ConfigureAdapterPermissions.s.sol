@@ -10,7 +10,6 @@ import { IERC7540 } from "kam/src/interfaces/IERC7540.sol";
 import { IkRegistry } from "kam/src/interfaces/IkRegistry.sol";
 
 contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
-    // Helper function to configure kMinter adapter permissions (full ERC7540 access)
     function configureAdapterPermissions(
         IkRegistry registry,
         address adapter,
@@ -34,20 +33,17 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
             bytes4 requestRedeemSelector = IERC7540.requestRedeem.selector;
             bytes4 redeemSelector = IERC7540.redeem.selector;
 
-            // Allow all ERC7540 vault functions for kMinter (full access)
             registry.setAdapterAllowedSelector(adapter, vault, 0, requestDepositSelector, true);
             registry.setAdapterAllowedSelector(adapter, vault, 0, depositSelector, true);
             registry.setAdapterAllowedSelector(adapter, vault, 0, requestRedeemSelector, true);
             registry.setAdapterAllowedSelector(adapter, vault, 0, redeemSelector, true);
 
-            // Allow transfer and approve for asset
             registry.setAdapterAllowedSelector(adapter, asset, 0, transferSelector, true);
             registry.setAdapterAllowedSelector(adapter, asset, 0, approveSelector, true);
             registry.setAdapterAllowedSelector(adapter, asset, 0, transferFromSelector, true);
         }
     }
 
-    // Helper function to configure custodial adapter permissions (targetType = 1)
     function configureCustodialAdapterPermissions(IkRegistry registry, address adapter, address custodialAddress)
         internal
     {
@@ -58,7 +54,6 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         registry.setAdapterAllowedSelector(adapter, custodialAddress, 1, approveSelector, true);
     }
 
-    // Helper function to configure parameter checkers
     function configureParameterChecker(
         IkRegistry registry,
         address adapter,
@@ -98,22 +93,14 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
 
         // Deploy ERC20 parameters checker
         ERC20ParameterChecker erc20ParameterChecker = new ERC20ParameterChecker(address(registry));
-
-        // Write mock target addresses to deployment output
         writeContractAddress("erc20ParameterChecker", address(erc20ParameterChecker));
 
-        // Determine which contracts to use based on environment
+        // Get addresses from config and existing deployments
         address usdcVault = existing.contracts.ERC7540USDC;
         address wbtcVault = existing.contracts.ERC7540WBTC;
         address usdcWallet = existing.contracts.WalletUSDC;
         address usdc = config.assets.USDC;
         address wbtc = config.assets.WBTC;
-        address paramChecker = address(erc20ParameterChecker);
-        address kMinterAdapterUSDC = existing.contracts.kMinterAdapterUSDC;
-        address kMinterAdapterWBTC = existing.contracts.kMinterAdapterWBTC;
-        address dnVaultAdapterUSDC = existing.contracts.dnVaultAdapterUSDC;
-        address dnVaultAdapterWBTC = existing.contracts.dnVaultAdapterWBTC;
-        address treasury = config.roles.treasury;
 
         console.log("1. Configuring Adapter permissions...");
         configureAdapterPermissions(registry, existing.contracts.kMinterAdapterUSDC, usdcVault, usdc, true);
@@ -125,6 +112,7 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
 
         console.log("");
         console.log("2. Configuring parameter checkers...");
+        address paramChecker = address(erc20ParameterChecker);
         configureParameterChecker(registry, existing.contracts.kMinterAdapterUSDC, usdc, paramChecker, true);
         configureParameterChecker(registry, existing.contracts.kMinterAdapterWBTC, wbtc, paramChecker, true);
         configureParameterChecker(registry, existing.contracts.kMinterAdapterUSDC, usdcVault, paramChecker, true);
@@ -135,32 +123,158 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         configureParameterChecker(registry, existing.contracts.betaVaultAdapter, usdcWallet, paramChecker, false);
 
         console.log("");
-        console.log("3. Configuring parameter checker permissions...");
-        console.log("   - Set allowed receivers for USDC and WBTC");
-        erc20ParameterChecker.setAllowedReceiver(usdc, usdcWallet, true);
-        erc20ParameterChecker.setAllowedReceiver(wbtc, usdcWallet, true); // WBTC can also go to USDC wallet
-        erc20ParameterChecker.setAllowedReceiver(usdcVault, kMinterAdapterUSDC, true); // Metavault shares can be
-        // transferred
-        erc20ParameterChecker.setAllowedReceiver(wbtcVault, kMinterAdapterWBTC, true);
-        erc20ParameterChecker.setAllowedReceiver(usdcVault, dnVaultAdapterUSDC, true);
-        erc20ParameterChecker.setAllowedReceiver(wbtcVault, dnVaultAdapterWBTC, true);
-        console.log("   - Set allowed sources for USDC and WBTC");
-        erc20ParameterChecker.setAllowedSource(usdcVault, kMinterAdapterUSDC, true);
-        erc20ParameterChecker.setAllowedSource(wbtcVault, kMinterAdapterWBTC, true);
-        erc20ParameterChecker.setAllowedSource(usdcVault, dnVaultAdapterUSDC, true);
-        erc20ParameterChecker.setAllowedSource(wbtcVault, dnVaultAdapterWBTC, true);
-        erc20ParameterChecker.setAllowedSource(usdcVault, treasury, true);
-        erc20ParameterChecker.setAllowedSource(wbtcVault, treasury, true);
-        console.log("   - Set allowed spenders for USDC and WBTC");
-        erc20ParameterChecker.setAllowedSpender(usdc, usdcVault, true);
-        erc20ParameterChecker.setAllowedSpender(wbtc, wbtcVault, true);
-        console.log("   - Set max transfer limits for USDC and WBTC");
-        erc20ParameterChecker.setMaxSingleTransfer(usdc, 1_000_000 * 10 ** 6);
-        erc20ParameterChecker.setMaxSingleTransfer(wbtc, 30 * 10 ** 8);
-        console.log("   - Set max transfer limits for metavault shares");
-        erc20ParameterChecker.setMaxSingleTransfer(usdcVault, 1_000_000 * 10 ** 6); // 1M USDC worth of shares
-        erc20ParameterChecker.setMaxSingleTransfer(wbtcVault, 30 * 10 ** 8); // 30 WBTC worth of shares
+        console.log("3. Configuring parameter checker permissions from config...");
+        
+        // Set allowed receivers from config
+        _configureAllowedReceivers(erc20ParameterChecker, config, existing, usdc, usdcVault, usdcWallet);
+        
+        // Set allowed sources from config
+        _configureAllowedSources(erc20ParameterChecker, config, existing, usdcVault, wbtcVault);
+        
+        // Set allowed spenders from config
+        _configureAllowedSpenders(erc20ParameterChecker, config, existing, usdc, wbtc, usdcVault, wbtcVault);
+        
+        // Set max transfer limits from config
+        console.log("   - Set max transfer limits");
+        erc20ParameterChecker.setMaxSingleTransfer(usdc, config.parameterChecker.maxSingleTransfer.USDC);
+        erc20ParameterChecker.setMaxSingleTransfer(wbtc, config.parameterChecker.maxSingleTransfer.WBTC);
+        erc20ParameterChecker.setMaxSingleTransfer(usdcVault, config.parameterChecker.maxSingleTransfer.ERC7540USDC);
+        erc20ParameterChecker.setMaxSingleTransfer(wbtcVault, config.parameterChecker.maxSingleTransfer.ERC7540WBTC);
 
         vm.stopBroadcast();
+
+        console.log("");
+        console.log("=======================================");
+        console.log("Adapter permissions configuration complete!");
+    }
+
+    function _configureAllowedReceivers(
+        ERC20ParameterChecker checker,
+        NetworkConfig memory config,
+        DeploymentOutput memory existing,
+        address usdc,
+        address usdcVault,
+        address usdcWallet
+    ) internal {
+        console.log("   - Set allowed receivers from config");
+        
+        // USDC receivers
+        for (uint256 i = 0; i < config.parameterChecker.allowedReceivers.USDC.length; i++) {
+            address receiver = _resolveAddress(config.parameterChecker.allowedReceivers.USDC[i], config, existing);
+            if (receiver != address(0)) {
+                checker.setAllowedReceiver(usdc, receiver, true);
+            }
+        }
+        
+        // WBTC receivers
+        for (uint256 i = 0; i < config.parameterChecker.allowedReceivers.WBTC.length; i++) {
+            address receiver = _resolveAddress(config.parameterChecker.allowedReceivers.WBTC[i], config, existing);
+            if (receiver != address(0)) {
+                checker.setAllowedReceiver(config.assets.WBTC, receiver, true);
+            }
+        }
+        
+        // ERC7540USDC receivers
+        for (uint256 i = 0; i < config.parameterChecker.allowedReceivers.ERC7540USDC.length; i++) {
+            address receiver = _resolveAddress(config.parameterChecker.allowedReceivers.ERC7540USDC[i], config, existing);
+            if (receiver != address(0)) {
+                checker.setAllowedReceiver(usdcVault, receiver, true);
+            }
+        }
+        
+        // ERC7540WBTC receivers
+        for (uint256 i = 0; i < config.parameterChecker.allowedReceivers.ERC7540WBTC.length; i++) {
+            address receiver = _resolveAddress(config.parameterChecker.allowedReceivers.ERC7540WBTC[i], config, existing);
+            if (receiver != address(0)) {
+                checker.setAllowedReceiver(existing.contracts.ERC7540WBTC, receiver, true);
+            }
+        }
+    }
+
+    function _configureAllowedSources(
+        ERC20ParameterChecker checker,
+        NetworkConfig memory config,
+        DeploymentOutput memory existing,
+        address usdcVault,
+        address wbtcVault
+    ) internal {
+        console.log("   - Set allowed sources from config");
+        
+        // ERC7540USDC sources
+        for (uint256 i = 0; i < config.parameterChecker.allowedSources.ERC7540USDC.length; i++) {
+            address source = _resolveAddress(config.parameterChecker.allowedSources.ERC7540USDC[i], config, existing);
+            if (source != address(0)) {
+                checker.setAllowedSource(usdcVault, source, true);
+            }
+        }
+        
+        // ERC7540WBTC sources
+        for (uint256 i = 0; i < config.parameterChecker.allowedSources.ERC7540WBTC.length; i++) {
+            address source = _resolveAddress(config.parameterChecker.allowedSources.ERC7540WBTC[i], config, existing);
+            if (source != address(0)) {
+                checker.setAllowedSource(wbtcVault, source, true);
+            }
+        }
+    }
+
+    function _configureAllowedSpenders(
+        ERC20ParameterChecker checker,
+        NetworkConfig memory config,
+        DeploymentOutput memory existing,
+        address usdc,
+        address wbtc,
+        address usdcVault,
+        address wbtcVault
+    ) internal {
+        console.log("   - Set allowed spenders from config");
+        
+        // USDC spenders
+        for (uint256 i = 0; i < config.parameterChecker.allowedSpenders.USDC.length; i++) {
+            address spender = _resolveAddress(config.parameterChecker.allowedSpenders.USDC[i], config, existing);
+            if (spender != address(0)) {
+                checker.setAllowedSpender(usdc, spender, true);
+            }
+        }
+        
+        // WBTC spenders
+        for (uint256 i = 0; i < config.parameterChecker.allowedSpenders.WBTC.length; i++) {
+            address spender = _resolveAddress(config.parameterChecker.allowedSpenders.WBTC[i], config, existing);
+            if (spender != address(0)) {
+                checker.setAllowedSpender(wbtc, spender, true);
+            }
+        }
+    }
+
+    function _resolveAddress(
+        string memory key,
+        NetworkConfig memory config,
+        DeploymentOutput memory existing
+    ) internal pure returns (address) {
+        // Check if it's a contract key
+        if (keccak256(bytes(key)) == keccak256(bytes("kMinterAdapterUSDC"))) {
+            return existing.contracts.kMinterAdapterUSDC;
+        } else if (keccak256(bytes(key)) == keccak256(bytes("kMinterAdapterWBTC"))) {
+            return existing.contracts.kMinterAdapterWBTC;
+        } else if (keccak256(bytes(key)) == keccak256(bytes("dnVaultAdapterUSDC"))) {
+            return existing.contracts.dnVaultAdapterUSDC;
+        } else if (keccak256(bytes(key)) == keccak256(bytes("dnVaultAdapterWBTC"))) {
+            return existing.contracts.dnVaultAdapterWBTC;
+        } else if (keccak256(bytes(key)) == keccak256(bytes("alphaVaultAdapter"))) {
+            return existing.contracts.alphaVaultAdapter;
+        } else if (keccak256(bytes(key)) == keccak256(bytes("betaVaultAdapter"))) {
+            return existing.contracts.betaVaultAdapter;
+        } else if (keccak256(bytes(key)) == keccak256(bytes("treasury"))) {
+            return config.roles.treasury;
+        } else if (keccak256(bytes(key)) == keccak256(bytes("walletUSDC"))) {
+            return existing.contracts.WalletUSDC;
+        } else if (keccak256(bytes(key)) == keccak256(bytes("walletWBTC"))) {
+            return existing.contracts.WalletWBTC;
+        } else if (keccak256(bytes(key)) == keccak256(bytes("ERC7540USDC"))) {
+            return existing.contracts.ERC7540USDC;
+        } else if (keccak256(bytes(key)) == keccak256(bytes("ERC7540WBTC"))) {
+            return existing.contracts.ERC7540WBTC;
+        }
+        
+        return address(0);
     }
 }

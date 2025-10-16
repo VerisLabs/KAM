@@ -2,13 +2,9 @@
 pragma solidity ^0.8.20;
 
 import { Script } from "forge-std/Script.sol";
-
 import { stdJson } from "forge-std/StdJson.sol";
 import { console2 as console } from "forge-std/console2.sol";
 
-/// @title DeploymentManager
-/// @notice Utility for managing JSON-based deployment configurations and outputs
-/// @dev Handles reading network configs and writing deployment addresses
 abstract contract DeploymentManager is Script {
     using stdJson for string;
 
@@ -18,6 +14,16 @@ abstract contract DeploymentManager is Script {
         RoleAddresses roles;
         AssetAddresses assets;
         ERC7540Addresses ERC7540s;
+        CustodialTargets custodialTargets;
+        KTokenConfig kUSD;
+        KTokenConfig kBTC;
+        VaultConfig dnVaultUSDC;
+        VaultConfig dnVaultWBTC;
+        VaultConfig alphaVault;
+        VaultConfig betaVault;
+        AssetRouterConfig assetRouter;
+        ParameterCheckerConfig parameterChecker;
+        MockAssetsConfig mockAssets;
     }
 
     struct RoleAddresses {
@@ -38,6 +44,80 @@ abstract contract DeploymentManager is Script {
     struct ERC7540Addresses {
         address USDC;
         address WBTC;
+    }
+
+    struct CustodialTargets {
+        address walletUSDC;
+        address walletWBTC;
+    }
+
+    struct KTokenConfig {
+        string name;
+        string symbol;
+        uint8 decimals;
+        uint256 maxMintPerBatch;
+        uint256 maxRedeemPerBatch;
+    }
+
+    struct VaultConfig {
+        string name;
+        string symbol;
+        uint8 decimals;
+        string underlyingAsset;
+        bool useKToken;
+        uint128 maxTotalAssets;
+    }
+
+    struct AssetRouterConfig {
+        uint256 settlementCooldown;
+        uint256 maxAllowedDelta;
+    }
+
+    struct ParameterCheckerConfig {
+        MaxTransferAmounts maxSingleTransfer;
+        AllowedReceivers allowedReceivers;
+        AllowedSources allowedSources;
+        AllowedSpenders allowedSpenders;
+    }
+
+    struct MaxTransferAmounts {
+        uint256 USDC;
+        uint256 WBTC;
+        uint256 ERC7540USDC;
+        uint256 ERC7540WBTC;
+    }
+
+    struct AllowedReceivers {
+        string[] USDC;
+        string[] WBTC;
+        string[] ERC7540USDC;
+        string[] ERC7540WBTC;
+    }
+
+    struct AllowedSources {
+        string[] ERC7540USDC;
+        string[] ERC7540WBTC;
+    }
+
+    struct AllowedSpenders {
+        string[] USDC;
+        string[] WBTC;
+    }
+
+    struct MockAssetsConfig {
+        bool enabled;
+        MockMintAmounts mintAmounts;
+        MockTargetAmounts mockTargetAmounts;
+    }
+
+    struct MockMintAmounts {
+        uint256 USDC;
+        uint256 WBTC;
+    }
+
+    struct MockTargetAmounts {
+        uint256 USDC;
+        uint256 WBTC;
     }
 
     struct DeploymentOutput {
@@ -84,30 +164,21 @@ abstract contract DeploymentManager is Script {
         address erc20ParameterChecker;
     }
 
-    /// @notice Gets the current network name from foundry context
-    /// @return network Network name (mainnet, sepolia, localhost)
     function getCurrentNetwork() internal view returns (string memory) {
         uint256 chainId = block.chainid;
-
         if (chainId == 1) return "mainnet";
         if (chainId == 11_155_111) return "sepolia";
         if (chainId == 31_337) return "localhost";
-
-        // Fallback to localhost for unknown chains
         return "localhost";
     }
 
     function isProduction() internal view returns (bool) {
-        bool isProd = vm.envOr("PRODUCTION", false);
-        return isProd;
+        return vm.envOr("PRODUCTION", false);
     }
 
-    /// @notice Reads network configuration from JSON file
-    /// @return config Network configuration struct
     function readNetworkConfig() internal view returns (NetworkConfig memory config) {
         string memory network = getCurrentNetwork();
         string memory configPath = string.concat("deployments/config/", network, ".json");
-
         require(vm.exists(configPath), string.concat("Config file not found: ", configPath));
 
         string memory json = vm.readFile(configPath);
@@ -132,133 +203,243 @@ abstract contract DeploymentManager is Script {
         config.ERC7540s.USDC = json.readAddress(".ERC7540s.USDC");
         config.ERC7540s.WBTC = json.readAddress(".ERC7540s.WBTC");
 
+        // Parse custodial targets (optional, may be zero for production)
+        if (json.keyExists(".custodialTargets.walletUSDC")) {
+            config.custodialTargets.walletUSDC = json.readAddress(".custodialTargets.walletUSDC");
+        }
+        if (json.keyExists(".custodialTargets.walletWBTC")) {
+            config.custodialTargets.walletWBTC = json.readAddress(".custodialTargets.walletWBTC");
+        }
+
+        // Parse kToken configs
+        config.kUSD = _readKTokenConfig(json, ".kTokens.kUSD");
+        config.kBTC = _readKTokenConfig(json, ".kTokens.kBTC");
+
+        // Parse vault configs
+        config.dnVaultUSDC = _readVaultConfig(json, ".vaults.dnVaultUSDC");
+        config.dnVaultWBTC = _readVaultConfig(json, ".vaults.dnVaultWBTC");
+        config.alphaVault = _readVaultConfig(json, ".vaults.alphaVault");
+        config.betaVault = _readVaultConfig(json, ".vaults.betaVault");
+
+        // Parse asset router config
+        config.assetRouter.settlementCooldown = json.readUint(".assetRouter.settlementCooldown");
+        config.assetRouter.maxAllowedDelta = json.readUint(".assetRouter.maxAllowedDelta");
+
+        // Parse parameter checker config
+        config.parameterChecker = _readParameterCheckerConfig(json);
+
+        // Parse mock assets config
+        config.mockAssets.enabled = json.readBool(".mockAssets.enabled");
+        config.mockAssets.mintAmounts.USDC = json.readUint(".mockAssets.mintAmounts.USDC");
+        config.mockAssets.mintAmounts.WBTC = json.readUint(".mockAssets.mintAmounts.WBTC");
+        config.mockAssets.mockTargetAmounts.USDC = json.readUint(".mockAssets.mockTargetAmounts.USDC");
+        config.mockAssets.mockTargetAmounts.WBTC = json.readUint(".mockAssets.mockTargetAmounts.WBTC");
+
         return config;
     }
 
-    /// @notice Reads existing deployment addresses from output JSON
-    /// @return output Deployment output struct with contract addresses
+    function _readKTokenConfig(string memory json, string memory path) private view returns (KTokenConfig memory) {
+        KTokenConfig memory config;
+        config.name = json.readString(string.concat(path, ".name"));
+        config.symbol = json.readString(string.concat(path, ".symbol"));
+        config.decimals = uint8(json.readUint(string.concat(path, ".decimals")));
+        
+        string memory maxMintStr = json.readString(string.concat(path, ".maxMintPerBatch"));
+        config.maxMintPerBatch = _parseUintString(maxMintStr);
+        
+        string memory maxRedeemStr = json.readString(string.concat(path, ".maxRedeemPerBatch"));
+        config.maxRedeemPerBatch = _parseUintString(maxRedeemStr);
+        
+        return config;
+    }
+
+    function _readVaultConfig(string memory json, string memory path) private view returns (VaultConfig memory) {
+        VaultConfig memory config;
+        config.name = json.readString(string.concat(path, ".name"));
+        config.symbol = json.readString(string.concat(path, ".symbol"));
+        config.decimals = uint8(json.readUint(string.concat(path, ".decimals")));
+        config.underlyingAsset = json.readString(string.concat(path, ".underlyingAsset"));
+        config.useKToken = json.readBool(string.concat(path, ".useKToken"));
+        config.maxTotalAssets = uint128(json.readUint(string.concat(path, ".maxTotalAssets")));
+        return config;
+    }
+
+    function _readParameterCheckerConfig(string memory json) private view returns (ParameterCheckerConfig memory) {
+        ParameterCheckerConfig memory config;
+        
+        // Read max single transfer amounts
+        config.maxSingleTransfer.USDC = _parseUintString(json.readString(".parameterChecker.maxSingleTransfer.USDC"));
+        config.maxSingleTransfer.WBTC = _parseUintString(json.readString(".parameterChecker.maxSingleTransfer.WBTC"));
+        config.maxSingleTransfer.ERC7540USDC = _parseUintString(json.readString(".parameterChecker.maxSingleTransfer.ERC7540USDC"));
+        config.maxSingleTransfer.ERC7540WBTC = _parseUintString(json.readString(".parameterChecker.maxSingleTransfer.ERC7540WBTC"));
+
+        // Read allowed receivers arrays
+        bytes memory usdcReceivers = json.parseRaw(".parameterChecker.allowedReceivers.USDC");
+        config.allowedReceivers.USDC = abi.decode(usdcReceivers, (string[]));
+
+        bytes memory wbtcReceivers = json.parseRaw(".parameterChecker.allowedReceivers.WBTC");
+        config.allowedReceivers.WBTC = abi.decode(wbtcReceivers, (string[]));
+
+        bytes memory erc7540UsdcReceivers = json.parseRaw(".parameterChecker.allowedReceivers.ERC7540USDC");
+        config.allowedReceivers.ERC7540USDC = abi.decode(erc7540UsdcReceivers, (string[]));
+
+        bytes memory erc7540WbtcReceivers = json.parseRaw(".parameterChecker.allowedReceivers.ERC7540WBTC");
+        config.allowedReceivers.ERC7540WBTC = abi.decode(erc7540WbtcReceivers, (string[]));
+
+        // Read allowed sources arrays
+        bytes memory erc7540UsdcSources = json.parseRaw(".parameterChecker.allowedSources.ERC7540USDC");
+        config.allowedSources.ERC7540USDC = abi.decode(erc7540UsdcSources, (string[]));
+
+        bytes memory erc7540WbtcSources = json.parseRaw(".parameterChecker.allowedSources.ERC7540WBTC");
+        config.allowedSources.ERC7540WBTC = abi.decode(erc7540WbtcSources, (string[]));
+
+        // Read allowed spenders arrays
+        bytes memory usdcSpenders = json.parseRaw(".parameterChecker.allowedSpenders.USDC");
+        config.allowedSpenders.USDC = abi.decode(usdcSpenders, (string[]));
+
+        bytes memory wbtcSpenders = json.parseRaw(".parameterChecker.allowedSpenders.WBTC");
+        config.allowedSpenders.WBTC = abi.decode(wbtcSpenders, (string[]));
+
+        return config;
+    }
+
+    function _parseUintString(string memory str) private pure returns (uint256) {
+        bytes memory b = bytes(str);
+        if (b.length == 1 && b[0] == 0x30) return 0; // "0"
+        
+        uint256 result = 0;
+        for (uint256 i = 0; i < b.length; i++) {
+            uint8 digit = uint8(b[i]) - 48;
+            require(digit <= 9, "Invalid number string");
+            result = result * 10 + digit;
+        }
+        return result == 0 ? type(uint256).max : result;
+    }
+
+    function getUnderlyingAssetAddress(NetworkConfig memory config, string memory assetKey) internal pure returns (address) {
+        if (keccak256(bytes(assetKey)) == keccak256(bytes("USDC"))) {
+            return config.assets.USDC;
+        } else if (keccak256(bytes(assetKey)) == keccak256(bytes("WBTC"))) {
+            return config.assets.WBTC;
+        }
+        revert("Unknown asset key");
+    }
+
+    function resolveContractAddress(DeploymentOutput memory existing, string memory contractKey) internal pure returns (address) {
+        if (keccak256(bytes(contractKey)) == keccak256(bytes("kMinterAdapterUSDC"))) {
+            return existing.contracts.kMinterAdapterUSDC;
+        } else if (keccak256(bytes(contractKey)) == keccak256(bytes("kMinterAdapterWBTC"))) {
+            return existing.contracts.kMinterAdapterWBTC;
+        } else if (keccak256(bytes(contractKey)) == keccak256(bytes("dnVaultAdapterUSDC"))) {
+            return existing.contracts.dnVaultAdapterUSDC;
+        } else if (keccak256(bytes(contractKey)) == keccak256(bytes("dnVaultAdapterWBTC"))) {
+            return existing.contracts.dnVaultAdapterWBTC;
+        } else if (keccak256(bytes(contractKey)) == keccak256(bytes("treasury"))) {
+            // This would need to come from config
+            return address(0);
+        } else if (keccak256(bytes(contractKey)) == keccak256(bytes("walletUSDC"))) {
+            return existing.contracts.WalletUSDC;
+        } else if (keccak256(bytes(contractKey)) == keccak256(bytes("walletWBTC"))) {
+            return existing.contracts.WalletWBTC;
+        }
+        revert("Unknown contract key");
+    }
+
+    // Keep all existing DeploymentOutput methods from original file...
     function readDeploymentOutput() internal view returns (DeploymentOutput memory output) {
         string memory network = getCurrentNetwork();
         string memory outputPath = string.concat("deployments/output/", network, "/addresses.json");
 
         if (!vm.exists(outputPath)) {
-            // Return empty struct if file doesn't exist
             output.network = network;
             output.chainId = block.chainid;
             return output;
         }
 
         string memory json = vm.readFile(outputPath);
-
         output.chainId = json.readUint(".chainId");
         output.network = json.readString(".network");
         output.timestamp = json.readUint(".timestamp");
 
-        // Parse contract addresses (check if keys exist before reading)
+        // Parse all contract addresses (keeping existing implementation)
         if (json.keyExists(".contracts.ERC1967Factory")) {
             output.contracts.ERC1967Factory = json.readAddress(".contracts.ERC1967Factory");
         }
-
         if (json.keyExists(".contracts.kRegistryImpl")) {
             output.contracts.kRegistryImpl = json.readAddress(".contracts.kRegistryImpl");
         }
-
         if (json.keyExists(".contracts.kRegistry")) {
             output.contracts.kRegistry = json.readAddress(".contracts.kRegistry");
         }
-
         if (json.keyExists(".contracts.kMinterImpl")) {
             output.contracts.kMinterImpl = json.readAddress(".contracts.kMinterImpl");
         }
-
         if (json.keyExists(".contracts.kMinter")) {
             output.contracts.kMinter = json.readAddress(".contracts.kMinter");
         }
-
         if (json.keyExists(".contracts.kAssetRouterImpl")) {
             output.contracts.kAssetRouterImpl = json.readAddress(".contracts.kAssetRouterImpl");
         }
-
         if (json.keyExists(".contracts.kAssetRouter")) {
             output.contracts.kAssetRouter = json.readAddress(".contracts.kAssetRouter");
         }
-
         if (json.keyExists(".contracts.kUSD")) {
             output.contracts.kUSD = json.readAddress(".contracts.kUSD");
         }
-
         if (json.keyExists(".contracts.kBTC")) {
             output.contracts.kBTC = json.readAddress(".contracts.kBTC");
         }
-
         if (json.keyExists(".contracts.readerModule")) {
             output.contracts.readerModule = json.readAddress(".contracts.readerModule");
         }
-
         if (json.keyExists(".contracts.adapterGuardianModule")) {
             output.contracts.adapterGuardianModule = json.readAddress(".contracts.adapterGuardianModule");
         }
-
         if (json.keyExists(".contracts.kStakingVaultImpl")) {
             output.contracts.kStakingVaultImpl = json.readAddress(".contracts.kStakingVaultImpl");
         }
-
         if (json.keyExists(".contracts.dnVaultUSDC")) {
             output.contracts.dnVaultUSDC = json.readAddress(".contracts.dnVaultUSDC");
         }
-
         if (json.keyExists(".contracts.dnVaultWBTC")) {
             output.contracts.dnVaultWBTC = json.readAddress(".contracts.dnVaultWBTC");
         }
-
         if (json.keyExists(".contracts.alphaVault")) {
             output.contracts.alphaVault = json.readAddress(".contracts.alphaVault");
         }
-
         if (json.keyExists(".contracts.betaVault")) {
             output.contracts.betaVault = json.readAddress(".contracts.betaVault");
         }
-
         if (json.keyExists(".contracts.vaultAdapterImpl")) {
             output.contracts.vaultAdapterImpl = json.readAddress(".contracts.vaultAdapterImpl");
         }
-
         if (json.keyExists(".contracts.dnVaultAdapterUSDC")) {
             output.contracts.dnVaultAdapterUSDC = json.readAddress(".contracts.dnVaultAdapterUSDC");
         }
-
         if (json.keyExists(".contracts.dnVaultAdapterWBTC")) {
             output.contracts.dnVaultAdapterWBTC = json.readAddress(".contracts.dnVaultAdapterWBTC");
         }
-
         if (json.keyExists(".contracts.alphaVaultAdapter")) {
             output.contracts.alphaVaultAdapter = json.readAddress(".contracts.alphaVaultAdapter");
         }
-
         if (json.keyExists(".contracts.betaVaultAdapter")) {
             output.contracts.betaVaultAdapter = json.readAddress(".contracts.betaVaultAdapter");
         }
-
         if (json.keyExists(".contracts.kMinterAdapterUSDC")) {
             output.contracts.kMinterAdapterUSDC = json.readAddress(".contracts.kMinterAdapterUSDC");
         }
-
         if (json.keyExists(".contracts.kMinterAdapterWBTC")) {
             output.contracts.kMinterAdapterWBTC = json.readAddress(".contracts.kMinterAdapterWBTC");
         }
-
         if (json.keyExists(".contracts.ERC7540USDC")) {
             output.contracts.ERC7540USDC = json.readAddress(".contracts.ERC7540USDC");
         }
-
         if (json.keyExists(".contracts.ERC7540WBTC")) {
             output.contracts.ERC7540WBTC = json.readAddress(".contracts.ERC7540WBTC");
         }
-
         if (json.keyExists(".contracts.WalletUSDC")) {
             output.contracts.WalletUSDC = json.readAddress(".contracts.WalletUSDC");
         }
-
         if (json.keyExists(".contracts.erc20ParameterChecker")) {
             output.contracts.erc20ParameterChecker = json.readAddress(".contracts.erc20ParameterChecker");
         }
@@ -266,14 +447,10 @@ abstract contract DeploymentManager is Script {
         return output;
     }
 
-    /// @notice Writes a single contract address to deployment output
-    /// @param contractName Name of the contract
-    /// @param contractAddress Address of the deployed contract
     function writeContractAddress(string memory contractName, address contractAddress) internal {
         string memory network = getCurrentNetwork();
         string memory outputPath = string.concat("deployments/output/", network, "/addresses.json");
 
-        // Read existing output or create new
         DeploymentOutput memory output = readDeploymentOutput();
         output.chainId = block.chainid;
         output.network = network;
@@ -336,16 +513,12 @@ abstract contract DeploymentManager is Script {
             output.contracts.erc20ParameterChecker = contractAddress;
         }
 
-        // Write to JSON file
         string memory json = _serializeDeploymentOutput(output);
         vm.writeFile(outputPath, json);
 
         console.log(string.concat(contractName, " address written to: "), outputPath);
     }
 
-    /// @notice Serializes deployment output to JSON string
-    /// @param output Deployment output struct
-    /// @return JSON string representation
     function _serializeDeploymentOutput(DeploymentOutput memory output) private pure returns (string memory) {
         string memory json = "{";
         json = string.concat(json, '"chainId":', vm.toString(output.chainId), ",");
@@ -364,8 +537,7 @@ abstract contract DeploymentManager is Script {
         json = string.concat(json, '"kBTC":"', vm.toString(output.contracts.kBTC), '",');
         json = string.concat(json, '"kStakingVaultImpl":"', vm.toString(output.contracts.kStakingVaultImpl), '",');
         json = string.concat(json, '"readerModule":"', vm.toString(output.contracts.readerModule), '",');
-        json =
-            string.concat(json, '"adapterGuardianModule":"', vm.toString(output.contracts.adapterGuardianModule), '",');
+        json = string.concat(json, '"adapterGuardianModule":"', vm.toString(output.contracts.adapterGuardianModule), '",');
         json = string.concat(json, '"dnVaultUSDC":"', vm.toString(output.contracts.dnVaultUSDC), '",');
         json = string.concat(json, '"dnVaultWBTC":"', vm.toString(output.contracts.dnVaultWBTC), '",');
         json = string.concat(json, '"alphaVault":"', vm.toString(output.contracts.alphaVault), '",');
@@ -380,15 +552,12 @@ abstract contract DeploymentManager is Script {
         json = string.concat(json, '"ERC7540USDC":"', vm.toString(output.contracts.ERC7540USDC), '",');
         json = string.concat(json, '"ERC7540WBTC":"', vm.toString(output.contracts.ERC7540WBTC), '",');
         json = string.concat(json, '"WalletUSDC":"', vm.toString(output.contracts.WalletUSDC), '",');
-        json =
-            string.concat(json, '"erc20ParameterChecker":"', vm.toString(output.contracts.erc20ParameterChecker), '"');
+        json = string.concat(json, '"erc20ParameterChecker":"', vm.toString(output.contracts.erc20ParameterChecker), '"');
         json = string.concat(json, "}}");
 
         return json;
     }
 
-    /// @notice Validates that required addresses are not zero
-    /// @param config Network configuration to validate
     function validateConfig(NetworkConfig memory config) internal pure {
         require(config.roles.owner != address(0), "Missing owner address");
         require(config.roles.admin != address(0), "Missing admin address");
@@ -399,12 +568,8 @@ abstract contract DeploymentManager is Script {
         require(config.roles.treasury != address(0), "Missing treasury address");
         require(config.assets.USDC != address(0), "Missing USDC address");
         require(config.assets.WBTC != address(0), "Missing WBTC address");
-        require(config.ERC7540s.USDC != address(0), "Missing ERC7540USDC address");
-        require(config.ERC7540s.WBTC != address(0), "Missing ERC7540WBTC address");
     }
 
-    /// @notice Validates that required deployment outputs are not zero for adapter configuration
-    /// @param existing Deployment output to validate
     function validateAdapterDeployments(DeploymentOutput memory existing) internal pure {
         require(existing.contracts.kRegistry != address(0), "kRegistry not deployed");
         require(existing.contracts.dnVaultAdapterUSDC != address(0), "dnVaultAdapterUSDC not deployed");
@@ -416,8 +581,6 @@ abstract contract DeploymentManager is Script {
         require(existing.contracts.WalletUSDC != address(0), "WalletUSDC not deployed");
     }
 
-    /// @notice Validates that required deployment outputs are not zero for protocol configuration
-    /// @param existing Deployment output to validate
     function validateProtocolDeployments(DeploymentOutput memory existing) internal pure {
         require(existing.contracts.kRegistry != address(0), "kRegistry not deployed");
         require(existing.contracts.kMinter != address(0), "kMinter not deployed");
@@ -432,8 +595,6 @@ abstract contract DeploymentManager is Script {
         require(existing.contracts.betaVaultAdapter != address(0), "betaVaultAdapter not deployed");
     }
 
-    /// @notice Logs deployment configuration for verification
-    /// @param config Network configuration
     function logConfig(NetworkConfig memory config) internal pure {
         console.log("=== DEPLOYMENT CONFIGURATION ===");
         console.log("Network:", config.network);
@@ -447,6 +608,8 @@ abstract contract DeploymentManager is Script {
         console.log("Treasury:", config.roles.treasury);
         console.log("USDC:", config.assets.USDC);
         console.log("WBTC:", config.assets.WBTC);
+        console.log("Settlement Cooldown:", config.assetRouter.settlementCooldown);
+        console.log("Max Allowed Delta:", config.assetRouter.maxAllowedDelta);
         console.log("===============================");
     }
 }

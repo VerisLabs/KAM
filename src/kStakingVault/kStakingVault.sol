@@ -163,7 +163,8 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
-        address asset_
+        address asset_,
+        uint128 maxTotalAssets_
     )
         external
         initializer
@@ -183,6 +184,7 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         $.sharePriceWatermark = (10 ** decimals_).toUint128();
         $.kToken = _registry().assetToKToken(asset_);
         $.receiverImplementation = address(new kBatchReceiver(_registry().getContractById(K_MINTER)));
+        $.maxTotalAssets = maxTotalAssets_;
 
         emit Initialized(registry_, name_, symbol_, decimals_, asset_);
     }
@@ -667,9 +669,9 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IVault
-    function setMaxTotalAssets(uint256 maxTotalAssets_) external {
+    function setMaxTotalAssets(uint128 maxTotalAssets_) external {
         _checkAdmin(msg.sender);
-        _getBaseVaultStorage().maxTotalAssets = maxTotalAssets_.toUint128();
+        _getBaseVaultStorage().maxTotalAssets = maxTotalAssets_;
     }
 
     /// @inheritdoc IVault
