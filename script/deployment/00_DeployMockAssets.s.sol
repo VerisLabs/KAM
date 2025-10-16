@@ -216,7 +216,8 @@ contract DeployMockAssetsScript is Script, DeploymentManager {
         uint256 usdcAmount = config.mockAssets.mockTargetAmounts.USDC;
         uint256 wbtcAmount = config.mockAssets.mockTargetAmounts.WBTC;
 
-        console.log("Minting", usdcAmount, "USDC and", wbtcAmount, "WBTC to mock targets");
+        console.log("Minting", usdcAmount, "USDC");
+        console.log(wbtcAmount, "WBTC per account");
 
         mockUSDC.mint(address(mockERC7540USDC), usdcAmount);
         mockWBTC.mint(address(mockERC7540WBTC), wbtcAmount);

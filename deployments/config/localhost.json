@@ -45,7 +45,10 @@
       "decimals": 6,
       "underlyingAsset": "USDC",
       "useKToken": false,
-      "maxTotalAssets":500000000000000
+      "maxTotalAssets": 500000000000000,
+      "maxDepositPerBatch": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "maxWithdrawPerBatch": 50000000000000
+
     },
     "dnVaultWBTC": {
       "name": "KAM DN Vault BTC",
@@ -53,7 +56,9 @@
       "decimals": 8,
       "underlyingAsset": "WBTC",
       "useKToken": false,
-      "maxTotalAssets":20000000000
+      "maxTotalAssets":20000000000,
+      "maxDepositPerBatch": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "maxWithdrawPerBatch": 2000000000
     },
     "alphaVault": {
       "name": "KAM Alpha Vault USD",
@@ -61,7 +66,9 @@
       "decimals": 6,
       "underlyingAsset": "USDC",
       "useKToken": false,
-      "maxTotalAssets":200000000000000 
+      "maxTotalAssets": "200000000000000",
+      "maxDepositPerBatch": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "maxWithdrawPerBatch": 20000000000000
     },
     "betaVault": {
       "name": "KAM Beta Vault USD",
@@ -69,7 +76,9 @@
       "decimals": 6,
       "underlyingAsset": "USDC",
       "useKToken": false,
-      "maxTotalAssets":200000000000000
+      "maxTotalAssets":200000000000000,
+      "maxDepositPerBatch": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "maxWithdrawPerBatch": 20000000000000
     }
   },
   "assetRouter": {

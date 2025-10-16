@@ -66,6 +66,8 @@ abstract contract DeploymentManager is Script {
         string underlyingAsset;
         bool useKToken;
         uint128 maxTotalAssets;
+        uint256 maxDepositPerBatch;
+        uint256 maxWithdrawPerBatch;
     }
 
     struct AssetRouterConfig {
@@ -261,6 +263,8 @@ abstract contract DeploymentManager is Script {
         config.underlyingAsset = json.readString(string.concat(path, ".underlyingAsset"));
         config.useKToken = json.readBool(string.concat(path, ".useKToken"));
         config.maxTotalAssets = uint128(json.readUint(string.concat(path, ".maxTotalAssets")));
+        config.maxDepositPerBatch = uint128(json.readUint(string.concat(path, ".maxDepositPerBatch")));
+        config.maxWithdrawPerBatch = uint128(json.readUint(string.concat(path, ".maxWithdrawPerBatch")));
         return config;
     }
 
