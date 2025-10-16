@@ -102,12 +102,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     }
 
     /// @inheritdoc IAdapterGuardian
-    function setAdapterParametersChecker(
-        address adapter,
-        address target,
-        bytes4 selector,
-        address parametersChecker
-    )
+    function setAdapterParametersChecker(address adapter, address target, bytes4 selector, address parametersChecker)
         external
     {
         _checkAdmin(msg.sender);
@@ -147,11 +142,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     }
 
     /// @inheritdoc IAdapterGuardian
-    function getAdapterParametersChecker(
-        address adapter,
-        address target,
-        bytes4 selector
-    )
+    function getAdapterParametersChecker(address adapter, address target, bytes4 selector)
         external
         view
         returns (address)
@@ -179,7 +170,7 @@ contract AdapterGuardianModule is IAdapterGuardian, IModule, kBaseRoles {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IModule
-    function selectors() external pure returns (bytes4[] memory moduleSelectors) {
+    function selectors() external pure returns (bytes4[] memory) {
         bytes4[] memory moduleSelectors = new bytes4[](7);
         moduleSelectors[0] = this.setAdapterAllowedSelector.selector;
         moduleSelectors[1] = this.setAdapterParametersChecker.selector;

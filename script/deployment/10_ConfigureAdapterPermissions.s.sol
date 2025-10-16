@@ -48,11 +48,7 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
     }
 
     // Helper function to configure custodial adapter permissions (targetType = 1)
-    function configureCustodialAdapterPermissions(
-        IkRegistry registry,
-        address adapter,
-        address custodialAddress
-    )
+    function configureCustodialAdapterPermissions(IkRegistry registry, address adapter, address custodialAddress)
         internal
     {
         bytes4 approveSelector = IERC7540.approve.selector;
@@ -144,7 +140,7 @@ contract ConfigureAdapterPermissionsScript is Script, DeploymentManager {
         erc20ParameterChecker.setAllowedReceiver(usdc, usdcWallet, true);
         erc20ParameterChecker.setAllowedReceiver(wbtc, usdcWallet, true); // WBTC can also go to USDC wallet
         erc20ParameterChecker.setAllowedReceiver(usdcVault, kMinterAdapterUSDC, true); // Metavault shares can be
-            // transferred
+        // transferred
         erc20ParameterChecker.setAllowedReceiver(wbtcVault, kMinterAdapterWBTC, true);
         erc20ParameterChecker.setAllowedReceiver(usdcVault, dnVaultAdapterUSDC, true);
         erc20ParameterChecker.setAllowedReceiver(wbtcVault, dnVaultAdapterWBTC, true);

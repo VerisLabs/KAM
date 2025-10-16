@@ -85,9 +85,9 @@ contract DeployMockAssetsScript is Script, DeploymentManager {
     function _assetsAlreadyDeployed(NetworkConfig memory config) internal pure returns (bool) {
         // Check if assets are already deployed (not zero address and not placeholder addresses)
         bool usdcDeployed = config.assets.USDC != address(0) && config.assets.USDC != address(1); // localhost
-            // placeholder
+        // placeholder
         bool wbtcDeployed = config.assets.WBTC != address(0) && config.assets.WBTC != address(2); // localhost
-            // placeholder
+        // placeholder
 
         return usdcDeployed && wbtcDeployed;
     }

@@ -218,6 +218,21 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         // Generate request ID
         requestId = _createStakeRequestId(msg.sender, amount, block.timestamp);
 
+        // Notify the router to move underlying assets from DN strategy
+        // To the strategy of this vault
+        // That movement will happen from the wallet managing the portfolio
+        IkAssetRouter(_getKAssetRouter())
+            .kAssetTransfer(_getKMinter(), address(this), $.underlyingAsset, amount, batchId);
+
+        // Deposit ktokens
+        $.kToken.safeTransferFrom(msg.sender, address(this), amount);
+
+        // Increase pending stakt
+        $.totalPendingStake += amount.toUint128();
+
+        // Add to user requests tracking
+        $.userRequests[msg.sender].add(requestId);
+
         // Create staking request
         $.stakeRequests[requestId] = BaseVaultTypes.StakeRequest({
             user: msg.sender,
@@ -227,22 +242,6 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
             status: BaseVaultTypes.RequestStatus.PENDING,
             batchId: batchId
         });
-
-        // Add to user requests tracking
-        $.userRequests[msg.sender].add(requestId);
-
-        // Deposit ktokens
-        $.kToken.safeTransferFrom(msg.sender, address(this), amount);
-
-        // Increase pending stakt
-        $.totalPendingStake += amount.toUint128();
-
-        // Notify the router to move underlying assets from DN strategy
-        // To the strategy of this vault
-        // That movement will happen from the wallet managing the portfolio
-        IkAssetRouter(_getKAssetRouter()).kAssetTransfer(
-            _getKMinter(), address(this), $.underlyingAsset, amount, batchId
-        );
 
         emit StakeRequestCreated(bytes32(requestId), msg.sender, $.kToken, amount, to, batchId);
 
@@ -313,16 +312,14 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         require($.userRequests[msg.sender].remove(requestId), KSTAKINGVAULT_REQUEST_NOT_FOUND);
         require(msg.sender == request.user, KSTAKINGVAULT_UNAUTHORIZED);
         require(request.status == BaseVaultTypes.RequestStatus.PENDING, KSTAKINGVAULT_REQUEST_NOT_ELIGIBLE);
-
-        request.status = BaseVaultTypes.RequestStatus.CANCELLED;
-
-        $.totalPendingStake -= request.kTokenAmount;
         require(!$.batches[request.batchId].isClosed, KSTAKINGVAULT_VAULT_CLOSED);
         require(!$.batches[request.batchId].isSettled, KSTAKINGVAULT_VAULT_SETTLED);
 
-        IkAssetRouter(_getKAssetRouter()).kAssetTransfer(
-            address(this), _getKMinter(), $.underlyingAsset, request.kTokenAmount, request.batchId
-        );
+        request.status = BaseVaultTypes.RequestStatus.CANCELLED;
+        $.totalPendingStake -= request.kTokenAmount;
+
+        IkAssetRouter(_getKAssetRouter())
+            .kAssetTransfer(address(this), _getKMinter(), $.underlyingAsset, request.kTokenAmount, request.batchId);
 
         $.kToken.safeTransfer(request.user, request.kTokenAmount);
 
@@ -344,11 +341,10 @@ contract kStakingVault is IVault, BaseVault, Initializable, UUPSUpgradeable, Own
         require(msg.sender == request.user, KSTAKINGVAULT_UNAUTHORIZED);
         require($.userRequests[msg.sender].remove(requestId), KSTAKINGVAULT_REQUEST_NOT_FOUND);
         require(request.status == BaseVaultTypes.RequestStatus.PENDING, KSTAKINGVAULT_REQUEST_NOT_ELIGIBLE);
-
-        request.status = BaseVaultTypes.RequestStatus.CANCELLED;
-
         require(!$.batches[request.batchId].isClosed, KSTAKINGVAULT_VAULT_CLOSED);
         require(!$.batches[request.batchId].isSettled, KSTAKINGVAULT_VAULT_SETTLED);
+
+        request.status = BaseVaultTypes.RequestStatus.CANCELLED;
 
         IkAssetRouter(_getKAssetRouter()).kSharesRequestPull(address(this), request.stkTokenAmount, request.batchId);
 

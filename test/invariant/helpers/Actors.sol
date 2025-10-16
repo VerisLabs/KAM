@@ -36,10 +36,7 @@ abstract contract Actors {
         }
     }
 
-    function reduceActors(
-        uint256 acc,
-        function(uint256, address) external returns (uint256) func
-    )
+    function reduceActors(uint256 acc, function(uint256, address) external returns (uint256) func)
         public
         returns (uint256)
     {

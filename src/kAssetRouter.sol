@@ -196,13 +196,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IkAssetRouter
-    function kAssetTransfer(
-        address sourceVault,
-        address targetVault,
-        address _asset,
-        uint256 amount,
-        bytes32 batchId
-    )
+    function kAssetTransfer(address sourceVault, address targetVault, address _asset, uint256 amount, bytes32 batchId)
         external
         payable
     {
@@ -281,10 +275,6 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         require($.batchIds.add(batchId), KASSETROUTER_BATCH_ID_PROPOSED);
         require(IkMinter(vault).isClosed(batchId), KASSETROUTER_NOT_BATCH_CLOSED);
 
-        int256 netted;
-        int256 yield;
-        uint256 lastTotalAssets = _virtualBalance(vault, asset);
-
         // Increase the counter to generate unique proposal id
         unchecked {
             $.proposalCounter++;
@@ -300,6 +290,10 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
         // Check if proposal already exists
         require(!$.executedProposalIds.contains(proposalId), KASSETROUTER_PROPOSAL_EXECUTED);
         require($.vaultPendingProposalIds[vault].add(proposalId), KASSETROUTER_PROPOSAL_EXISTS);
+
+        int256 netted;
+        int256 yield;
+        uint256 lastTotalAssets = _virtualBalance(vault, asset);
 
         if (_isKMinter(vault)) {
             netted = int256(uint256($.vaultBatchBalances[vault][batchId].deposited))
@@ -370,6 +364,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
 
         // Validations
         address vault = proposal.vault;
+
         // Remove proposal from vault queue
         require($.vaultPendingProposalIds[vault].remove(proposalId), KASSETROUTER_PROPOSAL_NOT_FOUND);
         require(block.timestamp >= proposal.executeAfter, KASSETROUTER_COOLDOOWN_IS_UP);
@@ -547,11 +542,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     }
 
     /// @inheritdoc IkAssetRouter
-    function getSettlementProposal(bytes32 proposalId)
-        external
-        view
-        returns (VaultSettlementProposal memory proposal)
-    {
+    function getSettlementProposal(bytes32 proposalId) external view returns (VaultSettlementProposal memory proposal) {
         kAssetRouterStorage storage $ = _getkAssetRouterStorage();
         proposal = $.settlementProposals[proposalId];
     }
@@ -661,10 +652,7 @@ contract kAssetRouter is IkAssetRouter, Initializable, UUPSUpgradeable, kBase, M
     }
 
     /// @inheritdoc IkAssetRouter
-    function getBatchIdBalances(
-        address vault,
-        bytes32 batchId
-    )
+    function getBatchIdBalances(address vault, bytes32 batchId)
         external
         view
         returns (uint256 deposited, uint256 requested)

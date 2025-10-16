@@ -140,11 +140,6 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
             batchId = _createNewBatch(asset_);
         }
 
-        address router = _getKAssetRouter();
-
-        // Transfer underlying asset from sender directly to router for efficiency
-        asset_.safeTransferFrom(msg.sender, router, amount_);
-
         kMinterStorage storage $ = _getkMinterStorage();
 
         // Make sure we dont exceed the max mint per batch
@@ -153,6 +148,11 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
             KMINTER_BATCH_MINT_REACHED
         );
         $.totalLockedAssets[asset_] += amount_;
+
+        address router = _getKAssetRouter();
+
+        // Transfer underlying asset from sender directly to router for efficiency
+        asset_.safeTransferFrom(msg.sender, router, amount_);
 
         // Push assets to kAssetRouter
         IkAssetRouter(router).kAssetPush(asset_, amount_, batchId);
@@ -190,6 +190,9 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
             KMINTER_BATCH_REDEEM_REACHED
         );
 
+        address receiver = _createBatchReceiver(batchId);
+        _checkAddressNotZero(receiver);
+
         // Create redemption request
         $.burnRequests[requestId] = BurnRequest({
             user: msg.sender,
@@ -206,9 +209,6 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
 
         // Escrow kTokens in this contract - NOT burned yet to allow cancellation
         kToken.safeTransferFrom(msg.sender, address(this), amount_);
-
-        address receiver = _createBatchReceiver(batchId);
-        _checkAddressNotZero(receiver);
 
         // Register redemption request with router for batch processing and settlement
         IkAssetRouter(_getKAssetRouter()).kAssetRequestPull(asset_, amount_, batchId);
@@ -237,14 +237,14 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         // Ensure request wasn't cancelled
         require(burnRequest.status != RequestStatus.CANCELLED, KMINTER_REQUEST_NOT_ELIGIBLE);
 
+        address batchReceiver = $.batches[burnRequest.batchId].batchReceiver;
+        require(batchReceiver != address(0), KMINTER_ZERO_ADDRESS);
+
         // Mark request as burned to prevent double-spending
         burnRequest.status = RequestStatus.REDEEMED;
 
         // Clean up request tracking and update accounting
         $.totalLockedAssets[burnRequest.asset] -= burnRequest.amount;
-
-        address batchReceiver = $.batches[burnRequest.batchId].batchReceiver;
-        require(batchReceiver != address(0), KMINTER_ZERO_ADDRESS);
 
         // Permanently burn the escrowed kTokens to reduce total supply
         address kToken = _getKTokenForAsset(burnRequest.asset);
@@ -270,13 +270,13 @@ contract kMinter is IkMinter, Initializable, UUPSUpgradeable, kBase, Extsload {
         require($.userRequests[burnRequest.user].remove(requestId), KMINTER_REQUEST_NOT_FOUND);
         require(burnRequest.status == RequestStatus.PENDING, KMINTER_REQUEST_NOT_ELIGIBLE);
 
-        // Update status and remove from tracking
-        burnRequest.status = RequestStatus.CANCELLED;
-
         // Ensure batch is still open - cannot cancel after batch closure or settlement
         IkMinter.BatchInfo storage batch = $.batches[burnRequest.batchId];
         require(!batch.isClosed, KMINTER_BATCH_CLOSED);
         require(!batch.isSettled, KMINTER_BATCH_SETTLED);
+
+        // Update status and remove from tracking
+        burnRequest.status = RequestStatus.CANCELLED;
 
         address kToken = _getKTokenForAsset(burnRequest.asset);
 

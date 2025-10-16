@@ -45,18 +45,18 @@ library OptimizedFixedPointMathLib {
                     // Make division exact by subtracting the remainder from `[p1 p0]`.
                     let r := mulmod(x, y, d) // Compute remainder using mulmod.
                     let t := and(d, sub(0, d)) // The least significant bit of `d`. `t >= 1`.
-                        // Make sure `z` is less than `2**256`. Also prevents `d == 0`.
-                        // Placing the check here seems to give more optimal stack operations.
+                    // Make sure `z` is less than `2**256`. Also prevents `d == 0`.
+                    // Placing the check here seems to give more optimal stack operations.
                     if iszero(gt(d, p1)) {
                         mstore(0x00, 0xae47f702) // `FullMulDivFailed()`.
                         revert(0x1c, 0x04)
                     }
                     d := div(d, t) // Divide `d` by `t`, which is a power of two.
-                        // Invert `d mod 2**256`
-                        // Now that `d` is an odd number, it has an inverse
-                        // modulo `2**256` such that `d * inv = 1 mod 2**256`.
-                        // Compute the inverse by starting with a seed that is correct
-                        // correct for four bits. That is, `d * inv = 1 mod 2**4`.
+                    // Invert `d mod 2**256`
+                    // Now that `d` is an odd number, it has an inverse
+                    // modulo `2**256` such that `d * inv = 1 mod 2**256`.
+                    // Compute the inverse by starting with a seed that is correct
+                    // correct for four bits. That is, `d * inv = 1 mod 2**4`.
                     let inv := xor(2, mul(3, d))
                     // Now use Newton-Raphson iteration to improve the precision.
                     // Thanks to Hensel's lifting lemma, this also works in modular
@@ -66,14 +66,13 @@ library OptimizedFixedPointMathLib {
                     inv := mul(inv, sub(2, mul(d, inv))) // inverse mod 2**32
                     inv := mul(inv, sub(2, mul(d, inv))) // inverse mod 2**64
                     inv := mul(inv, sub(2, mul(d, inv))) // inverse mod 2**128
-                    z :=
-                        mul(
-                            // Divide [p1 p0] by the factors of two.
-                            // Shift in bits from `p1` into `p0`. For this we need
-                            // to flip `t` such that it is `2**256 / t`.
-                            or(mul(sub(p1, gt(r, z)), add(div(sub(0, t), t), 1)), div(sub(z, r), t)),
-                            mul(sub(2, mul(d, inv)), inv) // inverse mod 2**256
-                        )
+                    z := mul(
+                        // Divide [p1 p0] by the factors of two.
+                        // Shift in bits from `p1` into `p0`. For this we need
+                        // to flip `t` such that it is `2**256 / t`.
+                        or(mul(sub(p1, gt(r, z)), add(div(sub(0, t), t), 1)), div(sub(z, r), t)),
+                        mul(sub(2, mul(d, inv)), inv) // inverse mod 2**256
+                    )
                     break
                 }
                 z := div(z, d)

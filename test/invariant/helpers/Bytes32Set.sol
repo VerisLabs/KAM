@@ -59,11 +59,7 @@ library LibBytes32Set {
         return s.values[index];
     }
 
-    function reduce(
-        Bytes32Set storage s,
-        uint256 acc,
-        function(uint256, bytes32) external returns (uint256) func
-    )
+    function reduce(Bytes32Set storage s, uint256 acc, function(uint256, bytes32) external returns (uint256) func)
         internal
         returns (uint256)
     {
