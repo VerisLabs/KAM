@@ -126,8 +126,8 @@ abstract contract BaseVault is ERC20, OptimizedReentrancyGuardTransient {
     struct BaseVaultStorage {
         //1
         uint256 config; // decimals, performance fee, management fee, initialized, paused,
-            // isHardHurdleRate, lastFeesChargedManagement, lastFeesChargedPerformance
-            //2
+        // isHardHurdleRate, lastFeesChargedManagement, lastFeesChargedPerformance
+        //2
         uint128 sharePriceWatermark;
         uint128 totalPendingStake;
         //3

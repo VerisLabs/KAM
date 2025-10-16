@@ -95,11 +95,7 @@ interface IVaultAdapter is IVersioned {
     /// @param data Array of calldata to send to each target contract
     /// @param values Array of asset amounts to send with each call
     /// @return result The combined return data from all calls
-    function execute(
-        address[] calldata targets,
-        bytes[] calldata data,
-        uint256[] calldata values
-    )
+    function execute(address[] calldata targets, bytes[] calldata data, uint256[] calldata values)
         external
         payable
         returns (bytes[] memory result);
