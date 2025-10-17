@@ -165,7 +165,7 @@ contract kBaseRoles is OptimizedOwnableRoles {
     /// @notice Check if caller has Guardian role
     /// @param user Address to check
     function _checkGuardian(address user) internal view {
-        require(_hasRole(user, RELAYER_ROLE), KROLESBASE_WRONG_ROLE);
+        require(_hasRole(user, GUARDIAN_ROLE), KROLESBASE_WRONG_ROLE);
     }
 
     /// @notice Check if caller has relayer role

@@ -116,7 +116,7 @@
 ┌─────────────────┐
 │Batch Active     │
 │(Accepting mint/ │
-│burn requests) │
+│burn requests)   │
 └────────┬────────┘
          │
          ▼
